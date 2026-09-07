@@ -1,8 +1,41 @@
 "use client";
 
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  ArrowsLeftRight,
+  Bell,
+  Buildings,
+  CalendarDots,
+  CaretDown,
+  CaretRight,
+  ChartBar,
+  ChatsCircle,
+  Check,
+  ClipboardText,
+  FileText,
+  Files,
+  FirstAidKit,
+  ForkKnife,
+  GearSix,
+  GraduationCap,
+  Heartbeat,
+  House,
+  ListChecks,
+  MagnifyingGlass,
+  NotePencil,
+  Pill,
+  Plus,
+  Pulse,
+  ShieldCheck,
+  SidebarSimple,
+  Sparkle,
+  Stethoscope,
+  UsersThree,
+  Warning,
+  X,
+} from "@phosphor-icons/react";
 
-type IconName = "home" | "residents" | "tasks" | "handover" | "calendar" | "team" | "learn" | "docs" | "chart" | "quality" | "settings" | "search" | "bell" | "building" | "chevron" | "alert" | "check" | "plus" | "pulse" | "close" | "note" | "vitals" | "report";
+type IconName = "home" | "residents" | "tasks" | "handover" | "calendar" | "team" | "learn" | "docs" | "chart" | "quality" | "settings" | "search" | "bell" | "building" | "chevron" | "caretDown" | "alert" | "check" | "plus" | "pulse" | "close" | "note" | "vitals" | "report" | "plan" | "med" | "wounds" | "nutrition" | "assess" | "shift" | "ai" | "sidebar";
 
 type WebMCPContext = {
   registerTool: (
@@ -19,39 +52,78 @@ type WebMCPContext = {
 };
 
 function Icon({ name, className = "" }: { name: IconName; className?: string }) {
-  const paths: Record<IconName, ReactNode> = {
-    home: <><path d="m3 10 9-7 9 7"/><path d="M5 9v11h14V9M9 20v-6h6v6"/></>,
-    residents: <><circle cx="9" cy="8" r="3"/><path d="M3.5 20v-2.2A4.8 4.8 0 0 1 8.3 13h1.4a4.8 4.8 0 0 1 4.8 4.8V20M16 4.7a3 3 0 0 1 0 5.7M16.5 13a4.5 4.5 0 0 1 4 4.5V20"/></>,
-    tasks: <><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m8 9 1.5 1.5L12 8M8 15h8"/></>,
-    handover: <><path d="M7 7h11l-3-3M17 17H6l3 3"/><path d="m18 7-3 3M6 17l3-3"/></>,
-    calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></>,
-    team: <><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.5 20a5.5 5.5 0 0 1 11 0M13 15a4.5 4.5 0 0 1 8 3v2"/></>,
-    learn: <><path d="m3 6 9-3 9 3-9 3-9-3Z"/><path d="M6 8v6c3 3 9 3 12 0V8M21 6v7"/></>,
-    docs: <><path d="M6 2h9l4 4v16H6z"/><path d="M14 2v5h5M9 12h6M9 16h6"/></>,
-    chart: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></>,
-    quality: <><path d="M12 2 4 5v6c0 5 3.4 9.2 8 11 4.6-1.8 8-6 8-11V5l-8-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></>,
-    settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></>,
-    search: <><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></>,
-    bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></>,
-    building: <><path d="M4 21V5l8-3 8 3v16M8 8h.01M12 8h.01M16 8h.01M8 12h.01M12 12h.01M16 12h.01M9 21v-5h6v5"/></>,
-    chevron: <path d="m9 18 6-6-6-6"/>,
-    alert: <><path d="M10.3 3.7 2.7 17a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.7a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></>,
-    check: <path d="m5 12 4 4L19 6"/>,
-    plus: <path d="M12 5v14M5 12h14"/>,
-    pulse: <path d="M3 12h4l2-5 4 10 2-5h6"/>,
-    close: <path d="m6 6 12 12M18 6 6 18"/>,
-    note: <><path d="M5 3h14v18H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></>,
-    vitals: <><circle cx="12" cy="12" r="10"/><path d="M3 12h4l2-5 4 10 2-5h6"/></>,
-    report: <><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5"/></>,
+  const icons = {
+    home: House,
+    residents: UsersThree,
+    tasks: ListChecks,
+    handover: ArrowsLeftRight,
+    calendar: CalendarDots,
+    team: ChatsCircle,
+    learn: GraduationCap,
+    docs: Files,
+    chart: ChartBar,
+    quality: ShieldCheck,
+    settings: GearSix,
+    search: MagnifyingGlass,
+    bell: Bell,
+    building: Buildings,
+    chevron: CaretRight,
+    caretDown: CaretDown,
+    alert: Warning,
+    check: Check,
+    plus: Plus,
+    pulse: Pulse,
+    close: X,
+    note: NotePencil,
+    vitals: Heartbeat,
+    report: FileText,
+    plan: ClipboardText,
+    med: Pill,
+    wounds: FirstAidKit,
+    nutrition: ForkKnife,
+    assess: Stethoscope,
+    shift: Heartbeat,
+    ai: Sparkle,
+    sidebar: SidebarSimple,
   };
-  return <svg className={className} viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
+  const Component = icons[name];
+  return <Component className={className} aria-hidden="true" weight="regular"/>;
 }
 
-const navigation = [
-  [["Home","home"],["Bewohner","residents"],["Aufgaben","tasks"],["Übergabe","handover"],["Dienstplan","calendar"]],
-  [["Team","team"],["Lernen","learn"],["Dokumente","docs"]],
-  [["Insights","chart"],["Qualität","quality"],["Administration","settings"]],
-] as const;
+type NavModule = { id: string; label: string; icon: IconName; children: string[]; badge?: number };
+type NavGroup = { id: string; label: string; modules: NavModule[] };
+
+const navigation: NavGroup[] = [
+  { id: "clinical", label: "Clinical", modules: [
+    { id: "residents", label: "Residents", icon: "residents", children: ["Übersicht", "Timeline", "Pflegeakte"] },
+    { id: "plan", label: "Plan", icon: "plan", children: ["Pflegeplanung", "Ziele & Massnahmen", "Evaluation"] },
+    { id: "chart", label: "Chart", icon: "note", children: ["Schnelldokumentation", "Verlaufsdokumentation"] },
+    { id: "vitals", label: "Vitals", icon: "vitals", children: ["Messwerte", "Trends", "Grenzwerte"] },
+    { id: "med", label: "Med", icon: "med", children: ["Medikamentenplan", "Medikamentenrunde", "Bestände"] },
+    { id: "wounds", label: "Wounds", icon: "wounds", children: ["Wundübersicht", "Dokumentation"] },
+    { id: "nutrition", label: "Nutrition", icon: "nutrition", children: ["Ernährungsplan", "Trinkprotokoll"] },
+    { id: "assess", label: "Assess", icon: "assess", children: ["Assessments", "Fälligkeiten"] },
+  ] },
+  { id: "operations", label: "Operations", modules: [
+    { id: "shift", label: "Shift", icon: "shift", children: ["Mein Dienst", "Schicht-Timeline"] },
+    { id: "tasks", label: "Tasks", icon: "tasks", children: ["Meine Aufgaben", "Teamaufgaben"], badge: 3 },
+    { id: "handover", label: "Handover", icon: "handover", children: ["Meine Übergabe", "Seit letztem Dienst"] },
+    { id: "schedule", label: "Schedule", icon: "calendar", children: ["Mein Dienstplan", "Teamplanung"] },
+  ] },
+  { id: "workforce", label: "Workforce", modules: [
+    { id: "team", label: "Team", icon: "team", children: ["News & Kanäle", "Chat"] },
+    { id: "learn", label: "Learn", icon: "learn", children: ["Meine Schulungen", "Compliance"] },
+    { id: "docs", label: "Docs", icon: "docs", children: ["Dokumente", "Standards & Weisungen"] },
+  ] },
+  { id: "management", label: "Management", modules: [
+    { id: "quality", label: "Quality", icon: "quality", children: ["Ereignisse", "Massnahmen"] },
+    { id: "insights", label: "Insights", icon: "chart", children: ["Pflege", "Management", "Workforce"] },
+    { id: "admin", label: "Admin", icon: "settings", children: ["Organisation", "Benutzer & Rollen", "Konfiguration"] },
+  ] },
+  { id: "intelligence", label: "Intelligence", modules: [
+    { id: "ai", label: "CareCore AI", icon: "ai", children: ["Assistenz", "AI-Entwürfe"] },
+  ] },
+];
 
 const changes = [
   { initials: "HM", name: "Herr Hans Müller", note: "Sturz um 02:10 Uhr. Keine sichtbaren Verletzungen, engmaschige Beobachtung läuft.", time: "02:10", status: "Kritisch", type: "critical" },
@@ -75,7 +147,7 @@ const initialTasks = [
 ];
 
 function Brand() {
-  return <div className="brand" aria-label="CareCore"><span className="brand-mark" aria-hidden="true"/><span className="brand-name">CareCore</span></div>;
+  return <div className="brand" aria-label="CareCore"><span className="brand-mark"><Icon name="pulse"/></span><span className="brand-copy"><span className="brand-name">CareCore</span><small>Mehr Zeit für Pflege.</small></span></div>;
 }
 
 export default function Home() {
@@ -84,6 +156,10 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [residentOpen, setResidentOpen] = useState(false);
   const [toast, setToast] = useState("");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [openGroups, setOpenGroups] = useState<string[]>(["operations"]);
+  const [openModules, setOpenModules] = useState<string[]>(["shift"]);
+  const [activeNav, setActiveNav] = useState("Mein Dienst");
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -149,16 +225,47 @@ export default function Home() {
 
   const unavailable = (label: string) => setToast(`${label} ist in dieser Demo noch nicht freigeschaltet`);
 
-  return <div className="app-shell">
-    <aside className="sidebar">
-      <Brand />
-      <nav aria-label="Hauptnavigation">
-        {navigation.map((section, sectionIndex) => <div className="nav-section" key={sectionIndex}>
-          {section.map(([label, icon]) => <button className={`nav-button ${label === "Home" ? "active" : ""}`} key={label} type="button" onClick={() => label !== "Home" && unavailable(label)}><Icon name={icon}/><span>{label}</span></button>)}
-        </div>)}
+  function toggleGroup(id: string) {
+    if (sidebarCollapsed) setSidebarCollapsed(false);
+    setOpenGroups((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  }
+
+  function toggleModule(groupId: string, moduleId: string) {
+    if (sidebarCollapsed) setSidebarCollapsed(false);
+    if (!openGroups.includes(groupId)) setOpenGroups((current) => [...current, groupId]);
+    setOpenModules((current) => current.includes(moduleId) ? current.filter((item) => item !== moduleId) : [...current, moduleId]);
+  }
+
+  function selectNav(label: string) {
+    setActiveNav(label);
+    setToast(`${label} geöffnet`);
+  }
+
+  return <div className={`app-shell ${sidebarCollapsed ? "sidebar-is-collapsed" : ""}`}>
+    <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
+      <div className="sidebar-head"><Brand/><button className="sidebar-collapse" type="button" aria-label={sidebarCollapsed ? "Sidebar ausklappen" : "Sidebar einklappen"} onClick={() => setSidebarCollapsed((value) => !value)}><Icon name="sidebar"/></button></div>
+      <nav className="sidebar-scroll" aria-label="Hauptnavigation">
+        <button className={`nav-button nav-home ${activeNav === "Home" ? "active" : ""}`} type="button" title="Home" onClick={() => selectNav("Home")}><Icon name="home"/><span className="nav-label">Home</span></button>
+        <div className="nav-groups">
+          {navigation.map((group) => {
+            const groupOpen = openGroups.includes(group.id);
+            return <section className={`nav-group ${groupOpen ? "open" : ""}`} key={group.id}>
+              <button className="group-toggle" type="button" aria-expanded={groupOpen} title={group.label} onClick={() => toggleGroup(group.id)}><span>{group.label}</span><Icon name="caretDown"/></button>
+              <div className="module-list">
+                {group.modules.map((module) => {
+                  const moduleOpen = openModules.includes(module.id);
+                  const moduleActive = module.children.includes(activeNav);
+                  return <div className={`module-block ${moduleOpen ? "open" : ""}`} key={module.id}>
+                    <button className={`nav-button module-button ${moduleActive ? "active" : ""}`} type="button" aria-expanded={moduleOpen} title={module.label} onClick={() => toggleModule(group.id, module.id)}><Icon name={module.icon}/><span className="nav-label">{module.label}</span>{module.badge && <span className="nav-badge">{module.badge}</span>}<Icon name="chevron" className="module-caret"/></button>
+                    <div className="submenu">{module.children.map((child) => <button className={`submenu-button ${activeNav === child ? "active" : ""}`} type="button" key={child} onClick={() => selectNav(child)}><span className="submenu-rail"/><span>{child}</span></button>)}</div>
+                  </div>;
+                })}
+              </div>
+            </section>;
+          })}
+        </div>
       </nav>
-      <div className="nav-spacer" />
-      <div className="shift-mini"><span className="shift-mini-label">Aktuelle Schicht</span><strong>Frühdienst</strong><p>06:45–15:15 · 22 %</p><div className="progress-track"><span/></div></div>
+      <div className="sidebar-footer"><button className="nav-button" type="button" title="Einstellungen" onClick={() => selectNav("Einstellungen")}><Icon name="settings"/><span className="nav-label">Einstellungen</span></button><button className="nav-button" type="button" title="Hilfe & Support" onClick={() => setToast("Hilfe & Support geöffnet")}><Icon name="docs"/><span className="nav-label">Hilfe & Support</span></button></div>
     </aside>
 
     <div className="main-column">
@@ -213,7 +320,7 @@ export default function Home() {
     <button className="floating-action" type="button" aria-label="Schnellaktion" onClick={() => setResidentOpen(true)}><Icon name="plus"/></button>
     <nav className="bottom-nav" aria-label="Mobile Navigation">{([["Home","home"],["Bewohner","residents"],["Aufgaben","tasks"],["Team","team"],["Mehr","settings"]] as const).map(([label,icon]) => <button className={label === "Home" ? "active" : ""} type="button" key={label} onClick={() => label !== "Home" && unavailable(label)}><Icon name={icon}/><span>{label}</span></button>)}</nav>
 
-    {searchOpen && <div className="overlay" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && setSearchOpen(false)}><section className="search-dialog" role="dialog" aria-modal="true" aria-label="Globale Suche"><div className="search-input-wrap"><Icon name="search"/><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Bewohner, Dokumente oder Funktionen suchen…" aria-label="Suchbegriff"/><button type="button" onClick={() => setSearchOpen(false)}>ESC</button></div><div className="search-results"><span className="search-group-label">{query ? "Suchergebnisse" : "Schnellzugriff"}</span>{filteredResults.map((result) => <button className="search-result" type="button" key={result.title} onClick={() => { setSearchOpen(false); result.icon === "residents" ? setResidentOpen(true) : setToast(`${result.title} geöffnet`); }}><span className="result-icon"><Icon name={result.icon}/></span><span><strong>{result.title}</strong><small>{result.meta}</small></span></button>)}</div></section></div>}
+    {searchOpen && <div className="overlay" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && setSearchOpen(false)}><section className="search-dialog" role="dialog" aria-modal="true" aria-label="Globale Suche"><div className="search-input-wrap"><Icon name="search"/><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Bewohner, Dokumente oder Funktionen suchen…" aria-label="Suchbegriff"/><button type="button" onClick={() => setSearchOpen(false)}>ESC</button></div><div className="search-results"><span className="search-group-label">{query ? "Suchergebnisse" : "Schnellzugriff"}</span>{filteredResults.map((result) => <button className="search-result" type="button" key={result.title} onClick={() => { setSearchOpen(false); if (result.icon === "residents") { setResidentOpen(true); } else { setToast(`${result.title} geöffnet`); } }}><span className="result-icon"><Icon name={result.icon}/></span><span><strong>{result.title}</strong><small>{result.meta}</small></span></button>)}</div></section></div>}
 
     {residentOpen && <div className="drawer-overlay" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && setResidentOpen(false)}><aside className="resident-drawer" role="dialog" aria-modal="true" aria-labelledby="resident-title"><div className="drawer-header"><div className="drawer-topline"><span>BEWOHNERÜBERSICHT</span><button className="close-button" type="button" aria-label="Schliessen" onClick={() => setResidentOpen(false)}><Icon name="close"/></button></div><div className="resident-identity"><span className="resident-avatar critical">HM</span><div><h2 id="resident-title">Hans Müller</h2><p>84 Jahre · Zimmer 207</p></div></div><div className="risk-row"><span className="risk-chip critical">Sturzrisiko hoch</span><span className="risk-chip">Antikoagulation</span><span className="risk-chip">Rollator</span></div></div><div className="drawer-body"><section className="drawer-section"><h3>Aktuell wichtig</h3><div className="clinical-note"><strong>Sturz um 02:10 Uhr</strong>Keine sichtbaren Verletzungen. Neurologische Kontrolle gemäss Standard bis 14:00 Uhr weiterführen.</div></section><section className="drawer-section"><h3>Letzte Ereignisse</h3><DrawerEvent time="06:10">Vitalwerte stabil: BD 132/78, Puls 72/min.</DrawerEvent><DrawerEvent time="04:10">Neurologische Kontrolle ohne Auffälligkeit.</DrawerEvent><DrawerEvent time="02:18">Arzt gemäss Nachtstandard telefonisch informiert.</DrawerEvent><DrawerEvent time="02:10">Sturz neben dem Bett, auf rechter Seite aufgefunden.</DrawerEvent></section><section className="drawer-section"><h3>Schnellaktionen</h3><div className="quick-actions-grid"><QuickAction icon="note" label="Dokumentieren" action={() => setToast("Dokumentation für Hans Müller vorbereitet")}/><QuickAction icon="vitals" label="Vitalwert erfassen" action={() => setToast("Vitalwerterfassung vorbereitet")}/><QuickAction icon="tasks" label="Aufgabe erstellen" action={() => setToast("Neue Aufgabe vorbereitet")}/><QuickAction icon="report" label="Ereignis melden" action={() => setToast("Ereignismeldung vorbereitet")}/></div></section></div></aside></div>}
 
