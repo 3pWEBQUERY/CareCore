@@ -2,43 +2,54 @@
 
 ## Prüfgrundlage
 
-- Source of visual truth: `/Users/alexander/Downloads/ChatGPT Image 7. Sept. 2026, 23_17_02.png`
-- Implementierung, ausgeklappt: `/Users/alexander/CareCore/qa-sidebar-expanded-final.png`
-- Implementierung, eingeklappt: `/Users/alexander/CareCore/qa-sidebar-collapsed-final.png`
-- Direkter Vergleich: `/Users/alexander/CareCore/qa-sidebar-comparison-final.png`
+- Source of visual truth (Aufbau): `/Users/alexander/Downloads/ChatGPT Image 7. Sept. 2026, 23_17_02.png`
+- Source of visual truth (Farbsemantik): `/Users/alexander/Downloads/CareCore – Product Requirements Document (PRD).md`, Kapitel 50–52
+- Implementierung, ausgeklappt: `/Users/alexander/CareCore/qa-sidebar-blue-final.png`
+- Implementierung, eingeklappt: `/Users/alexander/CareCore/qa-sidebar-blue-collapsed-final.png`
+- Implementierung mit finalem 6-Pixel-Radius: `/Users/alexander/CareCore/qa-radius-6px-final.png`
+- Direkter Vergleich: `/Users/alexander/CareCore/qa-sidebar-blue-comparison-final.png`
 - Viewport: 1536 × 1024 CSS-Pixel, Device Pixel Ratio 1
-- Geprüfter Zustand: Desktop, Operations geöffnet, Shift aktiv; zusätzlich Clinical → Residents mit Untermenü sowie eingeklappte Icon-Navigation
+- Source und Implementierung: jeweils 1536 × 1024 Pixel; Vergleich ohne Dichteskalierung
+- Zustand: Desktop, Operations geöffnet, Shift aktiv; zusätzlich eingeklappte Navigation
 
-## Vollansicht
+## Full-view comparison evidence
 
-Die Desktop-Ansicht übernimmt die wesentlichen visuellen Merkmale der Referenz: eine dunkelblaue, klar vom hellen Arbeitsbereich getrennte Sidebar, eine kompakte Markenfläche, dezente Trennlinien, helle Icons und Typografie, einen hervorgehobenen aktiven Menüpunkt sowie Einstellungen und Hilfe am unteren Rand.
+Der direkte Vergleich bestätigt, dass Aufbau, Breite, dunkle Seitenleiste, Markenbereich, aktive Navigationsfläche, Menügruppen und unterer Servicebereich der Referenz folgen. Die neue CareCore-Fassung verwendet bewusst ein deutlich blaues Navy-Spektrum statt des neutralen Anthrazits der Referenz.
 
-## Fokusbereich Sidebar
+## Focused region comparison evidence
 
-- Die Navigation ist entsprechend der PRD in Clinical, Operations, Workforce, Management und Intelligence gegliedert.
-- Sämtliche CareCore-Module sind vorhanden und besitzen kontextbezogene Untermenüs.
-- Gruppen und Module lassen sich unabhängig öffnen und schliessen.
-- Die Sidebar lässt sich auf eine 78 Pixel breite Icon-Navigation reduzieren und wieder ausklappen.
-- Der aktive Bereich Shift und der aktive Unterpunkt Mein Dienst bleiben eindeutig erkennbar.
-- Die Navigation ist mit semantischen Buttons, sichtbaren Fokuszuständen und passenden `aria-label`-Attributen bedienbar.
+Die Sidebar wurde zusätzlich separat in beiden Zuständen geprüft. Der aktive Menüpunkt verwendet ein klares Informationsblau, der aktive Unterpunkt Hellblau und die eingeklappte Navigation bewahrt alle Module als erkennbare Icon-Buttons. Primäre, sekundäre und leise Aktionen nutzen abgestufte Blauzustände.
 
-## Interaktionen und Technik
+## Required fidelity surfaces
 
-- Aus- und Einklappen erfolgreich getestet.
-- Clinical → Residents geöffnet; Übersicht, Timeline und Pflegeakte im Accessibility-Baum bestätigt.
-- Alle PRD-Bereiche sind in der eingeklappten Navigation als beschriftete Icon-Buttons erreichbar.
-- Browser-Konsole: keine Fehler.
-- Produktions-Build: erfolgreich.
+- Fonts und Typografie: Hierarchie, Gewichte, Zeilenhöhen und Beschriftungen bleiben gegenüber der geprüften vorherigen Fassung unverändert und ohne Überlauf.
+- Spacing und Layout: Sidebar-Breite, Abstände, Kartenraster und responsive Zustände bleiben stabil. Alle nicht-avatarbezogenen Rundungsdefinitionen verwenden einheitlich `6px`; Profil- und Bewohneravatare bleiben mit `50%` kreisrund.
+- Farben und Tokens: `#2563eb` als Primary, `#1d4ed8` als Primary Dark, `#eaf1ff` als Primary Soft und `#0b1f3a` als Navigation. Grün bleibt ausschliesslich Success, Gelb Attention und Rot Critical entsprechend der PRD.
+- Bild- und Iconqualität: Phosphor-Vektoricons bleiben scharf und konsistent; keine sichtbaren Rasterartefakte.
+- Copy und Inhalt: PRD-Module, Untermenüs und Dashboard-Inhalte wurden unverändert erhalten.
 
-## Iterationsverlauf
+## Findings
 
-1. Die erste eingeklappte Fassung hatte eine zu enge Position des Umschalters am Logo. Der Schalter wurde unter die Markenfläche versetzt und der Navigationsabstand angepasst.
-2. Die Sichtbarkeit des Umschalters war zunächst zu stark an Hover gebunden. Er ist jetzt dauerhaft erkennbar und erhält bei Hover beziehungsweise Tastaturfokus eine stärkere Hervorhebung.
-3. Der finale Vergleich bestätigt eine konsistente visuelle Hierarchie ohne verbleibende P0-, P1- oder P2-Abweichungen.
+Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen Hexwerte; die gewählte Blaupalette ist daher eine begründete Design-System-Auslegung der geforderten Informations- und Interaktionsfarbe.
 
-## Bewusste Abweichungen
+## Vergleichsverlauf
 
-Die Referenz zeigt eine flache Navigation. Für CareCore wurde sie bewusst um die in der PRD geforderte Produktstruktur und Untermenüs erweitert. Logo, Produktname und aktive Inhalte bleiben CareCore-spezifisch; die visuelle Sprache der Referenz wurde übernommen, nicht deren fremde Marke.
+1. Vorherige Fassung: CareCore Primary und mehrere Interaktionszustände waren türkis; die Sidebar wirkte dunkelgrünlich. Das widersprach dem expliziten Wunsch nach Blau.
+2. Korrektur: Globale Primary-Tokens, Sidebar-Verlauf, aktive Navigation, Untermenüs, Fokus, Avatare, Filter, Suchzustände, Toast und Button-Schatten wurden auf Blau umgestellt. Semantische Statusfarben wurden bewusst nicht vereinheitlicht.
+3. Post-Fix-Evidenz: Ausgeklappte und eingeklappte Desktop-Screenshots bestätigen die konsistente Palette; Browser-Konsole ohne Fehler.
+4. Radius-Normalisierung: Karten, Buttons, Dialoge, Badges, Statusmarken und Navigation wurden auf exakt `6px` vereinheitlicht. Profil- und Bewohneravatare wurden anschließend gezielt auf `50%` gesetzt. Der berechnete Browserstil enthält ausschließlich `6px` und die Avatar-Ausnahme `50%`.
+
+## Primäre Interaktionen
+
+- Sidebar ein- und ausgeklappt
+- PRD-Module im eingeklappten Zustand geprüft
+- Primärer CTA, sekundärer Button und Navigation visuell geprüft
+- Browser-Konsole auf Fehler geprüft
+- Lint und Produktions-Build erfolgreich
+
+## Follow-up polish
+
+Kein blockierender Nachlauf. Optional kann später ein zweites, etwas entsättigteres Blau als Enterprise-Branding-Variante angeboten werden.
 
 ## Ergebnis
 

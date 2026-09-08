@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import {
   ArrowsLeftRight,
   Bell,
@@ -161,14 +161,23 @@ export default function Home() {
   const [openModules, setOpenModules] = useState<string[]>(["shift"]);
   const [activeNav, setActiveNav] = useState("Mein Dienst");
 
+  const openSearch = useCallback(() => {
+    setResidentOpen(false);
+    setSearchOpen(true);
+  }, []);
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+  }, []);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setSearchOpen(true); }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); openSearch(); }
       if (event.key === "Escape") { setSearchOpen(false); setResidentOpen(false); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [openSearch]);
 
   useEffect(() => {
     if (!toast) return;
@@ -271,9 +280,9 @@ export default function Home() {
     <div className="main-column">
       <header className="topbar">
         <button className="location-control" type="button" onClick={() => setToast("Standortauswahl geöffnet")}><span className="location-icon"><Icon name="building"/></span><span><small>Alterszentrum Sonnengarten</small><strong>Wohnbereich 2 · 1. OG</strong></span><Icon name="chevron" className="chevron"/></button>
-        <div className="top-actions"><button className="search-trigger" type="button" onClick={() => setSearchOpen(true)} aria-label="Globale Suche öffnen"><Icon name="search"/><span>Suchen…</span><kbd>⌘ K</kbd></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><Icon name="bell"/><span className="notification-dot"/></button><div className="profile"><span className="avatar">AM</span><span><small>Pflegefachfrau HF</small><strong>Anna Meier</strong></span></div></div>
+        <div className="top-actions"><button className="search-trigger" type="button" onClick={openSearch} aria-label="Globale Suche öffnen" aria-haspopup="dialog" aria-controls="global-search-dialog" aria-expanded={searchOpen}><Icon name="search"/><span>Suchen…</span><kbd>⌘ K</kbd></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><Icon name="bell"/><span className="notification-dot"/></button><div className="profile"><span className="avatar">AM</span><span><small>Pflegefachfrau HF</small><strong>Anna Meier</strong></span></div></div>
       </header>
-      <header className="mobile-top"><Brand/><div className="mobile-actions"><button className="icon-button" type="button" aria-label="Suche öffnen" onClick={() => setSearchOpen(true)}><Icon name="search"/></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><Icon name="bell"/><span className="notification-dot"/></button></div></header>
+      <header className="mobile-top"><Brand/><div className="mobile-actions"><button className="icon-button" type="button" aria-label="Suche öffnen" onClick={openSearch} aria-haspopup="dialog" aria-controls="global-search-dialog" aria-expanded={searchOpen}><Icon name="search"/></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><Icon name="bell"/><span className="notification-dot"/></button></div></header>
 
       <main className="workspace">
         <section className="page-heading" aria-labelledby="page-title"><div className="heading-copy"><p className="eyebrow">Montag, 7. September · Frühdienst</p><h1 id="page-title">Guten Morgen, Anna.</h1><p>Deine Schicht auf Wohnbereich 2 ist vorbereitet.</p></div><button className="primary-button" type="button" onClick={() => setToast("Neue Dokumentation vorbereitet")}><Icon name="plus" className="button-icon"/>Dokumentieren</button></section>
@@ -320,7 +329,7 @@ export default function Home() {
     <button className="floating-action" type="button" aria-label="Schnellaktion" onClick={() => setResidentOpen(true)}><Icon name="plus"/></button>
     <nav className="bottom-nav" aria-label="Mobile Navigation">{([["Home","home"],["Bewohner","residents"],["Aufgaben","tasks"],["Team","team"],["Mehr","settings"]] as const).map(([label,icon]) => <button className={label === "Home" ? "active" : ""} type="button" key={label} onClick={() => label !== "Home" && unavailable(label)}><Icon name={icon}/><span>{label}</span></button>)}</nav>
 
-    {searchOpen && <div className="overlay" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && setSearchOpen(false)}><section className="search-dialog" role="dialog" aria-modal="true" aria-label="Globale Suche"><div className="search-input-wrap"><Icon name="search"/><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Bewohner, Dokumente oder Funktionen suchen…" aria-label="Suchbegriff"/><button type="button" onClick={() => setSearchOpen(false)}>ESC</button></div><div className="search-results"><span className="search-group-label">{query ? "Suchergebnisse" : "Schnellzugriff"}</span>{filteredResults.map((result) => <button className="search-result" type="button" key={result.title} onClick={() => { setSearchOpen(false); if (result.icon === "residents") { setResidentOpen(true); } else { setToast(`${result.title} geöffnet`); } }}><span className="result-icon"><Icon name={result.icon}/></span><span><strong>{result.title}</strong><small>{result.meta}</small></span></button>)}</div></section></div>}
+    {searchOpen && <div className="overlay" role="presentation" onClick={(event) => event.currentTarget === event.target && closeSearch()}><section id="global-search-dialog" className="search-dialog" role="dialog" aria-modal="true" aria-label="Globale Suche"><div className="search-input-wrap"><Icon name="search"/><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Bewohner, Dokumente oder Funktionen suchen…" aria-label="Suchbegriff"/><button type="button" onClick={closeSearch} aria-label="Suche schliessen">ESC</button></div><div className="search-results"><span className="search-group-label">{query ? "Suchergebnisse" : "Schnellzugriff"}</span>{filteredResults.map((result) => <button className="search-result" type="button" key={result.title} onClick={() => { closeSearch(); if (result.icon === "residents") { setResidentOpen(true); } else { setToast(`${result.title} geöffnet`); } }}><span className="result-icon"><Icon name={result.icon}/></span><span><strong>{result.title}</strong><small>{result.meta}</small></span></button>)}</div></section></div>}
 
     {residentOpen && <div className="drawer-overlay" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && setResidentOpen(false)}><aside className="resident-drawer" role="dialog" aria-modal="true" aria-labelledby="resident-title"><div className="drawer-header"><div className="drawer-topline"><span>BEWOHNERÜBERSICHT</span><button className="close-button" type="button" aria-label="Schliessen" onClick={() => setResidentOpen(false)}><Icon name="close"/></button></div><div className="resident-identity"><span className="resident-avatar critical">HM</span><div><h2 id="resident-title">Hans Müller</h2><p>84 Jahre · Zimmer 207</p></div></div><div className="risk-row"><span className="risk-chip critical">Sturzrisiko hoch</span><span className="risk-chip">Antikoagulation</span><span className="risk-chip">Rollator</span></div></div><div className="drawer-body"><section className="drawer-section"><h3>Aktuell wichtig</h3><div className="clinical-note"><strong>Sturz um 02:10 Uhr</strong>Keine sichtbaren Verletzungen. Neurologische Kontrolle gemäss Standard bis 14:00 Uhr weiterführen.</div></section><section className="drawer-section"><h3>Letzte Ereignisse</h3><DrawerEvent time="06:10">Vitalwerte stabil: BD 132/78, Puls 72/min.</DrawerEvent><DrawerEvent time="04:10">Neurologische Kontrolle ohne Auffälligkeit.</DrawerEvent><DrawerEvent time="02:18">Arzt gemäss Nachtstandard telefonisch informiert.</DrawerEvent><DrawerEvent time="02:10">Sturz neben dem Bett, auf rechter Seite aufgefunden.</DrawerEvent></section><section className="drawer-section"><h3>Schnellaktionen</h3><div className="quick-actions-grid"><QuickAction icon="note" label="Dokumentieren" action={() => setToast("Dokumentation für Hans Müller vorbereitet")}/><QuickAction icon="vitals" label="Vitalwert erfassen" action={() => setToast("Vitalwerterfassung vorbereitet")}/><QuickAction icon="tasks" label="Aufgabe erstellen" action={() => setToast("Neue Aufgabe vorbereitet")}/><QuickAction icon="report" label="Ereignis melden" action={() => setToast("Ereignismeldung vorbereitet")}/></div></section></div></aside></div>}
 
