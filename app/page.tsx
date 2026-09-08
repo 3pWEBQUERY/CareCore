@@ -94,34 +94,34 @@ type NavModule = { id: string; label: string; icon: IconName; children: string[]
 type NavGroup = { id: string; label: string; modules: NavModule[] };
 
 const navigation: NavGroup[] = [
-  { id: "clinical", label: "Clinical", modules: [
-    { id: "residents", label: "Residents", icon: "residents", children: ["Übersicht", "Timeline", "Pflegeakte"] },
-    { id: "plan", label: "Plan", icon: "plan", children: ["Pflegeplanung", "Ziele & Massnahmen", "Evaluation"] },
-    { id: "chart", label: "Chart", icon: "note", children: ["Schnelldokumentation", "Verlaufsdokumentation"] },
-    { id: "vitals", label: "Vitals", icon: "vitals", children: ["Messwerte", "Trends", "Grenzwerte"] },
-    { id: "med", label: "Med", icon: "med", children: ["Medikamentenplan", "Medikamentenrunde", "Bestände"] },
-    { id: "wounds", label: "Wounds", icon: "wounds", children: ["Wundübersicht", "Dokumentation"] },
-    { id: "nutrition", label: "Nutrition", icon: "nutrition", children: ["Ernährungsplan", "Trinkprotokoll"] },
-    { id: "assess", label: "Assess", icon: "assess", children: ["Assessments", "Fälligkeiten"] },
+  { id: "clinical", label: "Pflege & Klinik", modules: [
+    { id: "residents", label: "Bewohner", icon: "residents", children: ["Übersicht", "Verlauf", "Pflegeakte"] },
+    { id: "plan", label: "Pflegeplanung", icon: "plan", children: ["Pflegeplanung", "Ziele & Massnahmen", "Auswertung"] },
+    { id: "chart", label: "Pflegedokumentation", icon: "note", children: ["Schnelldokumentation", "Verlaufsdokumentation"] },
+    { id: "vitals", label: "Vitalwerte", icon: "vitals", children: ["Messwerte", "Entwicklung", "Grenzwerte"] },
+    { id: "med", label: "Medikation", icon: "med", children: ["Medikamentenplan", "Medikamentenrunde", "Bestände"] },
+    { id: "wounds", label: "Wundmanagement", icon: "wounds", children: ["Wundübersicht", "Dokumentation"] },
+    { id: "nutrition", label: "Ernährung", icon: "nutrition", children: ["Ernährungsplan", "Trinkprotokoll"] },
+    { id: "assess", label: "Einschätzungen", icon: "assess", children: ["Einschätzungen", "Fälligkeiten"] },
   ] },
-  { id: "operations", label: "Operations", modules: [
-    { id: "shift", label: "Shift", icon: "shift", children: ["Mein Dienst", "Schicht-Timeline"] },
-    { id: "tasks", label: "Tasks", icon: "tasks", children: ["Meine Aufgaben", "Teamaufgaben"], badge: 3 },
-    { id: "handover", label: "Handover", icon: "handover", children: ["Meine Übergabe", "Seit letztem Dienst"] },
-    { id: "schedule", label: "Schedule", icon: "calendar", children: ["Mein Dienstplan", "Teamplanung"] },
+  { id: "operations", label: "Betrieb", modules: [
+    { id: "shift", label: "Schicht", icon: "shift", children: ["Mein Dienst", "Schichtverlauf"] },
+    { id: "tasks", label: "Aufgaben", icon: "tasks", children: ["Meine Aufgaben", "Teamaufgaben"], badge: 3 },
+    { id: "handover", label: "Übergabe", icon: "handover", children: ["Meine Übergabe", "Seit letztem Dienst"] },
+    { id: "schedule", label: "Dienstplanung", icon: "calendar", children: ["Mein Dienstplan", "Teamplanung"] },
   ] },
-  { id: "workforce", label: "Workforce", modules: [
-    { id: "team", label: "Team", icon: "team", children: ["News & Kanäle", "Chat"] },
-    { id: "learn", label: "Learn", icon: "learn", children: ["Meine Schulungen", "Compliance"] },
-    { id: "docs", label: "Docs", icon: "docs", children: ["Dokumente", "Standards & Weisungen"] },
+  { id: "workforce", label: "Personal", modules: [
+    { id: "team", label: "Team", icon: "team", children: ["Neuigkeiten & Kanäle", "Nachrichten"] },
+    { id: "learn", label: "Schulungen", icon: "learn", children: ["Meine Schulungen", "Pflichtnachweise"] },
+    { id: "docs", label: "Dokumente", icon: "docs", children: ["Dokumente", "Standards & Weisungen"] },
   ] },
-  { id: "management", label: "Management", modules: [
-    { id: "quality", label: "Quality", icon: "quality", children: ["Ereignisse", "Massnahmen"] },
-    { id: "insights", label: "Insights", icon: "chart", children: ["Pflege", "Management", "Workforce"] },
-    { id: "admin", label: "Admin", icon: "settings", children: ["Organisation", "Benutzer & Rollen", "Konfiguration"] },
+  { id: "management", label: "Leitung", modules: [
+    { id: "quality", label: "Qualität", icon: "quality", children: ["Ereignisse", "Massnahmen"] },
+    { id: "insights", label: "Kennzahlen & Analysen", icon: "chart", children: ["Pflege", "Leitung", "Personal"] },
+    { id: "admin", label: "Administration", icon: "settings", children: ["Organisation", "Benutzer & Rollen", "Konfiguration"] },
   ] },
-  { id: "intelligence", label: "Intelligence", modules: [
-    { id: "ai", label: "CareCore AI", icon: "ai", children: ["Assistenz", "AI-Entwürfe"] },
+  { id: "intelligence", label: "Intelligenz", modules: [
+    { id: "ai", label: "CareCore KI", icon: "ai", children: ["Assistenz", "KI-Entwürfe"] },
   ] },
 ];
 
@@ -254,7 +254,7 @@ export default function Home() {
     <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
       <div className="sidebar-head"><Brand/><button className="sidebar-collapse" type="button" aria-label={sidebarCollapsed ? "Sidebar ausklappen" : "Sidebar einklappen"} onClick={() => setSidebarCollapsed((value) => !value)}><Icon name="sidebar"/></button></div>
       <nav className="sidebar-scroll" aria-label="Hauptnavigation">
-        <button className={`nav-button nav-home ${activeNav === "Home" ? "active" : ""}`} type="button" title="Home" onClick={() => selectNav("Home")}><Icon name="home"/><span className="nav-label">Home</span></button>
+        <button className={`nav-button nav-home ${activeNav === "Startseite" ? "active" : ""}`} type="button" title="Startseite" onClick={() => selectNav("Startseite")}><Icon name="home"/><span className="nav-label">Startseite</span></button>
         <div className="nav-groups">
           {navigation.map((group) => {
             const groupOpen = openGroups.includes(group.id);
@@ -327,7 +327,7 @@ export default function Home() {
     </div>
 
     <button className="floating-action" type="button" aria-label="Schnellaktion" onClick={() => setResidentOpen(true)}><Icon name="plus"/></button>
-    <nav className="bottom-nav" aria-label="Mobile Navigation">{([["Home","home"],["Bewohner","residents"],["Aufgaben","tasks"],["Team","team"],["Mehr","settings"]] as const).map(([label,icon]) => <button className={label === "Home" ? "active" : ""} type="button" key={label} onClick={() => label !== "Home" && unavailable(label)}><Icon name={icon}/><span>{label}</span></button>)}</nav>
+    <nav className="bottom-nav" aria-label="Mobile Navigation">{([["Startseite","home"],["Bewohner","residents"],["Aufgaben","tasks"],["Team","team"],["Mehr","settings"]] as const).map(([label,icon]) => <button className={label === "Startseite" ? "active" : ""} type="button" key={label} onClick={() => label !== "Startseite" && unavailable(label)}><Icon name={icon}/><span>{label}</span></button>)}</nav>
 
     {searchOpen && <div className="overlay" role="presentation" onClick={(event) => event.currentTarget === event.target && closeSearch()}><section id="global-search-dialog" className="search-dialog" role="dialog" aria-modal="true" aria-label="Globale Suche"><div className="search-input-wrap"><Icon name="search"/><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Bewohner, Dokumente oder Funktionen suchen…" aria-label="Suchbegriff"/><button type="button" onClick={closeSearch} aria-label="Suche schliessen">ESC</button></div><div className="search-results"><span className="search-group-label">{query ? "Suchergebnisse" : "Schnellzugriff"}</span>{filteredResults.map((result) => <button className="search-result" type="button" key={result.title} onClick={() => { closeSearch(); if (result.icon === "residents") { setResidentOpen(true); } else { setToast(`${result.title} geöffnet`); } }}><span className="result-icon"><Icon name={result.icon}/></span><span><strong>{result.title}</strong><small>{result.meta}</small></span></button>)}</div></section></div>}
 
