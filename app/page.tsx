@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowsLeftRight,
   Bell,
@@ -151,6 +152,7 @@ function Brand() {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [tasks, setTasks] = useState(initialTasks);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -240,6 +242,10 @@ export default function Home() {
   }
 
   function toggleModule(groupId: string, moduleId: string) {
+    if (moduleId === "residents") {
+      router.push("/bewohner");
+      return;
+    }
     if (sidebarCollapsed) setSidebarCollapsed(false);
     if (!openGroups.includes(groupId)) setOpenGroups((current) => [...current, groupId]);
     setOpenModules((current) => current.includes(moduleId) ? current.filter((item) => item !== moduleId) : [...current, moduleId]);
@@ -321,7 +327,7 @@ export default function Home() {
             <div className="tasks-footer"><button className="quiet-button" type="button" onClick={() => setToast("Alle 18 Aufgaben geöffnet")}>Alle 18 Aufgaben <Icon name="chevron" className="button-icon"/></button></div>
           </section>
 
-          <section className="card residents-card" aria-labelledby="residents-title"><div className="card-header"><div><h2 className="card-title" id="residents-title">Meine Bewohner</h2><p className="card-subtitle">4 von 7 mit aktuellen Hinweisen</p></div><button className="quiet-button" type="button" onClick={() => unavailable("Bewohnerübersicht")}>Alle anzeigen</button></div><div className="resident-grid">{residents.map((resident) => <button className="resident-tile" type="button" key={resident.name} onClick={() => setResidentOpen(true)}><span className={`resident-avatar ${resident.critical ? "critical" : ""}`}>{resident.initials}</span><span><strong>{resident.name}</strong><p>{resident.room} · <span className="risk-label">{resident.risk}</span></p></span></button>)}</div></section>
+          <section className="card residents-card" aria-labelledby="residents-title"><div className="card-header"><div><h2 className="card-title" id="residents-title">Meine Bewohner</h2><p className="card-subtitle">4 von 7 mit aktuellen Hinweisen</p></div><button className="quiet-button" type="button" onClick={() => router.push("/bewohner")}>Alle anzeigen</button></div><div className="resident-grid">{residents.map((resident) => <button className="resident-tile" type="button" key={resident.name} onClick={() => setResidentOpen(true)}><span className={`resident-avatar ${resident.critical ? "critical" : ""}`}>{resident.initials}</span><span><strong>{resident.name}</strong><p>{resident.room} · <span className="risk-label">{resident.risk}</span></p></span></button>)}</div></section>
         </div>
       </main>
     </div>
