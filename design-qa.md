@@ -19,6 +19,8 @@
 - Dokumentationskennzeichnungen, Mobil: `/Users/alexander/CareCore/qa-documentation-flags-mobile.png`
 - Stammdatenansicht, Desktop: `/Users/alexander/CareCore/qa-resident-master-data.png`
 - Stammdatenansicht, Mobil: `/Users/alexander/CareCore/qa-resident-master-data-mobile.png`
+- Pflegeaktenansicht, Desktop: `/Users/alexander/CareCore/qa-resident-care-record.png`
+- Pflegeaktenansicht, Mobil: `/Users/alexander/CareCore/qa-resident-care-record-mobile.png`
 - Direkter Vergleich: `/Users/alexander/CareCore/qa-sidebar-blue-comparison-final.png`
 - Viewport: 1536 × 1024 CSS-Pixel, Device Pixel Ratio 1
 - Source und Implementierung: jeweils 1536 × 1024 Pixel; Vergleich ohne Dichteskalierung
@@ -57,6 +59,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 9. Dokumentation: Tab, Schnellaktion und bestehende Dokumentationspunkte wechseln den Inhalt innerhalb derselben Bewohnerakte. Das responsive Formular unterstützt Neuaufnahme und Bearbeitung; ein automatischer Scroll-Reset hält den Ansichtsanfang sichtbar. Die Öffnungsanimation nutzt nur noch eine kurze GPU-beschleunigte Distanz von 42 Pixeln über 180 Millisekunden.
 10. Kennzeichnung: Dokumentationseinträge können unabhängig als „Wichtig“, „Wichtig für Visite“, „Beobachtungsphase“ und „Übergaberelevant“ markiert werden. Bestehende Einträge erhalten kontextabhängige Vorbelegungen; Attention bleibt gelb und funktionale Auswahlzustände bleiben blau.
 11. Stammdaten: Direkt nach „Übersicht“ steht ein eigener Stammdaten-Tab bereit. Die responsive Ansicht bündelt persönliche Angaben, Aufenthalt, medizinische Kontakte, Notfallkontakt und Versicherung und unterstützt einen klaren Bearbeitungs- und Speicherzustand innerhalb derselben Bewohnerakte.
+12. Pflegeakte: Der Tab „Pflegeakte“ zeigt ein vollständiges Pflegeprofil mit sechs interaktiv auswählbaren Pflegebereichen, dynamischen Zielen und Maßnahmen, aktuellen Prioritäten, Assessments und beteiligten Fachpersonen. Der Wechsel bleibt innerhalb desselben vollflächigen Dialogs.
 
 ## Primäre Interaktionen
 
@@ -71,6 +74,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Interner Wechsel zur Dokumentationsansicht, Bearbeitung, Speichern und Rückkehr zur Übersicht geprüft; dabei bleibt exakt ein Dialog geöffnet
 - Mehrfachauswahl, Vorbelegung und Speichern der vier Dokumentationskennzeichnungen auf Desktop und Mobil geprüft
 - Tab-Reihenfolge, vollständige Stammdatenbereiche, Bearbeitungsmodus und Speichern auf Desktop und Mobil geprüft
+- Pflegeakten-Tab, sechs Pflegebereiche, dynamischer Detailwechsel und Aktionen auf Desktop und Mobil geprüft
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 

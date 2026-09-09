@@ -36,7 +36,7 @@ type ResidentRecordProps = {
   onAction: (message: string) => void;
 };
 
-type RecordView = "overview" | "master-data" | "documentation";
+type RecordView = "overview" | "master-data" | "documentation" | "care-record";
 type DocumentationFlag = "important" | "visit" | "observation" | "handover";
 
 type DocumentationEntry = {
@@ -48,7 +48,26 @@ type DocumentationEntry = {
   category: string;
 };
 
+type CareDomain = {
+  id: string;
+  label: string;
+  status: "critical" | "attention" | "info" | "stable";
+  statusLabel: string;
+  summary: string;
+  goal: string;
+  measures: string[];
+};
+
 const recordTabs = ["Übersicht", "Stammdaten", "Dokumentation", "Pflegeakte", "Verlauf", "Dokumente"];
+
+const careDomains: CareDomain[] = [
+  { id: "mobility", label: "Mobilität & Bewegung", status: "attention", statusLabel: "Beobachten", summary: "Mobilisation mit Rollator und Begleitung. Erhöhtes Sturzrisiko bei Lagewechseln und in der Nacht.", goal: "Sichere Mobilität im Wohnbereich erhalten und weitere Sturzereignisse vermeiden.", measures: ["Transfers mit verbaler Anleitung begleiten", "Rollator vor jedem Aufstehen bereitstellen", "Sturzprophylaxe und neurologische Kontrollen fortführen"] },
+  { id: "nutrition", label: "Ernährung & Flüssigkeit", status: "stable", statusLabel: "Stabil", summary: "Normalkost, selbstständige Nahrungsaufnahme. Trinkmenge im vereinbarten Zielbereich.", goal: "Tägliche Flüssigkeitszufuhr von mindestens 1,5 Litern sicherstellen.", measures: ["Getränke sichtbar und erreichbar bereitstellen", "Trinkmenge pro Schicht dokumentieren", "Gewicht wöchentlich kontrollieren"] },
+  { id: "cognition", label: "Kognition & Orientierung", status: "info", statusLabel: "Unterstützung", summary: "Zeitlich teilweise desorientiert, örtliche und persönliche Orientierung erhalten.", goal: "Orientierung und Selbstbestimmung im Tagesablauf bestmöglich unterstützen.", measures: ["Tagesstruktur sichtbar kommunizieren", "Kurze und eindeutige Informationen geben", "Biografiebezogene Aktivierung anbieten"] },
+  { id: "skin", label: "Haut & Wunden", status: "stable", statusLabel: "Stabil", summary: "Haut intakt, aktuell keine offenen Wunden. Trockene Haut an beiden Unterschenkeln.", goal: "Intakte Haut erhalten und Hauttrockenheit reduzieren.", measures: ["Hautbeobachtung während der Körperpflege", "Unterschenkel morgens und abends eincremen", "Druckstellen unmittelbar dokumentieren"] },
+  { id: "elimination", label: "Ausscheidung", status: "stable", statusLabel: "Stabil", summary: "Kontinente Ausscheidung mit selbstständiger Toilettennutzung am Tag.", goal: "Selbstständige Toilettennutzung und regelmäßige Ausscheidung erhalten.", measures: ["Toilettengänge nach Bedarf begleiten", "Ausscheidungsverhalten beobachten", "Veränderungen im Verlauf dokumentieren"] },
+  { id: "sleep", label: "Ruhe & Schlaf", status: "attention", statusLabel: "Beobachten", summary: "Unterbrochener Nachtschlaf mit zwei bis drei Wachphasen und nächtlichem Bewegungsdrang.", goal: "Erholsame Ruhephasen fördern und nächtliche Sturzgefährdung reduzieren.", measures: ["Abendritual und Ruhezeiten einhalten", "Nachtlicht und Rufanlage kontrollieren", "Schlafverhalten im Nachtbericht festhalten"] },
+];
 
 function getDocumentationEntries(resident: ResidentRecordData): DocumentationEntry[] {
   return [
@@ -68,7 +87,9 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
   const [documentationText, setDocumentationText] = useState("");
   const [documentationFlags, setDocumentationFlags] = useState<DocumentationFlag[]>([]);
   const [masterDataEditing, setMasterDataEditing] = useState(false);
+  const [activeCareDomainId, setActiveCareDomainId] = useState("mobility");
   const selectedEntry = entries.find((entry) => entry.id === selectedEntryId) ?? null;
+  const activeCareDomain = careDomains.find((domain) => domain.id === activeCareDomainId) ?? careDomains[0];
   const [firstName, ...lastNameParts] = resident.name.split(" ");
   const lastName = lastNameParts.join(" ");
   const gender = ["Hans", "Peter"].includes(firstName) ? "Männlich" : "Weiblich";
@@ -99,6 +120,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
     if (tab === "Übersicht") setActiveView("overview");
     else if (tab === "Stammdaten") setActiveView("master-data");
     else if (tab === "Dokumentation") openDocumentation();
+    else if (tab === "Pflegeakte") setActiveView("care-record");
     else onAction(`${tab} geöffnet`);
   }
 
@@ -127,7 +149,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
 
         <nav className="resident-record-tabs" aria-label="Bereiche der Bewohnerakte">
           {recordTabs.map((tab) => {
-            const active = (tab === "Übersicht" && activeView === "overview") || (tab === "Stammdaten" && activeView === "master-data") || (tab === "Dokumentation" && activeView === "documentation");
+            const active = (tab === "Übersicht" && activeView === "overview") || (tab === "Stammdaten" && activeView === "master-data") || (tab === "Dokumentation" && activeView === "documentation") || (tab === "Pflegeakte" && activeView === "care-record");
             return <button className={active ? "active" : ""} type="button" key={tab} aria-current={active ? "page" : undefined} onClick={() => selectTab(tab)}>{tab}</button>;
           })}
         </nav>
@@ -252,6 +274,57 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
                     <label><span>Krankenversicherung</span><input defaultValue="CSS Versicherung" readOnly={!masterDataEditing}/></label>
                     <label><span>Versichertennummer</span><input defaultValue="80756012345678901234" readOnly={!masterDataEditing}/></label>
                   </div>
+                </section>
+              </aside>
+            </div>
+          </main>
+        ) : activeView === "care-record" ? (
+          <main className="resident-record-content record-care-view" ref={contentRef} key="care-record">
+            <div className="care-record-page-heading">
+              <div><span className="record-section-label">Pflegeakte</span><h3>Pflegeprofil</h3><p>Pflegerelevante Ressourcen, Risiken, Ziele und Maßnahmen für {resident.name}.</p></div>
+              <div className="care-record-heading-actions"><button className="secondary-button" type="button" onClick={() => onAction("Neue Einschätzung vorbereitet")}>Neue Einschätzung</button><button className="primary-button" type="button" onClick={() => onAction("Pflegeplanung geöffnet")}><ClipboardText aria-hidden="true"/> Pflegeplanung öffnen</button></div>
+            </div>
+
+            <section className="care-record-status" aria-label="Status der Pflegeakte">
+              <div><span><Check aria-hidden="true"/></span><p><small>Pflegeplanung</small><strong>Aktuell und bestätigt</strong></p></div>
+              <div><span><Warning aria-hidden="true"/></span><p><small>Offene Risiken</small><strong>2 in Beobachtung</strong></p></div>
+              <div><span><ClipboardText aria-hidden="true"/></span><p><small>Aktive Maßnahmen</small><strong>14 geplant</strong></p></div>
+              <div><span><CalendarDots aria-hidden="true"/></span><p><small>Nächste Evaluation</small><strong>16. September 2026</strong></p></div>
+            </section>
+
+            <div className="care-record-layout">
+              <div className="care-record-primary">
+                <section className="record-card">
+                  <div className="record-card-heading"><div><span className="record-section-label">Pflegeprofil</span><h3>Pflegebereiche</h3></div><span>6 Bereiche</span></div>
+                  <div className="care-domain-list">
+                    {careDomains.map((domain) => <button className={activeCareDomain.id === domain.id ? "active" : ""} type="button" key={domain.id} aria-pressed={activeCareDomain.id === domain.id} onClick={() => setActiveCareDomainId(domain.id)}><span className="care-domain-icon">{domain.id === "mobility" || domain.id === "sleep" ? <Pulse aria-hidden="true"/> : domain.id === "nutrition" ? <Heartbeat aria-hidden="true"/> : domain.id === "cognition" ? <User aria-hidden="true"/> : <ClipboardText aria-hidden="true"/>}</span><span><strong>{domain.label}</strong><small>{domain.summary}</small></span><span className={`status-badge ${domain.status}`}>{domain.statusLabel}</span></button>)}
+                  </div>
+                </section>
+
+                <section className="record-card care-domain-detail" aria-live="polite">
+                  <div className="record-card-heading"><div><span className="record-section-label">Ausgewählter Pflegebereich</span><h3>{activeCareDomain.label}</h3></div><button type="button" onClick={() => onAction(`${activeCareDomain.label} wird bearbeitet`)}>Bearbeiten</button></div>
+                  <div className="care-domain-summary"><span className={`status-badge ${activeCareDomain.status}`}>{activeCareDomain.statusLabel}</span><p>{activeCareDomain.summary}</p></div>
+                  <div className="care-goal-grid">
+                    <section><span className="care-detail-icon"><Check aria-hidden="true"/></span><div><small>Pflegeziel</small><strong>{activeCareDomain.goal}</strong><p>Evaluation am 16. September 2026</p></div></section>
+                    <section><span className="care-detail-icon"><ListChecks aria-hidden="true"/></span><div><small>Geplante Maßnahmen</small><ul>{activeCareDomain.measures.map((measure) => <li key={measure}>{measure}</li>)}</ul></div></section>
+                  </div>
+                </section>
+              </div>
+
+              <aside className="care-record-secondary">
+                <section className="record-card">
+                  <div className="record-card-heading"><div><span className="record-section-label">Prioritäten</span><h3>Aktuell beachten</h3></div></div>
+                  <div className="care-priority-list"><div className="critical"><Warning aria-hidden="true"/><span><strong>Sturzrisiko erhöht</strong><small>Nach Sturzereignis neurologische Kontrollen bis 14:00 Uhr.</small></span></div><div className="attention"><Pulse aria-hidden="true"/><span><strong>Schlaf beobachten</strong><small>Nächtliche Wachphasen und Bewegungsdrang dokumentieren.</small></span></div></div>
+                </section>
+
+                <section className="record-card">
+                  <div className="record-card-heading"><div><span className="record-section-label">Assessments</span><h3>Aktuelle Einschätzungen</h3></div><button type="button" onClick={() => onAction("Alle Assessments geöffnet")}>Alle anzeigen</button></div>
+                  <div className="care-assessment-list"><div><span>Sturzrisiko</span><strong className="critical">Hoch</strong><small>Heute</small></div><div><span>Dekubitusrisiko</span><strong className="stable">Niedrig</strong><small>Gestern</small></div><div><span>Schmerz</span><strong className="attention">NRS 3</strong><small>07:45 Uhr</small></div><div><span>Mangelernährung</span><strong className="stable">Kein Risiko</strong><small>02.09.2026</small></div></div>
+                </section>
+
+                <section className="record-card">
+                  <div className="record-card-heading"><div><span className="record-section-label">Pflegenetzwerk</span><h3>Beteiligte Fachpersonen</h3></div></div>
+                  <div className="care-team-list"><div><span className="avatar">AM</span><p><strong>Anna Meier</strong><small>Bezugspflege · Pflegefachfrau HF</small></p></div><div><span className="avatar">MW</span><p><strong>Dr. Martin Weber</strong><small>Hausarzt</small></p></div><div><span className="avatar">LF</span><p><strong>Lea Frei</strong><small>Fachfrau Gesundheit</small></p></div></div>
                 </section>
               </aside>
             </div>
