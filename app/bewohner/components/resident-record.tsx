@@ -36,7 +36,7 @@ type ResidentRecordProps = {
   onAction: (message: string) => void;
 };
 
-type RecordView = "overview" | "documentation";
+type RecordView = "overview" | "master-data" | "documentation";
 type DocumentationFlag = "important" | "visit" | "observation" | "handover";
 
 type DocumentationEntry = {
@@ -48,7 +48,7 @@ type DocumentationEntry = {
   category: string;
 };
 
-const recordTabs = ["Übersicht", "Dokumentation", "Pflegeakte", "Verlauf", "Dokumente"];
+const recordTabs = ["Übersicht", "Stammdaten", "Dokumentation", "Pflegeakte", "Verlauf", "Dokumente"];
 
 function getDocumentationEntries(resident: ResidentRecordData): DocumentationEntry[] {
   return [
@@ -67,7 +67,11 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [documentationText, setDocumentationText] = useState("");
   const [documentationFlags, setDocumentationFlags] = useState<DocumentationFlag[]>([]);
+  const [masterDataEditing, setMasterDataEditing] = useState(false);
   const selectedEntry = entries.find((entry) => entry.id === selectedEntryId) ?? null;
+  const [firstName, ...lastNameParts] = resident.name.split(" ");
+  const lastName = lastNameParts.join(" ");
+  const gender = ["Hans", "Peter"].includes(firstName) ? "Männlich" : "Weiblich";
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -93,6 +97,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
 
   function selectTab(tab: string) {
     if (tab === "Übersicht") setActiveView("overview");
+    else if (tab === "Stammdaten") setActiveView("master-data");
     else if (tab === "Dokumentation") openDocumentation();
     else onAction(`${tab} geöffnet`);
   }
@@ -122,7 +127,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
 
         <nav className="resident-record-tabs" aria-label="Bereiche der Bewohnerakte">
           {recordTabs.map((tab) => {
-            const active = (tab === "Übersicht" && activeView === "overview") || (tab === "Dokumentation" && activeView === "documentation");
+            const active = (tab === "Übersicht" && activeView === "overview") || (tab === "Stammdaten" && activeView === "master-data") || (tab === "Dokumentation" && activeView === "documentation");
             return <button className={active ? "active" : ""} type="button" key={tab} aria-current={active ? "page" : undefined} onClick={() => selectTab(tab)}>{tab}</button>;
           })}
         </nav>
@@ -163,7 +168,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
                 </section>
 
                 <section className="record-card">
-                  <div className="record-card-heading"><div><span className="record-section-label">Bewohner</span><h3>Stammdaten</h3></div><button type="button" onClick={() => onAction("Stammdaten bearbeiten")}>Bearbeiten</button></div>
+                  <div className="record-card-heading"><div><span className="record-section-label">Bewohner</span><h3>Stammdaten</h3></div><button type="button" onClick={() => setActiveView("master-data")}>Alle Stammdaten</button></div>
                   <dl className="record-details">
                     <div><dt>Zimmer</dt><dd>{resident.room}</dd></div>
                     <div><dt>Wohnbereich</dt><dd>{resident.unit}</dd></div>
@@ -175,6 +180,79 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
                 </section>
 
                 <button className="record-document-button" type="button" onClick={() => onAction("Dokumentenablage geöffnet")}><FileText aria-hidden="true"/><span><strong>Dokumente und Berichte</strong><small>12 hinterlegte Dokumente</small></span></button>
+              </aside>
+            </div>
+          </main>
+        ) : activeView === "master-data" ? (
+          <main className="resident-record-content record-master-data-view" ref={contentRef} key="master-data">
+            <div className="master-data-page-heading">
+              <div><span className="record-section-label">Bewohnerakte</span><h3>Stammdaten</h3><p>Persönliche, organisatorische und administrative Angaben zu {resident.name}.</p></div>
+              <div className="master-data-heading-actions">{masterDataEditing && <button className="secondary-button" type="button" onClick={() => setMasterDataEditing(false)}>Abbrechen</button>}<button className="primary-button" type="button" onClick={() => { if (masterDataEditing) onAction("Stammdaten gespeichert"); setMasterDataEditing((current) => !current); }}>{masterDataEditing ? <><Check aria-hidden="true"/> Änderungen speichern</> : "Stammdaten bearbeiten"}</button></div>
+            </div>
+
+            <section className="master-data-status" aria-label="Status der Stammdaten">
+              <div><span><Check aria-hidden="true"/></span><p><small>Aktenstatus</small><strong>Vollständig</strong></p></div>
+              <div><span><User aria-hidden="true"/></span><p><small>Bewohnernummer</small><strong>CC-2024-0207</strong></p></div>
+              <div><span><CalendarDots aria-hidden="true"/></span><p><small>Eintritt</small><strong>12. Februar 2024</strong></p></div>
+              <div><span><ClipboardText aria-hidden="true"/></span><p><small>Letzte Prüfung</small><strong>Heute, 08:05</strong></p></div>
+            </section>
+
+            <div className="master-data-layout">
+              <div className="master-data-primary">
+                <section className="record-card master-data-card">
+                  <div className="record-card-heading"><div><span className="record-section-label">Person</span><h3>Persönliche Angaben</h3></div></div>
+                  <div className="master-data-form-grid">
+                    <label><span>Vorname</span><input defaultValue={firstName} readOnly={!masterDataEditing}/></label>
+                    <label><span>Nachname</span><input defaultValue={lastName} readOnly={!masterDataEditing}/></label>
+                    <label><span>Geburtsdatum</span><input type="date" defaultValue="1940-06-14" readOnly={!masterDataEditing}/></label>
+                    <label><span>Geschlecht</span><select defaultValue={gender} disabled={!masterDataEditing}><option>Weiblich</option><option>Männlich</option><option>Divers</option></select></label>
+                    <label><span>Zivilstand</span><select defaultValue="Verwitwet" disabled={!masterDataEditing}><option>Ledig</option><option>Verheiratet</option><option>Verwitwet</option><option>Geschieden</option></select></label>
+                    <label><span>Bevorzugte Sprache</span><select defaultValue="Deutsch" disabled={!masterDataEditing}><option>Deutsch</option><option>Französisch</option><option>Italienisch</option><option>Englisch</option></select></label>
+                    <label><span>AHV-Nummer</span><input defaultValue="756.1234.5678.97" readOnly={!masterDataEditing}/></label>
+                    <label><span>Konfession</span><input defaultValue="Reformiert" readOnly={!masterDataEditing}/></label>
+                  </div>
+                </section>
+
+                <section className="record-card master-data-card">
+                  <div className="record-card-heading"><div><span className="record-section-label">Aufenthalt</span><h3>Organisation und Wohnen</h3></div></div>
+                  <div className="master-data-form-grid">
+                    <label><span>Wohnbereich</span><input defaultValue={resident.unit} readOnly={!masterDataEditing}/></label>
+                    <label><span>Zimmer</span><input defaultValue={resident.room} readOnly={!masterDataEditing}/></label>
+                    <label><span>Pflegebedarf</span><input defaultValue={resident.careLevel} readOnly={!masterDataEditing}/></label>
+                    <label><span>Bezugspflege</span><input defaultValue="Anna Meier" readOnly={!masterDataEditing}/></label>
+                    <label><span>Eintrittsdatum</span><input type="date" defaultValue="2024-02-12" readOnly={!masterDataEditing}/></label>
+                    <label><span>Eintrittsgrund</span><input defaultValue="Langzeitpflege" readOnly={!masterDataEditing}/></label>
+                  </div>
+                </section>
+              </div>
+
+              <aside className="master-data-secondary">
+                <section className="record-card master-data-card">
+                  <div className="record-card-heading"><div><span className="record-section-label">Medizin</span><h3>Medizinische Kontakte</h3></div></div>
+                  <div className="master-data-form-grid single-column">
+                    <label><span>Hausarzt</span><input defaultValue="Dr. med. Martin Weber" readOnly={!masterDataEditing}/></label>
+                    <label><span>Hausarztpraxis</span><input defaultValue="Praxis am Stadtpark, Zürich" readOnly={!masterDataEditing}/></label>
+                    <label><span>Stammapotheke</span><input defaultValue="Apotheke Sonnengarten" readOnly={!masterDataEditing}/></label>
+                  </div>
+                </section>
+
+                <section className="record-card master-data-card">
+                  <div className="record-card-heading"><div><span className="record-section-label">Notfall</span><h3>Kontaktperson</h3></div></div>
+                  <div className="master-data-form-grid single-column">
+                    <label><span>Name</span><input defaultValue="Ursula Müller" readOnly={!masterDataEditing}/></label>
+                    <label><span>Beziehung</span><input defaultValue="Tochter" readOnly={!masterDataEditing}/></label>
+                    <label><span>Telefon</span><input type="tel" defaultValue="+41 79 555 28 14" readOnly={!masterDataEditing}/></label>
+                    <label><span>E-Mail</span><input type="email" defaultValue="ursula.mueller@beispiel.ch" readOnly={!masterDataEditing}/></label>
+                  </div>
+                </section>
+
+                <section className="record-card master-data-card">
+                  <div className="record-card-heading"><div><span className="record-section-label">Administration</span><h3>Versicherung</h3></div></div>
+                  <div className="master-data-form-grid single-column">
+                    <label><span>Krankenversicherung</span><input defaultValue="CSS Versicherung" readOnly={!masterDataEditing}/></label>
+                    <label><span>Versichertennummer</span><input defaultValue="80756012345678901234" readOnly={!masterDataEditing}/></label>
+                  </div>
+                </section>
               </aside>
             </div>
           </main>
