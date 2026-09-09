@@ -283,8 +283,9 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .record-metric-icon svg { width: 18px; height: 18px; }
 .record-metrics small { display: block; color: var(--muted); font-size: 10px; }
 .record-metrics strong { display: block; margin-top: 4px; font-size: 13px; }
-.resident-record-grid { display: grid; grid-template-columns: minmax(0,1.65fr) minmax(330px,.85fr); gap: 20px; align-items: start; }
-.record-primary-column,.record-secondary-column { display: grid; gap: 20px; }
+.resident-overview-layout { display: grid; grid-template-columns: minmax(600px,1.55fr) minmax(330px,.72fr); gap: 20px; align-items: start; }
+.resident-overview-side { display: grid; gap: 20px; }
+.record-overview-history { grid-column: 1/-1; }
 .record-card { overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: white; box-shadow: 0 5px 18px rgba(23,54,64,.035); }
 .record-card-heading { min-height: 67px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
 .record-section-label { display: block; margin-bottom: 3px; color: var(--brand); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
@@ -317,6 +318,47 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .record-horizontal-actions button span { min-width: 0; }
 .record-horizontal-actions strong { display: block; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .record-horizontal-actions small { display: block; margin-top: 5px; overflow: hidden; color: var(--muted); font-size: 9px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.body-map-content { display: grid; grid-template-columns: minmax(280px,.8fr) minmax(310px,1.2fr); min-height: 560px; }
+.body-map-visual { min-width: 0; padding: 15px 18px 18px; border-right: 1px solid var(--line); background: #f8faff; }
+.body-map-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; margin-bottom: 7px; }
+.body-map-legend span { display: inline-flex; align-items: center; gap: 6px; color: #53687d; font-size: 9px; font-weight: 700; }
+.body-map-legend span::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.body-map-legend .redness { color: var(--attention); }
+.body-map-legend .wound { color: var(--critical); }
+.body-map-legend .fracture { color: var(--brand); }
+.body-map-stage { width: min(320px,100%); position: relative; margin: 0 auto; aspect-ratio: 2/3; }
+.body-map-stage > img { width: 100%; height: 100%; display: block; object-fit: contain; filter: saturate(.7) contrast(.96); }
+.body-marker { position: absolute; z-index: 2; display: flex; align-items: center; gap: 6px; padding: 0; border: 0; color: var(--brand); background: transparent; transform: translate(-50%,-50%); cursor: pointer; }
+.body-marker > span { width: 28px; height: 28px; display: block; border: 7px solid rgba(255,255,255,.82); border-radius: 50%; background: currentColor; box-shadow: 0 0 0 2px currentColor,0 4px 14px rgba(11,31,58,.2); transition: transform 140ms ease,box-shadow 140ms ease; }
+.body-marker small { max-width: 80px; padding: 5px 7px; border-radius: 6px; color: white; background: #18395f; font-size: 9px; font-weight: 800; white-space: nowrap; box-shadow: 0 4px 12px rgba(11,31,58,.16); }
+.body-marker.redness { color: var(--attention); }
+.body-marker.wound { color: var(--critical); }
+.body-marker.fracture { color: var(--brand); }
+.body-marker:hover > span,.body-marker.active > span { transform: scale(1.14); box-shadow: 0 0 0 4px color-mix(in srgb,currentColor 22%,transparent),0 5px 16px rgba(11,31,58,.22); }
+.body-marker.active small { background: var(--brand); }
+.body-observation-list { min-width: 0; padding: 10px 16px 16px; }
+.body-observation { border-bottom: 1px solid #e9eef4; }
+.body-observation:last-child { border-bottom: 0; }
+.body-observation-toggle { width: 100%; min-height: 72px; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 11px; padding: 11px 4px; border: 0; color: var(--ink); background: transparent; text-align: left; cursor: pointer; }
+.body-observation-toggle:hover { color: var(--brand-dark); }
+.body-observation-icon { width: 35px; height: 35px; display: grid; place-items: center; border-radius: 6px; color: var(--brand); background: var(--brand-soft); }
+.body-observation-icon.redness { color: var(--attention); background: var(--attention-soft); }
+.body-observation-icon.wound { color: var(--critical); background: var(--critical-soft); }
+.body-observation-icon svg { width: 17px; height: 17px; }
+.body-observation-toggle strong { display: block; font-size: 12px; }
+.body-observation-toggle small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
+.body-observation-toggle > svg { width: 16px; height: 16px; color: var(--muted); transition: transform 150ms ease; }
+.body-observation.expanded .body-observation-toggle > svg { transform: rotate(180deg); }
+.body-observation-detail { margin: -2px 4px 14px 50px; padding: 13px; border-left: 3px solid var(--brand); background: #f5f8ff; animation: record-content-in 140ms ease-out; }
+.body-observation-detail p { margin: 0; color: #455b70; font-size: 11px; line-height: 1.5; }
+.body-observation-detail dl { display: grid; gap: 6px; margin: 11px 0 0; }
+.body-observation-detail dl > div { display: flex; justify-content: space-between; gap: 14px; font-size: 9px; }
+.body-observation-detail dt { color: var(--muted); }
+.body-observation-detail dd { margin: 0; font-weight: 750; text-align: right; }
+.body-observation-links { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.body-observation-links button { min-height: 31px; display: inline-flex; align-items: center; gap: 5px; padding: 0 9px; border: 1px solid #bfdbfe; border-radius: 6px; color: var(--brand-dark); background: white; font-size: 9px; font-weight: 750; cursor: pointer; }
+.body-observation-links button:hover { background: var(--brand-soft); }
+.body-observation-links svg { width: 12px; height: 12px; }
 .record-document-button strong { display: block; font-size: 12px; }
 .record-document-button small { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.35; }
 .record-details { margin: 0; padding: 5px 18px 11px; }
@@ -509,7 +551,8 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .record-metrics { grid-template-columns: repeat(2,1fr); }
   .record-metrics > div:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
   .record-metrics > div:nth-child(4) { border-top: 1px solid var(--line); }
-  .resident-record-grid { grid-template-columns: minmax(0,1.3fr) minmax(300px,.85fr); }
+  .resident-overview-layout { grid-template-columns: minmax(560px,1.3fr) minmax(300px,.75fr); }
+  .body-map-content { grid-template-columns: minmax(250px,.72fr) minmax(290px,1.28fr); }
   .record-horizontal-actions { grid-template-columns: repeat(4,minmax(0,1fr)); }
   .record-horizontal-actions button:nth-child(-n+4) { border-bottom: 1px solid var(--line); }
   .record-horizontal-actions button:nth-child(4n) { border-right: 0; }
@@ -576,8 +619,11 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .record-metrics { grid-template-columns: 1fr 1fr; }
   .record-metrics > div { min-height: 71px; padding: 12px; }
   .record-metric-icon { display: none; }
-  .resident-record-grid { grid-template-columns: 1fr; }
-  .record-secondary-column { grid-row: 1; }
+  .resident-overview-layout { grid-template-columns: 1fr; }
+  .resident-overview-side,.record-overview-history { grid-column: auto; }
+  .body-map-content { grid-template-columns: 1fr; }
+  .body-map-visual { border-right: 0; border-bottom: 1px solid var(--line); }
+  .body-map-stage { width: min(300px,100%); }
   .record-horizontal-actions { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .record-horizontal-actions button { border-bottom: 1px solid var(--line); }
   .record-horizontal-actions button:nth-child(2n) { border-right: 0; }
@@ -619,6 +665,7 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .record-close-button { width: 40px; height: 40px; }
   .record-card-heading { align-items: flex-start; }
   .record-card-heading button { max-width: 125px; }
+  .body-observation-detail { margin-left: 4px; }
   .master-data-page-heading { display: grid; }
   .master-data-heading-actions { width: 100%; }
   .master-data-heading-actions .primary-button,.master-data-heading-actions .secondary-button { flex: 1; padding-inline: 8px; }

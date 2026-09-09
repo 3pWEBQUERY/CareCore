@@ -4,6 +4,7 @@
 
 - Source of visual truth (Aufbau): `/Users/alexander/Downloads/ChatGPT Image 7. Sept. 2026, 23_17_02.png`
 - Source of visual truth (Farbsemantik): `/Users/alexander/Downloads/CareCore – Product Requirements Document (PRD).md`, Kapitel 50–52
+- Source of visual truth (Körperkarte): `/Users/alexander/Desktop/Bildschirmfoto 2026-09-09 um 21.26.37.png`
 - Implementierung, ausgeklappt: `/Users/alexander/CareCore/qa-sidebar-blue-final.png`
 - Implementierung, eingeklappt: `/Users/alexander/CareCore/qa-sidebar-blue-collapsed-final.png`
 - Implementierung mit finalem 6-Pixel-Radius: `/Users/alexander/CareCore/qa-radius-6px-final.png`
@@ -21,10 +22,15 @@
 - Stammdatenansicht, Mobil: `/Users/alexander/CareCore/qa-resident-master-data-mobile.png`
 - Pflegeaktenansicht, Desktop: `/Users/alexander/CareCore/qa-resident-care-record.png`
 - Pflegeaktenansicht, Mobil: `/Users/alexander/CareCore/qa-resident-care-record-mobile.png`
+- Körperübersicht, Desktop: `/Users/alexander/CareCore/qa-resident-body-map-desktop.jpg`
+- Körperübersicht, Mobil mit geöffnetem Befund: `/Users/alexander/CareCore/qa-resident-body-map-mobile.jpg`
+- Körperübersicht im Referenzformat: `/Users/alexander/CareCore/qa-resident-body-map-reference-viewport.jpg`
+- Direkter Körperkartenvergleich: `/Users/alexander/CareCore/qa-resident-body-map-comparison.jpg`
 - Direkter Vergleich: `/Users/alexander/CareCore/qa-sidebar-blue-comparison-final.png`
 - Viewport: 1536 × 1024 CSS-Pixel, Device Pixel Ratio 1
 - Source und Implementierung: jeweils 1536 × 1024 Pixel; Vergleich ohne Dichteskalierung
 - Zustand: Desktop, Operations geöffnet, Shift aktiv; zusätzlich eingeklappte Navigation
+- Körperkartenvergleich: Quelle und Implementierung jeweils 658 × 1356 Pixel bei DPR 1; Bewohnerakte „Hans Müller“, Übersicht, Befund „Rötung“ geöffnet
 
 ## Full-view comparison evidence
 
@@ -32,19 +38,19 @@ Der direkte Vergleich bestätigt, dass Aufbau, Breite, dunkle Seitenleiste, Mark
 
 ## Focused region comparison evidence
 
-Die Sidebar wurde zusätzlich separat in beiden Zuständen geprüft. Der aktive Menüpunkt verwendet ein klares Informationsblau, der aktive Unterpunkt Hellblau und die eingeklappte Navigation bewahrt alle Module als erkennbare Icon-Buttons. Primäre, sekundäre und leise Aktionen nutzen abgestufte Blauzustände.
+Die Sidebar wurde zusätzlich separat in beiden Zuständen geprüft. Der aktive Menüpunkt verwendet ein klares Informationsblau, der aktive Unterpunkt Hellblau und die eingeklappte Navigation bewahrt alle Module als erkennbare Icon-Buttons. Primäre, sekundäre und leise Aktionen nutzen abgestufte Blauzustände. Für die neue Körperübersicht wurden Quelle und Implementierung bei identischen 658 × 1356 Pixeln in einer gemeinsamen Vergleichsdatei geprüft: Ganzkörperfigur, farbige Marker und klare Stellenlokalisierung entsprechen dem Referenzprinzip; das aufklappbare CareCore-Detail ergänzt die fachlich benötigten Informationen und Verlinkungen.
 
 ## Required fidelity surfaces
 
 - Fonts und Typografie: Hierarchie, Gewichte, Zeilenhöhen und Beschriftungen bleiben gegenüber der geprüften vorherigen Fassung unverändert und ohne Überlauf.
 - Spacing und Layout: Sidebar-Breite, Abstände, Kartenraster und responsive Zustände bleiben stabil. Alle nicht-avatarbezogenen Rundungsdefinitionen verwenden einheitlich `6px`; Profil- und Bewohneravatare bleiben mit `50%` kreisrund.
 - Farben und Tokens: `#2563eb` als Primary, `#1d4ed8` als Primary Dark, `#eaf1ff` als Primary Soft und `#0b1f3a` als Navigation. Grün bleibt ausschliesslich Success, Gelb Attention und Rot Critical entsprechend der PRD.
-- Bild- und Iconqualität: Phosphor-Vektoricons bleiben scharf und konsistent; keine sichtbaren Rasterartefakte.
-- Copy und Inhalt: PRD-Module, Untermenüs und Dashboard-Inhalte wurden unverändert erhalten.
+- Bild- und Iconqualität: Phosphor-Vektoricons bleiben scharf und konsistent. Die neue, wasserzeichenfreie Körperillustration ist eine eigenständige 1024 × 1536 Pixel große RGBA-Grafik mit transparentem Hintergrund und bleibt auf Desktop und Mobil klar lesbar.
+- Copy und Inhalt: PRD-Module, Untermenüs und Dashboard-Inhalte wurden unverändert erhalten. Körperstellen werden fachlich aus Bewohnerperspektive als rechte Schulter, linker Unterarm und rechtes Knie bezeichnet.
 
 ## Findings
 
-Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen Hexwerte; die gewählte Blaupalette ist daher eine begründete Design-System-Auslegung der geforderten Informations- und Interaktionsfarbe.
+Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen Hexwerte; die gewählte Blaupalette ist daher eine begründete Design-System-Auslegung der geforderten Informations- und Interaktionsfarbe. Die Körperübersicht übernimmt bewusst das Lokalisierungsprinzip der Referenz, nicht deren englische Beschriftungen oder wasserzeichenbehaftete Anatomiegrafik.
 
 ## Vergleichsverlauf
 
@@ -61,6 +67,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 11. Stammdaten: Direkt nach „Übersicht“ steht ein eigener Stammdaten-Tab bereit. Die responsive Ansicht bündelt persönliche Angaben, Aufenthalt, medizinische Kontakte, Notfallkontakt und Versicherung und unterstützt einen klaren Bearbeitungs- und Speicherzustand innerhalb derselben Bewohnerakte.
 12. Pflegeakte: Der Tab „Pflegeakte“ zeigt ein vollständiges Pflegeprofil mit sechs interaktiv auswählbaren Pflegebereichen, dynamischen Zielen und Maßnahmen, aktuellen Prioritäten, Assessments und beteiligten Fachpersonen. Der Wechsel bleibt innerhalb desselben vollflächigen Dialogs.
 13. Direktzugriff: Die Schnellaktionen stehen nun als eigene, horizontale Leiste unmittelbar unter Bezugspflege, Vitalwerten, Medikation und Termin. Acht Aktionen decken Dokumentation, Vitalwerte, Medikation, Aufgaben, Pflegeplanung, Wunden, Trinkmenge und Einschätzungen ab; das Raster reagiert mit acht, vier oder zwei Spalten auf die verfügbare Breite.
+14. Körperübersicht: Unter dem Direktzugriff wurde die Übersicht neu geordnet. Eine responsive Ganzkörperkarte zeigt Rötung, Wunde und Fraktur als interaktive Marker; jeder Marker öffnet exakt einen zugehörigen Detailbereich mit Beschreibung, Zeitpunkt, verantwortlicher Person und Verlinkungen. Ein anfänglicher Exportfehler der Bildoptimierung wurde durch den statisch kompatiblen Bildmodus behoben. Die klinische Seitenangabe wurde anschließend auf die Bewohnerperspektive korrigiert und im erneuten Browservergleich bestätigt.
 
 ## Primäre Interaktionen
 
@@ -77,6 +84,8 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Tab-Reihenfolge, vollständige Stammdatenbereiche, Bearbeitungsmodus und Speichern auf Desktop und Mobil geprüft
 - Pflegeakten-Tab, sechs Pflegebereiche, dynamischer Detailwechsel und Aktionen auf Desktop und Mobil geprüft
 - Horizontaler Direktzugriff mit acht Aktionen auf Desktop und Mobil geprüft; Dokumentation und Pflegeplanung wechseln innerhalb derselben Bewohnerakte
+- Körpermarker, drei Befund-Dropdowns und Verlinkungen zu Dokumentation, Pflegeakte und Wundmanagement auf Desktop und Mobil geprüft
+- Direkter Körperkartenvergleich bei 658 × 1356 Pixeln geprüft; keine P0-, P1- oder P2-Abweichungen
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 

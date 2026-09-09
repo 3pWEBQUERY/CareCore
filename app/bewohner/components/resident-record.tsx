@@ -1,9 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
+  ArrowRight,
   ArrowsLeftRight,
   CalendarDots,
+  CaretDown,
   Check,
   ClipboardText,
   FileText,
@@ -58,6 +61,19 @@ type CareDomain = {
   measures: string[];
 };
 
+type BodyObservation = {
+  id: string;
+  type: "redness" | "wound" | "fracture";
+  label: string;
+  location: string;
+  status: string;
+  summary: string;
+  recorded: string;
+  author: string;
+  x: string;
+  y: string;
+};
+
 const recordTabs = ["Übersicht", "Stammdaten", "Dokumentation", "Pflegeakte", "Verlauf", "Dokumente"];
 
 const careDomains: CareDomain[] = [
@@ -67,6 +83,12 @@ const careDomains: CareDomain[] = [
   { id: "skin", label: "Haut & Wunden", status: "stable", statusLabel: "Stabil", summary: "Haut intakt, aktuell keine offenen Wunden. Trockene Haut an beiden Unterschenkeln.", goal: "Intakte Haut erhalten und Hauttrockenheit reduzieren.", measures: ["Hautbeobachtung während der Körperpflege", "Unterschenkel morgens und abends eincremen", "Druckstellen unmittelbar dokumentieren"] },
   { id: "elimination", label: "Ausscheidung", status: "stable", statusLabel: "Stabil", summary: "Kontinente Ausscheidung mit selbstständiger Toilettennutzung am Tag.", goal: "Selbstständige Toilettennutzung und regelmäßige Ausscheidung erhalten.", measures: ["Toilettengänge nach Bedarf begleiten", "Ausscheidungsverhalten beobachten", "Veränderungen im Verlauf dokumentieren"] },
   { id: "sleep", label: "Ruhe & Schlaf", status: "attention", statusLabel: "Beobachten", summary: "Unterbrochener Nachtschlaf mit zwei bis drei Wachphasen und nächtlichem Bewegungsdrang.", goal: "Erholsame Ruhephasen fördern und nächtliche Sturzgefährdung reduzieren.", measures: ["Abendritual und Ruhezeiten einhalten", "Nachtlicht und Rufanlage kontrollieren", "Schlafverhalten im Nachtbericht festhalten"] },
+];
+
+const bodyObservations: BodyObservation[] = [
+  { id: "right-shoulder", type: "redness", label: "Rötung", location: "Rechte Schulter", status: "Beobachten", summary: "Umschriebene Rötung ohne offene Hautstelle. Druckentlastung fortführen und bei der Abendpflege erneut kontrollieren.", recorded: "Heute, 08:10", author: "Anna Meier", x: "37%", y: "24%" },
+  { id: "left-forearm", type: "wound", label: "Wunde", location: "Linker Unterarm", status: "Versorgung aktiv", summary: "Oberflächliche Hautläsion, 2,1 × 0,8 cm. Wundauflage trocken und reizlos; nächster Verbandwechsel morgen früh.", recorded: "Heute, 07:55", author: "Lea Frei", x: "70%", y: "43%" },
+  { id: "right-knee", type: "fracture", label: "Fraktur", location: "Rechtes Knie", status: "Heilungsverlauf", summary: "Kontrollierter Heilungsverlauf nach proximaler Tibiafraktur. Teilbelastung gemäss ärztlicher Verordnung, Schmerzangabe aktuell 2 von 10.", recorded: "Gestern, 16:20", author: "Dr. Martin Weber", x: "43%", y: "69%" },
 ];
 
 function getDocumentationEntries(resident: ResidentRecordData): DocumentationEntry[] {
@@ -88,6 +110,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
   const [documentationFlags, setDocumentationFlags] = useState<DocumentationFlag[]>([]);
   const [masterDataEditing, setMasterDataEditing] = useState(false);
   const [activeCareDomainId, setActiveCareDomainId] = useState("mobility");
+  const [activeBodyObservationId, setActiveBodyObservationId] = useState<string | null>("right-shoulder");
   const selectedEntry = entries.find((entry) => entry.id === selectedEntryId) ?? null;
   const activeCareDomain = careDomains.find((domain) => domain.id === activeCareDomainId) ?? careDomains[0];
   const [firstName, ...lastNameParts] = resident.name.split(" ");
@@ -177,22 +200,62 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
               </div>
             </section>
 
-            <div className="resident-record-grid">
-              <div className="record-primary-column">
+            <div className="resident-overview-layout">
+              <section className="record-card body-map-card" aria-labelledby="body-map-title">
+                <div className="record-card-heading"><div><span className="record-section-label">Körperstatus</span><h3 id="body-map-title">Körperübersicht</h3></div><span>{bodyObservations.length} Einträge</span></div>
+                <div className="body-map-content">
+                  <div className="body-map-visual">
+                    <div className="body-map-legend" aria-label="Legende"><span className="redness">Rötung</span><span className="wound">Wunde</span><span className="fracture">Fraktur</span></div>
+                    <div className="body-map-stage">
+                      <Image src="/resident-body-map.png" alt="Vorderansicht des Körpers von Hans Müller" width={1024} height={1536} priority unoptimized/>
+                      {bodyObservations.map((observation) => (
+                        <button
+                          className={`body-marker ${observation.type} ${activeBodyObservationId === observation.id ? "active" : ""}`}
+                          style={{ left: observation.x, top: observation.y }}
+                          type="button"
+                          key={observation.id}
+                          aria-label={`${observation.label} – ${observation.location}`}
+                          aria-expanded={activeBodyObservationId === observation.id}
+                          aria-controls={`body-observation-${observation.id}`}
+                          onClick={() => setActiveBodyObservationId((current) => current === observation.id ? null : observation.id)}
+                        ><span aria-hidden="true"/><small>{observation.label}</small></button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="body-observation-list" aria-label="Erfasste Körperstellen">
+                    {bodyObservations.map((observation) => {
+                      const expanded = activeBodyObservationId === observation.id;
+                      return (
+                        <section className={`body-observation ${expanded ? "expanded" : ""}`} key={observation.id}>
+                          <button className="body-observation-toggle" type="button" aria-expanded={expanded} aria-controls={`body-observation-${observation.id}`} onClick={() => setActiveBodyObservationId((current) => current === observation.id ? null : observation.id)}>
+                            <span className={`body-observation-icon ${observation.type}`}><Pulse aria-hidden="true"/></span>
+                            <span><strong>{observation.label}</strong><small>{observation.location} · {observation.status}</small></span>
+                            <CaretDown aria-hidden="true"/>
+                          </button>
+                          {expanded && (
+                            <div className="body-observation-detail" id={`body-observation-${observation.id}`}>
+                              <p>{observation.summary}</p>
+                              <dl><div><dt>Erfasst</dt><dd>{observation.recorded}</dd></div><div><dt>Verantwortlich</dt><dd>{observation.author}</dd></div></dl>
+                              <div className="body-observation-links">
+                                <button type="button" onClick={() => openDocumentation(entries[0])}>Dokumentation <ArrowRight aria-hidden="true"/></button>
+                                <button type="button" onClick={() => observation.type === "wound" ? onAction("Wundmanagement geöffnet") : setActiveView("care-record")}>{observation.type === "wound" ? "Wundmanagement" : "Pflegeakte"} <ArrowRight aria-hidden="true"/></button>
+                              </div>
+                            </div>
+                          )}
+                        </section>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
+
+              <aside className="resident-overview-side">
                 <section className="record-card record-alert-card">
                   <div className="record-card-heading"><div><span className="record-section-label">Pflegehinweis</span><h3>Aktuell wichtig</h3></div><span>{resident.lastUpdate}</span></div>
                   <div className={`record-clinical-alert ${resident.status}`}><Pulse aria-hidden="true"/><div><strong>{resident.note}</strong><p>Bitte im laufenden Dienst beachten und Veränderungen zeitnah dokumentieren.</p></div></div>
                 </section>
 
-                <section className="record-card">
-                  <div className="record-card-heading"><div><span className="record-section-label">Dokumentation</span><h3>Letzte Einträge</h3></div><button type="button" onClick={() => openDocumentation()}>Neue Dokumentation</button></div>
-                  <div className="record-history">
-                    {entries.map((entry) => <button className="record-history-entry" type="button" key={entry.id} onClick={() => openDocumentation(entry)} aria-label={`${entry.title} öffnen`}><time>{entry.time}</time><i/><span><strong>{entry.title}</strong><p>{entry.text}</p><small>{entry.author}</small></span></button>)}
-                  </div>
-                </section>
-              </div>
-
-              <aside className="record-secondary-column">
                 <section className="record-card">
                   <div className="record-card-heading"><div><span className="record-section-label">Bewohner</span><h3>Stammdaten</h3></div><button type="button" onClick={() => setActiveView("master-data")}>Alle Stammdaten</button></div>
                   <dl className="record-details">
@@ -207,6 +270,13 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
 
                 <button className="record-document-button" type="button" onClick={() => onAction("Dokumentenablage geöffnet")}><FileText aria-hidden="true"/><span><strong>Dokumente und Berichte</strong><small>12 hinterlegte Dokumente</small></span></button>
               </aside>
+
+              <section className="record-card record-overview-history">
+                <div className="record-card-heading"><div><span className="record-section-label">Dokumentation</span><h3>Letzte Einträge</h3></div><button type="button" onClick={() => openDocumentation()}>Neue Dokumentation</button></div>
+                <div className="record-history">
+                  {entries.map((entry) => <button className="record-history-entry" type="button" key={entry.id} onClick={() => openDocumentation(entry)} aria-label={`${entry.title} öffnen`}><time>{entry.time}</time><i/><span><strong>{entry.title}</strong><p>{entry.text}</p><small>{entry.author}</small></span></button>)}
+                </div>
+              </section>
             </div>
           </main>
         ) : activeView === "master-data" ? (
