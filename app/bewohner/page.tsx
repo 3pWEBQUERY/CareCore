@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ResidentRecord, type ResidentRecordData } from "./components/resident-record";
 import {
   ArrowsLeftRight,
   Bell,
@@ -112,19 +113,7 @@ const navigation: NavGroup[] = [
   ] },
 ];
 
-type Resident = {
-  initials: string;
-  name: string;
-  room: string;
-  unit: string;
-  careLevel: string;
-  note: string;
-  lastUpdate: string;
-  status: "critical" | "attention" | "info" | "stable";
-  statusLabel: string;
-};
-
-const residents: Resident[] = [
+const residents: ResidentRecordData[] = [
   { initials: "HM", name: "Hans Müller", room: "Zimmer 207", unit: "Wohnbereich 2", careLevel: "Pflegestufe 4", note: "Sturzrisiko · neurologische Kontrollen", lastUpdate: "Heute, 08:00", status: "critical", statusLabel: "Kritisch" },
   { initials: "MK", name: "Maria Keller", room: "Zimmer 204", unit: "Wohnbereich 2", careLevel: "Pflegestufe 3", note: "Schmerzbeobachtung · Diabetes", lastUpdate: "Heute, 07:30", status: "attention", statusLabel: "Beobachten" },
   { initials: "EM", name: "Erika Meier", room: "Zimmer 211", unit: "Wohnbereich 2", careLevel: "Pflegestufe 3", note: "Medikationsplan heute angepasst", lastUpdate: "Heute, 06:55", status: "info", statusLabel: "Aktualisiert" },
@@ -145,7 +134,7 @@ export default function ResidentsPage() {
   const [query, setQuery] = useState("");
   const [unit, setUnit] = useState("Alle");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
+  const [selectedResident, setSelectedResident] = useState<ResidentRecordData | null>(null);
   const [toast, setToast] = useState("");
 
   const openSearch = useCallback(() => {
@@ -261,7 +250,7 @@ export default function ResidentsPage() {
 
     {searchOpen && <div className="overlay" role="presentation" onClick={(event) => event.currentTarget === event.target && setSearchOpen(false)}><section id="resident-global-search" className="search-dialog" role="dialog" aria-modal="true" aria-label="Globale Suche"><div className="search-input-wrap"><Icon name="search"/><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Bewohner, Dokumente oder Funktionen suchen…" aria-label="Suchbegriff"/><button type="button" onClick={() => setSearchOpen(false)} aria-label="Suche schliessen">ESC</button></div><div className="search-results"><span className="search-group-label">Bewohner</span>{filteredResidents.map((resident) => <button className="search-result" type="button" key={resident.name} onClick={() => { setSearchOpen(false); setSelectedResident(resident); }}><span className="result-icon"><Icon name="residents"/></span><span><strong>{resident.name}</strong><small>{resident.room} · {resident.unit}</small></span></button>)}</div></section></div>}
 
-    {selectedResident && <div className="drawer-overlay" role="presentation" onClick={(event) => event.currentTarget === event.target && setSelectedResident(null)}><aside className="resident-drawer" role="dialog" aria-modal="true" aria-labelledby="selected-resident-title"><div className="drawer-header"><div className="drawer-topline"><span>BEWOHNERAKTE</span><button className="close-button" type="button" aria-label="Schliessen" onClick={() => setSelectedResident(null)}><Icon name="close"/></button></div><div className="resident-identity"><span className={`resident-avatar ${selectedResident.status === "critical" ? "critical" : ""}`}>{selectedResident.initials}</span><div><h2 id="selected-resident-title">{selectedResident.name}</h2><p>{selectedResident.room} · {selectedResident.unit}</p></div></div><div className="risk-row"><span className={`risk-chip ${selectedResident.status === "critical" ? "critical" : ""}`}>{selectedResident.statusLabel}</span><span className="risk-chip">{selectedResident.careLevel}</span></div></div><div className="drawer-body"><section className="drawer-section"><h3>Aktueller Hinweis</h3><div className="clinical-note"><strong>{selectedResident.note}</strong>Zuletzt aktualisiert: {selectedResident.lastUpdate}</div></section><section className="drawer-section"><h3>Schnellaktionen</h3><div className="quick-actions-grid"><button className="quick-action" type="button" onClick={() => setToast("Dokumentation vorbereitet")}><Icon name="note"/>Dokumentieren</button><button className="quick-action" type="button" onClick={() => setToast("Vitalwerterfassung vorbereitet")}><Icon name="vitals"/>Vitalwert erfassen</button><button className="quick-action" type="button" onClick={() => setToast("Pflegeakte geöffnet")}><Icon name="docs"/>Pflegeakte öffnen</button><button className="quick-action" type="button" onClick={() => setToast("Aufgabe vorbereitet")}><Icon name="tasks"/>Aufgabe erstellen</button></div></section></div></aside></div>}
+    {selectedResident && <ResidentRecord resident={selectedResident} onClose={() => setSelectedResident(null)} onAction={setToast}/>}
 
     {toast && <div className="toast" role="status"><Icon name="check"/>{toast}</div>}
   </div>;

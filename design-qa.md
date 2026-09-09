@@ -11,6 +11,8 @@
 - Vollständig deutsche Webnavigation: `/Users/alexander/CareCore/qa-navigation-german-final.png`
 - Bewohnerverzeichnis, Desktop: `/Users/alexander/CareCore/qa-residents-page-final.png`
 - Bewohnerverzeichnis, Mobil: `/Users/alexander/CareCore/qa-residents-page-mobile.png`
+- Vollflächige Bewohnerakte, Desktop: `/Users/alexander/CareCore/qa-resident-record-fullscreen.png`
+- Vollflächige Bewohnerakte, Mobil: `/Users/alexander/CareCore/qa-resident-record-fullscreen-mobile.png`
 - Direkter Vergleich: `/Users/alexander/CareCore/qa-sidebar-blue-comparison-final.png`
 - Viewport: 1536 × 1024 CSS-Pixel, Device Pixel Ratio 1
 - Source und Implementierung: jeweils 1536 × 1024 Pixel; Vergleich ohne Dichteskalierung
@@ -45,6 +47,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 5. Such-Popover: Die Desktopfläche wurde auf 860 × 620 Pixel vergrößert. Auf Mobilgeräten passt sie sich bis auf 466 × 620 Pixel an, ohne den Viewport zu verlassen.
 6. Lokalisierung: Sämtliche Navigationsbereiche, Module und Untermenüs wurden in deutsche Fachbegriffe übertragen. Der sichtbare Navigationsbaum enthält keine vorherigen englischen Menübezeichnungen mehr.
 7. Bewohnerseite: Der Menüpunkt „Bewohner“ verlinkt jetzt direkt auf `/bewohner`. Die neue responsive Übersicht enthält Kennzahlen, Verzeichnissuche, Wohnbereichsfilter, Statuskennzeichnung und eine Detail-Schublade mit Schnellaktionen.
+8. Bewohnerakte: Der bisherige schmale Drawer wurde auf der Bewohnerseite durch eine eigenständige, vollflächige Dialog-Komponente ersetzt. Sie fährt von rechts ein, belegt `100vw × 100dvh` und hat einen Außenradius von exakt `0px`. Desktop- und Mobilansicht sowie Schließen per Button und Escape wurden geprüft.
 
 ## Primäre Interaktionen
 
@@ -55,6 +58,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Alle fünf deutschen Navigationsbereiche geöffnet und alle 19 Modulbezeichnungen geprüft
 - Navigation von der Startseite zur Bewohnerseite, Suche, Wohnbereichsfilter und Bewohnerdetail geprüft
 - Bewohnerseite bei 1536 × 1024 und 506 × 890 CSS-Pixel geprüft
+- Vollflächige Bewohnerakte und Schnellaktionen bei 1536 × 1024 und 506 × 890 CSS-Pixel geprüft
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 
