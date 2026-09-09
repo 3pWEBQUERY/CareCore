@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
+  ArrowsLeftRight,
   CalendarDots,
   Check,
   ClipboardText,
@@ -11,7 +12,9 @@ import {
   NotePencil,
   Pill,
   Pulse,
+  Stethoscope,
   User,
+  Warning,
   X,
 } from "@phosphor-icons/react";
 
@@ -34,6 +37,7 @@ type ResidentRecordProps = {
 };
 
 type RecordView = "overview" | "documentation";
+type DocumentationFlag = "important" | "visit" | "observation" | "handover";
 
 type DocumentationEntry = {
   id: string;
@@ -62,6 +66,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
   const [activeView, setActiveView] = useState<RecordView>("overview");
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [documentationText, setDocumentationText] = useState("");
+  const [documentationFlags, setDocumentationFlags] = useState<DocumentationFlag[]>([]);
   const selectedEntry = entries.find((entry) => entry.id === selectedEntryId) ?? null;
 
   useEffect(() => {
@@ -78,7 +83,12 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
   function openDocumentation(entry?: DocumentationEntry) {
     setSelectedEntryId(entry?.id ?? null);
     setDocumentationText(entry?.text ?? "");
+    setDocumentationFlags(entry?.id === "observation" ? ["important", "observation"] : entry?.id === "vitals" ? ["visit"] : entry?.id === "handover" ? ["handover"] : []);
     setActiveView("documentation");
+  }
+
+  function toggleDocumentationFlag(flag: DocumentationFlag) {
+    setDocumentationFlags((current) => current.includes(flag) ? current.filter((item) => item !== flag) : [...current, flag]);
   }
 
   function selectTab(tab: string) {
@@ -185,6 +195,13 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
                 </div>
 
                 <label className="documentation-text-field"><span>Pflegeeintrag</span><textarea value={documentationText} onChange={(event) => setDocumentationText(event.target.value)} placeholder="Beobachtung, Massnahme und Wirkung dokumentieren …"/></label>
+
+                <fieldset className="documentation-flags"><legend>Kennzeichnung &amp; Weitergabe</legend><p>Markierungen machen den Eintrag in Übergabe, Visite und Schichtübersicht sichtbar.</p><div>
+                  <button className={documentationFlags.includes("important") ? "active important" : ""} type="button" role="checkbox" aria-checked={documentationFlags.includes("important")} onClick={() => toggleDocumentationFlag("important")}><Warning aria-hidden="true"/><span><strong>Wichtig</strong><small>Mit erhöhter Priorität anzeigen</small></span><i aria-hidden="true"><Check/></i></button>
+                  <button className={documentationFlags.includes("visit") ? "active visit" : ""} type="button" role="checkbox" aria-checked={documentationFlags.includes("visit")} onClick={() => toggleDocumentationFlag("visit")}><Stethoscope aria-hidden="true"/><span><strong>Wichtig für Visite</strong><small>Für die nächste Visite vormerken</small></span><i aria-hidden="true"><Check/></i></button>
+                  <button className={documentationFlags.includes("observation") ? "active observation" : ""} type="button" role="checkbox" aria-checked={documentationFlags.includes("observation")} onClick={() => toggleDocumentationFlag("observation")}><Pulse aria-hidden="true"/><span><strong>Beobachtungsphase</strong><small>Verlauf engmaschig weiterführen</small></span><i aria-hidden="true"><Check/></i></button>
+                  <button className={documentationFlags.includes("handover") ? "active handover" : ""} type="button" role="checkbox" aria-checked={documentationFlags.includes("handover")} onClick={() => toggleDocumentationFlag("handover")}><ArrowsLeftRight aria-hidden="true"/><span><strong>Übergaberelevant</strong><small>In die nächste Übergabe aufnehmen</small></span><i aria-hidden="true"><Check/></i></button>
+                </div></fieldset>
 
                 <fieldset className="documentation-tags"><legend>Bezug zur Pflegeplanung</legend><div><button className="active" type="button">Mobilität</button><button type="button">Schmerz</button><button type="button">Medikation</button><button type="button">Ernährung</button><button type="button">Psychosozial</button></div></fieldset>
 

@@ -15,6 +15,8 @@
 - Vollflächige Bewohnerakte, Mobil: `/Users/alexander/CareCore/qa-resident-record-fullscreen-mobile.png`
 - Dokumentationsansicht in der Bewohnerakte, Desktop: `/Users/alexander/CareCore/qa-resident-documentation-view.png`
 - Dokumentationsansicht in der Bewohnerakte, Mobil: `/Users/alexander/CareCore/qa-resident-documentation-mobile.png`
+- Dokumentationskennzeichnungen, Desktop: `/Users/alexander/CareCore/qa-documentation-flags.png`
+- Dokumentationskennzeichnungen, Mobil: `/Users/alexander/CareCore/qa-documentation-flags-mobile.png`
 - Direkter Vergleich: `/Users/alexander/CareCore/qa-sidebar-blue-comparison-final.png`
 - Viewport: 1536 × 1024 CSS-Pixel, Device Pixel Ratio 1
 - Source und Implementierung: jeweils 1536 × 1024 Pixel; Vergleich ohne Dichteskalierung
@@ -51,6 +53,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 7. Bewohnerseite: Der Menüpunkt „Bewohner“ verlinkt jetzt direkt auf `/bewohner`. Die neue responsive Übersicht enthält Kennzahlen, Verzeichnissuche, Wohnbereichsfilter, Statuskennzeichnung und eine Detail-Schublade mit Schnellaktionen.
 8. Bewohnerakte: Der bisherige schmale Drawer wurde auf der Bewohnerseite durch eine eigenständige, vollflächige Dialog-Komponente ersetzt. Sie fährt von rechts ein, belegt `100vw × 100dvh` und hat einen Außenradius von exakt `0px`. Desktop- und Mobilansicht sowie Schließen per Button und Escape wurden geprüft.
 9. Dokumentation: Tab, Schnellaktion und bestehende Dokumentationspunkte wechseln den Inhalt innerhalb derselben Bewohnerakte. Das responsive Formular unterstützt Neuaufnahme und Bearbeitung; ein automatischer Scroll-Reset hält den Ansichtsanfang sichtbar. Die Öffnungsanimation nutzt nur noch eine kurze GPU-beschleunigte Distanz von 42 Pixeln über 180 Millisekunden.
+10. Kennzeichnung: Dokumentationseinträge können unabhängig als „Wichtig“, „Wichtig für Visite“, „Beobachtungsphase“ und „Übergaberelevant“ markiert werden. Bestehende Einträge erhalten kontextabhängige Vorbelegungen; Attention bleibt gelb und funktionale Auswahlzustände bleiben blau.
 
 ## Primäre Interaktionen
 
@@ -63,6 +66,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Bewohnerseite bei 1536 × 1024 und 506 × 890 CSS-Pixel geprüft
 - Vollflächige Bewohnerakte und Schnellaktionen bei 1536 × 1024 und 506 × 890 CSS-Pixel geprüft
 - Interner Wechsel zur Dokumentationsansicht, Bearbeitung, Speichern und Rückkehr zur Übersicht geprüft; dabei bleibt exakt ein Dialog geöffnet
+- Mehrfachauswahl, Vorbelegung und Speichern der vier Dokumentationskennzeichnungen auf Desktop und Mobil geprüft
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 
