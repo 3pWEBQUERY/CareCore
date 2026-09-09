@@ -163,6 +163,20 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
               <div><span className="record-metric-icon"><CalendarDots aria-hidden="true"/></span><span><small>Nächster Termin</small><strong>Arztvisite, 09:30</strong></span></div>
             </section>
 
+            <section className="record-card record-quick-access" aria-labelledby="quick-access-title">
+              <div className="record-card-heading"><div><span className="record-section-label">Direktzugriff</span><h3 id="quick-access-title">Schnellaktionen</h3></div><span>8 Aktionen</span></div>
+              <div className="record-horizontal-actions">
+                <button type="button" onClick={() => openDocumentation()}><NotePencil aria-hidden="true"/><span><strong>Dokumentieren</strong><small>Pflegeeintrag</small></span></button>
+                <button type="button" onClick={() => onAction("Vitalwerterfassung vorbereitet")}><Heartbeat aria-hidden="true"/><span><strong>Vitalwert</strong><small>Messung erfassen</small></span></button>
+                <button type="button" onClick={() => onAction("Medikationsgabe vorbereitet")}><Pill aria-hidden="true"/><span><strong>Medikation</strong><small>Gabe erfassen</small></span></button>
+                <button type="button" onClick={() => onAction("Aufgabe vorbereitet")}><ListChecks aria-hidden="true"/><span><strong>Aufgabe</strong><small>Intervention planen</small></span></button>
+                <button type="button" onClick={() => setActiveView("care-record")}><ClipboardText aria-hidden="true"/><span><strong>Pflegeplanung</strong><small>Ziele öffnen</small></span></button>
+                <button type="button" onClick={() => onAction("Wunddokumentation vorbereitet")}><Pulse aria-hidden="true"/><span><strong>Wunde</strong><small>Status erfassen</small></span></button>
+                <button type="button" onClick={() => onAction("Trinkmenge vorbereitet")}><User aria-hidden="true"/><span><strong>Trinkmenge</strong><small>Flüssigkeit erfassen</small></span></button>
+                <button type="button" onClick={() => onAction("Neue Einschätzung vorbereitet")}><Stethoscope aria-hidden="true"/><span><strong>Einschätzung</strong><small>Assessment starten</small></span></button>
+              </div>
+            </section>
+
             <div className="resident-record-grid">
               <div className="record-primary-column">
                 <section className="record-card record-alert-card">
@@ -179,16 +193,6 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
               </div>
 
               <aside className="record-secondary-column">
-                <section className="record-card">
-                  <div className="record-card-heading"><div><span className="record-section-label">Direktzugriff</span><h3>Schnellaktionen</h3></div></div>
-                  <div className="record-quick-actions">
-                    <button type="button" onClick={() => openDocumentation()}><NotePencil aria-hidden="true"/><span><strong>Dokumentieren</strong><small>Neuen Pflegeeintrag erfassen</small></span></button>
-                    <button type="button" onClick={() => onAction("Vitalwerterfassung vorbereitet")}><Heartbeat aria-hidden="true"/><span><strong>Vitalwert erfassen</strong><small>Messung dokumentieren</small></span></button>
-                    <button type="button" onClick={() => onAction("Pflegeplanung geöffnet")}><ClipboardText aria-hidden="true"/><span><strong>Pflegeplanung</strong><small>Ziele und Massnahmen öffnen</small></span></button>
-                    <button type="button" onClick={() => onAction("Aufgabe vorbereitet")}><ListChecks aria-hidden="true"/><span><strong>Aufgabe erstellen</strong><small>Intervention einplanen</small></span></button>
-                  </div>
-                </section>
-
                 <section className="record-card">
                   <div className="record-card-heading"><div><span className="record-section-label">Bewohner</span><h3>Stammdaten</h3></div><button type="button" onClick={() => setActiveView("master-data")}>Alle Stammdaten</button></div>
                   <dl className="record-details">

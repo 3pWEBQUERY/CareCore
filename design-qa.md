@@ -60,6 +60,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 10. Kennzeichnung: Dokumentationseinträge können unabhängig als „Wichtig“, „Wichtig für Visite“, „Beobachtungsphase“ und „Übergaberelevant“ markiert werden. Bestehende Einträge erhalten kontextabhängige Vorbelegungen; Attention bleibt gelb und funktionale Auswahlzustände bleiben blau.
 11. Stammdaten: Direkt nach „Übersicht“ steht ein eigener Stammdaten-Tab bereit. Die responsive Ansicht bündelt persönliche Angaben, Aufenthalt, medizinische Kontakte, Notfallkontakt und Versicherung und unterstützt einen klaren Bearbeitungs- und Speicherzustand innerhalb derselben Bewohnerakte.
 12. Pflegeakte: Der Tab „Pflegeakte“ zeigt ein vollständiges Pflegeprofil mit sechs interaktiv auswählbaren Pflegebereichen, dynamischen Zielen und Maßnahmen, aktuellen Prioritäten, Assessments und beteiligten Fachpersonen. Der Wechsel bleibt innerhalb desselben vollflächigen Dialogs.
+13. Direktzugriff: Die Schnellaktionen stehen nun als eigene, horizontale Leiste unmittelbar unter Bezugspflege, Vitalwerten, Medikation und Termin. Acht Aktionen decken Dokumentation, Vitalwerte, Medikation, Aufgaben, Pflegeplanung, Wunden, Trinkmenge und Einschätzungen ab; das Raster reagiert mit acht, vier oder zwei Spalten auf die verfügbare Breite.
 
 ## Primäre Interaktionen
 
@@ -75,6 +76,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Mehrfachauswahl, Vorbelegung und Speichern der vier Dokumentationskennzeichnungen auf Desktop und Mobil geprüft
 - Tab-Reihenfolge, vollständige Stammdatenbereiche, Bearbeitungsmodus und Speichern auf Desktop und Mobil geprüft
 - Pflegeakten-Tab, sechs Pflegebereiche, dynamischer Detailwechsel und Aktionen auf Desktop und Mobil geprüft
+- Horizontaler Direktzugriff mit acht Aktionen auf Desktop und Mobil geprüft; Dokumentation und Pflegeplanung wechseln innerhalb derselben Bewohnerakte
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 

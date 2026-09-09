@@ -308,12 +308,17 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .record-history strong { display: block; font-size: 12px; }
 .record-history p { margin: 4px 0; color: #4f6478; font-size: 12px; line-height: 1.4; }
 .record-history small { color: var(--muted); font-size: 10px; }
-.record-quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; padding: 15px; }
-.record-quick-actions button { min-height: 88px; display: flex; align-items: flex-start; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 6px; background: white; text-align: left; cursor: pointer; }
-.record-quick-actions button:hover { border-color: #93c5fd; background: var(--brand-soft); }
-.record-quick-actions button > svg { width: 19px; height: 19px; flex: 0 0 auto; color: var(--brand); }
-.record-quick-actions strong,.record-document-button strong { display: block; font-size: 12px; }
-.record-quick-actions small,.record-document-button small { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.35; }
+.record-quick-access { margin-bottom: 20px; overflow: hidden; }
+.record-horizontal-actions { display: grid; grid-template-columns: repeat(8,minmax(0,1fr)); gap: 0; }
+.record-horizontal-actions button { min-width: 0; min-height: 88px; display: flex; align-items: center; gap: 9px; padding: 13px 14px; border: 0; border-right: 1px solid var(--line); background: white; text-align: left; cursor: pointer; }
+.record-horizontal-actions button:last-child { border-right: 0; }
+.record-horizontal-actions button:hover { color: var(--brand-dark); background: var(--brand-soft); }
+.record-horizontal-actions button > svg { width: 20px; height: 20px; flex: 0 0 auto; color: var(--brand); }
+.record-horizontal-actions button span { min-width: 0; }
+.record-horizontal-actions strong { display: block; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.record-horizontal-actions small { display: block; margin-top: 5px; overflow: hidden; color: var(--muted); font-size: 9px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.record-document-button strong { display: block; font-size: 12px; }
+.record-document-button small { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.35; }
 .record-details { margin: 0; padding: 5px 18px 11px; }
 .record-details > div { display: grid; grid-template-columns: 115px minmax(0,1fr); gap: 12px; padding: 11px 0; border-bottom: 1px solid #edf1f5; font-size: 11px; }
 .record-details > div:last-child { border-bottom: 0; }
@@ -505,7 +510,9 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .record-metrics > div:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
   .record-metrics > div:nth-child(4) { border-top: 1px solid var(--line); }
   .resident-record-grid { grid-template-columns: minmax(0,1.3fr) minmax(300px,.85fr); }
-  .record-quick-actions { grid-template-columns: 1fr; }
+  .record-horizontal-actions { grid-template-columns: repeat(4,minmax(0,1fr)); }
+  .record-horizontal-actions button:nth-child(-n+4) { border-bottom: 1px solid var(--line); }
+  .record-horizontal-actions button:nth-child(4n) { border-right: 0; }
   .master-data-layout { grid-template-columns: minmax(0,1.25fr) minmax(300px,.78fr); }
   .care-record-layout { grid-template-columns: minmax(0,1.25fr) minmax(300px,.78fr); }
   .care-domain-list { grid-template-columns: 1fr; }
@@ -571,7 +578,10 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .record-metric-icon { display: none; }
   .resident-record-grid { grid-template-columns: 1fr; }
   .record-secondary-column { grid-row: 1; }
-  .record-quick-actions { grid-template-columns: 1fr 1fr; }
+  .record-horizontal-actions { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .record-horizontal-actions button { border-bottom: 1px solid var(--line); }
+  .record-horizontal-actions button:nth-child(2n) { border-right: 0; }
+  .record-horizontal-actions button:nth-last-child(-n+2) { border-bottom: 0; }
   .master-data-page-heading { min-height: auto; align-items: flex-start; }
   .master-data-page-heading h3 { font-size: 21px; }
   .master-data-status { grid-template-columns: 1fr 1fr; }
@@ -607,7 +617,6 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .record-heading h2 { font-size: 21px; }
   .record-kicker { font-size: 9px; }
   .record-close-button { width: 40px; height: 40px; }
-  .record-quick-actions { grid-template-columns: 1fr; }
   .record-card-heading { align-items: flex-start; }
   .record-card-heading button { max-width: 125px; }
   .master-data-page-heading { display: grid; }
