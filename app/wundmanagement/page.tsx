@@ -150,8 +150,10 @@ export default function WoundOverviewPage() {
     setOpenModules((current) => current.includes(module.id) ? current.filter((item) => item !== module.id) : [...current, module.id]);
   }
 
-  function selectSubmenu(child: string) {
-    if (child === "Wundübersicht") return;
+  function selectSubmenu(moduleId: string, child: string) {
+    if (moduleId === "wounds" && child === "Wundübersicht") return;
+    if (moduleId === "wounds" && child === "Dokumentation") { router.push("/wundmanagement/dokumentation"); return; }
+    if (moduleId === "residents" && child === "Verlauf") { router.push("/bewohner/verlauf"); return; }
     setToast(`${child} geöffnet`);
   }
 
@@ -169,7 +171,7 @@ export default function WoundOverviewPage() {
               const moduleActive = module.id === "wounds";
               return <div className={`module-block ${moduleOpen ? "open" : ""}`} key={module.id}>
                 <button className={`nav-button module-button ${moduleActive ? "active" : ""}`} type="button" aria-expanded={moduleOpen} title={module.label} onClick={() => toggleModule(group.id, module)}><Icon name={module.icon}/><span className="nav-label">{module.label}</span>{module.badge && <span className="nav-badge">{module.badge}</span>}<Icon name="chevron" className="module-caret"/></button>
-                <div className="submenu">{module.children.map((child) => <button className={`submenu-button ${module.id === "wounds" && child === "Wundübersicht" ? "active" : ""}`} type="button" key={child} onClick={() => selectSubmenu(child)}><span className="submenu-rail"/><span>{child}</span></button>)}</div>
+                <div className="submenu">{module.children.map((child) => <button className={`submenu-button ${module.id === "wounds" && child === "Wundübersicht" ? "active" : ""}`} type="button" key={child} onClick={() => selectSubmenu(module.id, child)}><span className="submenu-rail"/><span>{child}</span></button>)}</div>
               </div>;
             })}</div>
           </section>;

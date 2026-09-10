@@ -178,6 +178,14 @@ export default function ResidentsPage() {
     setOpenModules((current) => current.includes(module.id) ? current.filter((item) => item !== module.id) : [...current, module.id]);
   }
 
+  function selectSubmenu(moduleId: string, child: string) {
+    if (moduleId === "residents" && child === "Übersicht") return;
+    if (moduleId === "residents" && child === "Verlauf") { router.push("/bewohner/verlauf"); return; }
+    if (moduleId === "wounds" && child === "Wundübersicht") { router.push("/wundmanagement"); return; }
+    if (moduleId === "wounds" && child === "Dokumentation") { router.push("/wundmanagement/dokumentation"); return; }
+    setToast(`${child} geöffnet`);
+  }
+
   return <div className={`app-shell residents-page ${sidebarCollapsed ? "sidebar-is-collapsed" : ""}`}>
     <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
       <div className="sidebar-head"><Brand/><button className="sidebar-collapse" type="button" aria-label={sidebarCollapsed ? "Sidebar ausklappen" : "Sidebar einklappen"} onClick={() => setSidebarCollapsed((value) => !value)}><Icon name="sidebar"/></button></div>
@@ -194,7 +202,7 @@ export default function ResidentsPage() {
                   const moduleActive = module.id === "residents";
                   return <div className={`module-block ${moduleOpen ? "open" : ""}`} key={module.id}>
                     <button className={`nav-button module-button ${moduleActive ? "active" : ""}`} type="button" aria-expanded={moduleOpen} title={module.label} onClick={() => toggleModule(group.id, module)}><Icon name={module.icon}/><span className="nav-label">{module.label}</span>{module.badge && <span className="nav-badge">{module.badge}</span>}<Icon name="chevron" className="module-caret"/></button>
-                    <div className="submenu">{module.children.map((child) => <button className={`submenu-button ${module.id === "residents" && child === "Übersicht" ? "active" : ""}`} type="button" key={child} onClick={() => child === "Wundübersicht" ? router.push("/wundmanagement") : setToast(`${child} geöffnet`)}><span className="submenu-rail"/><span>{child}</span></button>)}</div>
+                    <div className="submenu">{module.children.map((child) => <button className={`submenu-button ${module.id === "residents" && child === "Übersicht" ? "active" : ""}`} type="button" key={child} onClick={() => selectSubmenu(module.id, child)}><span className="submenu-rail"/><span>{child}</span></button>)}</div>
                   </div>;
                 })}
               </div>

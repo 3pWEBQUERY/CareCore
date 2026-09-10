@@ -32,6 +32,10 @@
 - Dokumentenansicht, Mobil mit aktiver Suche: `/Users/alexander/CareCore/qa-resident-documents-mobile.jpg`
 - Wundübersicht, Desktop: `/Users/alexander/CareCore/qa-wound-overview-desktop.jpg`
 - Wundübersicht, Mobil: `/Users/alexander/CareCore/qa-wound-overview-mobile.jpg`
+- Bereichsweiter Bewohnerverlauf, Desktop: `/Users/alexander/CareCore/qa-resident-overall-history-desktop.jpg`
+- Bereichsweiter Bewohnerverlauf, Mobil: `/Users/alexander/CareCore/qa-resident-overall-history-mobile.jpg`
+- Wunddokumentation, Desktop: `/Users/alexander/CareCore/qa-wound-documentation-desktop.jpg`
+- Wunddokumentation, Mobil: `/Users/alexander/CareCore/qa-wound-documentation-mobile.jpg`
 - Direkter Vergleich: `/Users/alexander/CareCore/qa-sidebar-blue-comparison-final.png`
 - Viewport: 1536 × 1024 CSS-Pixel, Device Pixel Ratio 1
 - Source und Implementierung: jeweils 1536 × 1024 Pixel; Vergleich ohne Dichteskalierung
@@ -76,6 +80,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 14. Körperübersicht: Unter dem Direktzugriff wurde die Übersicht neu geordnet. Eine responsive Ganzkörperkarte zeigt Rötung, Wunde und Fraktur als interaktive Marker; jeder Marker öffnet exakt einen zugehörigen Detailbereich mit Beschreibung, Zeitpunkt, verantwortlicher Person und Verlinkungen. Ein anfänglicher Exportfehler der Bildoptimierung wurde durch den statisch kompatiblen Bildmodus behoben. Die klinische Seitenangabe wurde anschließend auf die Bewohnerperspektive korrigiert und im erneuten Browservergleich bestätigt.
 15. Verlauf und Dokumente: Beide bisher nur beschrifteten Tabs besitzen jetzt eigenständige, responsive Ansichten innerhalb derselben Bewohnerakte. Der Verlauf bietet Kennzahlen, fünf funktionale Fachfilter, Tagesgruppen, Detailaktionen und Fokusinformationen. Die Dokumentenablage bietet Kennzahlen, Volltextsuche mit deutscher Wortstamm-Toleranz, fünf Kategorien, Statusangaben, Leerzustand sowie Ansehen- und Downloadaktionen.
 16. Wundübersicht: Der Untermenüpunkt „Wundübersicht“ öffnet jetzt die eigenständige statische Route `/wundmanagement`. Die responsive Seite bündelt Wundkennzahlen, kritische Hinweise, Suche, vier Statusfilter, Heilungsfortschritt, dynamische Fallauswahl und anstehende Versorgungen. Auf Mobil bleibt „Neue Wunde erfassen“ erreichbar und die Kennzahlen werden platzsparend als 2×2-Raster dargestellt.
+17. Bereichsverlauf und Wunddokumentation: „Bewohner → Verlauf“ öffnet jetzt `/bewohner/verlauf` mit chronologischen Einträgen, Fachfiltern, Suche, Detailauswahl und offenen Beobachtungen. „Wundmanagement → Dokumentation“ öffnet `/wundmanagement/dokumentation` mit Statusfiltern, Volltextsuche, dynamischer Befund- und Massnahmenansicht sowie Tagesaufgaben. Beide Seiten sind als eigenständige statische Next.js-Routen umgesetzt und zeigen den aktiven Untermenüpunkt korrekt an.
 
 ## Primäre Interaktionen
 
@@ -97,6 +102,9 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Verlaufsfilter, chronologische Tagesgruppen und interne Verlinkung zur Dokumentation auf Desktop und Mobil geprüft
 - Dokumentensuche, Kategorien, Leerzustand, Ansehen und Download auf Desktop und Mobil geprüft
 - Navigation zur Wundübersicht, Statusfilter, Suche, Fallauswahl, Wundakte und Verlaufserfassung auf Desktop und Mobil geprüft
+- Sidebar-Navigation von der Wundübersicht zur Wunddokumentation und von der Bewohnerübersicht zum bereichsweiten Verlauf geprüft
+- Wunddokumentationsfilter „Entwurf“, dynamische Fallauswahl und Detailansicht auf Desktop geprüft
+- Bereichsweiter Bewohnerverlauf und Wunddokumentation bei 1440 × 1000 sowie 390 × 844 CSS-Pixel geprüft
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 

@@ -252,8 +252,16 @@ export default function Home() {
   }
 
   function selectNav(label: string) {
+    if (label === "Verlauf") {
+      router.push("/bewohner/verlauf");
+      return;
+    }
     if (label === "Wundübersicht") {
       router.push("/wundmanagement");
+      return;
+    }
+    if (label === "Dokumentation") {
+      router.push("/wundmanagement/dokumentation");
       return;
     }
     setActiveNav(label);

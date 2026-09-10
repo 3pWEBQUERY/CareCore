@@ -295,6 +295,85 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .wound-schedule-list strong { display: block; font-size: 10px; }
 .wound-schedule-list small { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; }
 
+.module-workspace { max-width: 1660px; }
+.course-layout,.wound-doc-layout { display: grid; grid-template-columns: minmax(650px,1.5fr) minmax(330px,.62fr); gap: 18px; align-items: start; }
+.course-card,.wound-doc-directory { overflow: hidden; }
+.course-toolbar,.wound-doc-toolbar { min-height: 82px; display: grid; grid-template-columns: minmax(160px,.62fr) minmax(230px,.82fr) minmax(330px,auto); align-items: center; gap: 12px; padding: 15px 18px; border-bottom: 1px solid var(--line); }
+.course-filters { min-width: 0; display: flex; gap: 5px; overflow-x: auto; }
+.course-filters button { min-height: 34px; flex: 0 0 auto; padding: 0 9px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); background: white; font-size: 10px; font-weight: 720; cursor: pointer; }
+.course-filters button:hover,.course-filters button.active { color: var(--brand-dark); border-color: #93c5fd; background: var(--brand-soft); }
+.course-day-label { min-height: 41px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 18px; color: #43596f; background: #f7f9fc; font-size: 10px; font-weight: 780; letter-spacing: .035em; text-transform: uppercase; }
+.course-day-label small { color: var(--muted); font-size: 9px; }
+.course-list { padding: 0 18px 12px; }
+.course-row { width: 100%; min-height: 116px; display: grid; grid-template-columns: 48px 40px minmax(0,1fr) 18px; align-items: start; gap: 11px; padding: 15px 0; border: 0; border-bottom: 1px solid #e9eef4; color: var(--ink); background: white; text-align: left; cursor: pointer; }
+.course-row:last-child { border-bottom: 0; }
+.course-row:hover { background: #f8fbff; }
+.course-row.selected { margin-inline: -8px; padding-inline: 8px; border-radius: 6px; background: var(--brand-soft); box-shadow: inset 3px 0 0 var(--brand); }
+.course-row > time { padding-top: 11px; color: var(--brand-dark); font-size: 11px; font-weight: 780; }
+.course-row > .chevron { align-self: center; }
+.course-icon,.course-detail-icon { width: 39px; height: 39px; display: grid; place-items: center; border-radius: 6px; color: var(--brand); background: var(--brand-soft); }
+.course-icon.critical,.course-detail-icon.critical { color: var(--critical); background: var(--critical-soft); }
+.course-icon.attention,.course-detail-icon.attention { color: var(--attention); background: var(--attention-soft); }
+.course-icon.stable,.course-detail-icon.stable { color: var(--success); background: #e8f5ef; }
+.course-icon svg,.course-detail-icon svg { width: 18px; height: 18px; }
+.course-main { min-width: 0; }
+.course-main > span { display: flex; align-items: center; gap: 8px; }
+.course-main strong { font-size: 12px; }
+.course-main small { display: block; margin-top: 5px; color: var(--muted); font-size: 9px; }
+.course-main p { margin: 7px 0 0; color: #40566b; font-size: 11px; line-height: 1.5; }
+.course-main em { display: block; margin-top: 6px; color: #7a8da1; font-size: 9px; font-style: normal; }
+.course-sidebar,.wound-doc-sidebar { display: grid; gap: 18px; }
+.course-focus-card .card-header,.wound-doc-detail .card-header { align-items: flex-start; }
+.course-focus-body,.wound-doc-detail-body { padding: 18px; }
+.course-detail-icon { margin: 0 auto 12px; }
+.course-focus-body > h3,.wound-doc-detail-body > h3 { margin: 0; text-align: center; font-size: 15px; }
+.course-focus-body > p,.wound-doc-detail-body > p { margin: 6px 0 16px; color: var(--muted); font-size: 11px; line-height: 1.55; text-align: center; }
+.course-focus-body dl,.wound-doc-detail-body dl { margin: 0 0 16px; }
+.course-focus-body dl > div,.wound-doc-detail-body dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #edf1f5; font-size: 10px; }
+.course-focus-body dt,.wound-doc-detail-body dt { color: var(--muted); }
+.course-focus-body dd,.wound-doc-detail-body dd { margin: 0; font-weight: 750; text-align: right; }
+.course-focus-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.course-focus-actions button { padding-inline: 8px; }
+.course-priority-list { padding: 7px 14px 14px; }
+.course-priority-list button { width: 100%; min-height: 61px; display: grid; grid-template-columns: 10px minmax(0,1fr) 16px; align-items: center; gap: 10px; padding: 8px 5px; border: 0; border-bottom: 1px solid #edf1f5; background: transparent; text-align: left; cursor: pointer; }
+.course-priority-list button:last-child { border-bottom: 0; }
+.course-priority-list button:hover { background: var(--brand-soft); }
+.course-priority-list strong { display: block; font-size: 11px; }
+.course-priority-list small { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; }
+.course-priority-list svg { width: 14px; color: #91a2b2; }
+.priority-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); }
+.priority-dot.critical { background: var(--critical); }
+.priority-dot.attention { background: var(--attention); }
+.priority-dot.info { background: var(--info); }
+
+.wound-doc-toolbar { grid-template-columns: minmax(145px,.58fr) minmax(220px,.82fr) minmax(270px,auto) auto; }
+.wound-doc-toolbar > .secondary-button { min-height: 38px; padding-inline: 10px; }
+.wound-doc-table-head,.wound-doc-row { display: grid; grid-template-columns: 42px minmax(200px,1.35fr) minmax(125px,.72fr) minmax(110px,.62fr) 95px 18px; gap: 11px; align-items: center; }
+.wound-doc-table-head { min-height: 42px; padding: 0 18px; color: var(--muted); background: #f7f9fc; font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.wound-doc-table-head > span:first-child { grid-column: 1/3; }
+.wound-doc-list { padding: 0 18px 12px; }
+.wound-doc-row { width: 100%; min-height: 91px; padding: 13px 0; border: 0; border-bottom: 1px solid #e9eef4; color: var(--ink); background: white; text-align: left; cursor: pointer; }
+.wound-doc-row:last-child { border-bottom: 0; }
+.wound-doc-row:hover { background: #f8fbff; }
+.wound-doc-row.selected { margin-inline: -8px; padding-inline: 8px; border-radius: 6px; background: var(--brand-soft); box-shadow: inset 3px 0 0 var(--brand); }
+.wound-doc-row .resident-avatar { width: 40px; height: 40px; }
+.wound-doc-resident,.wound-doc-kind,.wound-doc-date { min-width: 0; }
+.wound-doc-resident strong,.wound-doc-kind strong,.wound-doc-date strong { display: block; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.wound-doc-resident small,.wound-doc-kind small,.wound-doc-date small { display: block; margin-top: 4px; overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.wound-doc-resident > span { display: block; margin-top: 6px; color: #455b70; font-size: 9px; }
+.wound-doc-detail-body > .wound-focus-icon { margin-bottom: 12px; }
+.wound-doc-detail-body > section { margin-bottom: 10px; padding: 11px 12px; border-left: 3px solid var(--brand); border-radius: 0 6px 6px 0; background: #f7faff; }
+.wound-doc-detail-body > section > span { display: block; color: var(--brand-dark); font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.wound-doc-detail-body > section p { margin: 5px 0 0; color: #42586c; font-size: 10px; line-height: 1.5; }
+.wound-doc-tasks > div:last-child { padding: 7px 14px 14px; }
+.wound-doc-tasks > div:last-child > button { width: 100%; min-height: 61px; display: grid; grid-template-columns: 24px minmax(0,1fr) auto; align-items: center; gap: 9px; padding: 8px 5px; border: 0; border-bottom: 1px solid #edf1f5; background: transparent; text-align: left; cursor: pointer; }
+.wound-doc-tasks > div:last-child > button:last-child { border-bottom: 0; }
+.wound-doc-tasks > div:last-child > button:hover { background: var(--brand-soft); }
+.wound-doc-tasks .task-check { width: 22px; height: 22px; margin: 0; }
+.wound-doc-tasks strong { display: block; font-size: 10px; }
+.wound-doc-tasks small { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; }
+.wound-doc-tasks time { color: var(--brand-dark); font-size: 9px; font-weight: 750; }
+
 .mobile-top,.bottom-nav,.floating-action { display: none; }
 .overlay,.drawer-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(4,20,27,.44); backdrop-filter: blur(3px); animation: fade-in 150ms ease; }
 .overlay { display: grid; place-items: center; padding: 20px; }
@@ -684,6 +763,12 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .wound-summary > div:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
   .wound-summary > div:nth-child(4) { border-top: 1px solid var(--line); }
   .wound-overview-layout { grid-template-columns: 1fr; }
+  .course-layout,.wound-doc-layout { grid-template-columns: 1fr; }
+  .course-toolbar { grid-template-columns: minmax(160px,.7fr) minmax(230px,1fr); }
+  .course-filters { grid-column: 1/3; }
+  .wound-doc-toolbar { grid-template-columns: minmax(160px,.65fr) minmax(230px,1fr) auto; }
+  .wound-doc-toolbar .wound-status-filter { grid-column: 1/3; grid-row: 2; }
+  .wound-doc-toolbar > .secondary-button { grid-column: 3; grid-row: 2; }
   .wound-toolbar { grid-template-columns: minmax(160px,.7fr) minmax(230px,1fr) auto; }
   .wound-toolbar .wound-status-filter { grid-column: 1/3; grid-row: 2; }
   .wound-toolbar > .secondary-button { grid-column: 3; grid-row: 2; }
@@ -748,6 +833,20 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .wound-toolbar { grid-template-columns: 1fr; align-items: stretch; }
   .wound-toolbar .wound-status-filter,.wound-toolbar > .secondary-button { grid-column: auto; grid-row: auto; }
   .wound-toolbar > .secondary-button { justify-content: center; }
+  .course-toolbar,.wound-doc-toolbar { grid-template-columns: 1fr; align-items: stretch; }
+  .course-filters,.wound-doc-toolbar .wound-status-filter,.wound-doc-toolbar > .secondary-button { grid-column: auto; grid-row: auto; }
+  .wound-doc-toolbar > .secondary-button { justify-content: center; }
+  .course-row { grid-template-columns: 42px 36px minmax(0,1fr); }
+  .course-row > .chevron { display: none; }
+  .course-main > span { align-items: flex-start; flex-direction: column; gap: 5px; }
+  .wound-doc-table-head { display: none; }
+  .wound-doc-row { grid-template-columns: 42px minmax(0,1fr) auto; gap: 7px 10px; }
+  .wound-doc-row .resident-avatar { grid-row: 1/3; }
+  .wound-doc-resident { grid-column: 2; }
+  .wound-doc-kind { grid-column: 2; grid-row: 2; }
+  .wound-doc-date { grid-column: 2; grid-row: 3; }
+  .wound-doc-row > .status-badge { grid-column: 3; grid-row: 1; }
+  .wound-doc-row > .chevron { grid-column: 3; grid-row: 2; }
   .wound-table-head { display: none; }
   .wound-case-row { grid-template-columns: 44px minmax(0,1fr) auto; gap: 8px 10px; }
   .wound-case-row .resident-avatar { grid-row: 1/3; }
@@ -832,6 +931,11 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .resident-summary { grid-template-columns: 1fr; }
   .resident-summary > div + div { border-left: 0; border-top: 1px solid var(--line); }
   .wound-focus-actions { grid-template-columns: 1fr; }
+  .course-focus-actions { grid-template-columns: 1fr; }
+  .course-row { grid-template-columns: 38px minmax(0,1fr); }
+  .course-row > time { grid-column: 1; grid-row: 1; }
+  .course-icon { grid-column: 1; grid-row: 2; }
+  .course-main { grid-column: 2; grid-row: 1/3; }
   .record-heading h2 { font-size: 21px; }
   .record-kicker { font-size: 9px; }
   .record-close-button { width: 40px; height: 40px; }
