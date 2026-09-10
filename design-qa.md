@@ -26,6 +26,10 @@
 - Körperübersicht, Mobil mit geöffnetem Befund: `/Users/alexander/CareCore/qa-resident-body-map-mobile.jpg`
 - Körperübersicht im Referenzformat: `/Users/alexander/CareCore/qa-resident-body-map-reference-viewport.jpg`
 - Direkter Körperkartenvergleich: `/Users/alexander/CareCore/qa-resident-body-map-comparison.jpg`
+- Verlaufsansicht, Desktop: `/Users/alexander/CareCore/qa-resident-history-desktop.jpg`
+- Verlaufsansicht, Mobil: `/Users/alexander/CareCore/qa-resident-history-mobile.jpg`
+- Dokumentenansicht, Desktop: `/Users/alexander/CareCore/qa-resident-documents-desktop.jpg`
+- Dokumentenansicht, Mobil mit aktiver Suche: `/Users/alexander/CareCore/qa-resident-documents-mobile.jpg`
 - Direkter Vergleich: `/Users/alexander/CareCore/qa-sidebar-blue-comparison-final.png`
 - Viewport: 1536 × 1024 CSS-Pixel, Device Pixel Ratio 1
 - Source und Implementierung: jeweils 1536 × 1024 Pixel; Vergleich ohne Dichteskalierung
@@ -68,6 +72,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 12. Pflegeakte: Der Tab „Pflegeakte“ zeigt ein vollständiges Pflegeprofil mit sechs interaktiv auswählbaren Pflegebereichen, dynamischen Zielen und Maßnahmen, aktuellen Prioritäten, Assessments und beteiligten Fachpersonen. Der Wechsel bleibt innerhalb desselben vollflächigen Dialogs.
 13. Direktzugriff: Die Schnellaktionen stehen nun als eigene, horizontale Leiste unmittelbar unter Bezugspflege, Vitalwerten, Medikation und Termin. Acht Aktionen decken Dokumentation, Vitalwerte, Medikation, Aufgaben, Pflegeplanung, Wunden, Trinkmenge und Einschätzungen ab; das Raster reagiert mit acht, vier oder zwei Spalten auf die verfügbare Breite.
 14. Körperübersicht: Unter dem Direktzugriff wurde die Übersicht neu geordnet. Eine responsive Ganzkörperkarte zeigt Rötung, Wunde und Fraktur als interaktive Marker; jeder Marker öffnet exakt einen zugehörigen Detailbereich mit Beschreibung, Zeitpunkt, verantwortlicher Person und Verlinkungen. Ein anfänglicher Exportfehler der Bildoptimierung wurde durch den statisch kompatiblen Bildmodus behoben. Die klinische Seitenangabe wurde anschließend auf die Bewohnerperspektive korrigiert und im erneuten Browservergleich bestätigt.
+15. Verlauf und Dokumente: Beide bisher nur beschrifteten Tabs besitzen jetzt eigenständige, responsive Ansichten innerhalb derselben Bewohnerakte. Der Verlauf bietet Kennzahlen, fünf funktionale Fachfilter, Tagesgruppen, Detailaktionen und Fokusinformationen. Die Dokumentenablage bietet Kennzahlen, Volltextsuche mit deutscher Wortstamm-Toleranz, fünf Kategorien, Statusangaben, Leerzustand sowie Ansehen- und Downloadaktionen.
 
 ## Primäre Interaktionen
 
@@ -86,6 +91,8 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Horizontaler Direktzugriff mit acht Aktionen auf Desktop und Mobil geprüft; Dokumentation und Pflegeplanung wechseln innerhalb derselben Bewohnerakte
 - Körpermarker, drei Befund-Dropdowns und Verlinkungen zu Dokumentation, Pflegeakte und Wundmanagement auf Desktop und Mobil geprüft
 - Direkter Körperkartenvergleich bei 658 × 1356 Pixeln geprüft; keine P0-, P1- oder P2-Abweichungen
+- Verlaufsfilter, chronologische Tagesgruppen und interne Verlinkung zur Dokumentation auf Desktop und Mobil geprüft
+- Dokumentensuche, Kategorien, Leerzustand, Ansehen und Download auf Desktop und Mobil geprüft
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 

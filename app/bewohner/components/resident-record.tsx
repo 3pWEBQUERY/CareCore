@@ -12,6 +12,7 @@ import {
   FileText,
   Heartbeat,
   ListChecks,
+  MagnifyingGlass,
   NotePencil,
   Pill,
   Pulse,
@@ -39,8 +40,9 @@ type ResidentRecordProps = {
   onAction: (message: string) => void;
 };
 
-type RecordView = "overview" | "master-data" | "documentation" | "care-record";
+type RecordView = "overview" | "master-data" | "documentation" | "care-record" | "history" | "documents";
 type DocumentationFlag = "important" | "visit" | "observation" | "handover";
+type HistoryFilter = "Alle" | "Pflege" | "Vitalwerte" | "Medikation" | "Termine";
 
 type DocumentationEntry = {
   id: string;
@@ -74,6 +76,29 @@ type BodyObservation = {
   y: string;
 };
 
+type HistoryEntry = {
+  id: string;
+  date: string;
+  time: string;
+  category: Exclude<HistoryFilter, "Alle">;
+  title: string;
+  description: string;
+  author: string;
+  tone: "critical" | "attention" | "info" | "stable";
+  documentationId?: string;
+};
+
+type ResidentDocument = {
+  id: string;
+  title: string;
+  category: "Arztberichte" | "Pflege" | "Medikation" | "Administration";
+  fileType: string;
+  size: string;
+  updated: string;
+  owner: string;
+  status: "Aktuell" | "Neu" | "Unterschrift offen";
+};
+
 const recordTabs = ["Übersicht", "Stammdaten", "Dokumentation", "Pflegeakte", "Verlauf", "Dokumente"];
 
 const careDomains: CareDomain[] = [
@@ -89,6 +114,24 @@ const bodyObservations: BodyObservation[] = [
   { id: "right-shoulder", type: "redness", label: "Rötung", location: "Rechte Schulter", status: "Beobachten", summary: "Umschriebene Rötung ohne offene Hautstelle. Druckentlastung fortführen und bei der Abendpflege erneut kontrollieren.", recorded: "Heute, 08:10", author: "Anna Meier", x: "37%", y: "24%" },
   { id: "left-forearm", type: "wound", label: "Wunde", location: "Linker Unterarm", status: "Versorgung aktiv", summary: "Oberflächliche Hautläsion, 2,1 × 0,8 cm. Wundauflage trocken und reizlos; nächster Verbandwechsel morgen früh.", recorded: "Heute, 07:55", author: "Lea Frei", x: "70%", y: "43%" },
   { id: "right-knee", type: "fracture", label: "Fraktur", location: "Rechtes Knie", status: "Heilungsverlauf", summary: "Kontrollierter Heilungsverlauf nach proximaler Tibiafraktur. Teilbelastung gemäss ärztlicher Verordnung, Schmerzangabe aktuell 2 von 10.", recorded: "Gestern, 16:20", author: "Dr. Martin Weber", x: "43%", y: "69%" },
+];
+
+const historyEntries: HistoryEntry[] = [
+  { id: "h1", date: "Heute · 10. September 2026", time: "08:10", category: "Pflege", title: "Hautbeobachtung ergänzt", description: "Rötung an der rechten Schulter dokumentiert und Druckentlastung für die laufende Schicht geplant.", author: "Anna Meier · Pflegefachfrau HF", tone: "attention", documentationId: "observation" },
+  { id: "h2", date: "Heute · 10. September 2026", time: "07:55", category: "Pflege", title: "Wundversorgung durchgeführt", description: "Hautläsion am linken Unterarm gereinigt und mit trockener Wundauflage versorgt.", author: "Lea Frei · Fachfrau Gesundheit", tone: "critical" },
+  { id: "h3", date: "Heute · 10. September 2026", time: "07:42", category: "Vitalwerte", title: "Vitalwerte erfasst", description: "Blutdruck 132/78 mmHg · Puls 72/min · Temperatur 36,7 °C.", author: "Anna Meier · Pflegefachfrau HF", tone: "stable", documentationId: "vitals" },
+  { id: "h4", date: "Heute · 10. September 2026", time: "07:30", category: "Medikation", title: "Morgenmedikation verabreicht", description: "Vier von sechs geplanten Medikationen gemäss aktuellem Medikamentenplan abgegeben.", author: "Lea Frei · Fachfrau Gesundheit", tone: "info", documentationId: "medication" },
+  { id: "h5", date: "Gestern · 9. September 2026", time: "16:20", category: "Termine", title: "Orthopädische Verlaufskontrolle", description: "Heilungsverlauf der proximalen Tibiafraktur regelrecht; Teilbelastung bleibt bestehen.", author: "Dr. med. Martin Weber", tone: "info" },
+  { id: "h6", date: "Gestern · 9. September 2026", time: "14:05", category: "Pflege", title: "Mobilisation begleitet", description: "Transfer mit Rollator sicher durchgeführt, keine Schwindelangabe bei Lagewechsel.", author: "Anna Meier · Pflegefachfrau HF", tone: "stable" },
+];
+
+const residentDocuments: ResidentDocument[] = [
+  { id: "d1", title: "Ärztlicher Verlaufsbericht September", category: "Arztberichte", fileType: "PDF", size: "1,8 MB", updated: "Heute, 08:35", owner: "Dr. Martin Weber", status: "Neu" },
+  { id: "d2", title: "Pflegeplanung und Maßnahmen", category: "Pflege", fileType: "PDF", size: "840 KB", updated: "Gestern, 17:10", owner: "Anna Meier", status: "Aktuell" },
+  { id: "d3", title: "Aktueller Medikamentenplan", category: "Medikation", fileType: "PDF", size: "420 KB", updated: "9. September 2026", owner: "Dr. Martin Weber", status: "Aktuell" },
+  { id: "d4", title: "Einwilligung zur Datenfreigabe", category: "Administration", fileType: "PDF", size: "265 KB", updated: "8. September 2026", owner: "Administration", status: "Unterschrift offen" },
+  { id: "d5", title: "Wunddokumentation linker Unterarm", category: "Pflege", fileType: "PDF", size: "3,2 MB", updated: "7. September 2026", owner: "Lea Frei", status: "Aktuell" },
+  { id: "d6", title: "Austrittsbericht Akutspital", category: "Arztberichte", fileType: "PDF", size: "2,4 MB", updated: "14. August 2026", owner: "Stadtspital Zürich", status: "Aktuell" },
 ];
 
 function getDocumentationEntries(resident: ResidentRecordData): DocumentationEntry[] {
@@ -111,8 +154,18 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
   const [masterDataEditing, setMasterDataEditing] = useState(false);
   const [activeCareDomainId, setActiveCareDomainId] = useState("mobility");
   const [activeBodyObservationId, setActiveBodyObservationId] = useState<string | null>("right-shoulder");
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("Alle");
+  const [documentSearch, setDocumentSearch] = useState("");
+  const [documentCategory, setDocumentCategory] = useState("Alle");
   const selectedEntry = entries.find((entry) => entry.id === selectedEntryId) ?? null;
   const activeCareDomain = careDomains.find((domain) => domain.id === activeCareDomainId) ?? careDomains[0];
+  const visibleHistoryEntries = historyEntries.filter((entry) => historyFilter === "Alle" || entry.category === historyFilter);
+  const visibleDocuments = residentDocuments.filter((document) => {
+    const query = documentSearch.trim().toLocaleLowerCase("de-CH");
+    const queryStem = query.endsWith("e") ? query.slice(0, -1) : query;
+    const searchableText = `${document.title} ${document.category} ${document.owner}`.toLocaleLowerCase("de-CH");
+    return (documentCategory === "Alle" || document.category === documentCategory) && (!query || searchableText.includes(query) || searchableText.includes(queryStem));
+  });
   const [firstName, ...lastNameParts] = resident.name.split(" ");
   const lastName = lastNameParts.join(" ");
   const gender = ["Hans", "Peter"].includes(firstName) ? "Männlich" : "Weiblich";
@@ -144,7 +197,8 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
     else if (tab === "Stammdaten") setActiveView("master-data");
     else if (tab === "Dokumentation") openDocumentation();
     else if (tab === "Pflegeakte") setActiveView("care-record");
-    else onAction(`${tab} geöffnet`);
+    else if (tab === "Verlauf") setActiveView("history");
+    else if (tab === "Dokumente") setActiveView("documents");
   }
 
   function saveDocumentation(event: FormEvent<HTMLFormElement>) {
@@ -172,7 +226,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
 
         <nav className="resident-record-tabs" aria-label="Bereiche der Bewohnerakte">
           {recordTabs.map((tab) => {
-            const active = (tab === "Übersicht" && activeView === "overview") || (tab === "Stammdaten" && activeView === "master-data") || (tab === "Dokumentation" && activeView === "documentation") || (tab === "Pflegeakte" && activeView === "care-record");
+            const active = (tab === "Übersicht" && activeView === "overview") || (tab === "Stammdaten" && activeView === "master-data") || (tab === "Dokumentation" && activeView === "documentation") || (tab === "Pflegeakte" && activeView === "care-record") || (tab === "Verlauf" && activeView === "history") || (tab === "Dokumente" && activeView === "documents");
             return <button className={active ? "active" : ""} type="button" key={tab} aria-current={active ? "page" : undefined} onClick={() => selectTab(tab)}>{tab}</button>;
           })}
         </nav>
@@ -268,7 +322,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
                   </dl>
                 </section>
 
-                <button className="record-document-button" type="button" onClick={() => onAction("Dokumentenablage geöffnet")}><FileText aria-hidden="true"/><span><strong>Dokumente und Berichte</strong><small>12 hinterlegte Dokumente</small></span></button>
+                <button className="record-document-button" type="button" onClick={() => setActiveView("documents")}><FileText aria-hidden="true"/><span><strong>Dokumente und Berichte</strong><small>12 hinterlegte Dokumente</small></span></button>
               </aside>
 
               <section className="record-card record-overview-history">
@@ -402,6 +456,92 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
                 </section>
               </aside>
             </div>
+          </main>
+        ) : activeView === "history" ? (
+          <main className="resident-record-content record-history-view" ref={contentRef} key="history">
+            <div className="record-subpage-heading">
+              <div><span className="record-section-label">Bewohnerakte</span><h3>Verlauf</h3><p>Chronologische Übersicht aller pflege- und behandlungsrelevanten Ereignisse von {resident.name}.</p></div>
+              <button className="primary-button" type="button" onClick={() => openDocumentation()}><NotePencil aria-hidden="true"/> Neuer Eintrag</button>
+            </div>
+
+            <section className="record-view-stats" aria-label="Verlaufsübersicht">
+              <div><span><ClipboardText aria-hidden="true"/></span><p><small>Diese Woche</small><strong>28 Ereignisse</strong></p></div>
+              <div><span><Heartbeat aria-hidden="true"/></span><p><small>Heute dokumentiert</small><strong>4 Einträge</strong></p></div>
+              <div><span className="attention"><Warning aria-hidden="true"/></span><p><small>In Beobachtung</small><strong>2 Entwicklungen</strong></p></div>
+              <div><span><ArrowsLeftRight aria-hidden="true"/></span><p><small>Letzte Übergabe</small><strong>Heute, 06:55</strong></p></div>
+            </section>
+
+            <div className="history-layout">
+              <section className="record-card history-card" aria-labelledby="history-timeline-title">
+                <div className="record-card-heading"><div><span className="record-section-label">Chronologie</span><h3 id="history-timeline-title">Aktivitäten und Ereignisse</h3></div><span>{visibleHistoryEntries.length} Einträge</span></div>
+                <div className="history-filters" aria-label="Verlauf filtern">
+                  {(["Alle", "Pflege", "Vitalwerte", "Medikation", "Termine"] as HistoryFilter[]).map((filter) => <button className={historyFilter === filter ? "active" : ""} type="button" key={filter} aria-pressed={historyFilter === filter} onClick={() => setHistoryFilter(filter)}>{filter}</button>)}
+                </div>
+                <div className="resident-history-timeline">
+                  {[...new Set(visibleHistoryEntries.map((entry) => entry.date))].map((date) => (
+                    <section className="resident-history-day" key={date} aria-label={date}>
+                      <h4>{date}</h4>
+                      {visibleHistoryEntries.filter((entry) => entry.date === date).map((entry) => (
+                        <article className="resident-history-entry" key={entry.id}>
+                          <time>{entry.time}</time>
+                          <span className={`resident-history-marker ${entry.tone}`}>{entry.category === "Medikation" ? <Pill aria-hidden="true"/> : entry.category === "Vitalwerte" ? <Heartbeat aria-hidden="true"/> : entry.category === "Termine" ? <CalendarDots aria-hidden="true"/> : <Pulse aria-hidden="true"/>}</span>
+                          <div><span className="history-entry-category">{entry.category}</span><h5>{entry.title}</h5><p>{entry.description}</p><small>{entry.author}</small></div>
+                          <button type="button" onClick={() => { const documentationEntry = entries.find((item) => item.id === entry.documentationId); if (documentationEntry) openDocumentation(documentationEntry); else onAction(`${entry.title} geöffnet`); }}>Öffnen</button>
+                        </article>
+                      ))}
+                    </section>
+                  ))}
+                </div>
+              </section>
+
+              <aside className="history-sidebar">
+                <section className="record-card">
+                  <div className="record-card-heading"><div><span className="record-section-label">Im Fokus</span><h3>Aktuelle Entwicklungen</h3></div></div>
+                  <div className="history-focus-list"><article className="critical"><Warning aria-hidden="true"/><div><strong>Wundheilung beobachten</strong><p>Verbandwechsel am linken Unterarm morgen um 08:00 Uhr.</p><button type="button" onClick={() => onAction("Wundmanagement geöffnet")}>Wundmanagement öffnen</button></div></article><article className="attention"><Pulse aria-hidden="true"/><div><strong>Rötung kontrollieren</strong><p>Erneute Hautkontrolle während der Abendpflege vorgesehen.</p><button type="button" onClick={() => setActiveView("overview")}>Körperübersicht öffnen</button></div></article></div>
+                </section>
+                <section className="record-card history-next-event">
+                  <div className="record-card-heading"><div><span className="record-section-label">Nächster Termin</span><h3>Arztvisite</h3></div></div>
+                  <div><CalendarDots aria-hidden="true"/><p><strong>Heute, 09:30 Uhr</strong><small>Visitenzimmer · Dr. Martin Weber</small></p></div>
+                </section>
+              </aside>
+            </div>
+          </main>
+        ) : activeView === "documents" ? (
+          <main className="resident-record-content record-documents-view" ref={contentRef} key="documents">
+            <div className="record-subpage-heading">
+              <div><span className="record-section-label">Bewohnerakte</span><h3>Dokumente</h3><p>Zentrale Ablage für Berichte, Pläne, Formulare und administrative Unterlagen von {resident.name}.</p></div>
+              <button className="primary-button" type="button" onClick={() => onAction("Dokumentenupload vorbereitet")}><FileText aria-hidden="true"/> Dokument hochladen</button>
+            </div>
+
+            <section className="record-view-stats" aria-label="Dokumentenübersicht">
+              <div><span><FileText aria-hidden="true"/></span><p><small>Dokumente gesamt</small><strong>12 Dateien</strong></p></div>
+              <div><span><Check aria-hidden="true"/></span><p><small>Aktuell und geprüft</small><strong>10 Dateien</strong></p></div>
+              <div><span><CalendarDots aria-hidden="true"/></span><p><small>Neu diese Woche</small><strong>2 Dateien</strong></p></div>
+              <div><span className="attention"><Warning aria-hidden="true"/></span><p><small>Offene Freigaben</small><strong>1 Unterschrift</strong></p></div>
+            </section>
+
+            <section className="record-card document-library" aria-labelledby="document-library-title">
+              <div className="record-card-heading"><div><span className="record-section-label">Ablage</span><h3 id="document-library-title">Dokumentenbibliothek</h3></div><span>{visibleDocuments.length} angezeigt</span></div>
+              <div className="document-toolbar">
+                <label className="document-search"><MagnifyingGlass aria-hidden="true"/><input type="search" value={documentSearch} onChange={(event) => setDocumentSearch(event.target.value)} placeholder="Dokumente durchsuchen …" aria-label="Dokumente durchsuchen"/></label>
+                <div className="document-category-filter" aria-label="Dokumentkategorie filtern">
+                  {["Alle", "Arztberichte", "Pflege", "Medikation", "Administration"].map((category) => <button className={documentCategory === category ? "active" : ""} type="button" key={category} aria-pressed={documentCategory === category} onClick={() => setDocumentCategory(category)}>{category}</button>)}
+                </div>
+              </div>
+              <div className="document-table-head" aria-hidden="true"><span>Dokument</span><span>Geändert</span><span>Status</span><span>Aktionen</span></div>
+              <div className="resident-document-list">
+                {visibleDocuments.map((document) => (
+                  <article className="resident-document-row" key={document.id}>
+                    <span className="resident-document-icon"><FileText aria-hidden="true"/></span>
+                    <div className="resident-document-name"><strong>{document.title}</strong><small>{document.category} · {document.fileType} · {document.size}</small></div>
+                    <div className="resident-document-meta"><strong>{document.updated}</strong><small>{document.owner}</small></div>
+                    <span className={`document-status ${document.status === "Neu" ? "new" : document.status === "Unterschrift offen" ? "attention" : "stable"}`}>{document.status}</span>
+                    <div className="resident-document-actions"><button type="button" onClick={() => onAction(`${document.title} geöffnet`)}>Ansehen</button><button type="button" onClick={() => onAction(`${document.title} heruntergeladen`)}>Download</button></div>
+                  </article>
+                ))}
+                {visibleDocuments.length === 0 && <div className="document-empty"><MagnifyingGlass aria-hidden="true"/><strong>Keine Dokumente gefunden</strong><p>Suche oder Kategorie anpassen.</p></div>}
+              </div>
+            </section>
           </main>
         ) : (
           <main className="resident-record-content record-documentation-view" ref={contentRef} key="documentation">
