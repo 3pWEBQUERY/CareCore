@@ -194,7 +194,7 @@ export default function ResidentsPage() {
                   const moduleActive = module.id === "residents";
                   return <div className={`module-block ${moduleOpen ? "open" : ""}`} key={module.id}>
                     <button className={`nav-button module-button ${moduleActive ? "active" : ""}`} type="button" aria-expanded={moduleOpen} title={module.label} onClick={() => toggleModule(group.id, module)}><Icon name={module.icon}/><span className="nav-label">{module.label}</span>{module.badge && <span className="nav-badge">{module.badge}</span>}<Icon name="chevron" className="module-caret"/></button>
-                    <div className="submenu">{module.children.map((child) => <button className={`submenu-button ${module.id === "residents" && child === "Übersicht" ? "active" : ""}`} type="button" key={child} onClick={() => setToast(`${child} geöffnet`)}><span className="submenu-rail"/><span>{child}</span></button>)}</div>
+                    <div className="submenu">{module.children.map((child) => <button className={`submenu-button ${module.id === "residents" && child === "Übersicht" ? "active" : ""}`} type="button" key={child} onClick={() => child === "Wundübersicht" ? router.push("/wundmanagement") : setToast(`${child} geöffnet`)}><span className="submenu-rail"/><span>{child}</span></button>)}</div>
                   </div>;
                 })}
               </div>

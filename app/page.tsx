@@ -252,6 +252,10 @@ export default function Home() {
   }
 
   function selectNav(label: string) {
+    if (label === "Wundübersicht") {
+      router.push("/wundmanagement");
+      return;
+    }
     setActiveNav(label);
     setToast(`${label} geöffnet`);
   }
