@@ -3,71 +3,96 @@
 import { useMemo, useState } from "react";
 import ModulePageShell, { ModuleIcon, type ModuleIconName } from "@/app/components/module-page-shell";
 
-type CourseFilter = "Alle" | "Pflege" | "Vitalwerte" | "Medikation" | "Ereignisse";
-type CourseEntry = {
+type ResidentStatus = "Alle" | "Aktiv" | "Verlegt" | "Ausgetreten" | "Verstorben";
+type ResidentTone = "critical" | "attention" | "info" | "stable" | "archived";
+type HouseResident = {
   id: string;
-  time: string;
-  resident: string;
   initials: string;
+  name: string;
   room: string;
-  category: Exclude<CourseFilter, "Alle">;
-  icon: ModuleIconName;
-  title: string;
-  detail: string;
+  unit: string;
+  status: Exclude<ResidentStatus, "Alle">;
+  tone: ResidentTone;
+  period: string;
+  lastEntry: string;
+  lastEntryAt: string;
   author: string;
-  status: string;
-  tone: "critical" | "attention" | "info" | "stable";
+  note: string;
+  icon: ModuleIconName;
 };
 
-const entries: CourseEntry[] = [
-  { id: "c1", time: "08:12", resident: "Hans Müller", initials: "HM", room: "Zimmer 207", category: "Ereignisse", icon: "alert", title: "Neurologische Kontrolle durchgeführt", detail: "Bewohner wach und orientiert. Pupillen isokor, keine neuen Schmerzen nach nächtlichem Sturz.", author: "Anna Meier", status: "Wichtig", tone: "critical" },
-  { id: "c2", time: "07:55", resident: "Hans Müller", initials: "HM", room: "Zimmer 207", category: "Pflege", icon: "wounds", title: "Wundversorgung linker Unterarm", detail: "Wunde gereinigt und atraumatischer Verband erneuert. Wundrand leicht gerötet.", author: "Lea Frei", status: "Für Visite", tone: "attention" },
-  { id: "c3", time: "07:42", resident: "Maria Keller", initials: "MK", room: "Zimmer 204", category: "Vitalwerte", icon: "vitals", title: "Blutzucker vor Frühstück", detail: "Messwert 8,7 mmol/l. Korrekturschema gemäss Verordnung angewendet.", author: "Anna Meier", status: "Dokumentiert", tone: "info" },
-  { id: "c4", time: "07:30", resident: "Erika Meier", initials: "EM", room: "Zimmer 211", category: "Medikation", icon: "med", title: "Morgenmedikation verabreicht", detail: "Metoprolol erstmals in angepasster Dosierung von 50 mg abgegeben. Verträglichkeit beobachten.", author: "Nora Baumann", status: "Beobachtung", tone: "attention" },
-  { id: "c5", time: "07:10", resident: "Peter Aebischer", initials: "PA", room: "Zimmer 115", category: "Pflege", icon: "note", title: "Trinkprotokoll ergänzt", detail: "250 ml Tee zum Frühstück angeboten, davon 180 ml getrunken. Motivation weiterhin erforderlich.", author: "Lea Frei", status: "Dokumentiert", tone: "stable" },
-  { id: "c6", time: "06:50", resident: "Ruth Baumann", initials: "RB", room: "Zimmer 214", category: "Pflege", icon: "tasks", title: "Morgenpflege abgeschlossen", detail: "Mobilisation mit Rollator sicher. Hautzustand unverändert, Druckstelle an linker Ferse entlastet.", author: "Nora Baumann", status: "Erledigt", tone: "stable" },
+const residents: HouseResident[] = [
+  { id: "r01", initials: "HM", name: "Hans Müller", room: "Zimmer 207", unit: "Wohnbereich 2", status: "Aktiv", tone: "critical", period: "Eintritt 12.03.2024", lastEntry: "Neurologische Kontrolle nach Sturz", lastEntryAt: "Heute, 08:12", author: "Anna Meier", note: "Engmaschige Beobachtung bis 14:00 Uhr weiterführen.", icon: "alert" },
+  { id: "r02", initials: "MK", name: "Maria Keller", room: "Zimmer 204", unit: "Wohnbereich 2", status: "Aktiv", tone: "attention", period: "Eintritt 06.11.2023", lastEntry: "Blutzucker vor Frühstück erfasst", lastEntryAt: "Heute, 07:42", author: "Anna Meier", note: "Korrekturschema gemäss Verordnung angewendet.", icon: "vitals" },
+  { id: "r03", initials: "EM", name: "Erika Meier", room: "Zimmer 211", unit: "Wohnbereich 2", status: "Aktiv", tone: "attention", period: "Eintritt 19.08.2022", lastEntry: "Morgenmedikation angepasst", lastEntryAt: "Heute, 07:30", author: "Nora Baumann", note: "Verträglichkeit der neuen Metoprolol-Dosierung beobachten.", icon: "med" },
+  { id: "r04", initials: "RB", name: "Ruth Baumann", room: "Zimmer 214", unit: "Wohnbereich 2", status: "Aktiv", tone: "stable", period: "Eintritt 24.01.2025", lastEntry: "Morgenpflege abgeschlossen", lastEntryAt: "Heute, 06:50", author: "Nora Baumann", note: "Mobilisation mit Rollator sicher, Hautzustand unverändert.", icon: "note" },
+  { id: "r05", initials: "PA", name: "Peter Aebischer", room: "Zimmer 115", unit: "Wohnbereich 1", status: "Aktiv", tone: "stable", period: "Eintritt 02.05.2025", lastEntry: "Trinkprotokoll ergänzt", lastEntryAt: "Heute, 07:10", author: "Lea Frei", note: "180 ml zum Frühstück getrunken, weiter motivieren.", icon: "nutrition" },
+  { id: "r06", initials: "AS", name: "Anna Schmid", room: "Zimmer 118", unit: "Wohnbereich 1", status: "Aktiv", tone: "stable", period: "Eintritt 17.02.2026", lastEntry: "Mobilisation dokumentiert", lastEntryAt: "Gestern, 19:40", author: "Lea Frei", note: "Selbstständig mit Gehstock auf dem Wohnbereich.", icon: "tasks" },
+  { id: "r07", initials: "WB", name: "Walter Brunner", room: "Zimmer 306", unit: "Wohnbereich 3", status: "Aktiv", tone: "info", period: "Eintritt 09.09.2026", lastEntry: "Eintrittsassessment abgeschlossen", lastEntryAt: "Gestern, 16:25", author: "Nora Baumann", note: "Pflegeplanung zur interprofessionellen Freigabe vorbereitet.", icon: "assess" },
+  { id: "r08", initials: "LF", name: "Lydia Frei", room: "Zimmer 309", unit: "Wohnbereich 3", status: "Aktiv", tone: "stable", period: "Eintritt 14.06.2021", lastEntry: "Schmerzassessment ohne Auffälligkeit", lastEntryAt: "Gestern, 14:10", author: "Anna Meier", note: "NRS 0 in Ruhe und bei Mobilisation.", icon: "assess" },
+  { id: "r09", initials: "BK", name: "Bernhard Koch", room: "Zimmer 012", unit: "Pflegewohngruppe", status: "Aktiv", tone: "attention", period: "Eintritt 30.10.2024", lastEntry: "Unruhe am Nachmittag beobachtet", lastEntryAt: "Gestern, 17:45", author: "Sven Keller", note: "Biografieorientierte Begleitung wirksam, keine Bedarfsmedikation.", icon: "note" },
+  { id: "r10", initials: "ZG", name: "Zora Graf", room: "Zimmer 015", unit: "Pflegewohngruppe", status: "Aktiv", tone: "stable", period: "Eintritt 11.04.2023", lastEntry: "Essbegleitung dokumentiert", lastEntryAt: "Gestern, 12:35", author: "Sven Keller", note: "Dreiviertel der Mahlzeit selbstständig eingenommen.", icon: "nutrition" },
+  { id: "r11", initials: "ES", name: "Elisabeth Sommer", room: "Neu: Zimmer 312", unit: "Wohnbereich 3", status: "Verlegt", tone: "info", period: "Verlegt am 08.09.2026", lastEntry: "Interne Verlegung abgeschlossen", lastEntryAt: "8. Sept., 10:15", author: "Lea Frei", note: "Von Wohnbereich 1 nach Wohnbereich 3 verlegt; Übergabe vollständig.", icon: "handover" },
+  { id: "r12", initials: "KH", name: "Kurt Hofer", room: "Ehem. Zimmer 108", unit: "Wohnbereich 1", status: "Ausgetreten", tone: "archived", period: "Austritt 31.08.2026", lastEntry: "Austrittsbericht freigegeben", lastEntryAt: "31. Aug., 15:20", author: "Anna Meier", note: "Rückkehr nach Hause mit Spitex-Anschluss; Akte vollständig archiviert.", icon: "docs" },
+  { id: "r13", initials: "MG", name: "Marlies Gasser", room: "Ehem. Zimmer 303", unit: "Wohnbereich 3", status: "Ausgetreten", tone: "archived", period: "Austritt 14.08.2026", lastEntry: "Übertrittsdokumentation versendet", lastEntryAt: "14. Aug., 11:05", author: "Nora Baumann", note: "Übertritt in Rehabilitationsklinik, Unterlagen vollständig übermittelt.", icon: "docs" },
+  { id: "r14", initials: "HF", name: "Heidi Furrer", room: "Ehem. Zimmer 009", unit: "Pflegewohngruppe", status: "Ausgetreten", tone: "archived", period: "Austritt 02.07.2026", lastEntry: "Austrittsmedikation abgeglichen", lastEntryAt: "2. Juli, 09:30", author: "Lea Frei", note: "Übertritt in betreutes Wohnen; Abschlusskontrolle erfolgt.", icon: "med" },
+  { id: "r15", initials: "AR", name: "Alfred Roth", room: "Ehem. Zimmer 202", unit: "Wohnbereich 2", status: "Verstorben", tone: "archived", period: "Verstorben 22.08.2026", lastEntry: "Pflegeabschluss dokumentiert", lastEntryAt: "22. Aug., 06:40", author: "Anna Meier", note: "Abschied und administrative Nachbearbeitung abgeschlossen; Akte geschützt archiviert.", icon: "docs" },
+  { id: "r16", initials: "JS", name: "Johanna Suter", room: "Ehem. Zimmer 305", unit: "Wohnbereich 3", status: "Verstorben", tone: "archived", period: "Verstorben 18.06.2026", lastEntry: "Abschlussgespräch dokumentiert", lastEntryAt: "19. Juni, 14:00", author: "Nora Baumann", note: "Abschlussgespräch mit Angehörigen erfolgt; Akte geschützt archiviert.", icon: "docs" },
 ];
 
-const filters: CourseFilter[] = ["Alle", "Pflege", "Vitalwerte", "Medikation", "Ereignisse"];
+const statuses: ResidentStatus[] = ["Alle", "Aktiv", "Verlegt", "Ausgetreten", "Verstorben"];
+const units = ["Gesamtes Haus", "Wohnbereich 1", "Wohnbereich 2", "Wohnbereich 3", "Pflegewohngruppe"];
 
 export default function ResidentHistoryPage() {
-  const [filter, setFilter] = useState<CourseFilter>("Alle");
+  const [status, setStatus] = useState<ResidentStatus>("Alle");
+  const [unit, setUnit] = useState("Gesamtes Haus");
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState("c1");
+  const [selectedId, setSelectedId] = useState("r01");
 
-  const filteredEntries = useMemo(() => entries.filter((entry) => {
-    const matchesFilter = filter === "Alle" || entry.category === filter;
-    const searchable = `${entry.resident} ${entry.room} ${entry.title} ${entry.detail}`.toLocaleLowerCase("de-CH");
-    return matchesFilter && searchable.includes(query.trim().toLocaleLowerCase("de-CH"));
-  }), [filter, query]);
-  const selectedEntry = entries.find((entry) => entry.id === selectedId) ?? entries[0];
+  const filteredResidents = useMemo(() => residents.filter((resident) => {
+    const matchesStatus = status === "Alle" || resident.status === status;
+    const matchesUnit = unit === "Gesamtes Haus" || resident.unit === unit;
+    const searchable = `${resident.name} ${resident.room} ${resident.unit} ${resident.status} ${resident.lastEntry} ${resident.note}`.toLocaleLowerCase("de-CH");
+    return matchesStatus && matchesUnit && searchable.includes(query.trim().toLocaleLowerCase("de-CH"));
+  }), [query, status, unit]);
+  const selectedResident = residents.find((resident) => resident.id === selectedId) ?? residents[0];
+  const activeCount = residents.filter((resident) => resident.status === "Aktiv").length;
+  const departedCount = residents.filter((resident) => resident.status === "Ausgetreten").length;
+  const deceasedCount = residents.filter((resident) => resident.status === "Verstorben").length;
+  const isArchived = selectedResident.status === "Ausgetreten" || selectedResident.status === "Verstorben";
 
-  return <ModulePageShell activeModule="residents" activeChild="Verlauf" pageClass="resident-history-page">
+  function resetFilters() {
+    setStatus("Alle");
+    setUnit("Gesamtes Haus");
+    setQuery("");
+  }
+
+  return <ModulePageShell activeModule="residents" activeChild="Verlauf" pageClass="resident-history-page" locationSecondary="Gesamtes Haus · alle Wohnbereiche">
     {(showToast) => <main className="workspace module-workspace">
-      <section className="page-heading residents-heading" aria-labelledby="resident-history-title"><div className="heading-copy"><p className="eyebrow">CareCore Bewohner</p><h1 id="resident-history-title">Bewohnerverlauf</h1><p>Pflegeereignisse und Veränderungen im gesamten Wohnbereich chronologisch gebündelt.</p></div><button className="primary-button" type="button" onClick={() => showToast("Neuer Pflegeeintrag vorbereitet")}><ModuleIcon name="plus" className="button-icon"/>Pflegeeintrag erstellen</button></section>
+      <section className="page-heading residents-heading" aria-labelledby="resident-history-title"><div className="heading-copy"><p className="eyebrow">CareCore Bewohner</p><h1 id="resident-history-title">Bewohnerverlauf &amp; Archiv</h1><p>Alle aktiven und ehemaligen Bewohnerakten des gesamten Hauses an einem Ort.</p></div><button className="primary-button" type="button" onClick={() => showToast("Hausweiter Bericht wird vorbereitet")}><ModuleIcon name="docs" className="button-icon"/>Hausbericht erstellen</button></section>
 
-      <section className="wound-summary" aria-label="Verlaufsübersicht">
-        <div><span className="summary-icon"><ModuleIcon name="note"/></span><span><strong>18</strong><small>Ereignisse heute</small></span></div>
-        <div><span className="summary-icon attention"><ModuleIcon name="alert"/></span><span><strong>5</strong><small>in Beobachtung</small></span></div>
-        <div><span className="summary-icon info"><ModuleIcon name="vitals"/></span><span><strong>3</strong><small>Vitalwertänderungen</small></span></div>
-        <div><span className="summary-icon"><ModuleIcon name="handover"/></span><span><strong>1</strong><small>Übergabe offen</small></span></div>
+      <section className="wound-summary" aria-label="Hausweite Bewohnerübersicht">
+        <div><span className="summary-icon"><ModuleIcon name="residents"/></span><span><strong>{residents.length}</strong><small>Bewohnerakten gesamt</small></span></div>
+        <div><span className="summary-icon"><ModuleIcon name="check"/></span><span><strong>{activeCount}</strong><small>aktuell im Haus</small></span></div>
+        <div><span className="summary-icon info"><ModuleIcon name="handover"/></span><span><strong>{departedCount}</strong><small>ausgetreten</small></span></div>
+        <div><span className="summary-icon archived"><ModuleIcon name="docs"/></span><span><strong>{deceasedCount}</strong><small>verstorben · archiviert</small></span></div>
       </section>
 
-      <section className="critical-alert wound-alert" aria-label="Wichtiger Verlaufshinweis"><span className="critical-symbol"><ModuleIcon name="alert"/></span><div><strong>Kontrolle weiterführen · Hans Müller</strong><p>Nach dem nächtlichen Sturz ist die nächste neurologische Kontrolle um 10:00 Uhr fällig.</p></div><button className="secondary-button" type="button" onClick={() => { setSelectedId("c1"); showToast("Verlauf von Hans Müller ausgewählt"); }}>Im Verlauf anzeigen <ModuleIcon name="chevron" className="button-icon"/></button></section>
+      <section className="house-scope-note" aria-label="Umfang der Ansicht"><span><ModuleIcon name="building"/></span><div><strong>Gesamtes Haus</strong><p>Die Ansicht umfasst alle Wohnbereiche sowie aktive, verlegte, ausgetretene und verstorbene Bewohner.</p></div><button className="quiet-button" type="button" onClick={resetFilters}>Alle Filter zurücksetzen</button></section>
 
-      <div className="course-layout">
-        <section className="card course-card" aria-labelledby="course-title">
-          <div className="course-toolbar"><div><h2 className="card-title" id="course-title">Heute im Wohnbereich</h2><p className="card-subtitle">{filteredEntries.length} von {entries.length} Einträgen</p></div><label className="resident-search"><ModuleIcon name="search"/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Bewohner oder Eintrag suchen" aria-label="Bewohnerverlauf durchsuchen"/></label><div className="course-filters" aria-label="Verlauf filtern">{filters.map((item) => <button className={filter === item ? "active" : ""} type="button" key={item} aria-pressed={filter === item} onClick={() => setFilter(item)}>{item}</button>)}</div></div>
-          <div className="course-day-label"><span>Heute · 10. September 2026</span><small>Frühdienst</small></div>
-          <div className="course-list">{filteredEntries.map((entry) => <button className={`course-row ${selectedEntry.id === entry.id ? "selected" : ""}`} type="button" key={entry.id} onClick={() => setSelectedId(entry.id)}>
-            <time>{entry.time}</time><span className={`course-icon ${entry.tone}`}><ModuleIcon name={entry.icon}/></span><span className="course-main"><span><strong>{entry.title}</strong><span className={`status-badge ${entry.tone}`}>{entry.status}</span></span><small>{entry.resident} · {entry.room} · {entry.category}</small><p>{entry.detail}</p><em>Erfasst von {entry.author}</em></span><ModuleIcon name="chevron" className="chevron"/>
-          </button>)}{filteredEntries.length === 0 && <div className="resident-empty"><ModuleIcon name="search"/><strong>Keine Einträge gefunden</strong><p>Suchbegriff oder Verlaufsfilter anpassen.</p></div>}</div>
+      <div className="house-history-layout">
+        <section className="card house-resident-directory" aria-labelledby="house-residents-title">
+          <div className="house-history-toolbar"><div><h2 className="card-title" id="house-residents-title">Bewohnerakten</h2><p className="card-subtitle">{filteredResidents.length} von {residents.length} Akten angezeigt</p></div><label className="resident-search"><ModuleIcon name="search"/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, Zimmer oder Eintrag suchen" aria-label="Alle Bewohnerakten durchsuchen"/></label><label className="house-unit-filter"><span>Wohnbereich</span><select value={unit} onChange={(event) => setUnit(event.target.value)} aria-label="Wohnbereich filtern">{units.map((item) => <option value={item} key={item}>{item}</option>)}</select></label><div className="house-status-filters" aria-label="Aktenstatus filtern">{statuses.map((item) => <button className={status === item ? "active" : ""} type="button" key={item} aria-pressed={status === item} onClick={() => setStatus(item)}>{item}</button>)}</div></div>
+          <div className="house-resident-table-head" aria-hidden="true"><span>Bewohner</span><span>Wohnbereich</span><span>Aufenthalt</span><span>Letzter Eintrag</span><span>Status</span><span/></div>
+          <div className="house-resident-list">{filteredResidents.map((resident) => <button className={`house-resident-row ${selectedResident.id === resident.id ? "selected" : ""}`} type="button" key={resident.id} onClick={() => setSelectedId(resident.id)}>
+            <span className={`resident-avatar ${resident.tone === "critical" ? "critical" : resident.tone === "archived" ? "archived" : ""}`}>{resident.initials}</span><span className="house-resident-person"><strong>{resident.name}</strong><small>{resident.room}</small></span><span className="house-resident-unit"><strong>{resident.unit}</strong><small>{resident.status === "Aktiv" ? "Aktueller Aufenthalt" : "Letzter Wohnbereich"}</small></span><span className="house-resident-period"><strong>{resident.period}</strong><small>{resident.status === "Aktiv" ? "Laufende Akte" : "Historische Akte"}</small></span><span className="house-resident-last"><strong>{resident.lastEntry}</strong><small>{resident.lastEntryAt} · {resident.author}</small></span><span className={`resident-state ${resident.status.toLocaleLowerCase("de-CH")}`}>{resident.status}</span><ModuleIcon name="chevron" className="chevron"/>
+          </button>)}{filteredResidents.length === 0 && <div className="resident-empty"><ModuleIcon name="search"/><strong>Keine Bewohnerakten gefunden</strong><p>Suchbegriff, Wohnbereich oder Statusfilter anpassen.</p><button className="secondary-button" type="button" onClick={resetFilters}>Filter zurücksetzen</button></div>}</div>
         </section>
 
-        <aside className="course-sidebar">
-          <section className="card course-focus-card" aria-live="polite"><div className="card-header"><div><p className="eyebrow">Ausgewählter Eintrag</p><h2 className="card-title">{selectedEntry.resident}</h2><p className="card-subtitle">{selectedEntry.room} · heute um {selectedEntry.time}</p></div><span className={`status-badge ${selectedEntry.tone}`}>{selectedEntry.status}</span></div><div className="course-focus-body"><span className={`course-detail-icon ${selectedEntry.tone}`}><ModuleIcon name={selectedEntry.icon}/></span><h3>{selectedEntry.title}</h3><p>{selectedEntry.detail}</p><dl><div><dt>Bereich</dt><dd>{selectedEntry.category}</dd></div><div><dt>Erfasst von</dt><dd>{selectedEntry.author}</dd></div><div><dt>Zeitpunkt</dt><dd>Heute, {selectedEntry.time}</dd></div></dl><div className="course-focus-actions"><button className="primary-button" type="button" onClick={() => showToast(`Bewohnerakte von ${selectedEntry.resident} geöffnet`)}>Bewohnerakte öffnen</button><button className="secondary-button" type="button" onClick={() => showToast("Ergänzung zum Verlauf vorbereitet")}>Eintrag ergänzen</button></div></div></section>
+        <aside className="house-history-sidebar">
+          <section className={`card house-resident-focus ${isArchived ? "archived" : ""}`} aria-live="polite"><div className="card-header"><div><p className="eyebrow">Ausgewählte Bewohnerakte</p><h2 className="card-title">{selectedResident.name}</h2><p className="card-subtitle">{selectedResident.room} · {selectedResident.unit}</p></div><span className={`resident-state ${selectedResident.status.toLocaleLowerCase("de-CH")}`}>{selectedResident.status}</span></div><div className="house-resident-focus-body"><span className={`resident-avatar ${selectedResident.tone === "critical" ? "critical" : selectedResident.tone === "archived" ? "archived" : ""}`}>{selectedResident.initials}</span><h3>{selectedResident.lastEntry}</h3><p>{selectedResident.note}</p><dl><div><dt>Aktenstatus</dt><dd>{selectedResident.status}</dd></div><div><dt>Zeitraum</dt><dd>{selectedResident.period}</dd></div><div><dt>Letzter Eintrag</dt><dd>{selectedResident.lastEntryAt}</dd></div><div><dt>Erfasst von</dt><dd>{selectedResident.author}</dd></div></dl>{isArchived && <div className="archive-privacy-note"><ModuleIcon name="quality"/><span><strong>Geschützte Archivakte</strong><small>Nur für berechtigte Mitarbeitende sichtbar.</small></span></div>}<div className="course-focus-actions"><button className="primary-button" type="button" onClick={() => showToast(`${isArchived ? "Archivakte" : "Bewohnerakte"} von ${selectedResident.name} geöffnet`)}>{isArchived ? "Archivakte öffnen" : "Bewohnerakte öffnen"}</button><button className="secondary-button" type="button" onClick={() => showToast(isArchived ? "Archivierte Dokumente geöffnet" : "Verlauf zum Ergänzen geöffnet")}>{isArchived ? "Dokumente anzeigen" : "Verlauf ergänzen"}</button></div></div></section>
 
-          <section className="card course-priority-card"><div className="card-header"><div><h2 className="card-title">Im Fokus</h2><p className="card-subtitle">Offene Beobachtungen</p></div></div><div className="course-priority-list"><button type="button" onClick={() => setSelectedId("c1")}><span className="priority-dot critical"/><span><strong>Hans Müller</strong><small>Sturz-Nachkontrolle · 10:00</small></span><ModuleIcon name="chevron"/></button><button type="button" onClick={() => setSelectedId("c4")}><span className="priority-dot attention"/><span><strong>Erika Meier</strong><small>Neue Dosierung beobachten</small></span><ModuleIcon name="chevron"/></button><button type="button" onClick={() => setSelectedId("c3")}><span className="priority-dot info"/><span><strong>Maria Keller</strong><small>Blutzucker-Kontrolle · 11:30</small></span><ModuleIcon name="chevron"/></button></div></section>
+          <section className="card house-status-overview"><div className="card-header"><div><h2 className="card-title">Akten nach Status</h2><p className="card-subtitle">Gesamtes Haus</p></div></div><div>{statuses.slice(1).map((item) => { const count = residents.filter((resident) => resident.status === item).length; return <button type="button" key={item} onClick={() => setStatus(item)}><span className={`priority-dot ${item === "Aktiv" ? "stable" : item === "Verlegt" ? "info" : "archived"}`}/><span><strong>{item}</strong><small>{count} {count === 1 ? "Akte" : "Akten"}</small></span><ModuleIcon name="chevron"/></button>; })}</div></section>
         </aside>
       </div>
     </main>}

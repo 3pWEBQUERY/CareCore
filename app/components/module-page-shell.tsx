@@ -95,7 +95,7 @@ function Brand() {
   return <div className="brand" aria-label="CareCore"><span className="brand-mark"><ModuleIcon name="pulse"/></span><span className="brand-copy"><span className="brand-name">CareCore</span><small>Mehr Zeit für Pflege.</small></span></div>;
 }
 
-export default function ModulePageShell({ activeModule, activeChild, pageClass, children }: { activeModule: string; activeChild: string; pageClass: string; children: (showToast: (message: string) => void) => ReactNode }) {
+export default function ModulePageShell({ activeModule, activeChild, pageClass, locationPrimary = "Alterszentrum Sonnengarten", locationSecondary = "Wohnbereich 2 · 1. OG", children }: { activeModule: string; activeChild: string; pageClass: string; locationPrimary?: string; locationSecondary?: string; children: (showToast: (message: string) => void) => ReactNode }) {
   const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState<string[]>(["clinical"]);
@@ -166,7 +166,7 @@ export default function ModulePageShell({ activeModule, activeChild, pageClass, 
     </aside>
 
     <div className="main-column">
-      <header className="topbar"><button className="location-control" type="button" onClick={() => setToast("Standortauswahl geöffnet")}><span className="location-icon"><ModuleIcon name="building"/></span><span><small>Alterszentrum Sonnengarten</small><strong>Wohnbereich 2 · 1. OG</strong></span><ModuleIcon name="chevron" className="chevron"/></button><div className="top-actions"><button className="search-trigger" type="button" onClick={openSearch} aria-label="Globale Suche öffnen" aria-haspopup="dialog" aria-expanded={searchOpen}><ModuleIcon name="search"/><span>Suchen…</span><kbd>⌘ K</kbd></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><ModuleIcon name="bell"/><span className="notification-dot"/></button><div className="profile"><span className="avatar">AM</span><span><small>Pflegefachfrau HF</small><strong>Anna Meier</strong></span></div></div></header>
+      <header className="topbar"><button className="location-control" type="button" onClick={() => setToast("Standortauswahl geöffnet")}><span className="location-icon"><ModuleIcon name="building"/></span><span><small>{locationPrimary}</small><strong>{locationSecondary}</strong></span><ModuleIcon name="chevron" className="chevron"/></button><div className="top-actions"><button className="search-trigger" type="button" onClick={openSearch} aria-label="Globale Suche öffnen" aria-haspopup="dialog" aria-expanded={searchOpen}><ModuleIcon name="search"/><span>Suchen…</span><kbd>⌘ K</kbd></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><ModuleIcon name="bell"/><span className="notification-dot"/></button><div className="profile"><span className="avatar">AM</span><span><small>Pflegefachfrau HF</small><strong>Anna Meier</strong></span></div></div></header>
       <header className="mobile-top"><Brand/><div className="mobile-actions"><button className="icon-button" type="button" aria-label="Suche öffnen" onClick={openSearch}><ModuleIcon name="search"/></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><ModuleIcon name="bell"/><span className="notification-dot"/></button></div></header>
       {children(setToast)}
     </div>

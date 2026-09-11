@@ -36,6 +36,8 @@
 - Bereichsweiter Bewohnerverlauf, Mobil: `/Users/alexander/CareCore/qa-resident-overall-history-mobile.jpg`
 - Wunddokumentation, Desktop: `/Users/alexander/CareCore/qa-wound-documentation-desktop.jpg`
 - Wunddokumentation, Mobil: `/Users/alexander/CareCore/qa-wound-documentation-mobile.jpg`
+- Hausweiter Bewohnerverlauf und Archiv, Desktop: `/Users/alexander/CareCore/qa-house-resident-history-desktop.jpg`
+- Hausweiter Bewohnerverlauf und Archiv, Mobil: `/Users/alexander/CareCore/qa-house-resident-history-mobile.jpg`
 - Direkter Vergleich: `/Users/alexander/CareCore/qa-sidebar-blue-comparison-final.png`
 - Viewport: 1536 × 1024 CSS-Pixel, Device Pixel Ratio 1
 - Source und Implementierung: jeweils 1536 × 1024 Pixel; Vergleich ohne Dichteskalierung
@@ -81,6 +83,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 15. Verlauf und Dokumente: Beide bisher nur beschrifteten Tabs besitzen jetzt eigenständige, responsive Ansichten innerhalb derselben Bewohnerakte. Der Verlauf bietet Kennzahlen, fünf funktionale Fachfilter, Tagesgruppen, Detailaktionen und Fokusinformationen. Die Dokumentenablage bietet Kennzahlen, Volltextsuche mit deutscher Wortstamm-Toleranz, fünf Kategorien, Statusangaben, Leerzustand sowie Ansehen- und Downloadaktionen.
 16. Wundübersicht: Der Untermenüpunkt „Wundübersicht“ öffnet jetzt die eigenständige statische Route `/wundmanagement`. Die responsive Seite bündelt Wundkennzahlen, kritische Hinweise, Suche, vier Statusfilter, Heilungsfortschritt, dynamische Fallauswahl und anstehende Versorgungen. Auf Mobil bleibt „Neue Wunde erfassen“ erreichbar und die Kennzahlen werden platzsparend als 2×2-Raster dargestellt.
 17. Bereichsverlauf und Wunddokumentation: „Bewohner → Verlauf“ öffnet jetzt `/bewohner/verlauf` mit chronologischen Einträgen, Fachfiltern, Suche, Detailauswahl und offenen Beobachtungen. „Wundmanagement → Dokumentation“ öffnet `/wundmanagement/dokumentation` mit Statusfiltern, Volltextsuche, dynamischer Befund- und Massnahmenansicht sowie Tagesaufgaben. Beide Seiten sind als eigenständige statische Next.js-Routen umgesetzt und zeigen den aktiven Untermenüpunkt korrekt an.
+18. Hausweiter Bewohnerverlauf: Die Verlaufsroute wurde zu „Bewohnerverlauf & Archiv“ erweitert. Die Demo zeigt 16 Bewohnerakten aus vier Wohnbereichen mit den Stati Aktiv, Verlegt, Ausgetreten und Verstorben. Volltextsuche, Wohnbereichsauswahl und Statusfilter sind kombinierbar; historische Akten erhalten angepasste Archivaktionen und einen Datenschutzhinweis.
 
 ## Primäre Interaktionen
 
@@ -105,6 +108,8 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Sidebar-Navigation von der Wundübersicht zur Wunddokumentation und von der Bewohnerübersicht zum bereichsweiten Verlauf geprüft
 - Wunddokumentationsfilter „Entwurf“, dynamische Fallauswahl und Detailansicht auf Desktop geprüft
 - Bereichsweiter Bewohnerverlauf und Wunddokumentation bei 1440 × 1000 sowie 390 × 844 CSS-Pixel geprüft
+- Kombinierte Filterung nach „Verstorben“ und „Wohnbereich 3“, Archivdetail für Johanna Suter sowie Volltextsuche nach „Spitex“ geprüft
+- Hausweiter Bewohnerverlauf bei Desktopbreite und 390 × 844 CSS-Pixel geprüft; Browserkonsole ohne Fehler
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 
