@@ -51,7 +51,7 @@ const navigation: NavGroup[] = [
     { id: "residents", label: "Bewohner", icon: "residents", href: "/bewohner", children: ["Übersicht", "Verlauf", "Pflegeakte"] },
     { id: "plan", label: "Pflegeplanung", icon: "plan", children: ["Pflegeplanung", "Ziele & Massnahmen", "Auswertung"] },
     { id: "chart", label: "Pflegedokumentation", icon: "note", children: ["Schnelldokumentation", "Verlaufsdokumentation"] },
-    { id: "vitals", label: "Vitalwerte", icon: "vitals", children: ["Messwerte", "Entwicklung", "Grenzwerte"] },
+    { id: "vitals", label: "Vitalwerte", icon: "vitals", children: ["Übersicht", "Entwicklung", "Grenzwerte"] },
     { id: "med", label: "Medikation", icon: "med", children: ["Medikamentenplan", "Medikamentenrunde", "Bestände"] },
     { id: "wounds", label: "Wundmanagement", icon: "wounds", children: ["Wundübersicht", "Dokumentation"] },
     { id: "nutrition", label: "Ernährung", icon: "nutrition", children: ["Ernährungsplan", "Trinkprotokoll"] },
@@ -80,6 +80,7 @@ const globalResults = [
   { title: "Hans Müller", meta: "Bewohner · Zimmer 207", icon: "residents" as ModuleIconName, href: "/bewohner" },
   { title: "Bewohnerverlauf", meta: "Alle Ereignisse im Wohnbereich", icon: "note" as ModuleIconName, href: "/bewohner/verlauf" },
   { title: "Pflegeakten", meta: "Pflegeprofile, Ziele und Maßnahmen", icon: "plan" as ModuleIconName, href: "/bewohner/pflegeakte" },
+  { title: "Vitalwerte", meta: "Hausweite Übersicht aller Messungen", icon: "vitals" as ModuleIconName, href: "/vitalwerte" },
   { title: "Wundübersicht", meta: "5 aktive Wundfälle", icon: "wounds" as ModuleIconName, href: "/wundmanagement" },
   { title: "Wunddokumentation", meta: "Versorgung und Fotodokumentation", icon: "docs" as ModuleIconName, href: "/wundmanagement/dokumentation" },
 ];
@@ -88,6 +89,7 @@ function routeFor(moduleId: string, child: string) {
   if (moduleId === "residents" && child === "Übersicht") return "/bewohner";
   if (moduleId === "residents" && child === "Verlauf") return "/bewohner/verlauf";
   if (moduleId === "residents" && child === "Pflegeakte") return "/bewohner/pflegeakte";
+  if (moduleId === "vitals" && child === "Übersicht") return "/vitalwerte";
   if (moduleId === "wounds" && child === "Wundübersicht") return "/wundmanagement";
   if (moduleId === "wounds" && child === "Dokumentation") return "/wundmanagement/dokumentation";
   return null;
@@ -143,6 +145,7 @@ export default function ModulePageShell({ activeModule, activeChild, pageClass, 
   }
 
   const mobileWoundsActive = activeModule === "wounds";
+  const mobileResidentsActive = activeModule === "residents";
 
   return <div className={`app-shell ${pageClass} ${sidebarCollapsed ? "sidebar-is-collapsed" : ""}`}>
     <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
@@ -173,7 +176,7 @@ export default function ModulePageShell({ activeModule, activeChild, pageClass, 
       {children(setToast)}
     </div>
 
-    <nav className="bottom-nav" aria-label="Mobile Navigation"><button type="button" onClick={() => router.push("/")}><ModuleIcon name="home"/><span>Startseite</span></button><button className={!mobileWoundsActive ? "active" : ""} type="button" onClick={() => router.push("/bewohner")}><ModuleIcon name="residents"/><span>Bewohner</span></button><button type="button" onClick={() => setToast("Aufgaben geöffnet")}><ModuleIcon name="tasks"/><span>Aufgaben</span></button><button type="button" onClick={() => setToast("Team geöffnet")}><ModuleIcon name="team"/><span>Team</span></button><button className={mobileWoundsActive ? "active" : ""} type="button" onClick={() => router.push("/wundmanagement")}><ModuleIcon name="wounds"/><span>Wunden</span></button></nav>
+    <nav className="bottom-nav" aria-label="Mobile Navigation"><button type="button" onClick={() => router.push("/")}><ModuleIcon name="home"/><span>Startseite</span></button><button className={mobileResidentsActive ? "active" : ""} type="button" onClick={() => router.push("/bewohner")}><ModuleIcon name="residents"/><span>Bewohner</span></button><button type="button" onClick={() => setToast("Aufgaben geöffnet")}><ModuleIcon name="tasks"/><span>Aufgaben</span></button><button type="button" onClick={() => setToast("Team geöffnet")}><ModuleIcon name="team"/><span>Team</span></button><button className={mobileWoundsActive ? "active" : ""} type="button" onClick={() => router.push("/wundmanagement")}><ModuleIcon name="wounds"/><span>Wunden</span></button></nav>
 
     {searchOpen && <div className="overlay" role="presentation" onClick={(event) => event.currentTarget === event.target && setSearchOpen(false)}><section className="search-dialog" role="dialog" aria-modal="true" aria-label="Globale Suche"><div className="search-input-wrap"><ModuleIcon name="search"/><input autoFocus value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Bewohner, Dokumente oder Funktionen suchen…" aria-label="Suchbegriff"/><button type="button" onClick={() => setSearchOpen(false)} aria-label="Suche schliessen">ESC</button></div><div className="search-results"><span className="search-group-label">{searchQuery ? "Suchergebnisse" : "Schnellzugriff"}</span>{filteredResults.map((result) => <button className="search-result" type="button" key={result.title} onClick={() => { setSearchOpen(false); router.push(result.href); }}><span className="result-icon"><ModuleIcon name={result.icon}/></span><span><strong>{result.title}</strong><small>{result.meta}</small></span></button>)}</div></section></div>}
     {toast && <div className="toast" role="status"><ModuleIcon name="check"/>{toast}</div>}

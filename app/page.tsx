@@ -99,7 +99,7 @@ const navigation: NavGroup[] = [
     { id: "residents", label: "Bewohner", icon: "residents", children: ["Übersicht", "Verlauf", "Pflegeakte"] },
     { id: "plan", label: "Pflegeplanung", icon: "plan", children: ["Pflegeplanung", "Ziele & Massnahmen", "Auswertung"] },
     { id: "chart", label: "Pflegedokumentation", icon: "note", children: ["Schnelldokumentation", "Verlaufsdokumentation"] },
-    { id: "vitals", label: "Vitalwerte", icon: "vitals", children: ["Messwerte", "Entwicklung", "Grenzwerte"] },
+    { id: "vitals", label: "Vitalwerte", icon: "vitals", children: ["Übersicht", "Entwicklung", "Grenzwerte"] },
     { id: "med", label: "Medikation", icon: "med", children: ["Medikamentenplan", "Medikamentenrunde", "Bestände"] },
     { id: "wounds", label: "Wundmanagement", icon: "wounds", children: ["Wundübersicht", "Dokumentation"] },
     { id: "nutrition", label: "Ernährung", icon: "nutrition", children: ["Ernährungsplan", "Trinkprotokoll"] },
@@ -251,7 +251,11 @@ export default function Home() {
     setOpenModules((current) => current.includes(moduleId) ? current.filter((item) => item !== moduleId) : [...current, moduleId]);
   }
 
-  function selectNav(label: string) {
+  function selectNav(label: string, moduleId?: string) {
+    if (moduleId === "vitals" && label === "Übersicht") {
+      router.push("/vitalwerte");
+      return;
+    }
     if (label === "Verlauf") {
       router.push("/bewohner/verlauf");
       return;
@@ -288,7 +292,7 @@ export default function Home() {
                   const moduleActive = module.children.includes(activeNav);
                   return <div className={`module-block ${moduleOpen ? "open" : ""}`} key={module.id}>
                     <button className={`nav-button module-button ${moduleActive ? "active" : ""}`} type="button" aria-expanded={moduleOpen} title={module.label} onClick={() => toggleModule(group.id, module.id)}><Icon name={module.icon}/><span className="nav-label">{module.label}</span>{module.badge && <span className="nav-badge">{module.badge}</span>}<Icon name="chevron" className="module-caret"/></button>
-                    <div className="submenu">{module.children.map((child) => <button className={`submenu-button ${activeNav === child ? "active" : ""}`} type="button" key={child} onClick={() => selectNav(child)}><span className="submenu-rail"/><span>{child}</span></button>)}</div>
+                    <div className="submenu">{module.children.map((child) => <button className={`submenu-button ${activeNav === child ? "active" : ""}`} type="button" key={child} onClick={() => selectNav(child, module.id)}><span className="submenu-rail"/><span>{child}</span></button>)}</div>
                   </div>;
                 })}
               </div>

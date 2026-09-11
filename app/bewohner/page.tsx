@@ -86,7 +86,7 @@ const navigation: NavGroup[] = [
     { id: "residents", label: "Bewohner", icon: "residents", href: "/bewohner", children: ["Übersicht", "Verlauf", "Pflegeakte"] },
     { id: "plan", label: "Pflegeplanung", icon: "plan", children: ["Pflegeplanung", "Ziele & Massnahmen", "Auswertung"] },
     { id: "chart", label: "Pflegedokumentation", icon: "note", children: ["Schnelldokumentation", "Verlaufsdokumentation"] },
-    { id: "vitals", label: "Vitalwerte", icon: "vitals", children: ["Messwerte", "Entwicklung", "Grenzwerte"] },
+    { id: "vitals", label: "Vitalwerte", icon: "vitals", children: ["Übersicht", "Entwicklung", "Grenzwerte"] },
     { id: "med", label: "Medikation", icon: "med", children: ["Medikamentenplan", "Medikamentenrunde", "Bestände"] },
     { id: "wounds", label: "Wundmanagement", icon: "wounds", children: ["Wundübersicht", "Dokumentation"] },
     { id: "nutrition", label: "Ernährung", icon: "nutrition", children: ["Ernährungsplan", "Trinkprotokoll"] },
@@ -182,6 +182,7 @@ export default function ResidentsPage() {
     if (moduleId === "residents" && child === "Übersicht") return;
     if (moduleId === "residents" && child === "Verlauf") { router.push("/bewohner/verlauf"); return; }
     if (moduleId === "residents" && child === "Pflegeakte") { router.push("/bewohner/pflegeakte"); return; }
+    if (moduleId === "vitals" && child === "Übersicht") { router.push("/vitalwerte"); return; }
     if (moduleId === "wounds" && child === "Wundübersicht") { router.push("/wundmanagement"); return; }
     if (moduleId === "wounds" && child === "Dokumentation") { router.push("/wundmanagement/dokumentation"); return; }
     setToast(`${child} geöffnet`);

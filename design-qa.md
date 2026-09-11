@@ -40,6 +40,7 @@
 - Hausweiter Bewohnerverlauf und Archiv, Mobil: `/Users/alexander/CareCore/qa-house-resident-history-mobile.jpg`
 - Hausweite Pflegeakten, Desktop: `/Users/alexander/CareCore/qa-care-records-page-desktop.jpg`
 - Hausweite Pflegeakten, Mobil: `/Users/alexander/CareCore/qa-care-records-page-mobile.jpg`
+- Hausweite Vitalwerte-Übersicht, Desktop: `/Users/alexander/CareCore/qa-vitals-overview-desktop.jpg`
 - Direkter Vergleich: `/Users/alexander/CareCore/qa-sidebar-blue-comparison-final.png`
 - Viewport: 1536 × 1024 CSS-Pixel, Device Pixel Ratio 1
 - Source und Implementierung: jeweils 1536 × 1024 Pixel; Vergleich ohne Dichteskalierung
@@ -87,6 +88,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 17. Bereichsverlauf und Wunddokumentation: „Bewohner → Verlauf“ öffnet jetzt `/bewohner/verlauf` mit chronologischen Einträgen, Fachfiltern, Suche, Detailauswahl und offenen Beobachtungen. „Wundmanagement → Dokumentation“ öffnet `/wundmanagement/dokumentation` mit Statusfiltern, Volltextsuche, dynamischer Befund- und Massnahmenansicht sowie Tagesaufgaben. Beide Seiten sind als eigenständige statische Next.js-Routen umgesetzt und zeigen den aktiven Untermenüpunkt korrekt an.
 18. Hausweiter Bewohnerverlauf: Die Verlaufsroute wurde zu „Bewohnerverlauf & Archiv“ erweitert. Die Demo zeigt 16 Bewohnerakten aus vier Wohnbereichen mit den Stati Aktiv, Verlegt, Ausgetreten und Verstorben. Volltextsuche, Wohnbereichsauswahl und Statusfilter sind kombinierbar; historische Akten erhalten angepasste Archivaktionen und einen Datenschutzhinweis.
 19. Pflegeakten-Arbeitsplatz: „Bewohner → Pflegeakte“ öffnet die eigenständige Route `/bewohner/pflegeakte`. Die responsive Ansicht bietet eine filterbare Bewohnerauswahl, dynamische Aktenkennzahlen, sechs auswählbare Pflegebereiche sowie zugehörige Ziele, Maßnahmen, Risiken, Evaluationen und Fachpersonen. Der Standortkontext ist auf das gesamte Haus gesetzt.
+20. Vitalwerte-Übersicht: „Vitalwerte → Übersicht“ ersetzt den bisherigen Untermenüpunkt „Messwerte“ und öffnet die eigenständige Route `/vitalwerte`. Die hausweite Arbeitsfläche zeigt sechs Messwertarten pro Bewohner, Status und Messzeitpunkt sowie eine dynamische Detailansicht mit klinischer Einordnung, 24-Stunden-Verlauf und fälligen Kontrollen. Volltextsuche, Wohnbereichsauswahl und Statusfilter lassen sich kombinieren.
 
 ## Primäre Interaktionen
 
@@ -115,6 +117,8 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Hausweiter Bewohnerverlauf bei Desktopbreite und 390 × 844 CSS-Pixel geprüft; Browserkonsole ohne Fehler
 - Sidebar-Navigation zur Pflegeakte, Statusfilter „Entwurf“, Bewohnerwechsel zu Walter Brunner und Pflegebereichswechsel zu „Haut & Wunden“ geprüft
 - Pflegeakten-Arbeitsplatz auf Desktop und bei 390 × 844 CSS-Pixel geprüft; Browserkonsole ohne Fehler
+- Sidebar-Navigation zu „Vitalwerte → Übersicht“, Statusfilter „Auffällig“, Volltextsuche nach „Walter“, Wohnbereichsfilter „Wohnbereich 1“, Bewohnerauswahl und Messwertwechsel zu „Sauerstoff“ geprüft
+- Vitalwerte-Übersicht im Desktopbrowser geprüft; acht Bewohnerzeilen und alle sechs Messwertarten bleiben vollständig sichtbar, Browserprotokoll ohne Fehler
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 
