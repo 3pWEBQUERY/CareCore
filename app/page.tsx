@@ -256,6 +256,10 @@ export default function Home() {
       router.push("/bewohner/verlauf");
       return;
     }
+    if (label === "Pflegeakte") {
+      router.push("/bewohner/pflegeakte");
+      return;
+    }
     if (label === "Wundübersicht") {
       router.push("/wundmanagement");
       return;

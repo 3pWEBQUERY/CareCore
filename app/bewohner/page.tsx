@@ -181,6 +181,7 @@ export default function ResidentsPage() {
   function selectSubmenu(moduleId: string, child: string) {
     if (moduleId === "residents" && child === "Übersicht") return;
     if (moduleId === "residents" && child === "Verlauf") { router.push("/bewohner/verlauf"); return; }
+    if (moduleId === "residents" && child === "Pflegeakte") { router.push("/bewohner/pflegeakte"); return; }
     if (moduleId === "wounds" && child === "Wundübersicht") { router.push("/wundmanagement"); return; }
     if (moduleId === "wounds" && child === "Dokumentation") { router.push("/wundmanagement/dokumentation"); return; }
     setToast(`${child} geöffnet`);

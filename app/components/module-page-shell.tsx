@@ -79,6 +79,7 @@ const navigation: NavGroup[] = [
 const globalResults = [
   { title: "Hans Müller", meta: "Bewohner · Zimmer 207", icon: "residents" as ModuleIconName, href: "/bewohner" },
   { title: "Bewohnerverlauf", meta: "Alle Ereignisse im Wohnbereich", icon: "note" as ModuleIconName, href: "/bewohner/verlauf" },
+  { title: "Pflegeakten", meta: "Pflegeprofile, Ziele und Maßnahmen", icon: "plan" as ModuleIconName, href: "/bewohner/pflegeakte" },
   { title: "Wundübersicht", meta: "5 aktive Wundfälle", icon: "wounds" as ModuleIconName, href: "/wundmanagement" },
   { title: "Wunddokumentation", meta: "Versorgung und Fotodokumentation", icon: "docs" as ModuleIconName, href: "/wundmanagement/dokumentation" },
 ];
@@ -86,6 +87,7 @@ const globalResults = [
 function routeFor(moduleId: string, child: string) {
   if (moduleId === "residents" && child === "Übersicht") return "/bewohner";
   if (moduleId === "residents" && child === "Verlauf") return "/bewohner/verlauf";
+  if (moduleId === "residents" && child === "Pflegeakte") return "/bewohner/pflegeakte";
   if (moduleId === "wounds" && child === "Wundübersicht") return "/wundmanagement";
   if (moduleId === "wounds" && child === "Dokumentation") return "/wundmanagement/dokumentation";
   return null;

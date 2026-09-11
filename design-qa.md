@@ -38,6 +38,8 @@
 - Wunddokumentation, Mobil: `/Users/alexander/CareCore/qa-wound-documentation-mobile.jpg`
 - Hausweiter Bewohnerverlauf und Archiv, Desktop: `/Users/alexander/CareCore/qa-house-resident-history-desktop.jpg`
 - Hausweiter Bewohnerverlauf und Archiv, Mobil: `/Users/alexander/CareCore/qa-house-resident-history-mobile.jpg`
+- Hausweite Pflegeakten, Desktop: `/Users/alexander/CareCore/qa-care-records-page-desktop.jpg`
+- Hausweite Pflegeakten, Mobil: `/Users/alexander/CareCore/qa-care-records-page-mobile.jpg`
 - Direkter Vergleich: `/Users/alexander/CareCore/qa-sidebar-blue-comparison-final.png`
 - Viewport: 1536 × 1024 CSS-Pixel, Device Pixel Ratio 1
 - Source und Implementierung: jeweils 1536 × 1024 Pixel; Vergleich ohne Dichteskalierung
@@ -84,6 +86,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 16. Wundübersicht: Der Untermenüpunkt „Wundübersicht“ öffnet jetzt die eigenständige statische Route `/wundmanagement`. Die responsive Seite bündelt Wundkennzahlen, kritische Hinweise, Suche, vier Statusfilter, Heilungsfortschritt, dynamische Fallauswahl und anstehende Versorgungen. Auf Mobil bleibt „Neue Wunde erfassen“ erreichbar und die Kennzahlen werden platzsparend als 2×2-Raster dargestellt.
 17. Bereichsverlauf und Wunddokumentation: „Bewohner → Verlauf“ öffnet jetzt `/bewohner/verlauf` mit chronologischen Einträgen, Fachfiltern, Suche, Detailauswahl und offenen Beobachtungen. „Wundmanagement → Dokumentation“ öffnet `/wundmanagement/dokumentation` mit Statusfiltern, Volltextsuche, dynamischer Befund- und Massnahmenansicht sowie Tagesaufgaben. Beide Seiten sind als eigenständige statische Next.js-Routen umgesetzt und zeigen den aktiven Untermenüpunkt korrekt an.
 18. Hausweiter Bewohnerverlauf: Die Verlaufsroute wurde zu „Bewohnerverlauf & Archiv“ erweitert. Die Demo zeigt 16 Bewohnerakten aus vier Wohnbereichen mit den Stati Aktiv, Verlegt, Ausgetreten und Verstorben. Volltextsuche, Wohnbereichsauswahl und Statusfilter sind kombinierbar; historische Akten erhalten angepasste Archivaktionen und einen Datenschutzhinweis.
+19. Pflegeakten-Arbeitsplatz: „Bewohner → Pflegeakte“ öffnet die eigenständige Route `/bewohner/pflegeakte`. Die responsive Ansicht bietet eine filterbare Bewohnerauswahl, dynamische Aktenkennzahlen, sechs auswählbare Pflegebereiche sowie zugehörige Ziele, Maßnahmen, Risiken, Evaluationen und Fachpersonen. Der Standortkontext ist auf das gesamte Haus gesetzt.
 
 ## Primäre Interaktionen
 
@@ -110,6 +113,8 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Bereichsweiter Bewohnerverlauf und Wunddokumentation bei 1440 × 1000 sowie 390 × 844 CSS-Pixel geprüft
 - Kombinierte Filterung nach „Verstorben“ und „Wohnbereich 3“, Archivdetail für Johanna Suter sowie Volltextsuche nach „Spitex“ geprüft
 - Hausweiter Bewohnerverlauf bei Desktopbreite und 390 × 844 CSS-Pixel geprüft; Browserkonsole ohne Fehler
+- Sidebar-Navigation zur Pflegeakte, Statusfilter „Entwurf“, Bewohnerwechsel zu Walter Brunner und Pflegebereichswechsel zu „Haut & Wunden“ geprüft
+- Pflegeakten-Arbeitsplatz auf Desktop und bei 390 × 844 CSS-Pixel geprüft; Browserkonsole ohne Fehler
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 

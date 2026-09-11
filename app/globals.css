@@ -405,6 +405,37 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .house-status-overview small { display: block; margin-top: 3px; color: var(--muted); font-size: 8px; }
 .house-status-overview svg { width: 14px; color: #91a2b2; }
 
+.care-page-layout { display: grid; grid-template-columns: minmax(270px,.48fr) minmax(0,1.52fr); gap: 18px; align-items: start; }
+.care-resident-browser { position: sticky; top: 88px; overflow: hidden; }
+.care-resident-toolbar { display: grid; gap: 12px; padding: 16px; border-bottom: 1px solid var(--line); }
+.care-record-filters { display: flex; gap: 5px; overflow-x: auto; }
+.care-record-filters button { min-height: 32px; flex: 0 0 auto; padding: 0 9px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); background: white; font-size: 9px; font-weight: 720; cursor: pointer; }
+.care-record-filters button:hover,.care-record-filters button.active { color: var(--brand-dark); border-color: #93c5fd; background: var(--brand-soft); }
+.care-resident-list { max-height: 870px; overflow-y: auto; padding: 6px 12px 12px; }
+.care-resident-row { width: 100%; min-height: 92px; display: grid; grid-template-columns: 39px minmax(0,1fr) auto 15px; align-items: center; gap: 10px; padding: 11px 7px; border: 0; border-bottom: 1px solid #e9eef4; border-radius: 0; color: var(--ink); background: white; text-align: left; cursor: pointer; }
+.care-resident-row:last-child { border-bottom: 0; }
+.care-resident-row:hover { background: #f8fbff; }
+.care-resident-row.selected { border-radius: 6px; background: var(--brand-soft); box-shadow: inset 3px 0 0 var(--brand); }
+.care-resident-row .resident-avatar { width: 38px; height: 38px; }
+.care-resident-row > span:nth-child(2) { min-width: 0; }
+.care-resident-row strong { display: block; font-size: 11px; }
+.care-resident-row small { display: block; margin-top: 4px; overflow: hidden; color: var(--muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.care-resident-row em { display: -webkit-box; margin-top: 6px; overflow: hidden; color: #4b6176; font-size: 8px; font-style: normal; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.care-resident-row > svg { width: 14px; color: #91a2b2; }
+.care-profile-workspace { min-width: 0; }
+.care-profile-header { min-height: 88px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; padding: 15px 18px; }
+.care-profile-identity { min-width: 0; display: flex; align-items: center; gap: 13px; }
+.care-profile-identity .resident-avatar { width: 48px; height: 48px; flex: 0 0 auto; }
+.care-profile-identity .eyebrow { margin-bottom: 3px; font-size: 9px; }
+.care-profile-identity h2 { margin: 0; font-size: 18px; letter-spacing: -.025em; }
+.care-profile-identity > div > span { display: block; margin-top: 5px; color: var(--muted); font-size: 9px; }
+.care-profile-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.care-profile-actions .primary-button,.care-profile-actions .secondary-button { min-height: 38px; padding-inline: 11px; font-size: 11px; }
+.care-profile-grid { display: grid; grid-template-columns: minmax(0,1.45fr) minmax(260px,.62fr); gap: 18px; align-items: start; }
+.care-profile-grid .card-header { align-items: flex-start; }
+.care-profile-grid .card-header .eyebrow { margin-bottom: 4px; font-size: 9px; }
+.care-evaluation-alert { margin-bottom: 18px; }
+
 .wound-doc-toolbar { grid-template-columns: minmax(145px,.58fr) minmax(220px,.82fr) minmax(270px,auto) auto; }
 .wound-doc-toolbar > .secondary-button { min-height: 38px; padding-inline: 10px; }
 .wound-doc-table-head,.wound-doc-row { display: grid; grid-template-columns: 42px minmax(200px,1.35fr) minmax(125px,.72fr) minmax(110px,.62fr) 95px 18px; gap: 11px; align-items: center; }
@@ -824,6 +855,11 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .wound-overview-layout { grid-template-columns: 1fr; }
   .course-layout,.wound-doc-layout { grid-template-columns: 1fr; }
   .house-history-layout { grid-template-columns: 1fr; }
+  .care-page-layout { grid-template-columns: 1fr; }
+  .care-resident-browser { position: static; }
+  .care-resident-list { max-height: 470px; }
+  .care-resident-row { grid-template-columns: 39px minmax(0,1fr) auto 15px; }
+  .care-profile-grid { grid-template-columns: minmax(0,1.3fr) minmax(260px,.7fr); }
   .course-toolbar { grid-template-columns: minmax(160px,.7fr) minmax(230px,1fr); }
   .course-filters { grid-column: 1/3; }
   .wound-doc-toolbar { grid-template-columns: minmax(160px,.65fr) minmax(230px,1fr) auto; }
@@ -912,6 +948,12 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .house-resident-period { grid-column: 2; grid-row: 3; }
   .house-resident-last { grid-column: 2/4; grid-row: 4; padding-top: 5px; }
   .house-resident-row > .chevron { display: none; }
+  .care-page-heading { display: grid; align-items: flex-start; }
+  .care-page-heading .primary-button { width: 100%; display: inline-flex; justify-content: center; margin-top: 6px; }
+  .care-profile-header { align-items: flex-start; flex-direction: column; }
+  .care-profile-actions { width: 100%; flex-wrap: wrap; }
+  .care-profile-actions .status-badge { margin-right: auto; }
+  .care-profile-grid { grid-template-columns: 1fr; }
   .wound-doc-table-head { display: none; }
   .wound-doc-row { grid-template-columns: 42px minmax(0,1fr) auto; gap: 7px 10px; }
   .wound-doc-row .resident-avatar { grid-row: 1/3; }
@@ -1018,6 +1060,11 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .house-resident-unit { grid-column: 2; grid-row: 3; }
   .house-resident-period { grid-column: 2; grid-row: 4; }
   .house-resident-last { grid-column: 2; grid-row: 5; }
+  .care-resident-row { grid-template-columns: 38px minmax(0,1fr) auto; }
+  .care-resident-row > svg { display: none; }
+  .care-resident-row > .status-badge { grid-column: 2; justify-self: start; }
+  .care-profile-actions .status-badge { width: 100%; margin-bottom: 2px; }
+  .care-profile-actions .primary-button,.care-profile-actions .secondary-button { flex: 1; }
   .record-heading h2 { font-size: 21px; }
   .record-kicker { font-size: 9px; }
   .record-close-button { width: 40px; height: 40px; }

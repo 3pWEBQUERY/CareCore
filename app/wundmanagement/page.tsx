@@ -154,6 +154,7 @@ export default function WoundOverviewPage() {
     if (moduleId === "wounds" && child === "Wundübersicht") return;
     if (moduleId === "wounds" && child === "Dokumentation") { router.push("/wundmanagement/dokumentation"); return; }
     if (moduleId === "residents" && child === "Verlauf") { router.push("/bewohner/verlauf"); return; }
+    if (moduleId === "residents" && child === "Pflegeakte") { router.push("/bewohner/pflegeakte"); return; }
     setToast(`${child} geöffnet`);
   }
 
