@@ -100,7 +100,7 @@ const navigation: NavGroup[] = [
     { id: "plan", label: "Pflegeplanung", icon: "plan", children: ["Pflegeplanung", "Ziele & Massnahmen", "Auswertung"] },
     { id: "chart", label: "Pflegedokumentation", icon: "note", children: ["Schnelldokumentation", "Verlaufsdokumentation"] },
     { id: "vitals", label: "Vitalwerte", icon: "vitals", children: ["Übersicht", "Entwicklung", "Grenzwerte"] },
-    { id: "med", label: "Medikation", icon: "med", children: ["Medikamentenplan", "Medikamentenrunde", "Bestände"] },
+    { id: "med", label: "Medikation", icon: "med", children: ["Medikamentenplan", "Medikamentenrunde", "Bestände", "Reserven"] },
     { id: "wounds", label: "Wundmanagement", icon: "wounds", children: ["Wundübersicht", "Dokumentation"] },
     { id: "nutrition", label: "Ernährung", icon: "nutrition", children: ["Ernährungsplan", "Trinkprotokoll"] },
     { id: "assess", label: "Einschätzungen", icon: "assess", children: ["Einschätzungen", "Fälligkeiten"] },
@@ -252,6 +252,10 @@ export default function Home() {
   }
 
   function selectNav(label: string, moduleId?: string) {
+    if (moduleId === "med" && label === "Medikamentenplan") { router.push("/medikation"); return; }
+    if (moduleId === "med" && label === "Medikamentenrunde") { router.push("/medikation/runde"); return; }
+    if (moduleId === "med" && label === "Bestände") { router.push("/medikation/bestaende"); return; }
+    if (moduleId === "med" && label === "Reserven") { router.push("/medikation/reserven"); return; }
     if (moduleId === "vitals" && label === "Übersicht") {
       router.push("/vitalwerte");
       return;

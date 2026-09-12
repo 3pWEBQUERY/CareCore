@@ -52,7 +52,7 @@ const navigation: NavGroup[] = [
     { id: "plan", label: "Pflegeplanung", icon: "plan", children: ["Pflegeplanung", "Ziele & Massnahmen", "Auswertung"] },
     { id: "chart", label: "Pflegedokumentation", icon: "note", children: ["Schnelldokumentation", "Verlaufsdokumentation"] },
     { id: "vitals", label: "Vitalwerte", icon: "vitals", children: ["Übersicht", "Entwicklung", "Grenzwerte"] },
-    { id: "med", label: "Medikation", icon: "med", children: ["Medikamentenplan", "Medikamentenrunde", "Bestände"] },
+    { id: "med", label: "Medikation", icon: "med", children: ["Medikamentenplan", "Medikamentenrunde", "Bestände", "Reserven"] },
     { id: "wounds", label: "Wundmanagement", icon: "wounds", children: ["Wundübersicht", "Dokumentation"] },
     { id: "nutrition", label: "Ernährung", icon: "nutrition", children: ["Ernährungsplan", "Trinkprotokoll"] },
     { id: "assess", label: "Einschätzungen", icon: "assess", children: ["Einschätzungen", "Fälligkeiten"] },
@@ -81,6 +81,10 @@ const globalResults = [
   { title: "Bewohnerverlauf", meta: "Alle Ereignisse im Wohnbereich", icon: "note" as ModuleIconName, href: "/bewohner/verlauf" },
   { title: "Pflegeakten", meta: "Pflegeprofile, Ziele und Maßnahmen", icon: "plan" as ModuleIconName, href: "/bewohner/pflegeakte" },
   { title: "Vitalwerte", meta: "Hausweite Übersicht aller Messungen", icon: "vitals" as ModuleIconName, href: "/vitalwerte" },
+  { title: "Medikamentenplan", meta: "Verordnungen und Einnahmezeiten", icon: "med" as ModuleIconName, href: "/medikation" },
+  { title: "Medikamentenrunde", meta: "Geplante Gaben dokumentieren", icon: "tasks" as ModuleIconName, href: "/medikation/runde" },
+  { title: "Medikamentenbestände", meta: "Lager, Mindestbestand und Verfall", icon: "docs" as ModuleIconName, href: "/medikation/bestaende" },
+  { title: "Bedarfsmedikation", meta: "Ärztlich verordnete Reserven führen", icon: "plus" as ModuleIconName, href: "/medikation/reserven" },
   { title: "Wundübersicht", meta: "5 aktive Wundfälle", icon: "wounds" as ModuleIconName, href: "/wundmanagement" },
   { title: "Wunddokumentation", meta: "Versorgung und Fotodokumentation", icon: "docs" as ModuleIconName, href: "/wundmanagement/dokumentation" },
 ];
@@ -90,6 +94,10 @@ function routeFor(moduleId: string, child: string) {
   if (moduleId === "residents" && child === "Verlauf") return "/bewohner/verlauf";
   if (moduleId === "residents" && child === "Pflegeakte") return "/bewohner/pflegeakte";
   if (moduleId === "vitals" && child === "Übersicht") return "/vitalwerte";
+  if (moduleId === "med" && child === "Medikamentenplan") return "/medikation";
+  if (moduleId === "med" && child === "Medikamentenrunde") return "/medikation/runde";
+  if (moduleId === "med" && child === "Bestände") return "/medikation/bestaende";
+  if (moduleId === "med" && child === "Reserven") return "/medikation/reserven";
   if (moduleId === "wounds" && child === "Wundübersicht") return "/wundmanagement";
   if (moduleId === "wounds" && child === "Dokumentation") return "/wundmanagement/dokumentation";
   return null;

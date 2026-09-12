@@ -87,7 +87,7 @@ const navigation: NavGroup[] = [
     { id: "plan", label: "Pflegeplanung", icon: "plan", children: ["Pflegeplanung", "Ziele & Massnahmen", "Auswertung"] },
     { id: "chart", label: "Pflegedokumentation", icon: "note", children: ["Schnelldokumentation", "Verlaufsdokumentation"] },
     { id: "vitals", label: "Vitalwerte", icon: "vitals", children: ["Übersicht", "Entwicklung", "Grenzwerte"] },
-    { id: "med", label: "Medikation", icon: "med", children: ["Medikamentenplan", "Medikamentenrunde", "Bestände"] },
+    { id: "med", label: "Medikation", icon: "med", children: ["Medikamentenplan", "Medikamentenrunde", "Bestände", "Reserven"] },
     { id: "wounds", label: "Wundmanagement", icon: "wounds", children: ["Wundübersicht", "Dokumentation"] },
     { id: "nutrition", label: "Ernährung", icon: "nutrition", children: ["Ernährungsplan", "Trinkprotokoll"] },
     { id: "assess", label: "Einschätzungen", icon: "assess", children: ["Einschätzungen", "Fälligkeiten"] },
@@ -183,6 +183,10 @@ export default function ResidentsPage() {
     if (moduleId === "residents" && child === "Verlauf") { router.push("/bewohner/verlauf"); return; }
     if (moduleId === "residents" && child === "Pflegeakte") { router.push("/bewohner/pflegeakte"); return; }
     if (moduleId === "vitals" && child === "Übersicht") { router.push("/vitalwerte"); return; }
+    if (moduleId === "med" && child === "Medikamentenplan") { router.push("/medikation"); return; }
+    if (moduleId === "med" && child === "Medikamentenrunde") { router.push("/medikation/runde"); return; }
+    if (moduleId === "med" && child === "Bestände") { router.push("/medikation/bestaende"); return; }
+    if (moduleId === "med" && child === "Reserven") { router.push("/medikation/reserven"); return; }
     if (moduleId === "wounds" && child === "Wundübersicht") { router.push("/wundmanagement"); return; }
     if (moduleId === "wounds" && child === "Dokumentation") { router.push("/wundmanagement/dokumentation"); return; }
     setToast(`${child} geöffnet`);
