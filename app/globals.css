@@ -1248,6 +1248,17 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .settings-toggle input:checked + i::after { transform: translateX(14px); }
 .settings-detail-footer { padding: 0 18px 18px; }
 .settings-detail-footer .secondary-button { min-height: 36px; font-size: 9px; }
+/* Settings prioritises readability over the compact density used by operational lists. */
+.settings-workspace .heading-copy > p:last-child { font-size: 16px; line-height: 1.5; }
+.settings-workspace .card-title { font-size: 18px; }
+.settings-nav nav button { font-size: 14px; }
+.settings-list > div:last-child button { min-height: 88px; }
+.settings-list strong { font-size: 15px; }
+.settings-list small { margin-top: 6px; font-size: 12px; line-height: 1.4; }
+.settings-item-value { font-size: 12px; }
+.settings-detail-body > p { font-size: 15px; line-height: 1.6; }
+.settings-toggle { font-size: 14px; }
+.settings-detail-footer .secondary-button { font-size: 13px; }
 @keyframes record-slide-in { from { opacity: .78; transform: translate3d(42px,0,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
 @keyframes record-content-in { from { opacity: .65; transform: translate3d(0,5px,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
 

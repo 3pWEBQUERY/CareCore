@@ -102,6 +102,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 24. Personal und Leitung: Alle Unterseiten der Sidebar-Bereiche „Personal“ und „Leitung“ sind als eigenständige statische Arbeitsflächen umgesetzt. Team, Schulungen und Dokumente decken Kommunikation, Nachweise und Standards ab; Qualität, Kennzahlen & Analysen und Administration bieten Ereignisse, Auswertungen, Benutzer- und Organisationseinstellungen.
 25. Bereichsspezifische Arbeitsflächen: „Betrieb“ nutzt jetzt einen operativen Puls mit Live-Status, Schichtkennzahlen und Tagesaktionen. „Leitung“ verwendet ein eigenständiges Management-Cockpit mit KPI-Kacheln, Entwicklungschart, Führungskreis, Arbeitsliste und Entscheidungsdetail statt des Personal-Layouts.
 26. Intelligenz und Einstellungen: „CareCore KI“ bietet Assistenz und KI-Entwürfe mit Prüf- und Datenschutzkontext. „Einstellungen“ ist über die Sidebar erreichbar und enthält Übersicht, Profil, Benachrichtigungen, Sicherheit und Darstellung als separate Routen.
+27. Einstellungslesbarkeit: Die zunächst zu kompakte Typografie der Einstellungsseite wurde gezielt angehoben. Navigation nutzt 14px, Bereichstitel 15px, Beschreibungen 12–15px und die Detailansicht 15px bei unverändertem Layout.
 
 ## Primäre Interaktionen
 
@@ -143,6 +144,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Sidebar-Navigation zu allen Personal- und Leitungsmodulen sowie aktive Untermenümarkierung auf Team und Benutzer & Rollen geprüft
 - Unterschiedliche Layouts von „Betrieb“ und „Leitung“ sowie operative Kennzahlen- und Management-Cockpit-Interaktionen geprüft
 - Intelligenz-Assistenz, KI-Entwürfe und Einstellungen inklusive Unterseiten-Navigation geprüft
+- Lesbarkeit der Einstellungsseite per Browserstil geprüft (Navigation 14px, Bereichstitel 15px, Detailtext 15px)
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 
