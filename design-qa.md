@@ -100,6 +100,8 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 22. Betrieb und Einschätzungen: Alle zehn zuvor nicht freigeschalteten Unterseiten besitzen eigenständige statische Routen und folgen dem bestehenden Arbeitsflächenmuster. „Mein Dienst“ bietet Schichttimeline und Fortschritt, „Schichtverlauf“ vergangene Dienste, Aufgaben- und Übergabeseiten bieten Statusfilter und direkte Aktionen, Dienstplanung zeigt Wochen- bzw. Teambesetzung und Einschätzungen bündeln Assessmentstatus und Fälligkeiten mit Suche und Bearbeitungsaktionen.
 23. Sidebar-Gruppenzustand: Der gemeinsame Seitenshell leitet die geöffnete Hauptgruppe jetzt aus dem aktiven Modul ab. Dadurch bleibt auf jeder Unterseite automatisch der passende Bereich (z. B. „Betrieb“ bei Schicht, Aufgaben und Übergaben) geöffnet, während andere Bereiche geschlossen starten.
 24. Personal und Leitung: Alle Unterseiten der Sidebar-Bereiche „Personal“ und „Leitung“ sind als eigenständige statische Arbeitsflächen umgesetzt. Team, Schulungen und Dokumente decken Kommunikation, Nachweise und Standards ab; Qualität, Kennzahlen & Analysen und Administration bieten Ereignisse, Auswertungen, Benutzer- und Organisationseinstellungen.
+25. Bereichsspezifische Arbeitsflächen: „Betrieb“ nutzt jetzt einen operativen Puls mit Live-Status, Schichtkennzahlen und Tagesaktionen. „Leitung“ verwendet ein eigenständiges Management-Cockpit mit KPI-Kacheln, Entwicklungschart, Führungskreis, Arbeitsliste und Entscheidungsdetail statt des Personal-Layouts.
+26. Intelligenz und Einstellungen: „CareCore KI“ bietet Assistenz und KI-Entwürfe mit Prüf- und Datenschutzkontext. „Einstellungen“ ist über die Sidebar erreichbar und enthält Übersicht, Profil, Benachrichtigungen, Sicherheit und Darstellung als separate Routen.
 
 ## Primäre Interaktionen
 
@@ -139,6 +141,8 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Mein Dienst und Einschätzungen im Desktopbrowser geprüft; Browserprotokoll ohne Fehler
 - Wechsel zwischen mehreren Unterseiten in „Betrieb“ und „Pflege & Klinik“ geprüft; die jeweils aktive Hauptgruppe bleibt geöffnet und wird nicht durch eine andere Gruppe ersetzt
 - Sidebar-Navigation zu allen Personal- und Leitungsmodulen sowie aktive Untermenümarkierung auf Team und Benutzer & Rollen geprüft
+- Unterschiedliche Layouts von „Betrieb“ und „Leitung“ sowie operative Kennzahlen- und Management-Cockpit-Interaktionen geprüft
+- Intelligenz-Assistenz, KI-Entwürfe und Einstellungen inklusive Unterseiten-Navigation geprüft
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 

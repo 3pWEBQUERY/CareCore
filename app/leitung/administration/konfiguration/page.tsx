@@ -1,3 +1,3 @@
-import GovernanceWorkspace from "../../../verwaltung/components/governance-workspace";
+import LeadershipWorkspace from "../../components/leadership-workspace";
 
-export default function ConfigurationPage() { return <GovernanceWorkspace view="configuration"/>; }
+export default function ConfigurationPage() { return <LeadershipWorkspace view="configuration"/>; }

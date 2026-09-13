@@ -1,3 +1,3 @@
-import GovernanceWorkspace from "../../verwaltung/components/governance-workspace";
+import LeadershipWorkspace from "../components/leadership-workspace";
 
-export default function QualityEventsPage() { return <GovernanceWorkspace view="qualityEvents"/>; }
+export default function QualityEventsPage() { return <LeadershipWorkspace view="qualityEvents"/>; }

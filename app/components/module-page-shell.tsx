@@ -35,13 +35,13 @@ import {
   Warning,
 } from "@phosphor-icons/react";
 
-export type ModuleIconName = "home" | "residents" | "tasks" | "handover" | "calendar" | "team" | "learn" | "docs" | "chart" | "quality" | "settings" | "search" | "bell" | "building" | "chevron" | "caretDown" | "alert" | "check" | "plus" | "pulse" | "note" | "vitals" | "plan" | "med" | "wounds" | "nutrition" | "assess" | "shift" | "ai" | "sidebar" | "filter";
+export type ModuleIconName = "home" | "residents" | "tasks" | "handover" | "calendar" | "team" | "learn" | "docs" | "chart" | "quality" | "settings" | "search" | "bell" | "building" | "chevron" | "caretDown" | "alert" | "check" | "plus" | "pulse" | "note" | "vitals" | "plan" | "med" | "wounds" | "nutrition" | "assess" | "shift" | "ai" | "sparkle" | "sidebar" | "filter";
 
 type NavModule = { id: string; label: string; icon: ModuleIconName; children: string[]; badge?: number; href?: string };
 type NavGroup = { id: string; label: string; modules: NavModule[] };
 
 export function ModuleIcon({ name, className = "" }: { name: ModuleIconName; className?: string }) {
-  const icons = { home: House, residents: UsersThree, tasks: ListChecks, handover: ArrowsLeftRight, calendar: CalendarDots, team: ChatsCircle, learn: GraduationCap, docs: Files, chart: ChartBar, quality: ShieldCheck, settings: GearSix, search: MagnifyingGlass, bell: Bell, building: Buildings, chevron: CaretRight, caretDown: CaretDown, alert: Warning, check: Check, plus: Plus, pulse: Pulse, note: NotePencil, vitals: Heartbeat, plan: ClipboardText, med: Pill, wounds: FirstAidKit, nutrition: ForkKnife, assess: Stethoscope, shift: Heartbeat, ai: Sparkle, sidebar: SidebarSimple, filter: Funnel };
+  const icons = { home: House, residents: UsersThree, tasks: ListChecks, handover: ArrowsLeftRight, calendar: CalendarDots, team: ChatsCircle, learn: GraduationCap, docs: Files, chart: ChartBar, quality: ShieldCheck, settings: GearSix, search: MagnifyingGlass, bell: Bell, building: Buildings, chevron: CaretRight, caretDown: CaretDown, alert: Warning, check: Check, plus: Plus, pulse: Pulse, note: NotePencil, vitals: Heartbeat, plan: ClipboardText, med: Pill, wounds: FirstAidKit, nutrition: ForkKnife, assess: Stethoscope, shift: Heartbeat, ai: Sparkle, sparkle: Sparkle, sidebar: SidebarSimple, filter: Funnel };
   const Component = icons[name];
   return <Component className={className} aria-hidden="true" weight="regular"/>;
 }
@@ -124,6 +124,8 @@ function routeFor(moduleId: string, child: string) {
   if (moduleId === "admin" && child === "Organisation") return "/leitung/administration";
   if (moduleId === "admin" && child === "Benutzer & Rollen") return "/leitung/administration/benutzer";
   if (moduleId === "admin" && child === "Konfiguration") return "/leitung/administration/konfiguration";
+  if (moduleId === "ai" && child === "Assistenz") return "/intelligenz";
+  if (moduleId === "ai" && child === "KI-Entwürfe") return "/intelligenz/entwuerfe";
   return null;
 }
 
@@ -131,14 +133,15 @@ function Brand() {
   return <div className="brand" aria-label="CareCore"><span className="brand-mark"><ModuleIcon name="pulse"/></span><span className="brand-copy"><span className="brand-name">CareCore</span><small>Mehr Zeit für Pflege.</small></span></div>;
 }
 
-export default function ModulePageShell({ activeModule, activeChild, pageClass, locationPrimary = "Alterszentrum Sonnengarten", locationSecondary = "Wohnbereich 2 · 1. OG", children }: { activeModule: string; activeChild: string; pageClass: string; locationPrimary?: string; locationSecondary?: string; children: (showToast: (message: string) => void) => ReactNode }) {
+export default function ModulePageShell({ activeModule, activeChild, activeGroup, pageClass, locationPrimary = "Alterszentrum Sonnengarten", locationSecondary = "Wohnbereich 2 · 1. OG", children }: { activeModule?: string; activeChild?: string; activeGroup?: string; pageClass: string; locationPrimary?: string; locationSecondary?: string; children: (showToast: (message: string) => void) => ReactNode }) {
   const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState<string[]>(() => {
-    const activeGroup = navigation.find((group) => group.modules.some((module) => module.id === activeModule));
-    return [activeGroup?.id ?? "clinical"];
+    if (activeGroup !== undefined) return activeGroup ? [activeGroup] : [];
+    const activeNavigationGroup = navigation.find((group) => group.modules.some((module) => module.id === activeModule));
+    return activeNavigationGroup ? [activeNavigationGroup.id] : [];
   });
-  const [openModules, setOpenModules] = useState<string[]>([activeModule]);
+  const [openModules, setOpenModules] = useState<string[]>(() => activeModule ? [activeModule] : []);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [toast, setToast] = useState("");
@@ -202,7 +205,7 @@ export default function ModulePageShell({ activeModule, activeChild, pageClass, 
           </section>;
         })}</div>
       </nav>
-      <div className="sidebar-footer"><button className="nav-button" type="button" title="Einstellungen" onClick={() => setToast("Einstellungen geöffnet")}><ModuleIcon name="settings"/><span className="nav-label">Einstellungen</span></button><button className="nav-button" type="button" title="Hilfe & Support" onClick={() => setToast("Hilfe & Support geöffnet")}><ModuleIcon name="docs"/><span className="nav-label">Hilfe & Support</span></button></div>
+      <div className="sidebar-footer"><button className="nav-button" type="button" title="Einstellungen" onClick={() => router.push("/einstellungen")}><ModuleIcon name="settings"/><span className="nav-label">Einstellungen</span></button><button className="nav-button" type="button" title="Hilfe & Support" onClick={() => setToast("Hilfe & Support geöffnet")}><ModuleIcon name="docs"/><span className="nav-label">Hilfe & Support</span></button></div>
     </aside>
 
     <div className="main-column">

@@ -1,3 +1,3 @@
-import GovernanceWorkspace from "../../../verwaltung/components/governance-workspace";
+import LeadershipWorkspace from "../../components/leadership-workspace";
 
-export default function WorkforceInsightsPage() { return <GovernanceWorkspace view="workforceInsights"/>; }
+export default function WorkforceInsightsPage() { return <LeadershipWorkspace view="workforceInsights"/>; }
