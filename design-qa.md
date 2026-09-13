@@ -104,6 +104,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 26. Intelligenz und Einstellungen: „CareCore KI“ bietet Assistenz und KI-Entwürfe mit Prüf- und Datenschutzkontext. „Einstellungen“ ist über die Sidebar erreichbar und enthält Übersicht, Profil, Benachrichtigungen, Sicherheit und Darstellung als separate Routen.
 27. Einstellungslesbarkeit: Die zunächst zu kompakte Typografie der Einstellungsseite wurde gezielt angehoben. Navigation nutzt 14px, Bereichstitel 15px, Beschreibungen 12–15px und die Detailansicht 15px bei unverändertem Layout.
 28. Darstellungsauswahl: Auf den Einstellungsseiten werden die Arbeitsbereich-Optionen jetzt je Seite als horizontale Karten nebeneinander angeordnet (Übersicht 4, Profil 2, Benachrichtigungen/Sicherheit/Darstellung 3); auf schmalen Viewports bleiben sie in einer horizontal scrollbaren Reihe erreichbar.
+29. Einstellungsdetails: Der Bereich „Ausgewählt“ zeigt nun kontextbezogene Inhalte für alle fünf Seiten. Profil, Benachrichtigungen, Sicherheit und Darstellung verwenden jeweils passende Schalter, Auswahlfelder oder Aktionen statt des generischen Aktiv-Schalters.
 
 ## Primäre Interaktionen
 
@@ -147,6 +148,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Intelligenz-Assistenz, KI-Entwürfe und Einstellungen inklusive Unterseiten-Navigation geprüft
 - Lesbarkeit der Einstellungsseite per Browserstil geprüft (Navigation 14px, Bereichstitel 15px, Detailtext 15px)
 - Arbeitsbereich: horizontale Raster für Übersicht, Profil, Benachrichtigungen, Sicherheit und Darstellung im Browser geprüft
+- Einstellungsdetails: Profil-, Benachrichtigungs-, Sicherheits- und Darstellungsoptionen mit passenden Detailsteuerungen geprüft
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 

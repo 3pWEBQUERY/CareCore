@@ -1246,6 +1246,11 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .settings-toggle i::after { content: ""; width: 14px; height: 14px; position: absolute; top: 3px; left: 3px; border-radius: 50%; background: white; transition: transform 160ms ease; }
 .settings-toggle input:checked + i { background: var(--brand); }
 .settings-toggle input:checked + i::after { transform: translateX(14px); }
+.settings-select,.settings-action { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid #edf1f5; color: var(--ink); font-size: 14px; font-weight: 680; }
+.settings-select select { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: #fbfdff; font-size: 13px; }
+.settings-select select:focus { outline: 3px solid rgba(37,99,235,.12); border-color: #93c5fd; }
+.settings-action { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.settings-action .secondary-button { min-height: 36px; font-size: 12px; }
 .settings-detail-footer { padding: 0 18px 18px; }
 .settings-detail-footer .secondary-button { min-height: 36px; font-size: 9px; }
 /* Settings prioritises readability over the compact density used by operational lists. */

@@ -20,6 +20,8 @@ const cards: Record<SettingsView, { title: string; description: string; eyebrow:
   appearance: { eyebrow: "Einstellungen · Darstellung", title: "Darstellung", description: "Optimiere CareCore für deinen persönlichen Arbeitsfluss.", items: [{ id: "app-density", title: "Informationsdichte", description: "Kompakte Zeilen für grosse Arbeitslisten", value: "Standard", icon: "chart" }, { id: "app-contrast", title: "Kontrast", description: "Hoher Kontrast für klare Statusfarben", value: "Standard", icon: "quality" }, { id: "app-start", title: "Startseite", description: "Persönlicher Schichtarbeitsplatz beim Öffnen", value: "Mein Dienst", icon: "home" }] },
 };
 
+export { cards };
+
 export default function SettingsWorkspace({ view }: { view: SettingsView }) {
   const content = cards[view];
   const router = useRouter();
