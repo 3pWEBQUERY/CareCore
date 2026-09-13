@@ -98,6 +98,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 20. Vitalwerte-Übersicht: „Vitalwerte → Übersicht“ ersetzt den bisherigen Untermenüpunkt „Messwerte“ und öffnet die eigenständige Route `/vitalwerte`. Die hausweite Arbeitsfläche zeigt sechs Messwertarten pro Bewohner, Status und Messzeitpunkt sowie eine dynamische Detailansicht mit klinischer Einordnung, 24-Stunden-Verlauf und fälligen Kontrollen. Volltextsuche, Wohnbereichsauswahl und Statusfilter lassen sich kombinieren.
 21. Medikationsarbeitsplatz: Der Bereich „Medikation“ verlinkt vier eigenständige statische Routen für Medikamentenplan, Medikamentenrunde, Bestände und den neuen Unterpunkt „Reserven“. Verordnungen lassen sich bewohnerbezogen prüfen, Gaben als gegeben, verweigert oder prüfpflichtig dokumentieren und kritische Lagerbestände nachbestellen. Reserven zeigen ausschließlich ärztlich verordnete Bedarfsmedikation einschließlich Einzeldosis, Maximaldosis, Mindestintervall und Gültigkeit; Ein- und Austräge ändern den Bestand und erzeugen einen Journalposten.
 22. Betrieb und Einschätzungen: Alle zehn zuvor nicht freigeschalteten Unterseiten besitzen eigenständige statische Routen und folgen dem bestehenden Arbeitsflächenmuster. „Mein Dienst“ bietet Schichttimeline und Fortschritt, „Schichtverlauf“ vergangene Dienste, Aufgaben- und Übergabeseiten bieten Statusfilter und direkte Aktionen, Dienstplanung zeigt Wochen- bzw. Teambesetzung und Einschätzungen bündeln Assessmentstatus und Fälligkeiten mit Suche und Bearbeitungsaktionen.
+23. Sidebar-Gruppenzustand: Der gemeinsame Seitenshell leitet die geöffnete Hauptgruppe jetzt aus dem aktiven Modul ab. Dadurch bleibt auf jeder Unterseite automatisch der passende Bereich (z. B. „Betrieb“ bei Schicht, Aufgaben und Übergaben) geöffnet, während andere Bereiche geschlossen starten.
 
 ## Primäre Interaktionen
 
@@ -135,6 +136,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Medikamentenplan, Runde, Bestände und Reserven im Desktopbrowser sowie der Medikamentenplan in der mobilen Ansicht geprüft; Browserprotokoll ohne Fehler
 - Betrieb und Einschätzungen: Sidebar-Verlinkung zu „Schicht“ und „Fälligkeiten“, Aufgabenfilter mit Statuswechsel, Übergabenotiz speichern sowie Fälligkeitenfilter „Überfällig“ geprüft
 - Mein Dienst und Einschätzungen im Desktopbrowser geprüft; Browserprotokoll ohne Fehler
+- Wechsel zwischen mehreren Unterseiten in „Betrieb“ und „Pflege & Klinik“ geprüft; die jeweils aktive Hauptgruppe bleibt geöffnet und wird nicht durch eine andere Gruppe ersetzt
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 

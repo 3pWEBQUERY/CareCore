@@ -120,7 +120,10 @@ function Brand() {
 export default function ModulePageShell({ activeModule, activeChild, pageClass, locationPrimary = "Alterszentrum Sonnengarten", locationSecondary = "Wohnbereich 2 · 1. OG", children }: { activeModule: string; activeChild: string; pageClass: string; locationPrimary?: string; locationSecondary?: string; children: (showToast: (message: string) => void) => ReactNode }) {
   const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [openGroups, setOpenGroups] = useState<string[]>(["clinical"]);
+  const [openGroups, setOpenGroups] = useState<string[]>(() => {
+    const activeGroup = navigation.find((group) => group.modules.some((module) => module.id === activeModule));
+    return [activeGroup?.id ?? "clinical"];
+  });
   const [openModules, setOpenModules] = useState<string[]>([activeModule]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
