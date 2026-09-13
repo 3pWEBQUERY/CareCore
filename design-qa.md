@@ -105,6 +105,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 27. Einstellungslesbarkeit: Die zunächst zu kompakte Typografie der Einstellungsseite wurde gezielt angehoben. Navigation nutzt 14px, Bereichstitel 15px, Beschreibungen 12–15px und die Detailansicht 15px bei unverändertem Layout.
 28. Darstellungsauswahl: Auf den Einstellungsseiten werden die Arbeitsbereich-Optionen jetzt je Seite als horizontale Karten nebeneinander angeordnet (Übersicht 4, Profil 2, Benachrichtigungen/Sicherheit/Darstellung 3); auf schmalen Viewports bleiben sie in einer horizontal scrollbaren Reihe erreichbar.
 29. Einstellungsdetails: Der Bereich „Ausgewählt“ zeigt nun kontextbezogene Inhalte für alle fünf Seiten. Profil, Benachrichtigungen, Sicherheit und Darstellung verwenden jeweils passende Schalter, Auswahlfelder oder Aktionen statt des generischen Aktiv-Schalters.
+30. Custom Selects: Alle Auswahlfelder im Bereich „Ausgewählt“ verwenden jetzt ein eigenes CareCore-Dropdown mit blauer Oberfläche, sichtbarer Auswahl, Fokuszustand und Klick-aussen-Schliessen statt der Browser-/Betriebssystem-UI.
 
 ## Primäre Interaktionen
 
@@ -149,6 +150,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Lesbarkeit der Einstellungsseite per Browserstil geprüft (Navigation 14px, Bereichstitel 15px, Detailtext 15px)
 - Arbeitsbereich: horizontale Raster für Übersicht, Profil, Benachrichtigungen, Sicherheit und Darstellung im Browser geprüft
 - Einstellungsdetails: Profil-, Benachrichtigungs-, Sicherheits- und Darstellungsoptionen mit passenden Detailsteuerungen geprüft
+- Eigene Select-UI auf Darstellung und Profil geöffnet, Option ausgewählt und wieder geschlossen; keine nativen Selectfelder verbleiben
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 
