@@ -99,6 +99,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 21. Medikationsarbeitsplatz: Der Bereich „Medikation“ verlinkt vier eigenständige statische Routen für Medikamentenplan, Medikamentenrunde, Bestände und den neuen Unterpunkt „Reserven“. Verordnungen lassen sich bewohnerbezogen prüfen, Gaben als gegeben, verweigert oder prüfpflichtig dokumentieren und kritische Lagerbestände nachbestellen. Reserven zeigen ausschließlich ärztlich verordnete Bedarfsmedikation einschließlich Einzeldosis, Maximaldosis, Mindestintervall und Gültigkeit; Ein- und Austräge ändern den Bestand und erzeugen einen Journalposten.
 22. Betrieb und Einschätzungen: Alle zehn zuvor nicht freigeschalteten Unterseiten besitzen eigenständige statische Routen und folgen dem bestehenden Arbeitsflächenmuster. „Mein Dienst“ bietet Schichttimeline und Fortschritt, „Schichtverlauf“ vergangene Dienste, Aufgaben- und Übergabeseiten bieten Statusfilter und direkte Aktionen, Dienstplanung zeigt Wochen- bzw. Teambesetzung und Einschätzungen bündeln Assessmentstatus und Fälligkeiten mit Suche und Bearbeitungsaktionen.
 23. Sidebar-Gruppenzustand: Der gemeinsame Seitenshell leitet die geöffnete Hauptgruppe jetzt aus dem aktiven Modul ab. Dadurch bleibt auf jeder Unterseite automatisch der passende Bereich (z. B. „Betrieb“ bei Schicht, Aufgaben und Übergaben) geöffnet, während andere Bereiche geschlossen starten.
+24. Personal und Leitung: Alle Unterseiten der Sidebar-Bereiche „Personal“ und „Leitung“ sind als eigenständige statische Arbeitsflächen umgesetzt. Team, Schulungen und Dokumente decken Kommunikation, Nachweise und Standards ab; Qualität, Kennzahlen & Analysen und Administration bieten Ereignisse, Auswertungen, Benutzer- und Organisationseinstellungen.
 
 ## Primäre Interaktionen
 
@@ -137,6 +138,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Betrieb und Einschätzungen: Sidebar-Verlinkung zu „Schicht“ und „Fälligkeiten“, Aufgabenfilter mit Statuswechsel, Übergabenotiz speichern sowie Fälligkeitenfilter „Überfällig“ geprüft
 - Mein Dienst und Einschätzungen im Desktopbrowser geprüft; Browserprotokoll ohne Fehler
 - Wechsel zwischen mehreren Unterseiten in „Betrieb“ und „Pflege & Klinik“ geprüft; die jeweils aktive Hauptgruppe bleibt geöffnet und wird nicht durch eine andere Gruppe ersetzt
+- Sidebar-Navigation zu allen Personal- und Leitungsmodulen sowie aktive Untermenümarkierung auf Team und Benutzer & Rollen geprüft
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 

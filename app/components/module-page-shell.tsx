@@ -110,6 +110,20 @@ function routeFor(moduleId: string, child: string) {
   if (moduleId === "assess" && child === "Fälligkeiten") return "/einschaetzungen/faelligkeiten";
   if (moduleId === "wounds" && child === "Wundübersicht") return "/wundmanagement";
   if (moduleId === "wounds" && child === "Dokumentation") return "/wundmanagement/dokumentation";
+  if (moduleId === "team" && child === "Neuigkeiten & Kanäle") return "/personal/team";
+  if (moduleId === "team" && child === "Nachrichten") return "/personal/team/nachrichten";
+  if (moduleId === "learn" && child === "Meine Schulungen") return "/personal/schulungen";
+  if (moduleId === "learn" && child === "Pflichtnachweise") return "/personal/schulungen/pflichtnachweise";
+  if (moduleId === "docs" && child === "Dokumente") return "/personal/dokumente";
+  if (moduleId === "docs" && child === "Standards & Weisungen") return "/personal/dokumente/standards";
+  if (moduleId === "quality" && child === "Ereignisse") return "/leitung/qualitaet";
+  if (moduleId === "quality" && child === "Massnahmen") return "/leitung/qualitaet/massnahmen";
+  if (moduleId === "insights" && child === "Pflege") return "/leitung/kennzahlen";
+  if (moduleId === "insights" && child === "Leitung") return "/leitung/kennzahlen/leitung";
+  if (moduleId === "insights" && child === "Personal") return "/leitung/kennzahlen/personal";
+  if (moduleId === "admin" && child === "Organisation") return "/leitung/administration";
+  if (moduleId === "admin" && child === "Benutzer & Rollen") return "/leitung/administration/benutzer";
+  if (moduleId === "admin" && child === "Konfiguration") return "/leitung/administration/konfiguration";
   return null;
 }
 
