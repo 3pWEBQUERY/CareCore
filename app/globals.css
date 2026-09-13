@@ -1266,6 +1266,32 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .settings-action .secondary-button { min-height: 36px; font-size: 12px; }
 .settings-detail-footer { padding: 0 18px 18px; }
 .settings-detail-footer .secondary-button { min-height: 36px; font-size: 9px; }
+.settings-password-overlay { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 24px; background: rgba(4,20,27,.46); backdrop-filter: blur(4px); animation: fade-in 150ms ease; }
+.settings-password-dialog { width: min(560px,100%); max-height: min(760px,calc(100dvh - 48px)); overflow-y: auto; border: 1px solid #d6e2f0; border-radius: 6px; background: white; box-shadow: 0 28px 80px rgba(5,27,35,.28); animation: rise-in 180ms ease; }
+.settings-password-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 24px 26px; border-bottom: 1px solid #dbe7f4; background: linear-gradient(135deg,#f4f8ff 0%,#ffffff 72%); }
+.settings-password-heading { min-width: 0; display: flex; align-items: flex-start; gap: 14px; }
+.settings-password-heading .eyebrow { margin: 2px 0 6px; font-size: 11px; }
+.settings-password-heading h2 { margin: 0; color: var(--ink); font-size: 22px; letter-spacing: -.025em; }
+.settings-password-heading p:last-child { margin: 7px 0 0; color: #536a82; font-size: 13px; line-height: 1.45; }
+.settings-password-icon { width: 42px; height: 42px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 6px; color: var(--brand); background: var(--brand-soft); }
+.settings-password-icon svg { width: 22px; height: 22px; }
+.settings-password-close { width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; margin: -3px -5px 0 0; border: 0; border-radius: 6px; color: #6b7f94; background: transparent; font-size: 27px; line-height: 1; cursor: pointer; }
+.settings-password-close:hover { color: var(--brand-dark); background: var(--brand-soft); }
+.settings-password-form { display: grid; gap: 16px; padding: 22px 26px 26px; }
+.settings-password-note { display: flex; align-items: center; gap: 8px; margin: 0; padding: 11px 12px; border: 1px solid #bfdbfe; border-radius: 6px; color: #315985; background: #f3f7ff; font-size: 12px; line-height: 1.4; }
+.settings-password-note svg { width: 16px; flex: 0 0 auto; color: var(--brand); }
+.settings-password-field { display: grid; gap: 7px; color: var(--ink); font-size: 13px; font-weight: 730; }
+.settings-password-field > div { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 6px; background: #fbfdff; transition: border-color 160ms ease,box-shadow 160ms ease; }
+.settings-password-field > div:focus-within { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+.settings-password-field input { width: 100%; min-width: 0; height: 44px; padding: 0 11px; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 14px; }
+.settings-password-field button { height: 30px; flex: 0 0 auto; margin-right: 6px; padding: 0 8px; border: 0; border-radius: 6px; color: var(--brand-dark); background: var(--brand-soft); font-size: 11px; font-weight: 700; cursor: pointer; }
+.settings-password-field button:hover { background: #dbeafe; }
+.settings-password-field small { margin-top: -2px; color: var(--muted); font-size: 11px; font-weight: 500; }
+.settings-password-divider { height: 1px; margin: 1px 0; background: #edf1f5; }
+.settings-password-error { display: flex; align-items: flex-start; gap: 7px; margin: -2px 0 0; padding: 10px 11px; border-left: 3px solid var(--critical); color: #9b3329; background: var(--critical-soft); font-size: 12px; line-height: 1.4; }
+.settings-password-error svg { width: 16px; flex: 0 0 auto; }
+.settings-password-actions { display: flex; justify-content: flex-end; gap: 9px; padding-top: 6px; border-top: 1px solid #edf1f5; }
+.settings-password-actions .primary-button,.settings-password-actions .secondary-button { min-height: 40px; font-size: 13px; }
 /* Settings prioritises readability over the compact density used by operational lists. */
 .settings-workspace .heading-copy > p:last-child { font-size: 16px; line-height: 1.5; }
 .settings-workspace .card-title { font-size: 18px; }
@@ -1711,6 +1737,12 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .settings-item-value { grid-column: 2/4; }
   .settings-workspace .settings-list > div:last-child { display: flex; overflow-x: auto; }
   .settings-workspace .settings-list > div:last-child button { min-width: 220px; flex: 0 0 220px; }
+  .settings-password-overlay { align-items: end; padding: 12px; }
+  .settings-password-dialog { max-height: calc(100dvh - 24px); }
+  .settings-password-header,.settings-password-form { padding-inline: 18px; }
+  .settings-password-heading h2 { font-size: 20px; }
+  .settings-password-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .settings-password-actions button { width: 100%; padding-inline: 8px; }
   .intelligence-message { max-width: 92%; }
   .intelligence-composer { padding-inline: 13px; }
   .operations-history-list article > span:nth-child(2),.operations-history-list article > span:nth-child(3) { grid-column: 1; }
