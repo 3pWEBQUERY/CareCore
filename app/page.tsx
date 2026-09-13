@@ -91,7 +91,7 @@ function Icon({ name, className = "" }: { name: IconName; className?: string }) 
   return <Component className={className} aria-hidden="true" weight="regular"/>;
 }
 
-type NavModule = { id: string; label: string; icon: IconName; children: string[]; badge?: number };
+type NavModule = { id: string; label: string; icon: IconName; children: string[]; badge?: number; href?: string };
 type NavGroup = { id: string; label: string; modules: NavModule[] };
 
 const navigation: NavGroup[] = [
@@ -106,7 +106,7 @@ const navigation: NavGroup[] = [
     { id: "assess", label: "Einschätzungen", icon: "assess", children: ["Einschätzungen", "Fälligkeiten"] },
   ] },
   { id: "operations", label: "Betrieb", modules: [
-    { id: "shift", label: "Schicht", icon: "shift", children: ["Mein Dienst", "Schichtverlauf"] },
+    { id: "shift", label: "Schicht", icon: "shift", href: "/betrieb/schicht", children: ["Mein Dienst", "Schichtverlauf"] },
     { id: "tasks", label: "Aufgaben", icon: "tasks", children: ["Meine Aufgaben", "Teamaufgaben"], badge: 3 },
     { id: "handover", label: "Übergabe", icon: "handover", children: ["Meine Übergabe", "Seit letztem Dienst"] },
     { id: "schedule", label: "Dienstplanung", icon: "calendar", children: ["Mein Dienstplan", "Teamplanung"] },
@@ -246,12 +246,26 @@ export default function Home() {
       router.push("/bewohner");
       return;
     }
+    if (moduleId === "shift") {
+      router.push("/betrieb/schicht");
+      return;
+    }
     if (sidebarCollapsed) setSidebarCollapsed(false);
     if (!openGroups.includes(groupId)) setOpenGroups((current) => [...current, groupId]);
     setOpenModules((current) => current.includes(moduleId) ? current.filter((item) => item !== moduleId) : [...current, moduleId]);
   }
 
   function selectNav(label: string, moduleId?: string) {
+    if (moduleId === "shift" && label === "Mein Dienst") { router.push("/betrieb/schicht"); return; }
+    if (moduleId === "shift" && label === "Schichtverlauf") { router.push("/betrieb/schicht/verlauf"); return; }
+    if (moduleId === "tasks" && label === "Meine Aufgaben") { router.push("/betrieb/aufgaben"); return; }
+    if (moduleId === "tasks" && label === "Teamaufgaben") { router.push("/betrieb/aufgaben/team"); return; }
+    if (moduleId === "handover" && label === "Meine Übergabe") { router.push("/betrieb/uebergabe"); return; }
+    if (moduleId === "handover" && label === "Seit letztem Dienst") { router.push("/betrieb/uebergabe/letzter-dienst"); return; }
+    if (moduleId === "schedule" && label === "Mein Dienstplan") { router.push("/betrieb/dienstplanung"); return; }
+    if (moduleId === "schedule" && label === "Teamplanung") { router.push("/betrieb/dienstplanung/team"); return; }
+    if (moduleId === "assess" && label === "Einschätzungen") { router.push("/einschaetzungen"); return; }
+    if (moduleId === "assess" && label === "Fälligkeiten") { router.push("/einschaetzungen/faelligkeiten"); return; }
     if (moduleId === "med" && label === "Medikamentenplan") { router.push("/medikation"); return; }
     if (moduleId === "med" && label === "Medikamentenrunde") { router.push("/medikation/runde"); return; }
     if (moduleId === "med" && label === "Bestände") { router.push("/medikation/bestaende"); return; }

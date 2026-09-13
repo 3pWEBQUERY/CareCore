@@ -58,7 +58,7 @@ const navigation: NavGroup[] = [
     { id: "assess", label: "Einschätzungen", icon: "assess", children: ["Einschätzungen", "Fälligkeiten"] },
   ] },
   { id: "operations", label: "Betrieb", modules: [
-    { id: "shift", label: "Schicht", icon: "shift", href: "/", children: ["Mein Dienst", "Schichtverlauf"] },
+    { id: "shift", label: "Schicht", icon: "shift", href: "/betrieb/schicht", children: ["Mein Dienst", "Schichtverlauf"] },
     { id: "tasks", label: "Aufgaben", icon: "tasks", children: ["Meine Aufgaben", "Teamaufgaben"], badge: 3 },
     { id: "handover", label: "Übergabe", icon: "handover", children: ["Meine Übergabe", "Seit letztem Dienst"] },
     { id: "schedule", label: "Dienstplanung", icon: "calendar", children: ["Mein Dienstplan", "Teamplanung"] },
@@ -98,6 +98,16 @@ function routeFor(moduleId: string, child: string) {
   if (moduleId === "med" && child === "Medikamentenrunde") return "/medikation/runde";
   if (moduleId === "med" && child === "Bestände") return "/medikation/bestaende";
   if (moduleId === "med" && child === "Reserven") return "/medikation/reserven";
+  if (moduleId === "shift" && child === "Mein Dienst") return "/betrieb/schicht";
+  if (moduleId === "shift" && child === "Schichtverlauf") return "/betrieb/schicht/verlauf";
+  if (moduleId === "tasks" && child === "Meine Aufgaben") return "/betrieb/aufgaben";
+  if (moduleId === "tasks" && child === "Teamaufgaben") return "/betrieb/aufgaben/team";
+  if (moduleId === "handover" && child === "Meine Übergabe") return "/betrieb/uebergabe";
+  if (moduleId === "handover" && child === "Seit letztem Dienst") return "/betrieb/uebergabe/letzter-dienst";
+  if (moduleId === "schedule" && child === "Mein Dienstplan") return "/betrieb/dienstplanung";
+  if (moduleId === "schedule" && child === "Teamplanung") return "/betrieb/dienstplanung/team";
+  if (moduleId === "assess" && child === "Einschätzungen") return "/einschaetzungen";
+  if (moduleId === "assess" && child === "Fälligkeiten") return "/einschaetzungen/faelligkeiten";
   if (moduleId === "wounds" && child === "Wundübersicht") return "/wundmanagement";
   if (moduleId === "wounds" && child === "Dokumentation") return "/wundmanagement/dokumentation";
   return null;

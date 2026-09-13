@@ -41,6 +41,8 @@
 - Hausweite Pflegeakten, Desktop: `/Users/alexander/CareCore/qa-care-records-page-desktop.jpg`
 - Hausweite Pflegeakten, Mobil: `/Users/alexander/CareCore/qa-care-records-page-mobile.jpg`
 - Hausweite Vitalwerte-Übersicht, Desktop: `/Users/alexander/CareCore/qa-vitals-overview-desktop.jpg`
+- Mein Dienst, Desktop: `/Users/alexander/CareCore/qa-operations-shift-desktop.jpg`
+- Einschätzungen, Desktop: `/Users/alexander/CareCore/qa-assessments-desktop.jpg`
 - Medikamentenplan, Desktop: `/Users/alexander/CareCore/qa-medication-plan-desktop.jpg`
 - Medikamentenplan, Mobil: `/Users/alexander/CareCore/qa-medication-plan-mobile.jpg`
 - Medikamentenrunde, Desktop: `/Users/alexander/CareCore/qa-medication-round-desktop.jpg`
@@ -95,6 +97,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 19. Pflegeakten-Arbeitsplatz: „Bewohner → Pflegeakte“ öffnet die eigenständige Route `/bewohner/pflegeakte`. Die responsive Ansicht bietet eine filterbare Bewohnerauswahl, dynamische Aktenkennzahlen, sechs auswählbare Pflegebereiche sowie zugehörige Ziele, Maßnahmen, Risiken, Evaluationen und Fachpersonen. Der Standortkontext ist auf das gesamte Haus gesetzt.
 20. Vitalwerte-Übersicht: „Vitalwerte → Übersicht“ ersetzt den bisherigen Untermenüpunkt „Messwerte“ und öffnet die eigenständige Route `/vitalwerte`. Die hausweite Arbeitsfläche zeigt sechs Messwertarten pro Bewohner, Status und Messzeitpunkt sowie eine dynamische Detailansicht mit klinischer Einordnung, 24-Stunden-Verlauf und fälligen Kontrollen. Volltextsuche, Wohnbereichsauswahl und Statusfilter lassen sich kombinieren.
 21. Medikationsarbeitsplatz: Der Bereich „Medikation“ verlinkt vier eigenständige statische Routen für Medikamentenplan, Medikamentenrunde, Bestände und den neuen Unterpunkt „Reserven“. Verordnungen lassen sich bewohnerbezogen prüfen, Gaben als gegeben, verweigert oder prüfpflichtig dokumentieren und kritische Lagerbestände nachbestellen. Reserven zeigen ausschließlich ärztlich verordnete Bedarfsmedikation einschließlich Einzeldosis, Maximaldosis, Mindestintervall und Gültigkeit; Ein- und Austräge ändern den Bestand und erzeugen einen Journalposten.
+22. Betrieb und Einschätzungen: Alle zehn zuvor nicht freigeschalteten Unterseiten besitzen eigenständige statische Routen und folgen dem bestehenden Arbeitsflächenmuster. „Mein Dienst“ bietet Schichttimeline und Fortschritt, „Schichtverlauf“ vergangene Dienste, Aufgaben- und Übergabeseiten bieten Statusfilter und direkte Aktionen, Dienstplanung zeigt Wochen- bzw. Teambesetzung und Einschätzungen bündeln Assessmentstatus und Fälligkeiten mit Suche und Bearbeitungsaktionen.
 
 ## Primäre Interaktionen
 
@@ -130,6 +133,8 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Bestände: Filter „Kritisch“ zeigt zwei Artikel; Nachbestellung wechselt sichtbar auf „Bestellt“
 - Reserven: Paracetamol-Austrag reduziert den Bestand von 18 auf 17, erzeugt einen Journalposten und lässt sich über einen Eingang wieder ausgleichen
 - Medikamentenplan, Runde, Bestände und Reserven im Desktopbrowser sowie der Medikamentenplan in der mobilen Ansicht geprüft; Browserprotokoll ohne Fehler
+- Betrieb und Einschätzungen: Sidebar-Verlinkung zu „Schicht“ und „Fälligkeiten“, Aufgabenfilter mit Statuswechsel, Übergabenotiz speichern sowie Fälligkeitenfilter „Überfällig“ geprüft
+- Mein Dienst und Einschätzungen im Desktopbrowser geprüft; Browserprotokoll ohne Fehler
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 

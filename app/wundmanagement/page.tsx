@@ -74,7 +74,7 @@ const navigation: NavGroup[] = [
     { id: "assess", label: "Einschätzungen", icon: "assess", children: ["Einschätzungen", "Fälligkeiten"] },
   ] },
   { id: "operations", label: "Betrieb", modules: [
-    { id: "shift", label: "Schicht", icon: "shift", href: "/", children: ["Mein Dienst", "Schichtverlauf"] },
+    { id: "shift", label: "Schicht", icon: "shift", href: "/betrieb/schicht", children: ["Mein Dienst", "Schichtverlauf"] },
     { id: "tasks", label: "Aufgaben", icon: "tasks", children: ["Meine Aufgaben", "Teamaufgaben"], badge: 3 },
     { id: "handover", label: "Übergabe", icon: "handover", children: ["Meine Übergabe", "Seit letztem Dienst"] },
     { id: "schedule", label: "Dienstplanung", icon: "calendar", children: ["Mein Dienstplan", "Teamplanung"] },
@@ -160,6 +160,16 @@ export default function WoundOverviewPage() {
     if (moduleId === "med" && child === "Medikamentenrunde") { router.push("/medikation/runde"); return; }
     if (moduleId === "med" && child === "Bestände") { router.push("/medikation/bestaende"); return; }
     if (moduleId === "med" && child === "Reserven") { router.push("/medikation/reserven"); return; }
+    if (moduleId === "shift" && child === "Mein Dienst") { router.push("/betrieb/schicht"); return; }
+    if (moduleId === "shift" && child === "Schichtverlauf") { router.push("/betrieb/schicht/verlauf"); return; }
+    if (moduleId === "tasks" && child === "Meine Aufgaben") { router.push("/betrieb/aufgaben"); return; }
+    if (moduleId === "tasks" && child === "Teamaufgaben") { router.push("/betrieb/aufgaben/team"); return; }
+    if (moduleId === "handover" && child === "Meine Übergabe") { router.push("/betrieb/uebergabe"); return; }
+    if (moduleId === "handover" && child === "Seit letztem Dienst") { router.push("/betrieb/uebergabe/letzter-dienst"); return; }
+    if (moduleId === "schedule" && child === "Mein Dienstplan") { router.push("/betrieb/dienstplanung"); return; }
+    if (moduleId === "schedule" && child === "Teamplanung") { router.push("/betrieb/dienstplanung/team"); return; }
+    if (moduleId === "assess" && child === "Einschätzungen") { router.push("/einschaetzungen"); return; }
+    if (moduleId === "assess" && child === "Fälligkeiten") { router.push("/einschaetzungen/faelligkeiten"); return; }
     setToast(`${child} geöffnet`);
   }
 
