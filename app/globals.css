@@ -1259,6 +1259,12 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .settings-detail-body > p { font-size: 15px; line-height: 1.6; }
 .settings-toggle { font-size: 14px; }
 .settings-detail-footer .secondary-button { font-size: 13px; }
+.settings-appearance .settings-list > div:last-child { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); padding: 0; }
+.settings-appearance .settings-list > div:last-child button { min-height: 154px; position: relative; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 10px; padding: 20px 18px; border-right: 1px solid var(--line); border-bottom: 0; }
+.settings-appearance .settings-list > div:last-child button:last-child { border-right: 0; }
+.settings-appearance .settings-list > div:last-child button > .chevron { position: absolute; top: 21px; right: 17px; width: 14px; }
+.settings-appearance .settings-list > div:last-child button > span:nth-child(2) { min-height: 52px; }
+.settings-appearance .settings-list > div:last-child .settings-item-value { margin-top: auto; }
 @keyframes record-slide-in { from { opacity: .78; transform: translate3d(42px,0,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
 @keyframes record-content-in { from { opacity: .65; transform: translate3d(0,5px,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
 
@@ -1682,6 +1688,8 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .settings-list > div:last-child button { grid-template-columns: 34px minmax(0,1fr) auto; gap: 8px; }
   .settings-list > div:last-child button > .chevron { display: none; }
   .settings-item-value { grid-column: 2/4; }
+  .settings-appearance .settings-list > div:last-child { display: flex; overflow-x: auto; }
+  .settings-appearance .settings-list > div:last-child button { min-width: 220px; flex: 0 0 220px; }
   .intelligence-message { max-width: 92%; }
   .intelligence-composer { padding-inline: 13px; }
   .operations-history-list article > span:nth-child(2),.operations-history-list article > span:nth-child(3) { grid-column: 1; }
