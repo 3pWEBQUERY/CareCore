@@ -166,8 +166,7 @@ export default function WoundOverviewPage() {
   }
 
   function toggleModule(groupId: string, module: NavModule) {
-    const defaultRoute = module.href ?? routeFor(module.id, module.children[0]);
-    if (defaultRoute) { router.push(defaultRoute); return; }
+    if (module.href) { router.push(module.href); return; }
     if (sidebarCollapsed) setSidebarCollapsed(false);
     if (!openGroups.includes(groupId)) setOpenGroups((current) => [...current, groupId]);
     setOpenModules((current) => current.includes(module.id) ? current.filter((item) => item !== module.id) : [...current, module.id]);

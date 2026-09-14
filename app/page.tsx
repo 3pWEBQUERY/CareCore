@@ -265,8 +265,7 @@ export default function Home() {
 
   function toggleModule(groupId: string, moduleId: string) {
     const navModule = navigation.flatMap((group) => group.modules).find((item) => item.id === moduleId);
-    const defaultRoute = navModule?.href ?? (navModule ? routeFor(navModule.id, navModule.children[0]) : null);
-    if (defaultRoute) { router.push(defaultRoute); return; }
+    if (navModule?.href) { router.push(navModule.href); return; }
     if (sidebarCollapsed) setSidebarCollapsed(false);
     if (!openGroups.includes(groupId)) setOpenGroups((current) => [...current, groupId]);
     setOpenModules((current) => current.includes(moduleId) ? current.filter((item) => item !== moduleId) : [...current, moduleId]);
