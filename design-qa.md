@@ -173,6 +173,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Dienstplanung: „Woche/Monat“-Umschalter, vollständiges September-Kalenderraster, Tagesauswahl im Monatskalender und Rücksprung auf „Heute“ geprüft
 - Personal und Leitung: individuelle Team-, Lern-, Dokument-, Qualitäts-, Kennzahlen-, Organisations-, Benutzer- und Konfigurationslayouts auf Desktop/Mobilstruktur geprüft
 - Administration Organisation: „Wohnbereich“ öffnet den vollflächigen Editor mit Stammdaten, Kapazität, Leitung, Diensten und Hinweisfeld; Abbrechen/Erstellen geprüft
+- Sidebar-Deep-Links: Hauptpunkte ohne eigenes Ziel öffnen beim Klick die erste verfügbare Unterseite (z. B. Administration → Organisation); Vercel- und Lokalrouting geprüft
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 
