@@ -113,6 +113,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 35. Profilmenü-Bedienbarkeit: Das Menü ist auch in der kompakten mobilen Kopfzeile über den runden Avatar erreichbar; die vier Ziele bleiben dort identisch und funktionieren per Tastatur und Klick.
 36. Benachrichtigungsmenü: Die Glocke im globalen Kopfbereich öffnet ein eigenes Dropdown mit vier aktuellen Hinweisen, Prioritätsfarben, Zeitstempeln, ungelesenen Markierungen und einem Link zur vollständigen Benachrichtigungsseite.
 37. Benachrichtigungsstatus: Im Dropdown lässt sich der Zähler über „Alle gelesen“ zurücksetzen; der Glockenpunkt und die ungelesenen Markierungen verschwinden konsistent.
+38. Eigener Benachrichtigungs-Posteingang: Der Dropdown-Link „Alle Benachrichtigungen“ öffnet `/benachrichtigungen` mit sieben Hinweisen, Kennzahlen, Filtern für Alle/Ungelesen/Kritisch, Einzelaktionen und globalem „Alle gelesen“.
 
 ## Primäre Interaktionen
 
@@ -165,6 +166,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Profilmenü in der kompakten Kopfzeile geöffnet und „Dienstplan“ erfolgreich zu `/betrieb/dienstplanung` navigiert
 - Benachrichtigungsmenü in der kompakten Kopfzeile geöffnet; vier Hinweise, ungelesene Markierungen und Link „Alle Benachrichtigungen“ mit Navigation zu `/einstellungen/notifications` geprüft
 - Benachrichtigungszähler „3 neu“ und Aktion „Alle gelesen“ geprüft
+- Dropdown-Link „Alle Benachrichtigungen“ öffnet den eigenständigen Posteingang; Kennzahlen, Filter und sieben Einträge auf Desktop/Mobil geprüft
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 
