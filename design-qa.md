@@ -180,6 +180,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Startseite-Profil: „Mein Profil“ steht im Profilmenü an erster Stelle und öffnet einen vollflächigen Profilbereich; „Bearbeiten“ schaltet die persönlichen Angaben direkt im selben Bereich in editierbare Felder um
 - Einheitlicher Kopfbereich: Startseite und alle Modul-Seiten verwenden dieselbe AppHeader-Komponente mit Standort, Suche, Benachrichtigungen und Profilmenü inklusive „Mein Profil"
 - Dienstplanung: „Abwesenheit melden“ öffnet einen vollflächigen Editor mit Zeitraum, Abwesenheitsart, Stellvertretung und Priorität; Auswahlfelder nutzen die eigene CareCore-Dropdown-UI
+- Abwesenheitskalender: „Von“ und „Bis“ verwenden einen eigenen CareCore-Monatskalender mit Monatsnavigation, Wochentagen, Auswahlzustand und „Heute“-Aktion statt des nativen Datepickers
 - Sidebar-Deep-Links: Untermenüpunkte ohne eigenes Ziel routen über eine zentrale Zuordnung (z. B. Administration → Organisation); Vercel- und Lokalrouting geprüft
 - Sidebar-Routing auf Einstiegseiten: Startseite, Bewohner und Wundmanagement verwenden nun dieselbe vollständige Routenzuordnung wie die Modulansicht; Administration, Qualität, Kennzahlen, Personal und Intelligenz öffnen statt Toast direkt ihre Seiten
 - Browser-Konsole auf Fehler geprüft

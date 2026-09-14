@@ -1164,6 +1164,29 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .schedule-month-grid button span { display: inline-flex; align-items: center; min-height: 18px; padding: 0 6px; border-radius: 4px; color: var(--brand-dark); background: #dbeafe; font-size: 8px; font-weight: 760; }
 .schedule-month-grid button span.free { color: var(--muted); background: #f1f5f9; }
 .schedule-month-empty { display: block; }
+.schedule-date-picker { position: relative; }
+.schedule-date-trigger { width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: white; font: inherit; font-size: 13px; font-weight: 500; text-align: left; cursor: pointer; }
+.schedule-date-trigger:hover,.schedule-date-trigger[aria-expanded="true"] { border-color: #93c5fd; background: var(--brand-soft); }
+.schedule-date-trigger:focus-visible { outline: 3px solid rgba(37,99,235,.14); outline-offset: 2px; }
+.schedule-date-trigger svg { width: 16px; color: var(--brand); }
+.schedule-date-menu { width: min(330px,calc(100vw - 36px)); position: absolute; inset: calc(100% + 7px) 0 auto; z-index: 40; padding: 13px; border: 1px solid #bfdbfe; border-radius: 6px; background: white; box-shadow: 0 16px 34px rgba(30,64,115,.2); animation: rise-in 150ms ease; }
+.schedule-date-menu.up { inset: auto 0 calc(100% + 7px); }
+.schedule-date-menu-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 13px; }
+.schedule-date-menu-header strong { color: var(--ink); font-size: 13px; text-transform: capitalize; }
+.schedule-date-menu-header button { width: 29px; height: 29px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 6px; color: var(--brand); background: white; cursor: pointer; }
+.schedule-date-menu-header button:hover { border-color: #93c5fd; background: var(--brand-soft); }
+.schedule-date-menu-header button svg { width: 14px; height: 14px; }
+.schedule-date-menu-header button svg.previous { transform: rotate(180deg); }
+.schedule-date-weekdays,.schedule-date-grid { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 4px; }
+.schedule-date-weekdays { margin-bottom: 5px; }
+.schedule-date-weekdays span { color: var(--muted); font-size: 9px; font-weight: 760; text-align: center; }
+.schedule-date-grid button,.schedule-date-grid span { min-height: 34px; }
+.schedule-date-grid button { display: grid; place-items: center; border: 1px solid transparent; border-radius: 6px; color: var(--ink); background: transparent; font-size: 11px; cursor: pointer; }
+.schedule-date-grid button:hover,.schedule-date-grid button.selected { border-color: #93c5fd; color: var(--brand-dark); background: var(--brand-soft); font-weight: 750; }
+.schedule-date-menu-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.schedule-date-menu-footer span { color: var(--muted); font-size: 10px; }
+.schedule-date-menu-footer button { min-height: 28px; padding: 0 9px; border: 0; border-radius: 6px; color: var(--brand-dark); background: var(--brand-soft); font-size: 10px; font-weight: 750; cursor: pointer; }
+.schedule-date-menu-footer button:hover { background: #dbeafe; }
 .schedule-day-detail { display: grid; grid-template-columns: minmax(220px,.65fr) minmax(300px,1.35fr); gap: 20px; align-items: center; padding: 20px 18px; }
 .schedule-day-detail h3 { margin: 4px 0; font-size: 15px; }
 .schedule-day-detail p:last-child { margin: 0; color: var(--muted); font-size: 10px; }
