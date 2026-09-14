@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import AppHeader from "./app-header";
 import {
   ArrowsLeftRight,
   Bell,
@@ -34,15 +35,16 @@ import {
   Stethoscope,
   UsersThree,
   Warning,
+  X,
 } from "@phosphor-icons/react";
 
-export type ModuleIconName = "home" | "residents" | "tasks" | "handover" | "calendar" | "team" | "learn" | "docs" | "chart" | "quality" | "settings" | "search" | "bell" | "building" | "chevron" | "caretDown" | "alert" | "check" | "plus" | "pulse" | "note" | "vitals" | "plan" | "med" | "wounds" | "nutrition" | "assess" | "shift" | "ai" | "sparkle" | "sidebar" | "filter" | "logout";
+export type ModuleIconName = "home" | "residents" | "tasks" | "handover" | "calendar" | "team" | "learn" | "docs" | "chart" | "quality" | "settings" | "search" | "bell" | "building" | "chevron" | "caretDown" | "alert" | "check" | "plus" | "pulse" | "note" | "vitals" | "plan" | "med" | "wounds" | "nutrition" | "assess" | "shift" | "ai" | "sparkle" | "sidebar" | "filter" | "logout" | "close";
 
 type NavModule = { id: string; label: string; icon: ModuleIconName; children: string[]; badge?: number; href?: string };
 type NavGroup = { id: string; label: string; modules: NavModule[] };
 
 export function ModuleIcon({ name, className = "" }: { name: ModuleIconName; className?: string }) {
-  const icons = { home: House, residents: UsersThree, tasks: ListChecks, handover: ArrowsLeftRight, calendar: CalendarDots, team: ChatsCircle, learn: GraduationCap, docs: Files, chart: ChartBar, quality: ShieldCheck, settings: GearSix, search: MagnifyingGlass, bell: Bell, building: Buildings, chevron: CaretRight, caretDown: CaretDown, alert: Warning, check: Check, plus: Plus, pulse: Pulse, note: NotePencil, vitals: Heartbeat, plan: ClipboardText, med: Pill, wounds: FirstAidKit, nutrition: ForkKnife, assess: Stethoscope, shift: Heartbeat, ai: Sparkle, sparkle: Sparkle, sidebar: SidebarSimple, filter: Funnel, logout: SignOut };
+  const icons = { home: House, residents: UsersThree, tasks: ListChecks, handover: ArrowsLeftRight, calendar: CalendarDots, team: ChatsCircle, learn: GraduationCap, docs: Files, chart: ChartBar, quality: ShieldCheck, settings: GearSix, search: MagnifyingGlass, bell: Bell, building: Buildings, chevron: CaretRight, caretDown: CaretDown, alert: Warning, check: Check, plus: Plus, pulse: Pulse, note: NotePencil, vitals: Heartbeat, plan: ClipboardText, med: Pill, wounds: FirstAidKit, nutrition: ForkKnife, assess: Stethoscope, shift: Heartbeat, ai: Sparkle, sparkle: Sparkle, sidebar: SidebarSimple, filter: Funnel, logout: SignOut, close: X };
   const Component = icons[name];
   return <Component className={className} aria-hidden="true" weight="regular"/>;
 }
@@ -89,13 +91,6 @@ const globalResults = [
   { title: "Bedarfsmedikation", meta: "Ärztlich verordnete Reserven führen", icon: "plus" as ModuleIconName, href: "/medikation/reserven" },
   { title: "Wundübersicht", meta: "5 aktive Wundfälle", icon: "wounds" as ModuleIconName, href: "/wundmanagement" },
   { title: "Wunddokumentation", meta: "Versorgung und Fotodokumentation", icon: "docs" as ModuleIconName, href: "/wundmanagement/dokumentation" },
-];
-
-const headerNotifications = [
-  { icon: "alert" as ModuleIconName, tone: "critical", title: "Sturzrisiko bei Hans Müller", description: "Bitte neurologische Kontrolle dokumentieren.", time: "vor 8 Min." },
-  { icon: "tasks" as ModuleIconName, tone: "attention", title: "Aufgabe bald fällig", description: "Medikationsrunde · Wohnbereich 2", time: "vor 24 Min." },
-  { icon: "handover" as ModuleIconName, tone: "info", title: "Neue Übergabe verfügbar", description: "Spätdienst hat 3 Hinweise ergänzt.", time: "vor 1 Std." },
-  { icon: "wounds" as ModuleIconName, tone: "stable", title: "Wunddokumentation aktualisiert", description: "Frau Schneider · rechter Unterschenkel", time: "Gestern" },
 ];
 
 function routeFor(moduleId: string, child: string) {
@@ -153,14 +148,7 @@ export default function ModulePageShell({ activeModule, activeChild, activeGroup
   const [openModules, setOpenModules] = useState<string[]>(() => activeModule ? [activeModule] : []);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [notificationOpen, setNotificationOpen] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(3);
   const [toast, setToast] = useState("");
-  const profileMenuRef = useRef<HTMLDivElement>(null);
-  const mobileProfileMenuRef = useRef<HTMLDivElement>(null);
-  const notificationMenuRef = useRef<HTMLDivElement>(null);
-  const mobileNotificationMenuRef = useRef<HTMLDivElement>(null);
 
   const openSearch = useCallback(() => setSearchOpen(true), []);
   const filteredResults = useMemo(() => globalResults.filter((item) => `${item.title} ${item.meta}`.toLocaleLowerCase("de-CH").includes(searchQuery.trim().toLocaleLowerCase("de-CH"))), [searchQuery]);
@@ -168,33 +156,11 @@ export default function ModulePageShell({ activeModule, activeChild, activeGroup
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); openSearch(); }
-      if (event.key === "Escape") { setSearchOpen(false); setProfileOpen(false); setNotificationOpen(false); }
+      if (event.key === "Escape") { setSearchOpen(false); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [openSearch]);
-
-  useEffect(() => {
-    if (!profileOpen) return;
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Node;
-      if (profileMenuRef.current?.contains(target) || mobileProfileMenuRef.current?.contains(target)) return;
-      setProfileOpen(false);
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [profileOpen]);
-
-  useEffect(() => {
-    if (!notificationOpen) return;
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Node;
-      if (notificationMenuRef.current?.contains(target) || mobileNotificationMenuRef.current?.contains(target)) return;
-      setNotificationOpen(false);
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [notificationOpen]);
 
   useEffect(() => {
     if (!toast) return;
@@ -223,15 +189,7 @@ export default function ModulePageShell({ activeModule, activeChild, activeGroup
   const mobileWoundsActive = activeModule === "wounds";
   const mobileResidentsActive = activeModule === "residents";
 
-  function renderProfileMenu(ref: RefObject<HTMLDivElement | null>, compact = false) {
-    return <div className={`profile-menu-wrap ${compact ? "mobile-profile-menu-wrap" : ""}`} ref={ref}><button className={`profile profile-trigger ${compact ? "mobile-profile-trigger" : ""} ${profileOpen ? "open" : ""}`} type="button" aria-haspopup="menu" aria-expanded={profileOpen} aria-controls={compact ? "mobile-profile-menu" : "profile-menu"} aria-label={compact ? "Profilmenü öffnen" : undefined} onClick={() => setProfileOpen((value) => !value)}><span className="avatar">AM</span>{!compact && <span><small>Pflegefachfrau HF</small><strong>Anna Meier</strong></span>}<ModuleIcon name="caretDown" className="profile-caret"/></button>{profileOpen && <div className="profile-dropdown" id={compact ? "mobile-profile-menu" : "profile-menu"} role="menu" aria-label="Profilmenü"><button type="button" role="menuitem" onClick={() => { setProfileOpen(false); router.push("/betrieb/dienstplanung"); }}><span className="profile-menu-icon"><ModuleIcon name="calendar"/></span><span>Dienstplan</span><ModuleIcon name="chevron" className="profile-menu-chevron"/></button><button type="button" role="menuitem" onClick={() => { setProfileOpen(false); router.push("/personal/team/nachrichten"); }}><span className="profile-menu-icon"><ModuleIcon name="team"/></span><span>Nachrichten</span><ModuleIcon name="chevron" className="profile-menu-chevron"/></button><button type="button" role="menuitem" onClick={() => { setProfileOpen(false); router.push("/einstellungen"); }}><span className="profile-menu-icon"><ModuleIcon name="settings"/></span><span>Einstellungen</span><ModuleIcon name="chevron" className="profile-menu-chevron"/></button><button className="logout" type="button" role="menuitem" onClick={() => { setProfileOpen(false); setToast("Ausloggen ist in dieser Demo vorbereitet"); }}><span className="profile-menu-icon"><ModuleIcon name="logout"/></span><span>Ausloggen</span></button></div>}</div>;
-  }
-
-  function renderNotificationMenu(ref: RefObject<HTMLDivElement | null>, compact = false) {
-    return <div className={`notification-menu-wrap ${compact ? "mobile-notification-menu-wrap" : ""}`} ref={ref}><button className={`icon-button notification-trigger ${notificationOpen ? "open" : ""}`} type="button" aria-label="Benachrichtigungen öffnen" aria-haspopup="menu" aria-expanded={notificationOpen} aria-controls={compact ? "mobile-notification-menu" : "notification-menu"} onClick={() => setNotificationOpen((value) => !value)}><ModuleIcon name="bell"/>{unreadNotifications > 0 && <span className="notification-dot"/>}</button>{notificationOpen && <div className="notification-dropdown" id={compact ? "mobile-notification-menu" : "notification-menu"} role="menu" aria-label="Benachrichtigungen"><div className="notification-dropdown-header"><div><p className="eyebrow">Posteingang</p><strong>Benachrichtigungen</strong></div><div className="notification-header-actions"><span className="notification-count">{unreadNotifications} neu</span><button type="button" onClick={() => { setUnreadNotifications(0); setToast("Alle Benachrichtigungen als gelesen markiert"); }}>Alle gelesen</button></div></div><div className="notification-list">{headerNotifications.map((item, index) => <button className="notification-item" type="button" role="menuitem" key={item.title} onClick={() => { setNotificationOpen(false); setToast(`${item.title} geöffnet`); }}><span className={`notification-item-icon ${item.tone}`}><ModuleIcon name={item.icon}/></span><span className="notification-item-copy"><strong>{item.title}</strong><small>{item.description}</small></span><span className="notification-item-meta">{index < unreadNotifications && <span className="notification-unread" aria-label="Ungelesen"/>}<time>{item.time}</time></span></button>)}</div><div className="notification-dropdown-footer"><button type="button" onClick={() => { setNotificationOpen(false); router.push("/benachrichtigungen"); }}>Alle Benachrichtigungen<ModuleIcon name="chevron"/></button></div></div>}</div>;
-  }
-
-  return <div className={`app-shell ${pageClass} ${sidebarCollapsed ? "sidebar-is-collapsed" : ""}`}>
+ return <div className={`app-shell ${pageClass} ${sidebarCollapsed ? "sidebar-is-collapsed" : ""}`}>
     <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
       <div className="sidebar-head"><Brand/><button className="sidebar-collapse" type="button" aria-label={sidebarCollapsed ? "Sidebar ausklappen" : "Sidebar einklappen"} onClick={() => setSidebarCollapsed((value) => !value)}><ModuleIcon name="sidebar"/></button></div>
       <nav className="sidebar-scroll" aria-label="Hauptnavigation">
@@ -255,8 +213,7 @@ export default function ModulePageShell({ activeModule, activeChild, activeGroup
     </aside>
 
     <div className="main-column">
-      <header className="topbar"><button className="location-control" type="button" onClick={() => setToast("Standortauswahl geöffnet")}><span className="location-icon"><ModuleIcon name="building"/></span><span><small>{locationPrimary}</small><strong>{locationSecondary}</strong></span><ModuleIcon name="chevron" className="chevron"/></button><div className="top-actions"><button className="search-trigger" type="button" onClick={openSearch} aria-label="Globale Suche öffnen" aria-haspopup="dialog" aria-expanded={searchOpen}><ModuleIcon name="search"/><span>Suchen…</span><kbd>⌘ K</kbd></button>{renderNotificationMenu(notificationMenuRef)}{renderProfileMenu(profileMenuRef)}</div></header>
-      <header className="mobile-top"><Brand/><div className="mobile-actions"><button className="icon-button" type="button" aria-label="Suche öffnen" onClick={openSearch}><ModuleIcon name="search"/></button>{renderNotificationMenu(mobileNotificationMenuRef,true)}{renderProfileMenu(mobileProfileMenuRef,true)}</div></header>
+      <AppHeader locationPrimary={locationPrimary} locationSecondary={locationSecondary} searchOpen={searchOpen} onSearch={openSearch} onToast={setToast}/>
       {children(setToast)}
     </div>
 

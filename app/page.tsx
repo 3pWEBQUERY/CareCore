@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import AppHeader from "./components/app-header";
 import {
   ArrowsLeftRight,
   Bell,
@@ -175,19 +176,6 @@ function Brand() {
   return <div className="brand" aria-label="CareCore"><span className="brand-mark"><Icon name="pulse"/></span><span className="brand-copy"><span className="brand-name">CareCore</span><small>Mehr Zeit für Pflege.</small></span></div>;
 }
 
-function ProfilePopover({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState("Anna Meier");
-  const [role, setRole] = useState("Pflegefachfrau HF");
-  const [email, setEmail] = useState("anna.meier@carecore.ch");
-  const [phone, setPhone] = useState("+41 79 555 12 34");
-  const [location, setLocation] = useState("Alterszentrum Sonnengarten");
-  const [bio, setBio] = useState("Verantwortlich für die Frühschicht auf Wohnbereich 2.");
-  if (!open) return null;
-  const field = (label: string, value: string, setValue: (value: string) => void) => editing ? <label className="profile-edit-field"><span>{label}</span><input value={value} onChange={(event) => setValue(event.target.value)}/></label> : <div className="profile-read-field"><span>{label}</span><strong>{value}</strong></div>;
-  return <div className="profile-overlay" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && onClose()}><section className="profile-panel" role="dialog" aria-modal="true" aria-labelledby="profile-popover-title"><header className="profile-panel-header"><div><p className="eyebrow">CareCore · Persönlicher Bereich</p><h2 id="profile-popover-title">Mein Profil</h2><p>Verwalte deine persönlichen Angaben und deinen Arbeitskontext.</p></div><button className="profile-panel-close" type="button" onClick={onClose} aria-label="Profil schliessen"><Icon name="close"/></button></header><div className="profile-panel-body"><div className="profile-panel-layout"><aside className="profile-summary-card"><span className="profile-large-avatar">AM</span><p className="eyebrow">Pflege & Klinik</p><h3>{name}</h3><p>{role}</p><span className="status-badge stable">Profil aktiv</span><div className="profile-summary-meta"><span><Icon name="building"/> {location}</span><span><Icon name="calendar"/> Frühdienst · Wohnbereich 2</span></div></aside><section className="card profile-details-card"><div className="card-header"><div><p className="eyebrow">Ausgewählt</p><h2 className="card-title">Persönliche Angaben</h2><p className="card-subtitle">Diese Angaben werden deinem Team im CareCore-Arbeitsplatz angezeigt.</p></div><div className="profile-detail-actions">{editing && <button className="secondary-button" type="button" onClick={() => setEditing(false)}>Abbrechen</button>}<button className="primary-button" type="button" onClick={() => setEditing((value) => !value)}><Icon name={editing ? "check" : "note"}/>{editing ? "Speichern" : "Bearbeiten"}</button></div></div><div className="profile-fields-grid">{field("Vollständiger Name", name, setName)}{field("Funktion", role, setRole)}{field("E-Mail", email, setEmail)}{field("Telefon", phone, setPhone)}{field("Standort", location, setLocation)}<div className={editing ? "profile-edit-field profile-edit-field-wide" : "profile-read-field profile-read-field-wide"}>{editing ? <label><span>Kurzprofil</span><textarea value={bio} onChange={(event) => setBio(event.target.value)} rows={4}/></label> : <><span>Kurzprofil</span><strong>{bio}</strong></>}</div></div></section></div></div></section></div>;
-}
-
 export default function Home() {
   const router = useRouter();
   const [tasks, setTasks] = useState(initialTasks);
@@ -195,14 +183,10 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [residentOpen, setResidentOpen] = useState(false);
   const [toast, setToast] = useState("");
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [profilePopoverOpen, setProfilePopoverOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState<string[]>(["operations"]);
   const [openModules, setOpenModules] = useState<string[]>(["shift"]);
   const [activeNav, setActiveNav] = useState("Mein Dienst");
-  const profileMenuRef = useRef<HTMLDivElement>(null);
-  const mobileProfileMenuRef = useRef<HTMLDivElement>(null);
 
   const openSearch = useCallback(() => {
     setResidentOpen(false);
@@ -216,22 +200,11 @@ export default function Home() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); openSearch(); }
-      if (event.key === "Escape") { setSearchOpen(false); setResidentOpen(false); setProfileOpen(false); setProfilePopoverOpen(false); }
+      if (event.key === "Escape") { setSearchOpen(false); setResidentOpen(false); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [openSearch]);
-
-  useEffect(() => {
-    if (!profileOpen) return;
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Node;
-      if (profileMenuRef.current?.contains(target) || mobileProfileMenuRef.current?.contains(target)) return;
-      setProfileOpen(false);
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [profileOpen]);
 
   useEffect(() => {
     if (!toast) return;
@@ -342,11 +315,6 @@ export default function Home() {
     setToast(`${label} geöffnet`);
   }
 
-  function renderProfileMenu(compact = false) {
-    const ref = compact ? mobileProfileMenuRef : profileMenuRef;
-    return <div className={`profile-menu-wrap ${compact ? "mobile-profile-menu-wrap" : ""}`} ref={ref}><button className={`profile profile-trigger ${compact ? "mobile-profile-trigger" : ""} ${profileOpen ? "open" : ""}`} type="button" aria-haspopup="menu" aria-expanded={profileOpen} aria-controls={compact ? "home-mobile-profile-menu" : "home-profile-menu"} aria-label={compact ? "Profilmenü öffnen" : undefined} onClick={() => setProfileOpen((value) => !value)}><span className="avatar">AM</span>{!compact && <span><small>Pflegefachfrau HF</small><strong>Anna Meier</strong></span>}<Icon name="caretDown" className="profile-caret"/></button>{profileOpen && <div className="profile-dropdown" id={compact ? "home-mobile-profile-menu" : "home-profile-menu"} role="menu" aria-label="Profilmenü"><button type="button" role="menuitem" onClick={() => { setProfileOpen(false); setProfilePopoverOpen(true); }}><span className="profile-menu-icon"><Icon name="team"/></span><span>Mein Profil</span><Icon name="chevron" className="profile-menu-chevron"/></button><button type="button" role="menuitem" onClick={() => { setProfileOpen(false); router.push("/betrieb/dienstplanung"); }}><span className="profile-menu-icon"><Icon name="calendar"/></span><span>Dienstplan</span><Icon name="chevron" className="profile-menu-chevron"/></button><button type="button" role="menuitem" onClick={() => { setProfileOpen(false); router.push("/personal/team/nachrichten"); }}><span className="profile-menu-icon"><Icon name="team"/></span><span>Nachrichten</span><Icon name="chevron" className="profile-menu-chevron"/></button><button type="button" role="menuitem" onClick={() => { setProfileOpen(false); router.push("/einstellungen"); }}><span className="profile-menu-icon"><Icon name="settings"/></span><span>Einstellungen</span><Icon name="chevron" className="profile-menu-chevron"/></button><button className="logout" type="button" role="menuitem" onClick={() => { setProfileOpen(false); setToast("Ausloggen ist in dieser Demo vorbereitet"); }}><span className="profile-menu-icon"><Icon name="logout"/></span><span>Ausloggen</span></button></div>}</div>;
-  }
-
   return <div className={`app-shell ${sidebarCollapsed ? "sidebar-is-collapsed" : ""}`}>
     <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
       <div className="sidebar-head"><Brand/><button className="sidebar-collapse" type="button" aria-label={sidebarCollapsed ? "Sidebar ausklappen" : "Sidebar einklappen"} onClick={() => setSidebarCollapsed((value) => !value)}><Icon name="sidebar"/></button></div>
@@ -375,11 +343,7 @@ export default function Home() {
     </aside>
 
     <div className="main-column">
-      <header className="topbar">
-        <button className="location-control" type="button" onClick={() => setToast("Standortauswahl geöffnet")}><span className="location-icon"><Icon name="building"/></span><span><small>Alterszentrum Sonnengarten</small><strong>Wohnbereich 2 · 1. OG</strong></span><Icon name="chevron" className="chevron"/></button>
-        <div className="top-actions"><button className="search-trigger" type="button" onClick={openSearch} aria-label="Globale Suche öffnen" aria-haspopup="dialog" aria-controls="global-search-dialog" aria-expanded={searchOpen}><Icon name="search"/><span>Suchen…</span><kbd>⌘ K</kbd></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><Icon name="bell"/><span className="notification-dot"/></button>{renderProfileMenu()}</div>
-      </header>
-      <header className="mobile-top"><Brand/><div className="mobile-actions"><button className="icon-button" type="button" aria-label="Suche öffnen" onClick={openSearch} aria-haspopup="dialog" aria-controls="global-search-dialog" aria-expanded={searchOpen}><Icon name="search"/></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><Icon name="bell"/><span className="notification-dot"/></button>{renderProfileMenu(true)}</div></header>
+      <AppHeader searchOpen={searchOpen} onSearch={openSearch} onToast={setToast}/>
 
       <main className="workspace">
         <section className="page-heading" aria-labelledby="page-title"><div className="heading-copy"><p className="eyebrow">Montag, 7. September · Frühdienst</p><h1 id="page-title">Guten Morgen, Anna.</h1><p>Deine Schicht auf Wohnbereich 2 ist vorbereitet.</p></div><button className="primary-button" type="button" onClick={() => setToast("Neue Dokumentation vorbereitet")}><Icon name="plus" className="button-icon"/>Dokumentieren</button></section>
@@ -427,8 +391,6 @@ export default function Home() {
 
     <button className="floating-action" type="button" aria-label="Schnellaktion" onClick={() => setResidentOpen(true)}><Icon name="plus"/></button>
     <nav className="bottom-nav" aria-label="Mobile Navigation">{([["Startseite","home"],["Bewohner","residents"],["Aufgaben","tasks"],["Team","team"],["Mehr","settings"]] as const).map(([label,icon]) => <button className={label === "Startseite" ? "active" : ""} type="button" key={label} onClick={() => label !== "Startseite" && unavailable(label)}><Icon name={icon}/><span>{label}</span></button>)}</nav>
-
-    <ProfilePopover open={profilePopoverOpen} onClose={() => setProfilePopoverOpen(false)}/>
 
     {searchOpen && <div className="overlay" role="presentation" onClick={(event) => event.currentTarget === event.target && closeSearch()}><section id="global-search-dialog" className="search-dialog" role="dialog" aria-modal="true" aria-label="Globale Suche"><div className="search-input-wrap"><Icon name="search"/><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Bewohner, Dokumente oder Funktionen suchen…" aria-label="Suchbegriff"/><button type="button" onClick={closeSearch} aria-label="Suche schliessen">ESC</button></div><div className="search-results"><span className="search-group-label">{query ? "Suchergebnisse" : "Schnellzugriff"}</span>{filteredResults.map((result) => <button className="search-result" type="button" key={result.title} onClick={() => { closeSearch(); if (result.icon === "residents") { setResidentOpen(true); } else { setToast(`${result.title} geöffnet`); } }}><span className="result-icon"><Icon name={result.icon}/></span><span><strong>{result.title}</strong><small>{result.meta}</small></span></button>)}</div></section></div>}
 

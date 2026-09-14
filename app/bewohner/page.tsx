@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import AppHeader from "../components/app-header";
 import { ResidentRecord, type ResidentRecordData } from "./components/resident-record";
 import {
   ArrowsLeftRight,
@@ -231,11 +232,7 @@ export default function ResidentsPage() {
     </aside>
 
     <div className="main-column">
-      <header className="topbar">
-        <button className="location-control" type="button" onClick={() => setToast("Standortauswahl geöffnet")}><span className="location-icon"><Icon name="building"/></span><span><small>Alterszentrum Sonnengarten</small><strong>Wohnbereich 2 · 1. OG</strong></span><Icon name="chevron" className="chevron"/></button>
-        <div className="top-actions"><button className="search-trigger" type="button" onClick={openSearch} aria-label="Globale Suche öffnen" aria-haspopup="dialog" aria-controls="resident-global-search" aria-expanded={searchOpen}><Icon name="search"/><span>Suchen…</span><kbd>⌘ K</kbd></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><Icon name="bell"/><span className="notification-dot"/></button><div className="profile"><span className="avatar">AM</span><span><small>Pflegefachfrau HF</small><strong>Anna Meier</strong></span></div></div>
-      </header>
-      <header className="mobile-top"><Brand/><div className="mobile-actions"><button className="icon-button" type="button" aria-label="Suche öffnen" onClick={openSearch}><Icon name="search"/></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><Icon name="bell"/><span className="notification-dot"/></button></div></header>
+      <AppHeader searchOpen={searchOpen} onSearch={openSearch} onToast={setToast}/>
 
       <main className="workspace residents-workspace">
         <section className="page-heading residents-heading" aria-labelledby="residents-page-title"><div className="heading-copy"><p className="eyebrow">CareCore Bewohner</p><h1 id="residents-page-title">Bewohner</h1><p>Zentrale Bewohner- und Patientenakte für den gesamten Wohnbereich.</p></div><button className="primary-button" type="button" onClick={() => setToast("Neue Bewohneraufnahme vorbereitet")}><Icon name="plus" className="button-icon"/>Bewohner aufnehmen</button></section>
