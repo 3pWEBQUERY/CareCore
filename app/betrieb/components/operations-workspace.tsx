@@ -1,12 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ModulePageShell, { ModuleIcon, type ModuleIconName } from "@/app/components/module-page-shell";
 
 type OperationsView = "shift" | "shiftHistory" | "tasks" | "teamTasks" | "handover" | "lastShift" | "schedule" | "teamSchedule" | "assessments" | "assessmentDue";
 type Tone = "stable" | "attention" | "critical" | "info";
 type Task = { id: string; time: string; title: string; detail: string; category: string; tone: Tone; owner?: string; due?: string; status?: string };
 type Assessment = { id: string; resident: string; room: string; type: string; score: string; status: string; tone: Tone; updated: string; next: string; dueTime?: string; owner?: string };
+
+function ScheduleSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [openUp, setOpenUp] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => { if (!rootRef.current?.contains(event.target as Node)) setOpen(false); };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, []);
+  const toggle = () => setOpen((current) => {
+    if (!current) {
+      const rect = rootRef.current?.getBoundingClientRect();
+      const menuHeight = options.length * 42 + 16;
+      setOpenUp(Boolean(rect && window.innerHeight - rect.bottom < menuHeight && rect.top > menuHeight));
+    } else setOpenUp(false);
+    return !current;
+  });
+  return <div className="area-custom-select" ref={rootRef}><button className="area-select-trigger" type="button" aria-haspopup="listbox" aria-expanded={open} aria-label={label} onClick={toggle}><span>{value}</span><ModuleIcon name="caretDown" className={open ? "open" : ""}/></button>{open && <div className={`area-select-menu ${openUp ? "up" : ""}`} role="listbox" aria-label={label}>{options.map((option) => <button type="button" role="option" aria-selected={value === option} className={value === option ? "selected" : ""} key={option} onClick={() => { onChange(option); setOpen(false); setOpenUp(false); }}>{option}<ModuleIcon name="check"/></button>)}</div>}</div>;
+}
+
+function AbsenceEditor({ open, onClose, showToast }: { open: boolean; onClose: () => void; showToast: (message: string) => void }) {
+  const [absenceType, setAbsenceType] = useState("Ferien");
+  const [substitute, setSubstitute] = useState("Keine Stellvertretung");
+  const [priority, setPriority] = useState("Normal");
+  if (!open) return null;
+  return <div className="area-editor-overlay" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && onClose()}><section className="area-editor-panel" role="dialog" aria-modal="true" aria-labelledby="absence-editor-title"><header className="area-editor-header"><div><p className="eyebrow">CareCore Schedule · Abwesenheiten</p><h2 id="absence-editor-title">Abwesenheit melden</h2><p>Erfasse deine Abwesenheit, damit die Dienstplanung rechtzeitig angepasst werden kann.</p></div><button className="area-editor-close" type="button" onClick={onClose} aria-label="Abwesenheitseditor schliessen">×</button></header><form className="area-editor-form" onSubmit={(event) => { event.preventDefault(); onClose(); showToast("Abwesenheit wurde gemeldet"); }}><div className="area-editor-intro"><span className="area-editor-icon"><ModuleIcon name="calendar"/></span><div><strong>Neue Abwesenheit</strong><p>Die Leitung wird über deine Meldung informiert und prüft die Abdeckung.</p></div></div><div className="area-editor-grid"><label>Art der Abwesenheit<ScheduleSelect label="Art der Abwesenheit" value={absenceType} options={["Ferien", "Krankheit", "Weiterbildung", "Persönlicher Termin"]} onChange={setAbsenceType}/></label><label>Priorität<ScheduleSelect label="Priorität" value={priority} options={["Normal", "Dringend"]} onChange={setPriority}/></label><label>Von<input type="date" defaultValue="2026-09-21" required/></label><label>Bis<input type="date" defaultValue="2026-09-23" required/></label><label className="area-editor-wide">Stellvertretung<ScheduleSelect label="Stellvertretung" value={substitute} options={["Keine Stellvertretung", "Lea Frei", "Nora Baumann", "Sven Keller"]} onChange={setSubstitute}/></label><label className="area-editor-wide">Hinweis oder Bemerkung<textarea placeholder="z. B. Übergabe an das Team, Erreichbarkeit …" rows={5}/></label></div><footer className="area-editor-actions"><button className="secondary-button" type="button" onClick={onClose}>Abbrechen</button><button className="primary-button" type="submit"><ModuleIcon name="check"/> Abwesenheit melden</button></footer></form></section></div>;
+}
 
 const viewMeta: Record<OperationsView, { module: string; child: string; eyebrow: string; title: string; description: string; action: string }> = {
   shift: { module: "shift", child: "Mein Dienst", eyebrow: "CareCore Shift", title: "Mein Dienst", description: "Dein persönlicher Schichtarbeitsplatz für heute.", action: "Dienst starten" },
@@ -187,7 +215,8 @@ function AssessmentsView({ due, showToast }: { due: boolean; showToast: (message
 
 export default function OperationsWorkspace({ view }: { view: OperationsView }) {
   const meta = viewMeta[view];
+  const [absenceEditorOpen, setAbsenceEditorOpen] = useState(false);
   return <ModulePageShell activeModule={meta.module} activeChild={meta.child} pageClass={`operations-page operations-${view}`} locationSecondary="Gesamtes Haus · alle Wohnbereiche">
-    {(showToast) => <main className="workspace module-workspace operations-command-workspace"><section className="page-heading care-page-heading" aria-labelledby="operations-title"><div className="heading-copy"><p className="eyebrow">{meta.eyebrow}</p><h1 id="operations-title">{meta.title}</h1><p>{meta.description}</p></div><button className="primary-button" type="button" onClick={() => showToast(`${meta.action} vorbereitet`)}><ModuleIcon name="plus" className="button-icon"/>{meta.action}</button></section><OperationsPulse showToast={showToast}/>{view === "shift" && <ShiftView showToast={showToast}/>} {view === "shiftHistory" && <ShiftHistoryView showToast={showToast}/>} {view === "tasks" && <TaskView team={false} showToast={showToast}/>} {view === "teamTasks" && <TaskView team showToast={showToast}/>} {view === "handover" && <HandoverView lastShift={false} showToast={showToast}/>} {view === "lastShift" && <HandoverView lastShift showToast={showToast}/>} {view === "schedule" && <ScheduleView team={false} showToast={showToast}/>} {view === "teamSchedule" && <ScheduleView team showToast={showToast}/>} {view === "assessments" && <AssessmentsView due={false} showToast={showToast}/>} {view === "assessmentDue" && <AssessmentsView due showToast={showToast}/>}</main>}
+    {(showToast) => <main className="workspace module-workspace operations-command-workspace"><section className="page-heading care-page-heading" aria-labelledby="operations-title"><div className="heading-copy"><p className="eyebrow">{meta.eyebrow}</p><h1 id="operations-title">{meta.title}</h1><p>{meta.description}</p></div><button className="primary-button" type="button" onClick={() => view === "schedule" ? setAbsenceEditorOpen(true) : showToast(`${meta.action} vorbereitet`)}><ModuleIcon name="plus" className="button-icon"/>{meta.action}</button></section><AbsenceEditor open={absenceEditorOpen} onClose={() => setAbsenceEditorOpen(false)} showToast={showToast}/><OperationsPulse showToast={showToast}/>{view === "shift" && <ShiftView showToast={showToast}/>} {view === "shiftHistory" && <ShiftHistoryView showToast={showToast}/>} {view === "tasks" && <TaskView team={false} showToast={showToast}/>} {view === "teamTasks" && <TaskView team showToast={showToast}/>} {view === "handover" && <HandoverView lastShift={false} showToast={showToast}/>} {view === "lastShift" && <HandoverView lastShift showToast={showToast}/>} {view === "schedule" && <ScheduleView team={false} showToast={showToast}/>} {view === "teamSchedule" && <ScheduleView team showToast={showToast}/>} {view === "assessments" && <AssessmentsView due={false} showToast={showToast}/>} {view === "assessmentDue" && <AssessmentsView due showToast={showToast}/>}</main>}
   </ModulePageShell>;
 }
