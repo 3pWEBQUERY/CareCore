@@ -108,6 +108,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 30. Custom Selects: Alle Auswahlfelder im Bereich „Ausgewählt“ verwenden jetzt ein eigenes CareCore-Dropdown mit blauer Oberfläche, sichtbarer Auswahl, Fokuszustand und Klick-aussen-Schliessen statt der Browser-/Betriebssystem-UI.
 31. Dropdown-Platzierung: Das Darstellungsprofil öffnet sein Dropdown bei wenig Platz automatisch nach oben. So bleibt das vollständige Menü sichtbar und wird weder von der Detailkarte noch vom Viewport abgeschnitten.
 32. Passwortdialog: „Passwort ändern“ öffnet in der Sicherheitsansicht ein eigenes, responsives CareCore-Popover. Aktuelles Passwort, neues Passwort und Bestätigung werden validiert; Sichtbarkeitsschalter, Escape, Abbrechen und Speichern sind vollständig innerhalb des Dialogs umgesetzt.
+33. Benachrichtigungsübersicht: Der Bereich „Benachrichtigungen“ in der Einstellungsübersicht zeigt jetzt alle sieben aktiven Hinweisarten mit Auslöser und Frequenz sowie einen direkten Link zur vollständigen Verwaltung.
 
 ## Primäre Interaktionen
 
@@ -155,6 +156,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Eigene Select-UI auf Darstellung und Profil geöffnet, Option ausgewählt und wieder geschlossen; keine nativen Selectfelder verbleiben
 - Darstellungsprofil am unteren Kartenrand geöffnet; Menü öffnet nach oben und bleibt vollständig innerhalb des Viewports sichtbar
 - Sicherheitsansicht: „Passwort ändern“ geöffnet, leeres Formular validiert, Passwortsichtbarkeit umgeschaltet und Dialog über „Abbrechen“ geschlossen
+- Einstellungsübersicht: „Benachrichtigungen“ ausgewählt; sieben aktive Hinweisarten, Auslöser, Status und Link zur Verwaltung geprüft
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 

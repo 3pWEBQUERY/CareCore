@@ -1292,6 +1292,19 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .settings-password-error svg { width: 16px; flex: 0 0 auto; }
 .settings-password-actions { display: flex; justify-content: flex-end; gap: 9px; padding-top: 6px; border-top: 1px solid #edf1f5; }
 .settings-password-actions .primary-button,.settings-password-actions .secondary-button { min-height: 40px; font-size: 13px; }
+.settings-notification-summary { display: grid; gap: 12px; margin-top: 2px; }
+.settings-notification-summary-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 11px; border-bottom: 1px solid #edf1f5; color: var(--ink); font-size: 14px; }
+.settings-notification-summary-head .status-badge { font-size: 11px; }
+.settings-notification-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.settings-notification-list article { min-width: 0; display: grid; grid-template-columns: 30px minmax(0,1fr) auto; align-items: start; gap: 8px; padding: 10px; border: 1px solid #e6edf5; border-radius: 6px; background: #fbfdff; }
+.settings-notification-icon { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 6px; color: var(--brand); background: var(--brand-soft); }
+.settings-notification-icon svg { width: 16px; height: 16px; }
+.settings-notification-list article strong { display: block; overflow: hidden; color: var(--ink); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.settings-notification-list article small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.35; }
+.settings-notification-value { display: flex; align-items: center; gap: 4px; color: var(--brand-dark); font-size: 10px; font-weight: 750; white-space: nowrap; }
+.settings-notification-value svg { width: 13px; height: 13px; color: var(--success); }
+.settings-notification-link { justify-self: start; min-height: 36px; font-size: 12px; }
+.settings-notification-link svg { width: 14px; height: 14px; }
 /* Settings prioritises readability over the compact density used by operational lists. */
 .settings-workspace .heading-copy > p:last-child { font-size: 16px; line-height: 1.5; }
 .settings-workspace .card-title { font-size: 18px; }
@@ -1743,6 +1756,8 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .settings-password-heading h2 { font-size: 20px; }
   .settings-password-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .settings-password-actions button { width: 100%; padding-inline: 8px; }
+  .settings-notification-list { grid-template-columns: 1fr; }
+  .settings-notification-list article { grid-template-columns: 32px minmax(0,1fr) auto; }
   .intelligence-message { max-width: 92%; }
   .intelligence-composer { padding-inline: 13px; }
   .operations-history-list article > span:nth-child(2),.operations-history-list article > span:nth-child(3) { grid-column: 1; }
