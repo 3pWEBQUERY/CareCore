@@ -115,6 +115,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 37. Benachrichtigungsstatus: Im Dropdown lässt sich der Zähler über „Alle gelesen“ zurücksetzen; der Glockenpunkt und die ungelesenen Markierungen verschwinden konsistent.
 38. Eigener Benachrichtigungs-Posteingang: Der Dropdown-Link „Alle Benachrichtigungen“ öffnet `/benachrichtigungen` mit sieben Hinweisen, Kennzahlen, Filtern für Alle/Ungelesen/Kritisch, Einzelaktionen und globalem „Alle gelesen“.
 39. Startseiten-Scroll: „Als Nächstes“ sitzt in einem eigenen oberen Dashboard-Grid. Der Sticky-Bereich bleibt auf Desktop auf seine Grid-Zeile begrenzt und endet vor „Meine Bewohner“; auf Mobil ist er vollständig statisch und zeigt alle Aufgaben ohne Überlagerung.
+40. Aufgabenkarte „Als Nächstes“: eigene Dashboard-Klassen verhindern Konflikte mit den Aufgabenlisten anderer Module; Aufgabe, Bewohnerhinweis und Uhrzeit bleiben in einer klaren, responsiven Zeile ohne Überlappungen.
 
 ## Primäre Interaktionen
 
