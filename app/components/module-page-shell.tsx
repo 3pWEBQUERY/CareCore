@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowsLeftRight,
@@ -148,6 +148,7 @@ export default function ModulePageShell({ activeModule, activeChild, activeGroup
   const [profileOpen, setProfileOpen] = useState(false);
   const [toast, setToast] = useState("");
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const mobileProfileMenuRef = useRef<HTMLDivElement>(null);
 
   const openSearch = useCallback(() => setSearchOpen(true), []);
   const filteredResults = useMemo(() => globalResults.filter((item) => `${item.title} ${item.meta}`.toLocaleLowerCase("de-CH").includes(searchQuery.trim().toLocaleLowerCase("de-CH"))), [searchQuery]);
@@ -163,7 +164,11 @@ export default function ModulePageShell({ activeModule, activeChild, activeGroup
 
   useEffect(() => {
     if (!profileOpen) return;
-    const onPointerDown = (event: PointerEvent) => { if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) setProfileOpen(false); };
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (profileMenuRef.current?.contains(target) || mobileProfileMenuRef.current?.contains(target)) return;
+      setProfileOpen(false);
+    };
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [profileOpen]);
@@ -195,6 +200,10 @@ export default function ModulePageShell({ activeModule, activeChild, activeGroup
   const mobileWoundsActive = activeModule === "wounds";
   const mobileResidentsActive = activeModule === "residents";
 
+  function renderProfileMenu(ref: RefObject<HTMLDivElement | null>, compact = false) {
+    return <div className={`profile-menu-wrap ${compact ? "mobile-profile-menu-wrap" : ""}`} ref={ref}><button className={`profile profile-trigger ${compact ? "mobile-profile-trigger" : ""} ${profileOpen ? "open" : ""}`} type="button" aria-haspopup="menu" aria-expanded={profileOpen} aria-controls={compact ? "mobile-profile-menu" : "profile-menu"} aria-label={compact ? "Profilmenü öffnen" : undefined} onClick={() => setProfileOpen((value) => !value)}><span className="avatar">AM</span>{!compact && <span><small>Pflegefachfrau HF</small><strong>Anna Meier</strong></span>}<ModuleIcon name="caretDown" className="profile-caret"/></button>{profileOpen && <div className="profile-dropdown" id={compact ? "mobile-profile-menu" : "profile-menu"} role="menu" aria-label="Profilmenü"><button type="button" role="menuitem" onClick={() => { setProfileOpen(false); router.push("/betrieb/dienstplanung"); }}><span className="profile-menu-icon"><ModuleIcon name="calendar"/></span><span>Dienstplan</span><ModuleIcon name="chevron" className="profile-menu-chevron"/></button><button type="button" role="menuitem" onClick={() => { setProfileOpen(false); router.push("/personal/team/nachrichten"); }}><span className="profile-menu-icon"><ModuleIcon name="team"/></span><span>Nachrichten</span><ModuleIcon name="chevron" className="profile-menu-chevron"/></button><button type="button" role="menuitem" onClick={() => { setProfileOpen(false); router.push("/einstellungen"); }}><span className="profile-menu-icon"><ModuleIcon name="settings"/></span><span>Einstellungen</span><ModuleIcon name="chevron" className="profile-menu-chevron"/></button><button className="logout" type="button" role="menuitem" onClick={() => { setProfileOpen(false); setToast("Ausloggen ist in dieser Demo vorbereitet"); }}><span className="profile-menu-icon"><ModuleIcon name="logout"/></span><span>Ausloggen</span></button></div>}</div>;
+  }
+
   return <div className={`app-shell ${pageClass} ${sidebarCollapsed ? "sidebar-is-collapsed" : ""}`}>
     <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
       <div className="sidebar-head"><Brand/><button className="sidebar-collapse" type="button" aria-label={sidebarCollapsed ? "Sidebar ausklappen" : "Sidebar einklappen"} onClick={() => setSidebarCollapsed((value) => !value)}><ModuleIcon name="sidebar"/></button></div>
@@ -219,8 +228,8 @@ export default function ModulePageShell({ activeModule, activeChild, activeGroup
     </aside>
 
     <div className="main-column">
-      <header className="topbar"><button className="location-control" type="button" onClick={() => setToast("Standortauswahl geöffnet")}><span className="location-icon"><ModuleIcon name="building"/></span><span><small>{locationPrimary}</small><strong>{locationSecondary}</strong></span><ModuleIcon name="chevron" className="chevron"/></button><div className="top-actions"><button className="search-trigger" type="button" onClick={openSearch} aria-label="Globale Suche öffnen" aria-haspopup="dialog" aria-expanded={searchOpen}><ModuleIcon name="search"/><span>Suchen…</span><kbd>⌘ K</kbd></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><ModuleIcon name="bell"/><span className="notification-dot"/></button><div className="profile-menu-wrap" ref={profileMenuRef}><button className={`profile profile-trigger ${profileOpen ? "open" : ""}`} type="button" aria-haspopup="menu" aria-expanded={profileOpen} aria-controls="profile-menu"><span className="avatar">AM</span><span><small>Pflegefachfrau HF</small><strong>Anna Meier</strong></span><ModuleIcon name="caretDown" className="profile-caret"/></button>{profileOpen && <div className="profile-dropdown" id="profile-menu" role="menu" aria-label="Profilmenü"><button type="button" role="menuitem" onClick={() => { setProfileOpen(false); router.push("/betrieb/dienstplanung"); }}><span className="profile-menu-icon"><ModuleIcon name="calendar"/></span><span>Dienstplan</span><ModuleIcon name="chevron" className="profile-menu-chevron"/></button><button type="button" role="menuitem" onClick={() => { setProfileOpen(false); router.push("/personal/team/nachrichten"); }}><span className="profile-menu-icon"><ModuleIcon name="team"/></span><span>Nachrichten</span><ModuleIcon name="chevron" className="profile-menu-chevron"/></button><button type="button" role="menuitem" onClick={() => { setProfileOpen(false); router.push("/einstellungen"); }}><span className="profile-menu-icon"><ModuleIcon name="settings"/></span><span>Einstellungen</span><ModuleIcon name="chevron" className="profile-menu-chevron"/></button><button className="logout" type="button" role="menuitem" onClick={() => { setProfileOpen(false); setToast("Ausloggen ist in dieser Demo vorbereitet"); }}><span className="profile-menu-icon"><ModuleIcon name="logout"/></span><span>Ausloggen</span></button></div>}</div></div></header>
-      <header className="mobile-top"><Brand/><div className="mobile-actions"><button className="icon-button" type="button" aria-label="Suche öffnen" onClick={openSearch}><ModuleIcon name="search"/></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><ModuleIcon name="bell"/><span className="notification-dot"/></button></div></header>
+      <header className="topbar"><button className="location-control" type="button" onClick={() => setToast("Standortauswahl geöffnet")}><span className="location-icon"><ModuleIcon name="building"/></span><span><small>{locationPrimary}</small><strong>{locationSecondary}</strong></span><ModuleIcon name="chevron" className="chevron"/></button><div className="top-actions"><button className="search-trigger" type="button" onClick={openSearch} aria-label="Globale Suche öffnen" aria-haspopup="dialog" aria-expanded={searchOpen}><ModuleIcon name="search"/><span>Suchen…</span><kbd>⌘ K</kbd></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><ModuleIcon name="bell"/><span className="notification-dot"/></button>{renderProfileMenu(profileMenuRef)}</div></header>
+      <header className="mobile-top"><Brand/><div className="mobile-actions"><button className="icon-button" type="button" aria-label="Suche öffnen" onClick={openSearch}><ModuleIcon name="search"/></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><ModuleIcon name="bell"/><span className="notification-dot"/></button>{renderProfileMenu(mobileProfileMenuRef,true)}</div></header>
       {children(setToast)}
     </div>
 

@@ -123,6 +123,8 @@ kbd { padding: 2px 6px; border: 1px solid var(--line); border-bottom-width: 2px;
 .profile-dropdown button.logout { margin-top: 4px; border-top: 1px solid #edf1f5; border-radius: 0 0 6px 6px; color: var(--critical); }
 .profile-dropdown button.logout .profile-menu-icon { color: var(--critical); background: var(--critical-soft); }
 .profile-dropdown button.logout:hover,.profile-dropdown button.logout:focus-visible { color: #9b3329; background: var(--critical-soft); }
+.mobile-profile-menu-wrap { display: none; margin-left: 0; }
+.mobile-profile-trigger .profile-caret { display: none; }
 
 .workspace { width: min(100%, 1440px); margin: 0 auto; padding: 32px 34px 54px; }
 .page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
@@ -1454,6 +1456,10 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .mobile-top .brand-name { display: inline; font-size: 18px; }
   .mobile-actions { display: flex; gap: 7px; }
   .mobile-actions .icon-button { width: 38px; height: 38px; }
+  .mobile-profile-menu-wrap { display: block; }
+  .mobile-profile-trigger { width: 38px; min-height: 38px; justify-content: center; padding: 0; }
+  .mobile-profile-trigger .avatar { width: 32px; height: 32px; font-size: 11px; }
+  .mobile-profile-menu-wrap .profile-dropdown { top: calc(100% + 8px); right: 0; }
   .workspace { padding: 24px 16px 112px; }
   .page-heading { align-items: flex-start; }
   .page-heading .primary-button { display: none; }
