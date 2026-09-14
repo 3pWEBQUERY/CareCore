@@ -171,6 +171,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Dropdown-Link „Alle Benachrichtigungen“ öffnet den eigenständigen Posteingang; Kennzahlen, Filter und sieben Einträge auf Desktop/Mobil geprüft
 - Startseite: vollständige Aufgabenliste in „Als Nächstes“, separate Position vor „Meine Bewohner“ und statisches Mobilverhalten geprüft
 - Dienstplanung: „Woche/Monat“-Umschalter, vollständiges September-Kalenderraster, Tagesauswahl im Monatskalender und Rücksprung auf „Heute“ geprüft
+- Personal und Leitung: individuelle Team-, Lern-, Dokument-, Qualitäts-, Kennzahlen-, Organisations-, Benutzer- und Konfigurationslayouts auf Desktop/Mobilstruktur geprüft
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 

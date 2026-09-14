@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import ModulePageShell, { ModuleIcon, type ModuleIconName } from "@/app/components/module-page-shell";
+import { GovernanceVariant } from "./governance-variants";
 
 export type GovernanceView =
   | "teamNews" | "teamMessages" | "learning" | "compliance"
@@ -10,7 +11,7 @@ export type GovernanceView =
   | "organization" | "users" | "configuration";
 
 type Tone = "stable" | "attention" | "critical" | "info";
-type GovernanceItem = { id: string; title: string; description: string; meta: string; status: string; tone: Tone; owner: string; icon: ModuleIconName };
+export type GovernanceItem = { id: string; title: string; description: string; meta: string; status: string; tone: Tone; owner: string; icon: ModuleIconName };
 
 const viewMeta: Record<GovernanceView, { module: string; child: string; eyebrow: string; title: string; description: string; action: string }> = {
   teamNews: { module: "team", child: "Neuigkeiten & Kanäle", eyebrow: "CareCore Team", title: "Neuigkeiten & Kanäle", description: "Updates, Absprachen und Fachdialoge im gesamten Haus.", action: "Beitrag erstellen" },
@@ -138,10 +139,7 @@ export default function GovernanceWorkspace({ view }: { view: GovernanceView }) 
     {(showToast) => <main className="workspace module-workspace governance-workspace">
       <section className="page-heading care-page-heading" aria-labelledby="governance-title"><div className="heading-copy"><p className="eyebrow">{meta.eyebrow}</p><h1 id="governance-title">{meta.title}</h1><p>{meta.description}</p></div><button className="primary-button" type="button" onClick={() => showToast(`${meta.action} vorbereitet`)}><ModuleIcon name="plus" className="button-icon"/>{meta.action}</button></section>
       <Summary view={view}/>
-      <div className="governance-layout">
-        <section className="card governance-list-card" aria-labelledby="governance-list-title"><div className="operations-toolbar"><div><h2 className="card-title" id="governance-list-title">{meta.title}</h2><p className="card-subtitle">{filtered.length} von {currentItems.length} Einträgen sichtbar</p></div><label className="resident-search"><ModuleIcon name="search"/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Suchen…" aria-label={`${meta.title} durchsuchen`}/></label></div><div className="governance-filters operations-filter-buttons" aria-label="Einträge filtern">{filters.map((item) => <button className={filter === item ? "active" : ""} type="button" key={item} aria-pressed={filter === item} onClick={() => setFilter(item)}>{item}</button>)}</div><div className="governance-list">{filtered.map((item) => { const isDone = completed.includes(item.id); return <button className={`governance-row ${selected.id === item.id ? "selected" : ""} ${isDone ? "complete" : ""}`} type="button" key={item.id} onClick={() => setSelectedId(item.id)}><span className={`governance-icon ${item.tone}`}><ModuleIcon name={item.icon}/></span><span className="governance-main"><strong>{item.title}</strong><small>{item.description}</small><em>{item.meta} · {item.owner}</em></span><span className={`status-badge ${isDone ? "stable" : item.tone}`}>{isDone ? "Erledigt" : item.status}</span><ModuleIcon name="chevron" className="chevron"/></button>; })}{filtered.length === 0 && <div className="resident-empty"><ModuleIcon name="search"/><strong>Keine Einträge gefunden</strong><p>Suchbegriff oder Filter anpassen.</p></div>}</div></section>
-        <aside className="governance-detail" aria-live="polite"><section className="card governance-focus-card"><div className="card-header"><div><p className="eyebrow">Ausgewählt</p><h2 className="card-title">{selected.title}</h2><p className="card-subtitle">{selected.meta}</p></div><span className={`status-badge ${selected.tone}`}>{selected.status}</span></div><div className="governance-focus-body"><span className={`governance-focus-icon ${selected.tone}`}><ModuleIcon name={selected.icon}/></span><p>{selected.description}</p><dl><div><dt>Verantwortlich</dt><dd>{selected.owner}</dd></div><div><dt>Bereich</dt><dd>{meta.eyebrow.replace("CareCore ", "")}</dd></div></dl></div><div className="governance-focus-actions"><button className="primary-button" type="button" onClick={() => { setCompleted((current) => current.includes(selected.id) ? current.filter((id) => id !== selected.id) : [...current, selected.id]); showToast(`${selected.title} ${completed.includes(selected.id) ? "wieder geöffnet" : "als erledigt markiert"}`); }}>{completed.includes(selected.id) ? "Wieder öffnen" : "Als erledigt markieren"}</button><button className="secondary-button" type="button" onClick={() => showToast(`${selected.title} geöffnet`)}>Details öffnen</button></div></section><section className="card governance-note-card"><div className="card-header"><div><p className="eyebrow">Arbeitsbereich</p><h2 className="card-title">Nächste Schritte</h2></div></div><ul><li><ModuleIcon name="check"/><span>Änderungen werden revisionssicher protokolliert.</span></li><li><ModuleIcon name="team"/><span>Alle beteiligten Rollen sehen den aktuellen Status.</span></li><li><ModuleIcon name="bell"/><span>Fälligkeiten erscheinen automatisch in deiner Übersicht.</span></li></ul></section></aside>
-      </div>
+      <GovernanceVariant view={view} title={meta.title} eyebrow={meta.eyebrow} items={currentItems} filtered={filtered} selected={selected} query={query} setQuery={setQuery} filter={filter} filters={filters} setFilter={setFilter} setSelectedId={setSelectedId} completed={completed} setCompleted={setCompleted} showToast={showToast}/>
     </main>}
   </ModulePageShell>;
 }
