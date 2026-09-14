@@ -112,6 +112,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 34. Profilmenü: Der Kopfbereich öffnet über Avatar und Namen ein CareCore-Dropdown mit Dienstplan, Nachrichten, Einstellungen und Ausloggen. Die Navigation schliesst bei Auswahl, Klick ausserhalb oder Escape.
 35. Profilmenü-Bedienbarkeit: Das Menü ist auch in der kompakten mobilen Kopfzeile über den runden Avatar erreichbar; die vier Ziele bleiben dort identisch und funktionieren per Tastatur und Klick.
 36. Benachrichtigungsmenü: Die Glocke im globalen Kopfbereich öffnet ein eigenes Dropdown mit vier aktuellen Hinweisen, Prioritätsfarben, Zeitstempeln, ungelesenen Markierungen und einem Link zur vollständigen Benachrichtigungsseite.
+37. Benachrichtigungsstatus: Im Dropdown lässt sich der Zähler über „Alle gelesen“ zurücksetzen; der Glockenpunkt und die ungelesenen Markierungen verschwinden konsistent.
 
 ## Primäre Interaktionen
 
@@ -163,6 +164,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Profilmenü im Kopfbereich geöffnet; vier Menüeinträge und Schliessen per Klick ausserhalb/Escape geprüft
 - Profilmenü in der kompakten Kopfzeile geöffnet und „Dienstplan“ erfolgreich zu `/betrieb/dienstplanung` navigiert
 - Benachrichtigungsmenü in der kompakten Kopfzeile geöffnet; vier Hinweise, ungelesene Markierungen und Link „Alle Benachrichtigungen“ mit Navigation zu `/einstellungen/notifications` geprüft
+- Benachrichtigungszähler „3 neu“ und Aktion „Alle gelesen“ geprüft
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 
