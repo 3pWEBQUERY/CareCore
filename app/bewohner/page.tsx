@@ -113,6 +113,28 @@ const navigation: NavGroup[] = [
   ] },
 ];
 
+function routeFor(moduleId: string, child: string) {
+  const routes: Record<string, Record<string, string>> = {
+    residents: { "Übersicht": "/bewohner", "Verlauf": "/bewohner/verlauf", "Pflegeakte": "/bewohner/pflegeakte" },
+    vitals: { "Übersicht": "/vitalwerte" },
+    med: { "Medikamentenplan": "/medikation", "Medikamentenrunde": "/medikation/runde", "Bestände": "/medikation/bestaende", "Reserven": "/medikation/reserven" },
+    shift: { "Mein Dienst": "/betrieb/schicht", "Schichtverlauf": "/betrieb/schicht/verlauf" },
+    tasks: { "Meine Aufgaben": "/betrieb/aufgaben", "Teamaufgaben": "/betrieb/aufgaben/team" },
+    handover: { "Meine Übergabe": "/betrieb/uebergabe", "Seit letztem Dienst": "/betrieb/uebergabe/letzter-dienst" },
+    schedule: { "Mein Dienstplan": "/betrieb/dienstplanung", "Teamplanung": "/betrieb/dienstplanung/team" },
+    assess: { "Einschätzungen": "/einschaetzungen", "Fälligkeiten": "/einschaetzungen/faelligkeiten" },
+    wounds: { "Wundübersicht": "/wundmanagement", "Dokumentation": "/wundmanagement/dokumentation" },
+    team: { "Neuigkeiten & Kanäle": "/personal/team", "Nachrichten": "/personal/team/nachrichten" },
+    learn: { "Meine Schulungen": "/personal/schulungen", "Pflichtnachweise": "/personal/schulungen/pflichtnachweise" },
+    docs: { "Dokumente": "/personal/dokumente", "Standards & Weisungen": "/personal/dokumente/standards" },
+    quality: { "Ereignisse": "/leitung/qualitaet", "Massnahmen": "/leitung/qualitaet/massnahmen" },
+    insights: { "Pflege": "/leitung/kennzahlen", "Leitung": "/leitung/kennzahlen/leitung", "Personal": "/leitung/kennzahlen/personal" },
+    admin: { "Organisation": "/leitung/administration", "Benutzer & Rollen": "/leitung/administration/benutzer", "Konfiguration": "/leitung/administration/konfiguration" },
+    ai: { "Assistenz": "/intelligenz", "KI-Entwürfe": "/intelligenz/entwuerfe" },
+  };
+  return routes[moduleId]?.[child] ?? null;
+}
+
 const residents: ResidentRecordData[] = [
   { initials: "HM", name: "Hans Müller", room: "Zimmer 207", unit: "Wohnbereich 2", careLevel: "Pflegestufe 4", note: "Sturzrisiko · neurologische Kontrollen", lastUpdate: "Heute, 08:00", status: "critical", statusLabel: "Kritisch" },
   { initials: "MK", name: "Maria Keller", room: "Zimmer 204", unit: "Wohnbereich 2", careLevel: "Pflegestufe 3", note: "Schmerzbeobachtung · Diabetes", lastUpdate: "Heute, 07:30", status: "attention", statusLabel: "Beobachten" },
@@ -169,36 +191,16 @@ export default function ResidentsPage() {
   }
 
   function toggleModule(groupId: string, module: NavModule) {
-    if (module.href) {
-      router.push(module.href);
-      return;
-    }
+    const defaultRoute = module.href ?? routeFor(module.id, module.children[0]);
+    if (defaultRoute) { router.push(defaultRoute); return; }
     if (sidebarCollapsed) setSidebarCollapsed(false);
     if (!openGroups.includes(groupId)) setOpenGroups((current) => [...current, groupId]);
     setOpenModules((current) => current.includes(module.id) ? current.filter((item) => item !== module.id) : [...current, module.id]);
   }
 
   function selectSubmenu(moduleId: string, child: string) {
-    if (moduleId === "residents" && child === "Übersicht") return;
-    if (moduleId === "residents" && child === "Verlauf") { router.push("/bewohner/verlauf"); return; }
-    if (moduleId === "residents" && child === "Pflegeakte") { router.push("/bewohner/pflegeakte"); return; }
-    if (moduleId === "vitals" && child === "Übersicht") { router.push("/vitalwerte"); return; }
-    if (moduleId === "med" && child === "Medikamentenplan") { router.push("/medikation"); return; }
-    if (moduleId === "med" && child === "Medikamentenrunde") { router.push("/medikation/runde"); return; }
-    if (moduleId === "med" && child === "Bestände") { router.push("/medikation/bestaende"); return; }
-    if (moduleId === "med" && child === "Reserven") { router.push("/medikation/reserven"); return; }
-    if (moduleId === "shift" && child === "Mein Dienst") { router.push("/betrieb/schicht"); return; }
-    if (moduleId === "shift" && child === "Schichtverlauf") { router.push("/betrieb/schicht/verlauf"); return; }
-    if (moduleId === "tasks" && child === "Meine Aufgaben") { router.push("/betrieb/aufgaben"); return; }
-    if (moduleId === "tasks" && child === "Teamaufgaben") { router.push("/betrieb/aufgaben/team"); return; }
-    if (moduleId === "handover" && child === "Meine Übergabe") { router.push("/betrieb/uebergabe"); return; }
-    if (moduleId === "handover" && child === "Seit letztem Dienst") { router.push("/betrieb/uebergabe/letzter-dienst"); return; }
-    if (moduleId === "schedule" && child === "Mein Dienstplan") { router.push("/betrieb/dienstplanung"); return; }
-    if (moduleId === "schedule" && child === "Teamplanung") { router.push("/betrieb/dienstplanung/team"); return; }
-    if (moduleId === "assess" && child === "Einschätzungen") { router.push("/einschaetzungen"); return; }
-    if (moduleId === "assess" && child === "Fälligkeiten") { router.push("/einschaetzungen/faelligkeiten"); return; }
-    if (moduleId === "wounds" && child === "Wundübersicht") { router.push("/wundmanagement"); return; }
-    if (moduleId === "wounds" && child === "Dokumentation") { router.push("/wundmanagement/dokumentation"); return; }
+    const route = routeFor(moduleId, child);
+    if (route) { router.push(route); return; }
     setToast(`${child} geöffnet`);
   }
 
@@ -226,7 +228,7 @@ export default function ResidentsPage() {
           })}
         </div>
       </nav>
-      <div className="sidebar-footer"><button className="nav-button" type="button" title="Einstellungen" onClick={() => setToast("Einstellungen geöffnet")}><Icon name="settings"/><span className="nav-label">Einstellungen</span></button><button className="nav-button" type="button" title="Hilfe & Support" onClick={() => setToast("Hilfe & Support geöffnet")}><Icon name="docs"/><span className="nav-label">Hilfe & Support</span></button></div>
+      <div className="sidebar-footer"><button className="nav-button" type="button" title="Einstellungen" onClick={() => router.push("/einstellungen")}><Icon name="settings"/><span className="nav-label">Einstellungen</span></button><button className="nav-button" type="button" title="Hilfe & Support" onClick={() => setToast("Hilfe & Support geöffnet")}><Icon name="docs"/><span className="nav-label">Hilfe & Support</span></button></div>
     </aside>
 
     <div className="main-column">

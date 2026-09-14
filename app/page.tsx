@@ -126,6 +126,28 @@ const navigation: NavGroup[] = [
   ] },
 ];
 
+function routeFor(moduleId: string, child: string) {
+  const routes: Record<string, Record<string, string>> = {
+    residents: { "Übersicht": "/bewohner", "Verlauf": "/bewohner/verlauf", "Pflegeakte": "/bewohner/pflegeakte" },
+    vitals: { "Übersicht": "/vitalwerte" },
+    med: { "Medikamentenplan": "/medikation", "Medikamentenrunde": "/medikation/runde", "Bestände": "/medikation/bestaende", "Reserven": "/medikation/reserven" },
+    shift: { "Mein Dienst": "/betrieb/schicht", "Schichtverlauf": "/betrieb/schicht/verlauf" },
+    tasks: { "Meine Aufgaben": "/betrieb/aufgaben", "Teamaufgaben": "/betrieb/aufgaben/team" },
+    handover: { "Meine Übergabe": "/betrieb/uebergabe", "Seit letztem Dienst": "/betrieb/uebergabe/letzter-dienst" },
+    schedule: { "Mein Dienstplan": "/betrieb/dienstplanung", "Teamplanung": "/betrieb/dienstplanung/team" },
+    assess: { "Einschätzungen": "/einschaetzungen", "Fälligkeiten": "/einschaetzungen/faelligkeiten" },
+    wounds: { "Wundübersicht": "/wundmanagement", "Dokumentation": "/wundmanagement/dokumentation" },
+    team: { "Neuigkeiten & Kanäle": "/personal/team", "Nachrichten": "/personal/team/nachrichten" },
+    learn: { "Meine Schulungen": "/personal/schulungen", "Pflichtnachweise": "/personal/schulungen/pflichtnachweise" },
+    docs: { "Dokumente": "/personal/dokumente", "Standards & Weisungen": "/personal/dokumente/standards" },
+    quality: { "Ereignisse": "/leitung/qualitaet", "Massnahmen": "/leitung/qualitaet/massnahmen" },
+    insights: { "Pflege": "/leitung/kennzahlen", "Leitung": "/leitung/kennzahlen/leitung", "Personal": "/leitung/kennzahlen/personal" },
+    admin: { "Organisation": "/leitung/administration", "Benutzer & Rollen": "/leitung/administration/benutzer", "Konfiguration": "/leitung/administration/konfiguration" },
+    ai: { "Assistenz": "/intelligenz", "KI-Entwürfe": "/intelligenz/entwuerfe" },
+  };
+  return routes[moduleId]?.[child] ?? null;
+}
+
 const changes = [
   { initials: "HM", name: "Herr Hans Müller", note: "Sturz um 02:10 Uhr. Keine sichtbaren Verletzungen, engmaschige Beobachtung läuft.", time: "02:10", status: "Kritisch", type: "critical" },
   { initials: "MK", name: "Frau Maria Keller", note: "Schmerzen im rechten Knie, NRS 6. Bedarfsmedikation um 05:40 verabreicht.", time: "05:40", status: "Beobachten", type: "attention" },
@@ -242,20 +264,17 @@ export default function Home() {
   }
 
   function toggleModule(groupId: string, moduleId: string) {
-    if (moduleId === "residents") {
-      router.push("/bewohner");
-      return;
-    }
-    if (moduleId === "shift") {
-      router.push("/betrieb/schicht");
-      return;
-    }
+    const navModule = navigation.flatMap((group) => group.modules).find((item) => item.id === moduleId);
+    const defaultRoute = navModule?.href ?? (navModule ? routeFor(navModule.id, navModule.children[0]) : null);
+    if (defaultRoute) { router.push(defaultRoute); return; }
     if (sidebarCollapsed) setSidebarCollapsed(false);
     if (!openGroups.includes(groupId)) setOpenGroups((current) => [...current, groupId]);
     setOpenModules((current) => current.includes(moduleId) ? current.filter((item) => item !== moduleId) : [...current, moduleId]);
   }
 
   function selectNav(label: string, moduleId?: string) {
+    const route = moduleId ? routeFor(moduleId, label) : label === "Einstellungen" ? "/einstellungen" : null;
+    if (route) { router.push(route); return; }
     if (moduleId === "shift" && label === "Mein Dienst") { router.push("/betrieb/schicht"); return; }
     if (moduleId === "shift" && label === "Schichtverlauf") { router.push("/betrieb/schicht/verlauf"); return; }
     if (moduleId === "tasks" && label === "Meine Aufgaben") { router.push("/betrieb/aufgaben"); return; }
