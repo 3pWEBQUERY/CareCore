@@ -215,7 +215,8 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .critical-alert strong { display: block; color: #6d2b23; font-size: 14px; }
 .critical-alert p { margin: 4px 0 0; color: #87564f; font-size: 13px; }
 
-.dashboard-grid { display: grid; grid-template-columns: minmax(0,1.48fr) minmax(320px,.92fr); gap: 20px; align-items: start; }
+.dashboard-grid { display: grid; grid-template-columns: minmax(0,1fr); gap: 0; align-items: start; }
+.dashboard-top-grid { display: grid; grid-template-columns: minmax(0,1.48fr) minmax(320px,.92fr); gap: 20px; align-items: start; }
 .card { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); box-shadow: 0 5px 18px rgba(23,54,64,.035); }
 .card-header { min-height: 67px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 18px; border-bottom: 1px solid var(--line); }
 .card-title { margin: 0; font-size: 16px; font-weight: 740; letter-spacing: -.015em; }
@@ -253,7 +254,7 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .timeline-state.done { color: var(--success); }
 .timeline-state.now { color: var(--brand); }
 
-.tasks-card { position: sticky; top: 90px; }
+.tasks-card { position: sticky; top: 90px; align-self: start; max-height: calc(100dvh - 110px); overflow-y: auto; }
 .progress-ring { --progress: 20%; width: 38px; height: 38px; position: relative; display: grid; place-items: center; border-radius: 6px; background: conic-gradient(var(--brand) var(--progress),#e8edef 0); }
 .progress-ring::before { content: ""; position: absolute; inset: 5px; border-radius: 6px; background: white; }
 .progress-ring span { position: relative; color: var(--brand-dark); font-size: 10px; font-weight: 780; }
@@ -1533,7 +1534,8 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .critical-alert { grid-template-columns: auto minmax(0,1fr); padding: 13px; }
   .critical-alert .secondary-button { grid-column: 2; justify-self: start; min-height: 36px; }
   .dashboard-grid { grid-template-columns: 1fr; }
-  .tasks-card { position: static; }
+  .dashboard-top-grid { grid-template-columns: 1fr; }
+  .tasks-card { position: static; max-height: none; overflow: visible; }
   .timeline-card,.residents-card { margin-top: 16px; }
   .residents-card { grid-column: auto; }
   .bottom-nav { height: 72px; position: fixed; inset: auto 0 0; z-index: 35; display: grid; grid-template-columns: repeat(5,1fr); padding: 7px 7px max(7px,env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: rgba(255,255,255,.97); backdrop-filter: blur(14px); }

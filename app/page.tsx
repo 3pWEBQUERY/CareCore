@@ -341,6 +341,7 @@ export default function Home() {
         <section className="critical-alert" aria-label="Kritischer Hinweis"><span className="critical-symbol"><Icon name="alert"/></span><div><strong>Unmittelbar prüfen · Herr Müller</strong><p>Sturz in der Nacht. Nächste neurologische Kontrolle um 08:00 Uhr.</p></div><button className="secondary-button" type="button" onClick={() => setResidentOpen(true)}>Fall öffnen <Icon name="chevron" className="button-icon"/></button></section>
 
         <div className="dashboard-grid">
+          <div className="dashboard-top-grid">
           <div>
             <section className="card" aria-labelledby="changes-title">
               <div className="card-header"><div><h2 className="card-title" id="changes-title">Seit deinem letzten Dienst</h2><p className="card-subtitle">Relevante Veränderungen · letzte 16 Stunden</p></div><button className="filter-pill" type="button">Alle 3</button></div>
@@ -364,6 +365,7 @@ export default function Home() {
             <div className="task-list">{tasks.map((task) => <div className={`task-row ${task.completed ? "completed" : ""}`} key={task.id}><button className="task-check" type="button" aria-label={`${task.title} ${task.completed ? "wieder öffnen" : "erledigen"}`} onClick={() => toggleTask(task.id)}><Icon name="check"/></button><span><strong className="task-title">{task.title}</strong><span className="task-resident">{task.resident}</span></span><time className={`task-time ${task.overdue && !task.completed ? "overdue" : ""}`}>{task.time}</time></div>)}</div>
             <div className="tasks-footer"><button className="quiet-button" type="button" onClick={() => setToast("Alle 18 Aufgaben geöffnet")}>Alle 18 Aufgaben <Icon name="chevron" className="button-icon"/></button></div>
           </section>
+          </div>
 
           <section className="card residents-card" aria-labelledby="residents-title"><div className="card-header"><div><h2 className="card-title" id="residents-title">Meine Bewohner</h2><p className="card-subtitle">4 von 7 mit aktuellen Hinweisen</p></div><button className="quiet-button" type="button" onClick={() => router.push("/bewohner")}>Alle anzeigen</button></div><div className="resident-grid">{residents.map((resident) => <button className="resident-tile" type="button" key={resident.name} onClick={() => setResidentOpen(true)}><span className={`resident-avatar ${resident.critical ? "critical" : ""}`}>{resident.initials}</span><span><strong>{resident.name}</strong><p>{resident.room} · <span className="risk-label">{resident.risk}</span></p></span></button>)}</div></section>
         </div>
