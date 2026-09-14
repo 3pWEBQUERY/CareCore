@@ -173,6 +173,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Dienstplanung: „Woche/Monat“-Umschalter, vollständiges September-Kalenderraster, Tagesauswahl im Monatskalender und Rücksprung auf „Heute“ geprüft
 - Personal und Leitung: individuelle Team-, Lern-, Dokument-, Qualitäts-, Kennzahlen-, Organisations-, Benutzer- und Konfigurationslayouts auf Desktop/Mobilstruktur geprüft
 - Administration Organisation: „Wohnbereich“ öffnet den vollflächigen Editor mit Stammdaten, Kapazität, Leitung, Diensten und Hinweisfeld; Abbrechen/Erstellen geprüft
+- Geplante Dienste: Checkboxen im Bereichseditor überschreiben nicht mehr die Formularbreite; Frühdienst, Spätdienst und Nachtwache bleiben als drei klar lesbare Auswahlkarten sichtbar
 - Sidebar-Deep-Links: Untermenüpunkte ohne eigenes Ziel routen über eine zentrale Zuordnung (z. B. Administration → Organisation); Vercel- und Lokalrouting geprüft
 - Sidebar-Routing auf Einstiegseiten: Startseite, Bewohner und Wundmanagement verwenden nun dieselbe vollständige Routenzuordnung wie die Modulansicht; Administration, Qualität, Kennzahlen, Personal und Intelligenz öffnen statt Toast direkt ihre Seiten
 - Browser-Konsole auf Fehler geprüft
