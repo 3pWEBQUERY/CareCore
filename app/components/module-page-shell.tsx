@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowsLeftRight,
@@ -29,19 +29,20 @@ import {
   Pulse,
   ShieldCheck,
   SidebarSimple,
+  SignOut,
   Sparkle,
   Stethoscope,
   UsersThree,
   Warning,
 } from "@phosphor-icons/react";
 
-export type ModuleIconName = "home" | "residents" | "tasks" | "handover" | "calendar" | "team" | "learn" | "docs" | "chart" | "quality" | "settings" | "search" | "bell" | "building" | "chevron" | "caretDown" | "alert" | "check" | "plus" | "pulse" | "note" | "vitals" | "plan" | "med" | "wounds" | "nutrition" | "assess" | "shift" | "ai" | "sparkle" | "sidebar" | "filter";
+export type ModuleIconName = "home" | "residents" | "tasks" | "handover" | "calendar" | "team" | "learn" | "docs" | "chart" | "quality" | "settings" | "search" | "bell" | "building" | "chevron" | "caretDown" | "alert" | "check" | "plus" | "pulse" | "note" | "vitals" | "plan" | "med" | "wounds" | "nutrition" | "assess" | "shift" | "ai" | "sparkle" | "sidebar" | "filter" | "logout";
 
 type NavModule = { id: string; label: string; icon: ModuleIconName; children: string[]; badge?: number; href?: string };
 type NavGroup = { id: string; label: string; modules: NavModule[] };
 
 export function ModuleIcon({ name, className = "" }: { name: ModuleIconName; className?: string }) {
-  const icons = { home: House, residents: UsersThree, tasks: ListChecks, handover: ArrowsLeftRight, calendar: CalendarDots, team: ChatsCircle, learn: GraduationCap, docs: Files, chart: ChartBar, quality: ShieldCheck, settings: GearSix, search: MagnifyingGlass, bell: Bell, building: Buildings, chevron: CaretRight, caretDown: CaretDown, alert: Warning, check: Check, plus: Plus, pulse: Pulse, note: NotePencil, vitals: Heartbeat, plan: ClipboardText, med: Pill, wounds: FirstAidKit, nutrition: ForkKnife, assess: Stethoscope, shift: Heartbeat, ai: Sparkle, sparkle: Sparkle, sidebar: SidebarSimple, filter: Funnel };
+  const icons = { home: House, residents: UsersThree, tasks: ListChecks, handover: ArrowsLeftRight, calendar: CalendarDots, team: ChatsCircle, learn: GraduationCap, docs: Files, chart: ChartBar, quality: ShieldCheck, settings: GearSix, search: MagnifyingGlass, bell: Bell, building: Buildings, chevron: CaretRight, caretDown: CaretDown, alert: Warning, check: Check, plus: Plus, pulse: Pulse, note: NotePencil, vitals: Heartbeat, plan: ClipboardText, med: Pill, wounds: FirstAidKit, nutrition: ForkKnife, assess: Stethoscope, shift: Heartbeat, ai: Sparkle, sparkle: Sparkle, sidebar: SidebarSimple, filter: Funnel, logout: SignOut };
   const Component = icons[name];
   return <Component className={className} aria-hidden="true" weight="regular"/>;
 }
@@ -144,7 +145,9 @@ export default function ModulePageShell({ activeModule, activeChild, activeGroup
   const [openModules, setOpenModules] = useState<string[]>(() => activeModule ? [activeModule] : []);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [profileOpen, setProfileOpen] = useState(false);
   const [toast, setToast] = useState("");
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
   const openSearch = useCallback(() => setSearchOpen(true), []);
   const filteredResults = useMemo(() => globalResults.filter((item) => `${item.title} ${item.meta}`.toLocaleLowerCase("de-CH").includes(searchQuery.trim().toLocaleLowerCase("de-CH"))), [searchQuery]);
@@ -152,11 +155,18 @@ export default function ModulePageShell({ activeModule, activeChild, activeGroup
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); openSearch(); }
-      if (event.key === "Escape") setSearchOpen(false);
+      if (event.key === "Escape") { setSearchOpen(false); setProfileOpen(false); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [openSearch]);
+
+  useEffect(() => {
+    if (!profileOpen) return;
+    const onPointerDown = (event: PointerEvent) => { if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) setProfileOpen(false); };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [profileOpen]);
 
   useEffect(() => {
     if (!toast) return;
@@ -209,7 +219,7 @@ export default function ModulePageShell({ activeModule, activeChild, activeGroup
     </aside>
 
     <div className="main-column">
-      <header className="topbar"><button className="location-control" type="button" onClick={() => setToast("Standortauswahl geöffnet")}><span className="location-icon"><ModuleIcon name="building"/></span><span><small>{locationPrimary}</small><strong>{locationSecondary}</strong></span><ModuleIcon name="chevron" className="chevron"/></button><div className="top-actions"><button className="search-trigger" type="button" onClick={openSearch} aria-label="Globale Suche öffnen" aria-haspopup="dialog" aria-expanded={searchOpen}><ModuleIcon name="search"/><span>Suchen…</span><kbd>⌘ K</kbd></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><ModuleIcon name="bell"/><span className="notification-dot"/></button><div className="profile"><span className="avatar">AM</span><span><small>Pflegefachfrau HF</small><strong>Anna Meier</strong></span></div></div></header>
+      <header className="topbar"><button className="location-control" type="button" onClick={() => setToast("Standortauswahl geöffnet")}><span className="location-icon"><ModuleIcon name="building"/></span><span><small>{locationPrimary}</small><strong>{locationSecondary}</strong></span><ModuleIcon name="chevron" className="chevron"/></button><div className="top-actions"><button className="search-trigger" type="button" onClick={openSearch} aria-label="Globale Suche öffnen" aria-haspopup="dialog" aria-expanded={searchOpen}><ModuleIcon name="search"/><span>Suchen…</span><kbd>⌘ K</kbd></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><ModuleIcon name="bell"/><span className="notification-dot"/></button><div className="profile-menu-wrap" ref={profileMenuRef}><button className={`profile profile-trigger ${profileOpen ? "open" : ""}`} type="button" aria-haspopup="menu" aria-expanded={profileOpen} aria-controls="profile-menu"><span className="avatar">AM</span><span><small>Pflegefachfrau HF</small><strong>Anna Meier</strong></span><ModuleIcon name="caretDown" className="profile-caret"/></button>{profileOpen && <div className="profile-dropdown" id="profile-menu" role="menu" aria-label="Profilmenü"><button type="button" role="menuitem" onClick={() => { setProfileOpen(false); router.push("/betrieb/dienstplanung"); }}><span className="profile-menu-icon"><ModuleIcon name="calendar"/></span><span>Dienstplan</span><ModuleIcon name="chevron" className="profile-menu-chevron"/></button><button type="button" role="menuitem" onClick={() => { setProfileOpen(false); router.push("/personal/team/nachrichten"); }}><span className="profile-menu-icon"><ModuleIcon name="team"/></span><span>Nachrichten</span><ModuleIcon name="chevron" className="profile-menu-chevron"/></button><button type="button" role="menuitem" onClick={() => { setProfileOpen(false); router.push("/einstellungen"); }}><span className="profile-menu-icon"><ModuleIcon name="settings"/></span><span>Einstellungen</span><ModuleIcon name="chevron" className="profile-menu-chevron"/></button><button className="logout" type="button" role="menuitem" onClick={() => { setProfileOpen(false); setToast("Ausloggen ist in dieser Demo vorbereitet"); }}><span className="profile-menu-icon"><ModuleIcon name="logout"/></span><span>Ausloggen</span></button></div>}</div></div></header>
       <header className="mobile-top"><Brand/><div className="mobile-actions"><button className="icon-button" type="button" aria-label="Suche öffnen" onClick={openSearch}><ModuleIcon name="search"/></button><button className="icon-button" type="button" aria-label="Benachrichtigungen" onClick={() => setToast("3 neue Benachrichtigungen")}><ModuleIcon name="bell"/><span className="notification-dot"/></button></div></header>
       {children(setToast)}
     </div>

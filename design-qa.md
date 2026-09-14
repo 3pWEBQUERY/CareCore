@@ -109,6 +109,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 31. Dropdown-Platzierung: Das Darstellungsprofil öffnet sein Dropdown bei wenig Platz automatisch nach oben. So bleibt das vollständige Menü sichtbar und wird weder von der Detailkarte noch vom Viewport abgeschnitten.
 32. Passwortdialog: „Passwort ändern“ öffnet in der Sicherheitsansicht ein eigenes, responsives CareCore-Popover. Aktuelles Passwort, neues Passwort und Bestätigung werden validiert; Sichtbarkeitsschalter, Escape, Abbrechen und Speichern sind vollständig innerhalb des Dialogs umgesetzt.
 33. Benachrichtigungsübersicht: Der Bereich „Benachrichtigungen“ in der Einstellungsübersicht zeigt jetzt alle sieben aktiven Hinweisarten mit Auslöser und Frequenz sowie einen direkten Link zur vollständigen Verwaltung.
+34. Profilmenü: Der Kopfbereich öffnet über Avatar und Namen ein CareCore-Dropdown mit Dienstplan, Nachrichten, Einstellungen und Ausloggen. Die Navigation schliesst bei Auswahl, Klick ausserhalb oder Escape.
 
 ## Primäre Interaktionen
 
@@ -157,6 +158,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Darstellungsprofil am unteren Kartenrand geöffnet; Menü öffnet nach oben und bleibt vollständig innerhalb des Viewports sichtbar
 - Sicherheitsansicht: „Passwort ändern“ geöffnet, leeres Formular validiert, Passwortsichtbarkeit umgeschaltet und Dialog über „Abbrechen“ geschlossen
 - Einstellungsübersicht: „Benachrichtigungen“ ausgewählt; sieben aktive Hinweisarten, Auslöser, Status und Link zur Verwaltung geprüft
+- Profilmenü im Kopfbereich geöffnet; vier Menüeinträge und Schliessen per Klick ausserhalb/Escape geprüft
 - Browser-Konsole auf Fehler geprüft
 - Lint und Produktions-Build erfolgreich
 
