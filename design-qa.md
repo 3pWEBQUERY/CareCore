@@ -177,6 +177,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Etage-Auswahl: Der Bereichseditor verwendet ein eigenes CareCore-Dropdown mit Fokuszustand, Auswahlmarkierung, Klick-aussen-Schliessen und Aufwärtsöffnung bei wenig Platz statt der nativen Browserauswahl
 - Verantwortliche Leitung: Die Personenauswahl nutzt dieselbe eigene CareCore-Dropdown-UI mit vier Leitungsprofilen statt eines nativen Browser-Selects
 - Standortverwaltung: „Bereich hinzufügen“ öffnet einen vollflächigen Standorteditor mit Stammdaten, Standorttyp, Land, Leitung und Status; sämtliche Auswahlfelder verwenden die eigene CareCore-Dropdown-UI
+- Startseite-Profil: „Mein Profil“ steht im Profilmenü an erster Stelle und öffnet einen vollflächigen Profilbereich; „Bearbeiten“ schaltet die persönlichen Angaben direkt im selben Bereich in editierbare Felder um
 - Sidebar-Deep-Links: Untermenüpunkte ohne eigenes Ziel routen über eine zentrale Zuordnung (z. B. Administration → Organisation); Vercel- und Lokalrouting geprüft
 - Sidebar-Routing auf Einstiegseiten: Startseite, Bewohner und Wundmanagement verwenden nun dieselbe vollständige Routenzuordnung wie die Modulansicht; Administration, Qualität, Kennzahlen, Personal und Intelligenz öffnen statt Toast direkt ihre Seiten
 - Browser-Konsole auf Fehler geprüft
