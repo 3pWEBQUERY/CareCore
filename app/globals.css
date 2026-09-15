@@ -1386,6 +1386,17 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .area-editor-grid { max-width: 980px; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px 20px; margin: 0 auto; }.area-editor-grid > label,.area-editor-grid fieldset { display: grid; gap: 7px; color: var(--ink); font-size: 12px; font-weight: 730; }.area-editor-grid input,.area-editor-grid select,.area-editor-grid textarea { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; outline: 0; color: var(--ink); background: white; font: inherit; font-size: 13px; font-weight: 500; }.area-editor-grid textarea { min-height: 94px; padding: 11px 12px; resize: vertical; }.area-editor-grid input:focus,.area-editor-grid select:focus,.area-editor-grid textarea:focus { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }.area-editor-wide { grid-column: 1/-1; }.area-editor-grid fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }.area-editor-grid legend { padding: 0; }.area-service-options { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }.area-service-options label { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; color: #4f6478; background: white; font-size: 11px; font-weight: 600; cursor: pointer; }.area-service-options label:has(input:checked) { border-color: #93c5fd; color: var(--brand-dark); background: var(--brand-soft); }.area-service-options input { accent-color: var(--brand); }
 .area-service-options input { width: 18px; min-width: 18px; height: 18px; min-height: 18px; flex: 0 0 auto; margin: 0; padding: 0; border: 0; border-radius: 4px; accent-color: var(--brand); }
 .area-service-options label span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.duty-editor-panel .area-editor-intro { max-width: 1120px; }
+.duty-assignment-status { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; padding: 7px 10px; border: 1px solid #bbf7d0; border-radius: 6px; color: #18794e; background: #f0fdf4; font-size: 10px; font-weight: 720; white-space: nowrap; }
+.duty-assignment-status i { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
+.duty-assignment-options { margin-top: 1px; }
+.duty-assignment-options .area-service-options { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.duty-assignment-summary { max-width: 1120px; display: flex; justify-content: space-between; gap: 18px; margin: 24px auto 0; padding: 15px 17px; border: 1px solid #bfdbfe; border-radius: 6px; color: var(--brand-dark); background: var(--brand-soft); }
+.duty-assignment-summary span { display: grid; gap: 4px; }
+.duty-assignment-summary span:last-child { text-align: right; }
+.duty-assignment-summary strong { font-size: 12px; }
+.duty-assignment-summary small { color: #4f6478; font-size: 10px; }
+.duty-editor-panel .area-editor-actions { max-width: 1120px; }
 .area-custom-select { position: relative; }
 .area-select-trigger { width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: white; font: inherit; font-size: 13px; font-weight: 500; text-align: left; cursor: pointer; }
 .area-select-trigger:hover,.area-select-trigger[aria-expanded="true"] { border-color: #93c5fd; background: var(--brand-soft); }
@@ -1903,6 +1914,10 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .area-editor-grid { grid-template-columns: 1fr; gap: 15px; }
   .area-editor-wide { grid-column: auto; }
   .area-service-options { grid-template-columns: 1fr; }
+  .duty-assignment-status { margin: 6px 0 0; }
+  .duty-editor-panel .area-editor-intro { align-items: flex-start; flex-wrap: wrap; }
+  .duty-assignment-summary { flex-direction: column; gap: 10px; }
+  .duty-assignment-summary span:last-child { text-align: left; }
   .area-editor-actions { flex-direction: column-reverse; margin-top: 22px; }
   .area-editor-actions button { width: 100%; justify-content: center; }
 }
