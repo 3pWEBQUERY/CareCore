@@ -1714,6 +1714,7 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .floating-action svg { width: 23px; }
   .toast { right: 14px; left: 14px; bottom: 88px; max-width: none; }
   .residents-heading { align-items: flex-start; }
+  .residents-heading .primary-button { width: 100%; display: inline-flex; justify-content: center; margin-top: 6px; }
   .wounds-heading { display: grid; align-items: flex-start; }
   .wounds-heading .primary-button { width: 100%; display: inline-flex; justify-content: center; margin-top: 6px; }
   .resident-summary > div { min-height: 78px; padding: 14px; }

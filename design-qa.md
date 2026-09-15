@@ -182,6 +182,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Dienstplanung: „Abwesenheit melden“ öffnet einen vollflächigen Editor mit Zeitraum, Abwesenheitsart, Stellvertretung und Priorität; Auswahlfelder nutzen die eigene CareCore-Dropdown-UI
 - Abwesenheitskalender: „Von“ und „Bis“ verwenden einen eigenen CareCore-Monatskalender mit Monatsnavigation, Wochentagen, Auswahlzustand und „Heute“-Aktion statt des nativen Datepickers
 - Operations-Aktionen: „Aufgabe erstellen“ und „Dienst starten“ öffnen vollflächige CareCore-Editoren mit Aufgabenfeldern, Schicht-Check-in, Statuszusammenfassung und eigener Auswahl-UI
+- Bewohnerverwaltung: „Bewohner aufnehmen“ und „Pflegeakte erstellen“ öffnen vollflächige Aufnahmeeditoren mit Stammdaten, Zuweisung, Pflegefokus, Evaluation und eigener Auswahl-UI
 - Sidebar-Deep-Links: Untermenüpunkte ohne eigenes Ziel routen über eine zentrale Zuordnung (z. B. Administration → Organisation); Vercel- und Lokalrouting geprüft
 - Sidebar-Routing auf Einstiegseiten: Startseite, Bewohner und Wundmanagement verwenden nun dieselbe vollständige Routenzuordnung wie die Modulansicht; Administration, Qualität, Kennzahlen, Personal und Intelligenz öffnen statt Toast direkt ihre Seiten
 - Browser-Konsole auf Fehler geprüft

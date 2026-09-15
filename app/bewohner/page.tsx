@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppHeader from "../components/app-header";
+import { CareDatePicker, CareSelect, formatCareDate } from "../components/care-form-controls";
 import { ResidentRecord, type ResidentRecordData } from "./components/resident-record";
 import {
   ArrowsLeftRight,
@@ -145,6 +146,23 @@ const residents: ResidentRecordData[] = [
   { initials: "AS", name: "Anna Schmid", room: "Zimmer 118", unit: "Wohnbereich 1", careLevel: "Pflegestufe 1", note: "Keine aktuellen Hinweise", lastUpdate: "Gestern, 20:15", status: "stable", statusLabel: "Stabil" },
 ];
 
+function ResidentIntakeEditor({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess: (message: string) => void }) {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [birthDate, setBirthDate] = useState("1942-05-18");
+  const [gender, setGender] = useState("Weiblich");
+  const [admissionDate, setAdmissionDate] = useState("2026-09-15");
+  const [unit, setUnit] = useState("Wohnbereich 2");
+  const [room, setRoom] = useState("Zimmer 216");
+  const [careLevel, setCareLevel] = useState("Pflegestufe 3");
+  const [owner, setOwner] = useState("Anna Meier");
+  const [status, setStatus] = useState("Aktiv");
+  const [note, setNote] = useState("");
+  if (!open) return null;
+  const fullName = `${firstName} ${lastName}`.trim();
+  return <div className="area-editor-overlay" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && onClose()}><section className="area-editor-panel resident-intake-panel" role="dialog" aria-modal="true" aria-labelledby="resident-intake-title"><header className="area-editor-header"><div><p className="eyebrow">CareCore Bewohner · Aufnahme</p><h2 id="resident-intake-title">Bewohner aufnehmen</h2><p>Erstelle die Bewohnerakte und weise die Person direkt einem Zimmer und einer Bezugspflege zu.</p></div><button className="area-editor-close" type="button" onClick={onClose} aria-label="Aufnahmeeditor schliessen">×</button></header><form className="area-editor-form" onSubmit={(event) => { event.preventDefault(); onClose(); onSuccess(`${fullName || "Neue Bewohnerin oder neuer Bewohner"} wurde aufgenommen und ${unit} zugewiesen`); }}><div className="area-editor-intro"><span className="area-editor-icon"><Icon name="residents"/></span><div><strong>Neue Bewohnerakte</strong><p>Pflichtangaben können später in den Stammdaten ergänzt und bearbeitet werden.</p></div><span className="duty-assignment-status"><i/>Aufnahme vorbereiten</span></div><div className="area-editor-grid"><label>Vorname<input value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="z. B. Elisabeth" required/></label><label>Nachname<input value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="z. B. Weber" required/></label><label>Geburtsdatum<CareDatePicker label="Geburtsdatum" value={birthDate} onChange={setBirthDate}/></label><label>Geschlecht<CareSelect label="Geschlecht" value={gender} options={["Weiblich", "Männlich", "Divers", "Keine Angabe"]} onChange={setGender}/></label><label>Eintrittsdatum<CareDatePicker label="Eintrittsdatum" value={admissionDate} onChange={setAdmissionDate}/></label><label>Pflegestufe<CareSelect label="Pflegestufe" value={careLevel} options={["Pflegestufe 1", "Pflegestufe 2", "Pflegestufe 3", "Pflegestufe 4", "Pflegestufe 5"]} onChange={setCareLevel}/></label><label>Wohnbereich<CareSelect label="Wohnbereich" value={unit} options={["Wohnbereich 1", "Wohnbereich 2", "Wohnbereich 3", "Pflegewohngruppe"]} onChange={setUnit}/></label><label>Zimmer<input value={room} onChange={(event) => setRoom(event.target.value)} placeholder="z. B. Zimmer 216" required/></label><label>Bezugspflege<CareSelect label="Bezugspflege" value={owner} options={["Anna Meier", "Lea Frei", "Nora Baumann", "Sven Keller"]} onChange={setOwner}/></label><label>Status<CareSelect label="Status" value={status} options={["Aktiv", "Eintritt geplant", "Vorläufig"]} onChange={setStatus}/></label><label className="area-editor-wide">Hinweis zur Aufnahme<textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="z. B. Angehörige, Diagnosen oder wichtige Hinweise …" rows={5}/></label></div><div className="duty-assignment-summary"><span><strong>{fullName || "Neue Bewohnerakte"}</strong><small>{room} · {unit} · {careLevel}</small></span><span><strong>Eintritt {formatCareDate(admissionDate)}</strong><small>Bezugspflege: {owner} · {status}</small></span></div><footer className="area-editor-actions"><button className="secondary-button" type="button" onClick={onClose}>Abbrechen</button><button className="primary-button" type="submit"><Icon name="check"/> Bewohner aufnehmen</button></footer></form></section></div>;
+}
+
 function Brand() {
   return <div className="brand" aria-label="CareCore"><span className="brand-mark"><Icon name="pulse"/></span><span className="brand-copy"><span className="brand-name">CareCore</span><small>Mehr Zeit für Pflege.</small></span></div>;
 }
@@ -158,6 +176,7 @@ export default function ResidentsPage() {
   const [unit, setUnit] = useState("Alle");
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedResident, setSelectedResident] = useState<ResidentRecordData | null>(null);
+  const [intakeEditorOpen, setIntakeEditorOpen] = useState(false);
   const [toast, setToast] = useState("");
 
   const openSearch = useCallback(() => {
@@ -235,7 +254,7 @@ export default function ResidentsPage() {
       <AppHeader searchOpen={searchOpen} onSearch={openSearch} onToast={setToast}/>
 
       <main className="workspace residents-workspace">
-        <section className="page-heading residents-heading" aria-labelledby="residents-page-title"><div className="heading-copy"><p className="eyebrow">CareCore Bewohner</p><h1 id="residents-page-title">Bewohner</h1><p>Zentrale Bewohner- und Patientenakte für den gesamten Wohnbereich.</p></div><button className="primary-button" type="button" onClick={() => setToast("Neue Bewohneraufnahme vorbereitet")}><Icon name="plus" className="button-icon"/>Bewohner aufnehmen</button></section>
+        <section className="page-heading residents-heading" aria-labelledby="residents-page-title"><div className="heading-copy"><p className="eyebrow">CareCore Bewohner</p><h1 id="residents-page-title">Bewohner</h1><p>Zentrale Bewohner- und Patientenakte für den gesamten Wohnbereich.</p></div><button className="primary-button" type="button" onClick={() => setIntakeEditorOpen(true)}><Icon name="plus" className="button-icon"/>Bewohner aufnehmen</button></section>
 
         <section className="resident-summary" aria-label="Bewohnerübersicht">
           <div><span className="summary-icon"><Icon name="residents"/></span><span><strong>48</strong><small>Bewohner gesamt</small></span></div>
@@ -273,6 +292,8 @@ export default function ResidentsPage() {
     {searchOpen && <div className="overlay" role="presentation" onClick={(event) => event.currentTarget === event.target && setSearchOpen(false)}><section id="resident-global-search" className="search-dialog" role="dialog" aria-modal="true" aria-label="Globale Suche"><div className="search-input-wrap"><Icon name="search"/><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Bewohner, Dokumente oder Funktionen suchen…" aria-label="Suchbegriff"/><button type="button" onClick={() => setSearchOpen(false)} aria-label="Suche schliessen">ESC</button></div><div className="search-results"><span className="search-group-label">Bewohner</span>{filteredResidents.map((resident) => <button className="search-result" type="button" key={resident.name} onClick={() => { setSearchOpen(false); setSelectedResident(resident); }}><span className="result-icon"><Icon name="residents"/></span><span><strong>{resident.name}</strong><small>{resident.room} · {resident.unit}</small></span></button>)}</div></section></div>}
 
     {selectedResident && <ResidentRecord resident={selectedResident} onClose={() => setSelectedResident(null)} onAction={setToast}/>}
+
+    <ResidentIntakeEditor open={intakeEditorOpen} onClose={() => setIntakeEditorOpen(false)} onSuccess={setToast}/>
 
     {toast && <div className="toast" role="status"><Icon name="check"/>{toast}</div>}
   </div>;
