@@ -97,7 +97,9 @@ const navigation: NavGroup[] = [
 function routeFor(moduleId: string, child: string) {
   const routes: Record<string, Record<string, string>> = {
     residents: { "Übersicht": "/bewohner", "Verlauf": "/bewohner/verlauf", "Pflegeakte": "/bewohner/pflegeakte" },
-    vitals: { "Übersicht": "/vitalwerte" },
+    plan: { "Pflegeplanung": "/pflegeplanung", "Ziele & Massnahmen": "/pflegeplanung/ziele-massnahmen", "Auswertung": "/pflegeplanung/auswertung" },
+    chart: { "Schnelldokumentation": "/pflegedokumentation", "Verlaufsdokumentation": "/pflegedokumentation/verlauf" },
+    vitals: { "Übersicht": "/vitalwerte", "Entwicklung": "/vitalwerte/entwicklung", "Grenzwerte": "/vitalwerte/grenzwerte" },
     med: { "Medikamentenplan": "/medikation", "Medikamentenrunde": "/medikation/runde", "Bestände": "/medikation/bestaende", "Reserven": "/medikation/reserven" },
     shift: { "Mein Dienst": "/betrieb/schicht", "Schichtverlauf": "/betrieb/schicht/verlauf" },
     tasks: { "Meine Aufgaben": "/betrieb/aufgaben", "Teamaufgaben": "/betrieb/aufgaben/team" },
@@ -105,6 +107,7 @@ function routeFor(moduleId: string, child: string) {
     schedule: { "Mein Dienstplan": "/betrieb/dienstplanung", "Teamplanung": "/betrieb/dienstplanung/team" },
     assess: { "Einschätzungen": "/einschaetzungen", "Fälligkeiten": "/einschaetzungen/faelligkeiten" },
     wounds: { "Wundübersicht": "/wundmanagement", "Dokumentation": "/wundmanagement/dokumentation" },
+    nutrition: { "Ernährungsplan": "/ernaehrung", "Trinkprotokoll": "/ernaehrung/trinkprotokoll" },
     team: { "Neuigkeiten & Kanäle": "/personal/team", "Nachrichten": "/personal/team/nachrichten" },
     learn: { "Meine Schulungen": "/personal/schulungen", "Pflichtnachweise": "/personal/schulungen/pflichtnachweise" },
     docs: { "Dokumente": "/personal/dokumente", "Standards & Weisungen": "/personal/dokumente/standards" },

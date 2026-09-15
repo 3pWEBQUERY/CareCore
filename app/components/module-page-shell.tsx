@@ -86,6 +86,14 @@ const globalResults = [
   { title: "Bewohnerverlauf", meta: "Alle Ereignisse im Wohnbereich", icon: "note" as ModuleIconName, href: "/bewohner/verlauf" },
   { title: "Pflegeakten", meta: "Pflegeprofile, Ziele und Maßnahmen", icon: "plan" as ModuleIconName, href: "/bewohner/pflegeakte" },
   { title: "Vitalwerte", meta: "Hausweite Übersicht aller Messungen", icon: "vitals" as ModuleIconName, href: "/vitalwerte" },
+  { title: "Pflegeplanung", meta: "Ziele, Ressourcen und Interventionen", icon: "plan" as ModuleIconName, href: "/pflegeplanung" },
+  { title: "Ziele & Massnahmen", meta: "Aktive Pflegeziele im Team", icon: "tasks" as ModuleIconName, href: "/pflegeplanung/ziele-massnahmen" },
+  { title: "Schnelldokumentation", meta: "Kurze Beobachtungen dokumentieren", icon: "note" as ModuleIconName, href: "/pflegedokumentation" },
+  { title: "Verlaufsdokumentation", meta: "Chronologische Pflegeverläufe", icon: "note" as ModuleIconName, href: "/pflegedokumentation/verlauf" },
+  { title: "Vitalwerte Entwicklung", meta: "Trends und Verläufe vergleichen", icon: "chart" as ModuleIconName, href: "/vitalwerte/entwicklung" },
+  { title: "Vitalwerte Grenzwerte", meta: "Persönliche Zielbereiche verwalten", icon: "vitals" as ModuleIconName, href: "/vitalwerte/grenzwerte" },
+  { title: "Ernährungsplan", meta: "Kostformen und Trinkziele", icon: "nutrition" as ModuleIconName, href: "/ernaehrung" },
+  { title: "Trinkprotokoll", meta: "Flüssigkeitsaufnahme dokumentieren", icon: "nutrition" as ModuleIconName, href: "/ernaehrung/trinkprotokoll" },
   { title: "Medikamentenplan", meta: "Verordnungen und Einnahmezeiten", icon: "med" as ModuleIconName, href: "/medikation" },
   { title: "Medikamentenrunde", meta: "Geplante Gaben dokumentieren", icon: "tasks" as ModuleIconName, href: "/medikation/runde" },
   { title: "Medikamentenbestände", meta: "Lager, Mindestbestand und Verfall", icon: "docs" as ModuleIconName, href: "/medikation/bestaende" },
@@ -98,7 +106,14 @@ function routeFor(moduleId: string, child: string) {
   if (moduleId === "residents" && child === "Übersicht") return "/bewohner";
   if (moduleId === "residents" && child === "Verlauf") return "/bewohner/verlauf";
   if (moduleId === "residents" && child === "Pflegeakte") return "/bewohner/pflegeakte";
+  if (moduleId === "plan" && child === "Pflegeplanung") return "/pflegeplanung";
+  if (moduleId === "plan" && child === "Ziele & Massnahmen") return "/pflegeplanung/ziele-massnahmen";
+  if (moduleId === "plan" && child === "Auswertung") return "/pflegeplanung/auswertung";
+  if (moduleId === "chart" && child === "Schnelldokumentation") return "/pflegedokumentation";
+  if (moduleId === "chart" && child === "Verlaufsdokumentation") return "/pflegedokumentation/verlauf";
   if (moduleId === "vitals" && child === "Übersicht") return "/vitalwerte";
+  if (moduleId === "vitals" && child === "Entwicklung") return "/vitalwerte/entwicklung";
+  if (moduleId === "vitals" && child === "Grenzwerte") return "/vitalwerte/grenzwerte";
   if (moduleId === "med" && child === "Medikamentenplan") return "/medikation";
   if (moduleId === "med" && child === "Medikamentenrunde") return "/medikation/runde";
   if (moduleId === "med" && child === "Bestände") return "/medikation/bestaende";
@@ -115,6 +130,8 @@ function routeFor(moduleId: string, child: string) {
   if (moduleId === "assess" && child === "Fälligkeiten") return "/einschaetzungen/faelligkeiten";
   if (moduleId === "wounds" && child === "Wundübersicht") return "/wundmanagement";
   if (moduleId === "wounds" && child === "Dokumentation") return "/wundmanagement/dokumentation";
+  if (moduleId === "nutrition" && child === "Ernährungsplan") return "/ernaehrung";
+  if (moduleId === "nutrition" && child === "Trinkprotokoll") return "/ernaehrung/trinkprotokoll";
   if (moduleId === "team" && child === "Neuigkeiten & Kanäle") return "/personal/team";
   if (moduleId === "team" && child === "Nachrichten") return "/personal/team/nachrichten";
   if (moduleId === "learn" && child === "Meine Schulungen") return "/personal/schulungen";
