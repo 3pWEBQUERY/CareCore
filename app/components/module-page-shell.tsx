@@ -77,6 +77,7 @@ const navigation: NavGroup[] = [
     { id: "admin", label: "Administration", icon: "settings", children: ["Organisation", "Benutzer & Rollen", "Konfiguration"] },
   ] },
   { id: "intelligence", label: "Intelligenz", modules: [{ id: "ai", label: "CareCore KI", icon: "ai", children: ["Assistenz", "KI-Entwürfe"] }] },
+  { id: "rai", label: "CareCore RAI", modules: [{ id: "rai", label: "RAI Arbeitsplatz", icon: "assess", children: ["Übersicht", "interRAI-Erfassung", "Fälligkeiten", "Berichte"] }] },
 ];
 
 const globalResults = [
@@ -130,6 +131,10 @@ function routeFor(moduleId: string, child: string) {
   if (moduleId === "admin" && child === "Konfiguration") return "/leitung/administration/konfiguration";
   if (moduleId === "ai" && child === "Assistenz") return "/intelligenz";
   if (moduleId === "ai" && child === "KI-Entwürfe") return "/intelligenz/entwuerfe";
+  if (moduleId === "rai" && child === "Übersicht") return "/rai";
+  if (moduleId === "rai" && child === "interRAI-Erfassung") return "/rai/erfassung";
+  if (moduleId === "rai" && child === "Fälligkeiten") return "/rai/faelligkeiten";
+  if (moduleId === "rai" && child === "Berichte") return "/rai/berichte";
   return null;
 }
 
