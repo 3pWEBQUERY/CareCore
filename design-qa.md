@@ -206,3 +206,16 @@ passed
 - Nachprüfung: Lokaler Browserabgleich zeigt identische Start- und Endkanten der Fortschrittsleisten sowie eine konsistente Statusspalte; `npm run lint` und `npm run build -- --webpack` erfolgreich.
 
 Ergebnis: passed
+
+## Sidebar-Rail – Nachprüfung 16.09.2026
+
+- Source of visual truth: `/Users/alexander/Downloads/aae766de7d971981f2995ea7d8a5f11e.jpg`
+- Implementation: `http://localhost:3000/rai` und `http://localhost:3000/bewohner` (Desktop, 1280 × 720 CSS-Pixel)
+- Die permanente Navigation zeigt ausschließlich die Hauptpunkte als Icon-Rail; der frühere Ein-/Ausklapp-Toggle wurde entfernt.
+- Jeder Hauptpunkt besitzt einen sichtbaren Tooltip bei Hover/Fokus. Ein Klick öffnet rechts neben der Rail das passende Untermenü.
+- Das Untermenü schließt beim Verlassen per Maus oder Escape. Aktive Unterseiten bleiben markiert.
+- Beim Öffnen verschiebt sich der Inhaltsbereich mit einer kurzen, GPU-freundlichen 180-ms-Animation nach rechts; beim Schließen fährt er sauber zurück.
+- Mobile Breakpoints behalten die bestehende Bottom-Navigation bei und blenden die Desktop-Rail aus.
+- `npm run lint` und `npm run build -- --webpack` erfolgreich; keine neuen Browserfehler im geprüften Flow.
+
+Ergebnis: passed
