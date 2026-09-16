@@ -176,10 +176,10 @@ function Brand() {
 
 export default function ResidentsPage() {
   const router = useRouter();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
-  const [flyoutModule, setFlyoutModule] = useState<string | null>(null);
-  const [openGroups, setOpenGroups] = useState<string[]>(["clinical"]);
-  const [openModules] = useState<string[]>(["residents"]);
+  const [sidebarCollapsed] = useState(true);
+  const [flyoutGroup, setFlyoutGroup] = useState<string | null>(null);
+  const [openGroups] = useState<string[]>([]);
+  const [openModules] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [unit, setUnit] = useState("Alle");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -195,7 +195,7 @@ export default function ResidentsPage() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); openSearch(); }
-      if (event.key === "Escape") { setSearchOpen(false); setSelectedResident(null); setFlyoutModule(null); }
+      if (event.key === "Escape") { setSearchOpen(false); setSelectedResident(null); setFlyoutGroup(null); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -214,12 +214,11 @@ export default function ResidentsPage() {
   }), [query, unit]);
 
   function toggleGroup(id: string) {
-    if (sidebarCollapsed) setSidebarCollapsed(false);
-    setOpenGroups((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+    setFlyoutGroup((current) => current === id ? null : id);
   }
 
-  function toggleModule(groupId: string, module: NavModule) {
-    setFlyoutModule((current) => current === module.id ? null : module.id);
+  function toggleModule(groupId: string) {
+    setFlyoutGroup((current) => current === groupId ? null : groupId);
     return;
   }
 
@@ -229,7 +228,7 @@ export default function ResidentsPage() {
     setToast(`${child} geöffnet`);
   }
 
-  const flyout = navigation.flatMap((group) => group.modules.map((module) => ({ group, module }))).find(({ module }) => module.id === flyoutModule);
+  const flyout = navigation.find((group) => group.id === flyoutGroup);
 
   return <div className={`app-shell residents-page ${sidebarCollapsed ? "sidebar-is-collapsed" : ""}`}>
     <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
@@ -240,13 +239,13 @@ export default function ResidentsPage() {
           {navigation.map((group) => {
             const groupOpen = openGroups.includes(group.id);
             return <section className={`nav-group ${groupOpen ? "open" : ""}`} key={group.id}>
-              <button className="group-toggle" type="button" aria-expanded={groupOpen} title={group.label} onClick={() => toggleGroup(group.id)}><span>{group.label}</span><Icon name="caretDown"/></button>
+            <button className="group-toggle" type="button" aria-expanded={groupOpen} title={group.label} onClick={() => toggleGroup(group.id)}><Icon name={group.id === "clinical" ? "residents" : group.id === "operations" ? "calendar" : group.id === "workforce" ? "team" : group.id === "management" ? "chart" : group.id === "intelligence" ? "ai" : "assess"} className="group-rail-icon"/><span>{group.label}</span><Icon name="caretDown"/></button>
               <div className="module-list">
                 {group.modules.map((module) => {
                   const moduleOpen = openModules.includes(module.id);
                   const moduleActive = module.id === "residents";
                   return <div className={`module-block ${moduleOpen ? "open" : ""}`} key={module.id}>
-                    <button className={`nav-button module-button ${moduleActive ? "active" : ""}`} type="button" aria-expanded={moduleOpen} title={module.label} onClick={() => toggleModule(group.id, module)}><Icon name={module.icon}/><span className="nav-label">{module.label}</span>{module.badge && <span className="nav-badge">{module.badge}</span>}<Icon name="chevron" className="module-caret"/></button>
+                <button className={`nav-button module-button ${moduleActive ? "active" : ""}`} type="button" aria-expanded={moduleOpen} title={module.label} onClick={() => toggleModule(group.id)}><Icon name={module.icon}/><span className="nav-label">{module.label}</span>{module.badge && <span className="nav-badge">{module.badge}</span>}<Icon name="chevron" className="module-caret"/></button>
                     <div className="submenu">{module.children.map((child) => <button className={`submenu-button ${module.id === "residents" && child === "Übersicht" ? "active" : ""}`} type="button" key={child} onClick={() => selectSubmenu(module.id, child)}><span className="submenu-rail"/><span>{child}</span></button>)}</div>
                   </div>;
                 })}
@@ -258,7 +257,7 @@ export default function ResidentsPage() {
       <div className="sidebar-footer"><button className="nav-button" type="button" title="Einstellungen" onClick={() => router.push("/einstellungen")}><Icon name="settings"/><span className="nav-label">Einstellungen</span></button><button className="nav-button" type="button" title="Hilfe & Support" onClick={() => setToast("Hilfe & Support geöffnet")}><Icon name="docs"/><span className="nav-label">Hilfe & Support</span></button></div>
     </aside>
 
-    {flyout && <aside className="sidebar-flyout" aria-label={`${flyout.module.label} Untermenü`} onMouseLeave={() => setFlyoutModule(null)}><div className="sidebar-flyout-head"><div className="sidebar-flyout-icon"><Icon name={flyout.module.icon}/></div><div><span>{flyout.group.label}</span><strong>{flyout.module.label}</strong></div><button type="button" aria-label="Untermenü schliessen" onClick={() => setFlyoutModule(null)}><Icon name="close"/></button></div><div className="sidebar-flyout-body"><span className="sidebar-flyout-label">Bereich</span>{flyout.module.children.map((child) => <button className={`sidebar-flyout-link ${flyout.module.id === "residents" && child === "Übersicht" ? "active" : ""}`} type="button" key={child} onClick={() => { setFlyoutModule(null); selectSubmenu(flyout.module.id, child); }}><span>{child}</span><Icon name="chevron"/></button>)}</div></aside>}
+    {flyout && <aside className="sidebar-flyout" aria-label={`${flyout.label} Untermenü`} onMouseLeave={() => setFlyoutGroup(null)}><div className="sidebar-flyout-head"><div className="sidebar-flyout-icon"><Icon name={flyout.id === "clinical" ? "residents" : flyout.id === "operations" ? "calendar" : flyout.id === "workforce" ? "team" : flyout.id === "management" ? "chart" : flyout.id === "intelligence" ? "ai" : "assess"}/></div><div><span>Hauptbereich</span><strong>{flyout.label}</strong></div><button type="button" aria-label="Untermenü schliessen" onClick={() => setFlyoutGroup(null)}><Icon name="close"/></button></div><div className="sidebar-flyout-body"><span className="sidebar-flyout-label">Module</span>{flyout.modules.map((module) => <section className="sidebar-flyout-module" key={module.id}><strong>{module.label}</strong>{module.children.map((child) => <button className={`sidebar-flyout-link ${module.id === "residents" && child === "Übersicht" ? "active" : ""}`} type="button" key={child} onClick={() => { setFlyoutGroup(null); selectSubmenu(module.id, child); }}><span>{child}</span><Icon name="chevron"/></button>)}</section>)}</div></aside>}
 
     <div className="main-column">
       <AppHeader searchOpen={searchOpen} onSearch={openSearch} onToast={setToast}/>

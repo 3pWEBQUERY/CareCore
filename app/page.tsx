@@ -190,10 +190,10 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [residentOpen, setResidentOpen] = useState(false);
   const [toast, setToast] = useState("");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
-  const [flyoutModule, setFlyoutModule] = useState<string | null>(null);
-  const [openGroups, setOpenGroups] = useState<string[]>(["operations"]);
-  const [openModules, setOpenModules] = useState<string[]>(["shift"]);
+  const [sidebarCollapsed] = useState(true);
+  const [flyoutGroup, setFlyoutGroup] = useState<string | null>(null);
+  const [openGroups] = useState<string[]>([]);
+  const [openModules] = useState<string[]>([]);
   const [activeNav, setActiveNav] = useState("Startseite");
 
   const openSearch = useCallback(() => {
@@ -208,7 +208,7 @@ export default function Home() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); openSearch(); }
-      if (event.key === "Escape") { setSearchOpen(false); setResidentOpen(false); setFlyoutModule(null); }
+      if (event.key === "Escape") { setSearchOpen(false); setResidentOpen(false); setFlyoutGroup(null); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -270,19 +270,15 @@ export default function Home() {
   const unavailable = (label: string) => setToast(`${label} ist in dieser Demo noch nicht freigeschaltet`);
 
   function toggleGroup(id: string) {
-    if (sidebarCollapsed) setSidebarCollapsed(false);
-    setOpenGroups((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+    setFlyoutGroup((current) => current === id ? null : id);
   }
 
-  function toggleModule(groupId: string, moduleId: string) {
+  function toggleModule(moduleId: string) {
     const navModule = navigation.flatMap((group) => group.modules).find((item) => item.id === moduleId);
-    if (navModule) { setFlyoutModule((current) => current === moduleId ? null : moduleId); return; }
-    if (sidebarCollapsed) setSidebarCollapsed(false);
-    if (!openGroups.includes(groupId)) setOpenGroups((current) => [...current, groupId]);
-    setOpenModules((current) => current.includes(moduleId) ? current.filter((item) => item !== moduleId) : [...current, moduleId]);
+    if (navModule) setFlyoutGroup((current) => current === navModule.id ? null : navModule.id);
   }
 
-  const flyout = navigation.flatMap((group) => group.modules.map((module) => ({ group, module }))).find(({ module }) => module.id === flyoutModule);
+  const flyout = navigation.find((group) => group.id === flyoutGroup);
 
   function selectNav(label: string, moduleId?: string) {
     const route = moduleId ? routeFor(moduleId, label) : label === "Einstellungen" ? "/einstellungen" : null;
@@ -334,13 +330,13 @@ export default function Home() {
           {navigation.map((group) => {
             const groupOpen = openGroups.includes(group.id);
             return <section className={`nav-group ${groupOpen ? "open" : ""}`} key={group.id}>
-              <button className="group-toggle" type="button" aria-expanded={groupOpen} title={group.label} onClick={() => toggleGroup(group.id)}><span>{group.label}</span><Icon name="caretDown"/></button>
+              <button className="group-toggle" type="button" aria-expanded={groupOpen} title={group.label} onClick={() => toggleGroup(group.id)}><Icon name={group.id === "clinical" ? "residents" : group.id === "operations" ? "calendar" : group.id === "workforce" ? "team" : group.id === "management" ? "chart" : group.id === "intelligence" ? "ai" : "assess"} className="group-rail-icon"/><span>{group.label}</span><Icon name="caretDown"/></button>
               <div className="module-list">
                 {group.modules.map((module) => {
                   const moduleOpen = openModules.includes(module.id);
                   const moduleActive = module.children.includes(activeNav);
                   return <div className={`module-block ${moduleOpen ? "open" : ""}`} key={module.id}>
-                    <button className={`nav-button module-button ${moduleActive ? "active" : ""}`} type="button" aria-expanded={moduleOpen} title={module.label} onClick={() => toggleModule(group.id, module.id)}><Icon name={module.icon}/><span className="nav-label">{module.label}</span>{module.badge && <span className="nav-badge">{module.badge}</span>}<Icon name="chevron" className="module-caret"/></button>
+                    <button className={`nav-button module-button ${moduleActive ? "active" : ""}`} type="button" aria-expanded={moduleOpen} title={module.label} onClick={() => toggleModule(module.id)}><Icon name={module.icon}/><span className="nav-label">{module.label}</span>{module.badge && <span className="nav-badge">{module.badge}</span>}<Icon name="chevron" className="module-caret"/></button>
                     <div className="submenu">{module.children.map((child) => <button className={`submenu-button ${activeNav === child ? "active" : ""}`} type="button" key={child} onClick={() => selectNav(child, module.id)}><span className="submenu-rail"/><span>{child}</span></button>)}</div>
                   </div>;
                 })}
@@ -352,7 +348,7 @@ export default function Home() {
       <div className="sidebar-footer"><button className="nav-button" type="button" title="Einstellungen" onClick={() => selectNav("Einstellungen")}><Icon name="settings"/><span className="nav-label">Einstellungen</span></button><button className="nav-button" type="button" title="Hilfe & Support" onClick={() => setToast("Hilfe & Support geöffnet")}><Icon name="docs"/><span className="nav-label">Hilfe & Support</span></button></div>
     </aside>
 
-    {flyout && <aside className="sidebar-flyout" aria-label={`${flyout.module.label} Untermenü`} onMouseLeave={() => setFlyoutModule(null)}><div className="sidebar-flyout-head"><div className="sidebar-flyout-icon"><Icon name={flyout.module.icon}/></div><div><span>{flyout.group.label}</span><strong>{flyout.module.label}</strong></div><button type="button" aria-label="Untermenü schliessen" onClick={() => setFlyoutModule(null)}><Icon name="close"/></button></div><div className="sidebar-flyout-body"><span className="sidebar-flyout-label">Bereich</span>{flyout.module.children.map((child) => <button className={`sidebar-flyout-link ${activeNav === child ? "active" : ""}`} type="button" key={child} onClick={() => { setFlyoutModule(null); selectNav(child, flyout.module.id); }}><span>{child}</span><Icon name="chevron"/></button>)}</div></aside>}
+    {flyout && <aside className="sidebar-flyout" aria-label={`${flyout.label} Untermenü`} onMouseLeave={() => setFlyoutGroup(null)}><div className="sidebar-flyout-head"><div className="sidebar-flyout-icon"><Icon name={flyout.id === "clinical" ? "residents" : flyout.id === "operations" ? "calendar" : flyout.id === "workforce" ? "team" : flyout.id === "management" ? "chart" : flyout.id === "intelligence" ? "ai" : "assess"}/></div><div><span>Hauptbereich</span><strong>{flyout.label}</strong></div><button type="button" aria-label="Untermenü schliessen" onClick={() => setFlyoutGroup(null)}><Icon name="close"/></button></div><div className="sidebar-flyout-body"><span className="sidebar-flyout-label">Module</span>{flyout.modules.map((module) => <section className="sidebar-flyout-module" key={module.id}><strong>{module.label}</strong>{module.children.map((child) => <button className={`sidebar-flyout-link ${module.id === "shift" && child === activeNav ? "active" : ""}`} type="button" key={child} onClick={() => { setFlyoutGroup(null); selectNav(child, module.id); }}><span>{child}</span><Icon name="chevron"/></button>)}</section>)}</div></aside>}
 
     <div className="main-column">
       <AppHeader searchOpen={searchOpen} onSearch={openSearch} onToast={setToast}/>

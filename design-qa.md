@@ -211,7 +211,7 @@ Ergebnis: passed
 
 - Source of visual truth: `/Users/alexander/Downloads/aae766de7d971981f2995ea7d8a5f11e.jpg`
 - Implementation: `http://localhost:3000/rai` und `http://localhost:3000/bewohner` (Desktop, 1280 × 720 CSS-Pixel)
-- Die permanente Navigation zeigt ausschließlich die Hauptpunkte als Icon-Rail; der frühere Ein-/Ausklapp-Toggle wurde entfernt.
+- Die permanente Navigation zeigt ausschließlich die sechs Hauptbereiche (Pflege & Klinik, Betrieb, Personal, Leitung, Intelligenz und CareCore RAI) als Icon-Rail; der frühere Ein-/Ausklapp-Toggle wurde entfernt.
 - Jeder Hauptpunkt besitzt einen sichtbaren Tooltip bei Hover/Fokus. Ein Klick öffnet rechts neben der Rail das passende Untermenü.
 - Das Untermenü schließt beim Verlassen per Maus oder Escape. Aktive Unterseiten bleiben markiert.
 - Beim Öffnen verschiebt sich der Inhaltsbereich mit einer kurzen, GPU-freundlichen 180-ms-Animation nach rechts; beim Schließen fährt er sauber zurück.
