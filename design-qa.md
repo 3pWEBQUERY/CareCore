@@ -196,3 +196,13 @@ Kein blockierender Nachlauf. Optional kann später ein zweites, etwas entsättig
 ## Ergebnis
 
 passed
+
+## RAI-Arbeitskorb – Nachprüfung 16.09.2026
+
+- Source of visual truth: `/Users/alexander/Desktop/Bildschirmfoto 2026-09-16 um 21.47.52.png`
+- Implementation: `http://localhost:3000/rai` (Desktop, ARBEITSKORB sichtbar)
+- Fix: Bewohnerzeilen verwenden feste Grid-Spalten für Fortschrittsbalken (102px) und Status-Badges (122px). Dadurch bleiben alle Prozessanzeigen und Statusmarken unabhängig von Namen oder Statuslänge exakt untereinander ausgerichtet.
+- Responsive Verhalten: Unterhalb des bestehenden 1080px-Breakpoints bleibt die kompakte Darstellung unverändert; die Fortschrittsanzeige wird weiterhin ausgeblendet.
+- Nachprüfung: Lokaler Browserabgleich zeigt identische Start- und Endkanten der Fortschrittsleisten sowie eine konsistente Statusspalte; `npm run lint` und `npm run build -- --webpack` erfolgreich.
+
+Ergebnis: passed
