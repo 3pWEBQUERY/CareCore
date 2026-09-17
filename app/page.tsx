@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import AppHeader from "./components/app-header";
+import AppSidebar from "./components/app-sidebar";
 import {
   ArrowsLeftRight,
   Bell,
@@ -94,70 +95,6 @@ function Icon({ name, className = "" }: { name: IconName; className?: string }) 
   return <Component className={className} aria-hidden="true" weight="regular"/>;
 }
 
-type NavModule = { id: string; label: string; icon: IconName; children: string[]; badge?: number; href?: string };
-type NavGroup = { id: string; label: string; modules: NavModule[] };
-
-const navigation: NavGroup[] = [
-  { id: "clinical", label: "Pflege & Klinik", modules: [
-    { id: "residents", label: "Bewohner", icon: "residents", children: ["Übersicht", "Verlauf", "Pflegeakte"] },
-    { id: "plan", label: "Pflegeplanung", icon: "plan", children: ["Pflegeplanung", "Ziele & Massnahmen", "Auswertung"] },
-    { id: "chart", label: "Pflegedokumentation", icon: "note", children: ["Schnelldokumentation", "Verlaufsdokumentation"] },
-    { id: "vitals", label: "Vitalwerte", icon: "vitals", children: ["Übersicht", "Entwicklung", "Grenzwerte"] },
-    { id: "med", label: "Medikation", icon: "med", children: ["Medikamentenplan", "Medikamentenrunde", "Bestände", "Reserven"] },
-    { id: "wounds", label: "Wundmanagement", icon: "wounds", children: ["Wundübersicht", "Dokumentation"] },
-    { id: "nutrition", label: "Ernährung", icon: "nutrition", children: ["Ernährungsplan", "Trinkprotokoll"] },
-    { id: "assess", label: "Einschätzungen", icon: "assess", children: ["Einschätzungen", "Fälligkeiten"] },
-  ] },
-  { id: "operations", label: "Betrieb", modules: [
-    { id: "shift", label: "Schicht", icon: "shift", href: "/betrieb/schicht", children: ["Mein Dienst", "Schichtverlauf"] },
-    { id: "tasks", label: "Aufgaben", icon: "tasks", children: ["Meine Aufgaben", "Teamaufgaben"], badge: 3 },
-    { id: "handover", label: "Übergabe", icon: "handover", children: ["Meine Übergabe", "Seit letztem Dienst"] },
-    { id: "schedule", label: "Dienstplanung", icon: "calendar", children: ["Mein Dienstplan", "Teamplanung"] },
-  ] },
-  { id: "workforce", label: "Personal", modules: [
-    { id: "team", label: "Team", icon: "team", children: ["Neuigkeiten & Kanäle", "Nachrichten"] },
-    { id: "learn", label: "Schulungen", icon: "learn", children: ["Meine Schulungen", "Pflichtnachweise"] },
-    { id: "docs", label: "Dokumente", icon: "docs", children: ["Dokumente", "Standards & Weisungen"] },
-  ] },
-  { id: "management", label: "Leitung", modules: [
-    { id: "quality", label: "Qualität", icon: "quality", children: ["Ereignisse", "Massnahmen"] },
-    { id: "insights", label: "Kennzahlen & Analysen", icon: "chart", children: ["Pflege", "Leitung", "Personal"] },
-    { id: "admin", label: "Administration", icon: "settings", children: ["Organisation", "Benutzer & Rollen", "Konfiguration"] },
-  ] },
-  { id: "intelligence", label: "Intelligenz", modules: [
-    { id: "ai", label: "CareCore KI", icon: "ai", children: ["Assistenz", "KI-Entwürfe"] },
-  ] },
-  { id: "rai", label: "CareCore RAI", modules: [
-    { id: "rai", label: "RAI Arbeitsplatz", icon: "assess", children: ["Übersicht", "interRAI-Erfassung", "Fälligkeiten", "Berichte"] },
-  ] },
-];
-
-function routeFor(moduleId: string, child: string) {
-  const routes: Record<string, Record<string, string>> = {
-    residents: { "Übersicht": "/bewohner", "Verlauf": "/bewohner/verlauf", "Pflegeakte": "/bewohner/pflegeakte" },
-    plan: { "Pflegeplanung": "/pflegeplanung", "Ziele & Massnahmen": "/pflegeplanung/ziele-massnahmen", "Auswertung": "/pflegeplanung/auswertung" },
-    chart: { "Schnelldokumentation": "/pflegedokumentation", "Verlaufsdokumentation": "/pflegedokumentation/verlauf" },
-    vitals: { "Übersicht": "/vitalwerte", "Entwicklung": "/vitalwerte/entwicklung", "Grenzwerte": "/vitalwerte/grenzwerte" },
-    med: { "Medikamentenplan": "/medikation", "Medikamentenrunde": "/medikation/runde", "Bestände": "/medikation/bestaende", "Reserven": "/medikation/reserven" },
-    shift: { "Mein Dienst": "/betrieb/schicht", "Schichtverlauf": "/betrieb/schicht/verlauf" },
-    tasks: { "Meine Aufgaben": "/betrieb/aufgaben", "Teamaufgaben": "/betrieb/aufgaben/team" },
-    handover: { "Meine Übergabe": "/betrieb/uebergabe", "Seit letztem Dienst": "/betrieb/uebergabe/letzter-dienst" },
-    schedule: { "Mein Dienstplan": "/betrieb/dienstplanung", "Teamplanung": "/betrieb/dienstplanung/team" },
-    assess: { "Einschätzungen": "/einschaetzungen", "Fälligkeiten": "/einschaetzungen/faelligkeiten" },
-    wounds: { "Wundübersicht": "/wundmanagement", "Dokumentation": "/wundmanagement/dokumentation" },
-    nutrition: { "Ernährungsplan": "/ernaehrung", "Trinkprotokoll": "/ernaehrung/trinkprotokoll" },
-    team: { "Neuigkeiten & Kanäle": "/personal/team", "Nachrichten": "/personal/team/nachrichten" },
-    learn: { "Meine Schulungen": "/personal/schulungen", "Pflichtnachweise": "/personal/schulungen/pflichtnachweise" },
-    docs: { "Dokumente": "/personal/dokumente", "Standards & Weisungen": "/personal/dokumente/standards" },
-    quality: { "Ereignisse": "/leitung/qualitaet", "Massnahmen": "/leitung/qualitaet/massnahmen" },
-    insights: { "Pflege": "/leitung/kennzahlen", "Leitung": "/leitung/kennzahlen/leitung", "Personal": "/leitung/kennzahlen/personal" },
-    admin: { "Organisation": "/leitung/administration", "Benutzer & Rollen": "/leitung/administration/benutzer", "Konfiguration": "/leitung/administration/konfiguration" },
-    ai: { "Assistenz": "/intelligenz", "KI-Entwürfe": "/intelligenz/entwuerfe" },
-    rai: { "Übersicht": "/rai", "interRAI-Erfassung": "/rai/erfassung", "Fälligkeiten": "/rai/faelligkeiten", "Berichte": "/rai/berichte" },
-  };
-  return routes[moduleId]?.[child] ?? null;
-}
-
 const changes = [
   { initials: "HM", name: "Herr Hans Müller", note: "Sturz um 02:10 Uhr. Keine sichtbaren Verletzungen, engmaschige Beobachtung läuft.", time: "02:10", status: "Kritisch", type: "critical" },
   { initials: "MK", name: "Frau Maria Keller", note: "Schmerzen im rechten Knie, NRS 6. Bedarfsmedikation um 05:40 verabreicht.", time: "05:40", status: "Beobachten", type: "attention" },
@@ -179,10 +116,6 @@ const initialTasks = [
   { id: 5, title: "Trinkmenge erfassen", resident: "Herr Aebischer · Zimmer 215", time: "08:30", completed: false },
 ];
 
-function Brand() {
-  return <div className="brand" aria-label="CareCore"><span className="brand-mark"><Icon name="pulse"/></span><span className="brand-copy"><span className="brand-name">CareCore</span><small>Mehr Zeit für Pflege.</small></span></div>;
-}
-
 export default function Home() {
   const router = useRouter();
   const [tasks, setTasks] = useState(initialTasks);
@@ -190,11 +123,6 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [residentOpen, setResidentOpen] = useState(false);
   const [toast, setToast] = useState("");
-  const [sidebarCollapsed] = useState(true);
-  const [flyoutGroup, setFlyoutGroup] = useState<string | null>(null);
-  const [openGroups] = useState<string[]>([]);
-  const [openModules] = useState<string[]>([]);
-  const [activeNav, setActiveNav] = useState("Startseite");
 
   const openSearch = useCallback(() => {
     setResidentOpen(false);
@@ -208,7 +136,7 @@ export default function Home() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); openSearch(); }
-      if (event.key === "Escape") { setSearchOpen(false); setResidentOpen(false); setFlyoutGroup(null); }
+      if (event.key === "Escape") { setSearchOpen(false); setResidentOpen(false); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -269,86 +197,8 @@ export default function Home() {
 
   const unavailable = (label: string) => setToast(`${label} ist in dieser Demo noch nicht freigeschaltet`);
 
-  function toggleGroup(id: string) {
-    setFlyoutGroup((current) => current === id ? null : id);
-  }
-
-  function toggleModule(moduleId: string) {
-    const navModule = navigation.flatMap((group) => group.modules).find((item) => item.id === moduleId);
-    if (navModule) setFlyoutGroup((current) => current === navModule.id ? null : navModule.id);
-  }
-
-  const flyout = navigation.find((group) => group.id === flyoutGroup);
-
-  function selectNav(label: string, moduleId?: string) {
-    const route = moduleId ? routeFor(moduleId, label) : label === "Einstellungen" ? "/einstellungen" : null;
-    if (route) { router.push(route); return; }
-    if (moduleId === "shift" && label === "Mein Dienst") { router.push("/betrieb/schicht"); return; }
-    if (moduleId === "shift" && label === "Schichtverlauf") { router.push("/betrieb/schicht/verlauf"); return; }
-    if (moduleId === "tasks" && label === "Meine Aufgaben") { router.push("/betrieb/aufgaben"); return; }
-    if (moduleId === "tasks" && label === "Teamaufgaben") { router.push("/betrieb/aufgaben/team"); return; }
-    if (moduleId === "handover" && label === "Meine Übergabe") { router.push("/betrieb/uebergabe"); return; }
-    if (moduleId === "handover" && label === "Seit letztem Dienst") { router.push("/betrieb/uebergabe/letzter-dienst"); return; }
-    if (moduleId === "schedule" && label === "Mein Dienstplan") { router.push("/betrieb/dienstplanung"); return; }
-    if (moduleId === "schedule" && label === "Teamplanung") { router.push("/betrieb/dienstplanung/team"); return; }
-    if (moduleId === "assess" && label === "Einschätzungen") { router.push("/einschaetzungen"); return; }
-    if (moduleId === "assess" && label === "Fälligkeiten") { router.push("/einschaetzungen/faelligkeiten"); return; }
-    if (moduleId === "med" && label === "Medikamentenplan") { router.push("/medikation"); return; }
-    if (moduleId === "med" && label === "Medikamentenrunde") { router.push("/medikation/runde"); return; }
-    if (moduleId === "med" && label === "Bestände") { router.push("/medikation/bestaende"); return; }
-    if (moduleId === "med" && label === "Reserven") { router.push("/medikation/reserven"); return; }
-    if (moduleId === "vitals" && label === "Übersicht") {
-      router.push("/vitalwerte");
-      return;
-    }
-    if (label === "Verlauf") {
-      router.push("/bewohner/verlauf");
-      return;
-    }
-    if (label === "Pflegeakte") {
-      router.push("/bewohner/pflegeakte");
-      return;
-    }
-    if (label === "Wundübersicht") {
-      router.push("/wundmanagement");
-      return;
-    }
-    if (label === "Dokumentation") {
-      router.push("/wundmanagement/dokumentation");
-      return;
-    }
-    setActiveNav(label);
-    setToast(`${label} geöffnet`);
-  }
-
-  return <div className={`app-shell ${sidebarCollapsed ? "sidebar-is-collapsed" : ""}`}>
-    <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
-      <div className="sidebar-head"><Brand/></div>
-      <nav className="sidebar-scroll" aria-label="Hauptnavigation">
-        <button className={`nav-button nav-home ${activeNav === "Startseite" ? "active" : ""}`} type="button" title="Startseite" onClick={() => selectNav("Startseite")}><Icon name="home"/><span className="nav-label">Startseite</span></button>
-        <div className="nav-groups">
-          {navigation.map((group) => {
-            const groupOpen = openGroups.includes(group.id);
-            return <section className={`nav-group ${groupOpen ? "open" : ""}`} key={group.id}>
-              <button className="group-toggle" type="button" aria-expanded={groupOpen} title={group.label} onClick={() => toggleGroup(group.id)}><Icon name={group.id === "clinical" ? "residents" : group.id === "operations" ? "calendar" : group.id === "workforce" ? "team" : group.id === "management" ? "chart" : group.id === "intelligence" ? "ai" : "assess"} className="group-rail-icon"/><span>{group.label}</span><Icon name="caretDown"/></button>
-              <div className="module-list">
-                {group.modules.map((module) => {
-                  const moduleOpen = openModules.includes(module.id);
-                  const moduleActive = module.children.includes(activeNav);
-                  return <div className={`module-block ${moduleOpen ? "open" : ""}`} key={module.id}>
-                    <button className={`nav-button module-button ${moduleActive ? "active" : ""}`} type="button" aria-expanded={moduleOpen} title={module.label} onClick={() => toggleModule(module.id)}><Icon name={module.icon}/><span className="nav-label">{module.label}</span>{module.badge && <span className="nav-badge">{module.badge}</span>}<Icon name="chevron" className="module-caret"/></button>
-                    <div className="submenu">{module.children.map((child) => <button className={`submenu-button ${activeNav === child ? "active" : ""}`} type="button" key={child} onClick={() => selectNav(child, module.id)}><span className="submenu-rail"/><span>{child}</span></button>)}</div>
-                  </div>;
-                })}
-              </div>
-            </section>;
-          })}
-        </div>
-      </nav>
-      <div className="sidebar-footer"><button className="nav-button" type="button" title="Einstellungen" onClick={() => selectNav("Einstellungen")}><Icon name="settings"/><span className="nav-label">Einstellungen</span></button><button className="nav-button" type="button" title="Hilfe & Support" onClick={() => setToast("Hilfe & Support geöffnet")}><Icon name="docs"/><span className="nav-label">Hilfe & Support</span></button></div>
-    </aside>
-
-    {flyout && <aside className="sidebar-flyout" aria-label={`${flyout.label} Untermenü`} onMouseLeave={() => setFlyoutGroup(null)}><div className="sidebar-flyout-head"><div className="sidebar-flyout-icon"><Icon name={flyout.id === "clinical" ? "residents" : flyout.id === "operations" ? "calendar" : flyout.id === "workforce" ? "team" : flyout.id === "management" ? "chart" : flyout.id === "intelligence" ? "ai" : "assess"}/></div><div><span>Hauptbereich</span><strong>{flyout.label}</strong></div><button type="button" aria-label="Untermenü schliessen" onClick={() => setFlyoutGroup(null)}><Icon name="close"/></button></div><div className="sidebar-flyout-body"><span className="sidebar-flyout-label">Module</span>{flyout.modules.map((module) => <section className="sidebar-flyout-module" key={module.id}><strong>{module.label}</strong>{module.children.map((child) => <button className={`sidebar-flyout-link ${module.id === "shift" && child === activeNav ? "active" : ""}`} type="button" key={child} onClick={() => { setFlyoutGroup(null); selectNav(child, module.id); }}><span>{child}</span><Icon name="chevron"/></button>)}</section>)}</div></aside>}
+  return <div className="app-shell">
+    <AppSidebar activeModule="home" onToast={setToast}/>
 
     <div className="main-column">
       <AppHeader searchOpen={searchOpen} onSearch={openSearch} onToast={setToast}/>
