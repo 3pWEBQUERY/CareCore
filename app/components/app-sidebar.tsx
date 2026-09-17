@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   ArrowsLeftRight, Bell, Buildings, CalendarDots, CaretRight, ChartBar, ChatsCircle,
@@ -33,7 +34,40 @@ type AppSidebarProps = {
 };
 
 export function SidebarTooltip({ label }: { label: string }) {
-  return <span className="sidebar-tooltip" role="tooltip">{label}</span>;
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    const anchor = anchorRef.current;
+    const trigger = anchor?.parentElement;
+    if (!trigger) return;
+    const updatePosition = () => {
+      const rect = trigger.getBoundingClientRect();
+      setPosition({ top: rect.top + rect.height / 2, left: rect.right + 12 });
+    };
+    const show = () => { updatePosition(); setOpen(true); };
+    const hide = () => setOpen(false);
+    trigger.addEventListener("mouseenter", show);
+    trigger.addEventListener("mouseleave", hide);
+    trigger.addEventListener("focus", show);
+    trigger.addEventListener("blur", hide);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      trigger.removeEventListener("mouseenter", show);
+      trigger.removeEventListener("mouseleave", hide);
+      trigger.removeEventListener("focus", show);
+      trigger.removeEventListener("blur", hide);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, []);
+
+  return <>
+    <span ref={anchorRef} className="sidebar-tooltip-anchor" aria-hidden="true" />
+    {open && typeof document !== "undefined" && createPortal(<span className="sidebar-tooltip sidebar-tooltip-portal" role="tooltip" style={{ top: position.top, left: position.left }}>{label}</span>, document.body)}
+  </>;
 }
 
 export default function AppSidebar({ activeModule, activeChild, onToast }: AppSidebarProps) {

@@ -207,6 +207,15 @@ passed
 
 Ergebnis: passed
 
+## Sidebar-Tooltip – Nachprüfung 17.09.2026
+
+- Source of visual truth: `/Users/alexander/Desktop/Bildschirmfoto 2026-09-17 um 08.41.02.png`
+- Der Tooltip wird als eigene `SidebarTooltip`-Komponente per Portal in `document.body` gerendert. Dadurch wird er nicht mehr vom scrollenden Sidebar-Container oder dessen Overflow abgeschnitten.
+- Position und Sichtbarkeit werden bei Hover, Fokus, Scrollen und Resize aktualisiert; die gestaltete CareCore-Fläche bleibt vollständig rechts neben dem jeweiligen Icon sichtbar.
+- `npm run lint` und `npm run build -- --webpack` erfolgreich.
+
+Ergebnis: passed
+
 ## Sidebar-Rail – Nachprüfung 17.09.2026
 
 - Source of visual truth: `/Users/alexander/Desktop/Bildschirmfoto 2026-09-17 um 08.30.50.png` und `/Users/alexander/Desktop/Bildschirmfoto 2026-09-17 um 08.32.06.png`
