@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CareCore · Meine Schicht",
+  title: "CareCore · Pflegearbeitsplatz",
   description: "Der persönliche digitale Arbeitsplatz für moderne Pflege.",
 };
 

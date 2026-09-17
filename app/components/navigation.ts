@@ -58,5 +58,6 @@ const routes: Record<string, Record<string, string>> = {
 };
 
 export function routeFor(moduleId: string, child: string) {
-  return routes[moduleId]?.[child] ?? null;
+  const route = routes[moduleId]?.[child];
+  return route ? `/c${route}` : null;
 }

@@ -1,4 +1,14 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+CareCore ist eine Next.js-Anwendung mit geschütztem Pflegearbeitsplatz unter `/c` und einer Neon-Postgres-basierten Anmeldung.
+
+## Lokale Einrichtung
+
+1. `.env.example` als `.env.local` kopieren.
+2. `DATABASE_URL` mit der gepoolten Neon-Verbindungsadresse befüllen.
+3. `npm install` und anschließend `npm run dev` ausführen.
+
+Beim ersten Anmeldeversuch werden die Tabellen `carecore_users` und `carecore_sessions` angelegt und der initiale Administrator sicher mit einem Scrypt-Passworthash eingetragen. Alternativ kann `database/schema.sql` einmalig im Neon SQL Editor ausgeführt werden.
+
+Für Vercel muss `DATABASE_URL` in den Umgebungsvariablen des Projekts für Production, Preview und Development gesetzt werden. Die Anwendung benötigt den normalen Next.js-Serverbetrieb; ein statischer Export ist wegen Login, Sessions und Datenbankzugriff nicht möglich.
 
 ## Getting Started
 

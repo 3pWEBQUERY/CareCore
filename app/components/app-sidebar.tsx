@@ -102,10 +102,10 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
     <aside className="sidebar sidebar-rail" aria-label="Hauptnavigation">
       <div className="sidebar-rail-head"><span className="brand-mark" aria-label="CareCore"><RailIcon name="pulse"/></span></div>
       <nav className="sidebar-rail-scroll">
-        <button className={`sidebar-rail-button ${activeModule === "home" ? "active" : ""}`} type="button" aria-label="Startseite" onClick={() => { setFlyoutGroup(null); router.push("/"); }}><RailIcon name="home"/><SidebarTooltip label="Startseite"/></button>
+        <button className={`sidebar-rail-button ${activeModule === "home" ? "active" : ""}`} type="button" aria-label="Startseite" onClick={() => { setFlyoutGroup(null); router.push("/c"); }}><RailIcon name="home"/><SidebarTooltip label="Startseite"/></button>
         {navigation.map((group) => <button className={`sidebar-rail-button ${activeGroup?.id === group.id ? "active" : ""}`} type="button" key={group.id} aria-label={group.label} aria-expanded={flyoutGroup === group.id} onClick={() => openGroup(group.id)}><RailIcon name={groupIcons[group.id] ?? "pulse"}/><SidebarTooltip label={group.label}/></button>)}
       </nav>
-      <div className="sidebar-rail-footer"><button className={`sidebar-rail-button ${activeModule === "settings" ? "active" : ""}`} type="button" aria-label="Einstellungen" onClick={() => { setFlyoutGroup(null); router.push("/einstellungen"); }}><RailIcon name="settings"/><SidebarTooltip label="Einstellungen"/></button><button className="sidebar-rail-button" type="button" aria-label="Hilfe & Support" onClick={() => onToast?.("Hilfe & Support geöffnet")}><RailIcon name="docs"/><SidebarTooltip label="Hilfe & Support"/></button></div>
+      <div className="sidebar-rail-footer"><button className={`sidebar-rail-button ${activeModule === "settings" ? "active" : ""}`} type="button" aria-label="Einstellungen" onClick={() => { setFlyoutGroup(null); router.push("/c/einstellungen"); }}><RailIcon name="settings"/><SidebarTooltip label="Einstellungen"/></button><button className="sidebar-rail-button" type="button" aria-label="Hilfe & Support" onClick={() => onToast?.("Hilfe & Support geöffnet")}><RailIcon name="docs"/><SidebarTooltip label="Hilfe & Support"/></button></div>
     </aside>
 
     {flyout && <aside className="sidebar-flyout" aria-label={`${flyout.label} Untermenü`} onMouseLeave={() => setFlyoutGroup(null)}>
