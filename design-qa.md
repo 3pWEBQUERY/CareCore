@@ -218,9 +218,9 @@ Ergebnis: passed
 
 ## Sidebar-Rail – Nachprüfung 17.09.2026
 
-- Source of visual truth: `/Users/alexander/Desktop/Bildschirmfoto 2026-09-17 um 08.30.50.png` und `/Users/alexander/Desktop/Bildschirmfoto 2026-09-17 um 08.32.06.png`
-- Implementation: `http://localhost:3000/` und `http://localhost:3000/rai` (Desktop, 1440 × 900 CSS-Pixel)
-- Die permanente Navigation entspricht auf Startseite und Modul-Seiten derselben blauen Icon-Rail mit den Hauptmodulen (Bewohner, Pflegeplanung, Dokumentation, Vitalwerte, Medikation, Wunden, Ernährung, Betrieb, Personal, Leitung, Intelligenz und RAI); der frühere Ein-/Ausklapp-Toggle wurde entfernt.
+- Source of visual truth: `/Users/alexander/Desktop/Bildschirmfoto 2026-09-17 um 08.48.39.png`
+- Implementation: `http://localhost:3000/` und `http://localhost:3000/betrieb/dienstplanung` (Desktop, 1440 × 900 CSS-Pixel)
+- Die permanente Navigation entspricht auf Startseite und Modul-Seiten derselben blauen Icon-Rail mit ausschließlich den sechs Hauptkategorien (Pflege & Klinik, Betrieb, Personal, Leitung, Intelligenz und CareCore RAI); Unterseiten sind nicht dauerhaft in der geschlossenen Rail sichtbar.
 - Jeder Hauptpunkt besitzt die eigene `SidebarTooltip`-Komponente mit gestalteter CareCore-Fläche bei Hover/Fokus. Ein Klick öffnet rechts neben der Rail das passende Untermenü.
 - Das Untermenü schließt beim Verlassen per Maus oder Escape. Aktive Unterseiten bleiben markiert.
 - Beim Öffnen verschiebt sich der Inhaltsbereich mit einer kurzen, GPU-freundlichen 180-ms-Animation nach rechts; beim Schließen fährt er sauber zurück.
