@@ -51,7 +51,7 @@ export default function LoginPage() {
         <div className="login-heading"><p className="eyebrow">Willkommen zurück</p><h2>Bei CareCore anmelden</h2><p>Melde dich mit deinem persönlichen Benutzerkonto an.</p></div>
         <form className="login-form" onSubmit={submit}>
           <label htmlFor="username">Benutzername</label>
-          <div className="login-input"><User/><input id="username" name="username" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="Benutzername eingeben" required autoFocus/></div>
+          <div className="login-input"><User/><input id="username" name="username" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="Benutzername eingeben" required/></div>
           <div className="login-password-label"><label htmlFor="password">Passwort</label><span>Geschützter Zugang</span></div>
           <div className="login-input"><LockKey/><input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Passwort eingeben" required/><button type="button" aria-label={showPassword ? "Passwort ausblenden" : "Passwort anzeigen"} aria-pressed={showPassword} onClick={() => setShowPassword((value) => !value)}>{showPassword ? <EyeSlash/> : <Eye/>}</button></div>
           {error && <div className="login-error" role="alert">{error}</div>}
