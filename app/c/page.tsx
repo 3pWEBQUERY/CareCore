@@ -117,6 +117,34 @@ const initialTasks = [
   { id: 5, title: "Trinkmenge erfassen", resident: "Herr Aebischer · Zimmer 215", time: "08:30", completed: false },
 ];
 
+type DashboardWidgetId = "summary" | "critical" | "changes" | "shift" | "tasks" | "residents";
+
+const dashboardWidgets: Array<{ id: DashboardWidgetId; label: string; description: string; wide?: boolean }> = [
+  { id: "summary", label: "Schichtübersicht", description: "Kennzahlen für den aktuellen Dienst", wide: true },
+  { id: "critical", label: "Wichtiger Hinweis", description: "Kritische Informationen", wide: true },
+  { id: "changes", label: "Seit letztem Dienst", description: "Relevante Veränderungen" },
+  { id: "tasks", label: "Als Nächstes", description: "Offene Aufgaben" },
+  { id: "shift", label: "Meine Schicht", description: "Zeitlicher Dienstplan" },
+  { id: "residents", label: "Meine Bewohner", description: "Zugewiesene Bewohner", wide: true },
+];
+
+const defaultDashboardOrder = dashboardWidgets.map((widget) => widget.id);
+const dashboardLayoutStorageKey = "carecore.dashboard-layout.v1";
+
+function readStoredDashboardLayout() {
+  if (typeof window === "undefined") return { order: defaultDashboardOrder, hidden: [] as DashboardWidgetId[] };
+  try {
+    const saved = window.localStorage.getItem(dashboardLayoutStorageKey);
+    if (!saved) return { order: defaultDashboardOrder, hidden: [] as DashboardWidgetId[] };
+    const layout = JSON.parse(saved) as { order?: DashboardWidgetId[]; hidden?: DashboardWidgetId[] };
+    const allowed = new Set(defaultDashboardOrder);
+    const order = (layout.order ?? []).filter((id): id is DashboardWidgetId => allowed.has(id));
+    return { order: [...order, ...defaultDashboardOrder.filter((id) => !order.includes(id))], hidden: (layout.hidden ?? []).filter((id): id is DashboardWidgetId => allowed.has(id)) };
+  } catch {
+    return { order: defaultDashboardOrder, hidden: [] as DashboardWidgetId[] };
+  }
+}
+
 export default function Home() {
   const router = useRouter();
   const [tasks, setTasks] = useState(initialTasks);
@@ -124,6 +152,10 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [residentOpen, setResidentOpen] = useState(false);
   const [toast, setToast] = useState("");
+  const [dashboardEditing, setDashboardEditing] = useState(false);
+  const [widgetOrder, setWidgetOrder] = useState<DashboardWidgetId[]>(() => readStoredDashboardLayout().order);
+  const [hiddenWidgets, setHiddenWidgets] = useState<DashboardWidgetId[]>(() => readStoredDashboardLayout().hidden);
+  const [draggedWidget, setDraggedWidget] = useState<DashboardWidgetId | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileGroupId, setMobileGroupId] = useState<string | null>(null);
   const mobileGroup = navigation.find((group) => group.id === mobileGroupId);
@@ -218,6 +250,42 @@ export default function Home() {
     if (task && !task.completed) setToast(`„${task.title}“ als erledigt markiert`);
   }
 
+  function persistDashboardLayout(nextOrder: DashboardWidgetId[], nextHidden: DashboardWidgetId[]) {
+    window.localStorage.setItem(dashboardLayoutStorageKey, JSON.stringify({ order: nextOrder, hidden: nextHidden }));
+  }
+
+  function toggleWidget(widgetId: DashboardWidgetId) {
+    const nextHidden = hiddenWidgets.includes(widgetId) ? hiddenWidgets.filter((id) => id !== widgetId) : [...hiddenWidgets, widgetId];
+    setHiddenWidgets(nextHidden);
+    persistDashboardLayout(widgetOrder, nextHidden);
+  }
+
+  function resetDashboardLayout() {
+    setWidgetOrder(defaultDashboardOrder);
+    setHiddenWidgets([]);
+    window.localStorage.removeItem(dashboardLayoutStorageKey);
+  }
+
+  function moveWidget(targetId: DashboardWidgetId) {
+    if (!draggedWidget || draggedWidget === targetId) return;
+    const nextOrder = [...widgetOrder];
+    const from = nextOrder.indexOf(draggedWidget);
+    const to = nextOrder.indexOf(targetId);
+    nextOrder.splice(from, 1);
+    nextOrder.splice(to, 0, draggedWidget);
+    setWidgetOrder(nextOrder);
+    persistDashboardLayout(nextOrder, hiddenWidgets);
+  }
+
+  const dashboardContent: Record<DashboardWidgetId, ReactNode> = {
+    summary: <section className="summary-strip" aria-label="Schichtübersicht"><div className="summary-item"><span className="summary-icon"><Icon name="residents"/></span><span><strong className="summary-value">7</strong><span className="summary-label">Bewohner zugeteilt</span></span></div><div className="summary-item"><span className="summary-icon"><Icon name="tasks"/></span><span><strong className="summary-value">18</strong><span className="summary-label">Aufgaben geplant</span></span></div><div className="summary-item"><span className="summary-icon attention"><Icon name="pulse"/></span><span><strong className="summary-value">3</strong><span className="summary-label">wichtige Änderungen</span></span></div><div className="summary-item"><span className="summary-icon info"><Icon name="handover"/></span><span><strong className="summary-value">1</strong><span className="summary-label">Übergabe offen</span></span></div></section>,
+    critical: <section className="critical-alert" aria-label="Kritischer Hinweis"><span className="critical-symbol"><Icon name="alert"/></span><div><strong>Unmittelbar prüfen · Herr Müller</strong><p>Sturz in der Nacht. Nächste neurologische Kontrolle um 08:00 Uhr.</p></div><button className="secondary-button" type="button" onClick={() => setResidentOpen(true)}>Fall öffnen <Icon name="chevron" className="button-icon"/></button></section>,
+    changes: <section className="card" aria-labelledby="changes-title"><div className="card-header"><div><h2 className="card-title" id="changes-title">Seit deinem letzten Dienst</h2><p className="card-subtitle">Relevante Veränderungen · letzte 16 Stunden</p></div><button className="filter-pill" type="button">Alle 3</button></div><div className="changes-list">{changes.map((change) => <button className="change-row" key={change.name} type="button" onClick={() => setResidentOpen(true)}><span className={`resident-avatar ${change.type === "critical" ? "critical" : ""}`}>{change.initials}<span className="avatar-status"/></span><span className="change-main"><strong>{change.name}</strong><p>{change.note}</p></span><span className="change-meta"><span>{change.time}</span><span className={`status-badge ${change.type}`}>{change.status}</span><Icon name="chevron" className="chevron"/></span></button>)}</div></section>,
+    shift: <section className="card timeline-card" aria-labelledby="timeline-title"><div className="card-header"><div><h2 className="card-title" id="timeline-title">Meine Schicht</h2><p className="card-subtitle">Der Plan passt sich neuen Ereignissen an</p></div><button className="quiet-button" type="button" onClick={() => setToast("Gesamte Schichtansicht geöffnet")}>Gesamter Plan</button></div><div className="timeline-list"><Timeline time="06:45" title="Übergabe Nachtdienst" detail="Wohnbereich 2 · Teamraum" state="Erledigt" variant="done" rail/><Timeline time="07:30" title="Medikamentenrunde" detail="7 Bewohner · 1 Anpassung" state="Jetzt" variant="current" rail/><Timeline time="08:00" title="Blutzucker & Sturzkontrolle" detail="Frau Keller · Herr Müller" state="In 18 Min." rail/><Timeline time="09:30" title="Arztvisite" detail="Zimmer 204, 207 und 211" state="Geplant" rail/><Timeline time="10:00" title="Verbandwechsel" detail="Frau Baumann · Zimmer 214" state="Geplant"/></div></section>,
+    tasks: <section className="card tasks-card" aria-labelledby="tasks-title"><div className="card-header"><div><h2 className="card-title" id="tasks-title">Als Nächstes</h2><p className="card-subtitle">{tasks.filter((task) => !task.completed).length} Aufgaben bis 09:00 Uhr</p></div><div className="progress-ring" style={{ "--progress": `${progress}%` } as CSSProperties} aria-label={`${progress} Prozent erledigt`}><span>{progress}%</span></div></div><div className="dashboard-task-list">{tasks.map((task) => <div className={`dashboard-task-row ${task.completed ? "completed" : ""}`} key={task.id}><button className="dashboard-task-check" type="button" aria-label={`${task.title} ${task.completed ? "wieder öffnen" : "erledigen"}`} onClick={() => toggleTask(task.id)}><Icon name="check"/></button><span className="dashboard-task-copy"><strong className="dashboard-task-title">{task.title}</strong><span className="dashboard-task-resident">{task.resident}</span></span><time className={`dashboard-task-time ${task.overdue && !task.completed ? "overdue" : ""}`}>{task.time}</time></div>)}</div><div className="tasks-footer"><button className="quiet-button" type="button" onClick={() => setToast("Alle 18 Aufgaben geöffnet")}>Alle 18 Aufgaben <Icon name="chevron" className="button-icon"/></button></div></section>,
+    residents: <section className="card residents-card" aria-labelledby="residents-title"><div className="card-header"><div><h2 className="card-title" id="residents-title">Meine Bewohner</h2><p className="card-subtitle">4 von 7 mit aktuellen Hinweisen</p></div><button className="quiet-button" type="button" onClick={() => router.push("/c/bewohner")}>Alle anzeigen</button></div><div className="resident-grid">{residents.map((resident) => <button className="resident-tile" type="button" key={resident.name} onClick={() => setResidentOpen(true)}><span className={`resident-avatar ${resident.critical ? "critical" : ""}`}>{resident.initials}</span><span><strong>{resident.name}</strong><p>{resident.room} · <span className="risk-label">{resident.risk}</span></p></span></button>)}</div></section>,
+  };
+
   return <div className="app-shell">
     <AppSidebar activeModule="home" onToast={setToast}/>
 
@@ -225,46 +293,11 @@ export default function Home() {
       <AppHeader searchOpen={searchOpen} onSearch={openSearch} onToast={setToast}/>
 
       <main className="workspace">
-        <section className="page-heading" aria-labelledby="page-title"><div className="heading-copy"><p className="eyebrow">Montag, 7. September · Frühdienst</p><h1 id="page-title">Guten Morgen, Anna.</h1><p>Deine Schicht auf Wohnbereich 2 ist vorbereitet.</p></div><button className="primary-button" type="button" onClick={() => setToast("Neue Dokumentation vorbereitet")}><Icon name="plus" className="button-icon"/>Dokumentieren</button></section>
+        <section className="page-heading" aria-labelledby="page-title"><div className="heading-copy"><p className="eyebrow">Montag, 7. September · Frühdienst</p><h1 id="page-title">Guten Morgen, Anna.</h1><p>Deine Schicht auf Wohnbereich 2 ist vorbereitet.</p></div><div className="dashboard-heading-actions"><button className="secondary-button" type="button" aria-pressed={dashboardEditing} onClick={() => setDashboardEditing((value) => !value)}>{dashboardEditing ? "Fertig" : "Arbeitsplatz bearbeiten"}</button><button className="primary-button" type="button" onClick={() => setToast("Neue Dokumentation vorbereitet")}><Icon name="plus" className="button-icon"/>Dokumentieren</button></div></section>
 
-        <section className="summary-strip" aria-label="Schichtübersicht">
-          <div className="summary-item"><span className="summary-icon"><Icon name="residents"/></span><span><strong className="summary-value">7</strong><span className="summary-label">Bewohner zugeteilt</span></span></div>
-          <div className="summary-item"><span className="summary-icon"><Icon name="tasks"/></span><span><strong className="summary-value">18</strong><span className="summary-label">Aufgaben geplant</span></span></div>
-          <div className="summary-item"><span className="summary-icon attention"><Icon name="pulse"/></span><span><strong className="summary-value">3</strong><span className="summary-label">wichtige Änderungen</span></span></div>
-          <div className="summary-item"><span className="summary-icon info"><Icon name="handover"/></span><span><strong className="summary-value">1</strong><span className="summary-label">Übergabe offen</span></span></div>
-        </section>
+        {dashboardEditing && <section className="dashboard-customizer" aria-label="Arbeitsplatz bearbeiten"><div><p className="eyebrow">Persönlicher Arbeitsplatz</p><h2>Komponenten anordnen</h2><p>Ziehe sichtbare Komponenten auf dem Dashboard an die gewünschte Stelle oder blende sie ein und aus.</p></div><div className="dashboard-customizer-list">{dashboardWidgets.map((widget) => <button className={!hiddenWidgets.includes(widget.id) ? "active" : ""} type="button" key={widget.id} onClick={() => toggleWidget(widget.id)}><span>{!hiddenWidgets.includes(widget.id) ? "✓" : "+"}</span><div><strong>{widget.label}</strong><small>{widget.description}</small></div></button>)}</div><button className="quiet-button" type="button" onClick={resetDashboardLayout}>Standard wiederherstellen</button></section>}
 
-        <section className="critical-alert" aria-label="Kritischer Hinweis"><span className="critical-symbol"><Icon name="alert"/></span><div><strong>Unmittelbar prüfen · Herr Müller</strong><p>Sturz in der Nacht. Nächste neurologische Kontrolle um 08:00 Uhr.</p></div><button className="secondary-button" type="button" onClick={() => setResidentOpen(true)}>Fall öffnen <Icon name="chevron" className="button-icon"/></button></section>
-
-        <div className="dashboard-grid">
-          <div className="dashboard-top-grid">
-          <div>
-            <section className="card" aria-labelledby="changes-title">
-              <div className="card-header"><div><h2 className="card-title" id="changes-title">Seit deinem letzten Dienst</h2><p className="card-subtitle">Relevante Veränderungen · letzte 16 Stunden</p></div><button className="filter-pill" type="button">Alle 3</button></div>
-              <div className="changes-list">{changes.map((change) => <button className="change-row" key={change.name} type="button" onClick={() => setResidentOpen(true)}><span className={`resident-avatar ${change.type === "critical" ? "critical" : ""}`}>{change.initials}<span className="avatar-status"/></span><span className="change-main"><strong>{change.name}</strong><p>{change.note}</p></span><span className="change-meta"><span>{change.time}</span><span className={`status-badge ${change.type}`}>{change.status}</span><Icon name="chevron" className="chevron"/></span></button>)}</div>
-            </section>
-
-            <section className="card timeline-card" aria-labelledby="timeline-title">
-              <div className="card-header"><div><h2 className="card-title" id="timeline-title">Meine Schicht</h2><p className="card-subtitle">Der Plan passt sich neuen Ereignissen an</p></div><button className="quiet-button" type="button" onClick={() => setToast("Gesamte Schichtansicht geöffnet")}>Gesamter Plan</button></div>
-              <div className="timeline-list">
-                <Timeline time="06:45" title="Übergabe Nachtdienst" detail="Wohnbereich 2 · Teamraum" state="Erledigt" variant="done" rail/>
-                <Timeline time="07:30" title="Medikamentenrunde" detail="7 Bewohner · 1 Anpassung" state="Jetzt" variant="current" rail/>
-                <Timeline time="08:00" title="Blutzucker & Sturzkontrolle" detail="Frau Keller · Herr Müller" state="In 18 Min." rail/>
-                <Timeline time="09:30" title="Arztvisite" detail="Zimmer 204, 207 und 211" state="Geplant" rail/>
-                <Timeline time="10:00" title="Verbandwechsel" detail="Frau Baumann · Zimmer 214" state="Geplant"/>
-              </div>
-            </section>
-          </div>
-
-          <section className="card tasks-card" aria-labelledby="tasks-title">
-            <div className="card-header"><div><h2 className="card-title" id="tasks-title">Als Nächstes</h2><p className="card-subtitle">{tasks.filter((task) => !task.completed).length} Aufgaben bis 09:00 Uhr</p></div><div className="progress-ring" style={{"--progress": `${progress}%`} as CSSProperties} aria-label={`${progress} Prozent erledigt`}><span>{progress}%</span></div></div>
-            <div className="dashboard-task-list">{tasks.map((task) => <div className={`dashboard-task-row ${task.completed ? "completed" : ""}`} key={task.id}><button className="dashboard-task-check" type="button" aria-label={`${task.title} ${task.completed ? "wieder öffnen" : "erledigen"}`} onClick={() => toggleTask(task.id)}><Icon name="check"/></button><span className="dashboard-task-copy"><strong className="dashboard-task-title">{task.title}</strong><span className="dashboard-task-resident">{task.resident}</span></span><time className={`dashboard-task-time ${task.overdue && !task.completed ? "overdue" : ""}`}>{task.time}</time></div>)}</div>
-            <div className="tasks-footer"><button className="quiet-button" type="button" onClick={() => setToast("Alle 18 Aufgaben geöffnet")}>Alle 18 Aufgaben <Icon name="chevron" className="button-icon"/></button></div>
-          </section>
-          </div>
-
-          <section className="card residents-card" aria-labelledby="residents-title"><div className="card-header"><div><h2 className="card-title" id="residents-title">Meine Bewohner</h2><p className="card-subtitle">4 von 7 mit aktuellen Hinweisen</p></div><button className="quiet-button" type="button" onClick={() => router.push("/c/bewohner")}>Alle anzeigen</button></div><div className="resident-grid">{residents.map((resident) => <button className="resident-tile" type="button" key={resident.name} onClick={() => setResidentOpen(true)}><span className={`resident-avatar ${resident.critical ? "critical" : ""}`}>{resident.initials}</span><span><strong>{resident.name}</strong><p>{resident.room} · <span className="risk-label">{resident.risk}</span></p></span></button>)}</div></section>
-        </div>
+        <div className={`dashboard-custom-grid ${dashboardEditing ? "is-editing" : ""}`}>{widgetOrder.filter((id) => !hiddenWidgets.includes(id)).map((id) => { const widget = dashboardWidgets.find((item) => item.id === id)!; return <div className={`dashboard-widget ${widget.wide ? "wide" : ""}`} key={id} draggable={dashboardEditing} onDragStart={() => setDraggedWidget(id)} onDragEnd={() => setDraggedWidget(null)} onDragOver={(event) => dashboardEditing && event.preventDefault()} onDrop={() => moveWidget(id)}>{dashboardEditing && <div className="dashboard-widget-handle" aria-label={`${widget.label} verschieben`}>⠿ <span>{widget.label}</span></div>}{dashboardContent[id]}</div>; })}</div>
       </main>
     </div>
 
