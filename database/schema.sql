@@ -87,11 +87,16 @@ CREATE TABLE IF NOT EXISTS carecore_user_profiles (
   job_title VARCHAR(140),
   phone VARCHAR(60),
   avatar_url TEXT,
+  primary_care_unit_id UUID REFERENCES carecore_care_units(id) ON DELETE SET NULL,
   locale VARCHAR(16) NOT NULL DEFAULT 'de-CH',
   preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
   last_seen_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Kept separately so existing Neon installations receive the column as well.
+ALTER TABLE carecore_user_profiles
+  ADD COLUMN IF NOT EXISTS primary_care_unit_id UUID REFERENCES carecore_care_units(id) ON DELETE SET NULL;
 
 CREATE TABLE IF NOT EXISTS carecore_user_dashboard_layouts (
   user_id UUID PRIMARY KEY REFERENCES carecore_users(id) ON DELETE CASCADE,
@@ -602,6 +607,7 @@ CREATE TABLE IF NOT EXISTS carecore_audit_log (
 CREATE INDEX IF NOT EXISTS carecore_sites_organization_idx ON carecore_sites (organization_id);
 CREATE INDEX IF NOT EXISTS carecore_dashboard_layouts_updated_idx ON carecore_user_dashboard_layouts (updated_at DESC);
 CREATE INDEX IF NOT EXISTS carecore_units_site_idx ON carecore_care_units (site_id);
+CREATE INDEX IF NOT EXISTS carecore_user_profiles_primary_unit_idx ON carecore_user_profiles (primary_care_unit_id);
 CREATE INDEX IF NOT EXISTS carecore_rooms_unit_idx ON carecore_rooms (care_unit_id);
 CREATE INDEX IF NOT EXISTS carecore_residents_organization_status_idx ON carecore_residents (organization_id, status);
 CREATE INDEX IF NOT EXISTS carecore_residents_name_idx ON carecore_residents (last_name, first_name);

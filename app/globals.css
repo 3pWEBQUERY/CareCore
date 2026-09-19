@@ -198,6 +198,31 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(37,99,235,.3
 .resident-context-empty svg { width: 20px; height: 20px; color: var(--brand); }
 .resident-context-empty strong { color: var(--ink); font-size: 12px; }
 .resident-context-empty span { font-size: 10px; }
+.resident-picker-overlay { position: fixed; inset: 0; z-index: 90; overflow: hidden; background: rgba(4,20,27,.52); backdrop-filter: blur(5px); animation: fade-in 150ms ease; }
+.resident-picker-panel { width: 100vw; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); animation: record-slide-in 190ms cubic-bezier(.16,1,.3,1); }
+.resident-picker-header { min-height: 132px; display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding: 28px 42px; color: white; background: linear-gradient(115deg,#0b1f3a 0%,#174a8f 100%); }
+.resident-picker-header .eyebrow { margin: 0 0 8px; color: #bfdbfe; }
+.resident-picker-header h2 { margin: 0; font-size: 28px; letter-spacing: -.025em; }
+.resident-picker-header p:last-child { max-width: 700px; margin: 8px 0 0; color: #dbeafe; font-size: 13px; line-height: 1.45; }
+.resident-picker-body { width: min(1160px,100%); min-height: 0; flex: 1; overflow-y: auto; margin: 0 auto; padding: 30px 42px 42px; }
+.resident-picker-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 15px; }
+.resident-picker-toolbar > span { color: var(--muted); font-size: 12px; }
+.resident-picker-search { min-height: 48px; flex: 1; display: flex; align-items: center; gap: 10px; padding: 0 14px; border: 1px solid var(--line); border-radius: 6px; color: var(--brand); background: white; box-shadow: 0 4px 16px rgba(23,54,64,.04); }
+.resident-picker-search:focus-within { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+.resident-picker-search svg { width: 18px; height: 18px; }
+.resident-picker-search input { width: 100%; min-width: 0; border: 0; outline: 0; color: var(--ink); background: transparent; font: inherit; font-size: 14px; }
+.resident-picker-filters { display: flex; gap: 8px; overflow-x: auto; padding: 0 0 16px; scrollbar-width: none; }
+.resident-picker-filters::-webkit-scrollbar { display: none; }
+.resident-picker-filters button { min-height: 36px; flex: 0 0 auto; display: grid; gap: 1px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; color: #536a82; background: white; font-size: 11px; font-weight: 730; text-align: left; cursor: pointer; }
+.resident-picker-filters button small { color: #5d80af; font-size: 9px; font-weight: 700; }
+.resident-picker-filters button:hover,.resident-picker-filters button.active { border-color: #93c5fd; color: var(--brand-dark); background: var(--brand-soft); }
+.resident-picker-list { display: grid; gap: 7px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: white; }
+.resident-picker-list > button { min-height: 68px; display: grid; grid-template-columns: 38px minmax(0,1fr) auto 18px 16px; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid transparent; border-radius: 6px; color: var(--ink); background: transparent; text-align: left; cursor: pointer; }
+.resident-picker-list > button:hover,.resident-picker-list > button.active { border-color: #bfdbfe; background: var(--brand-soft); }
+.resident-picker-list > button > span:nth-child(2) { min-width: 0; }
+.resident-picker-list > button strong { display: block; font-size: 14px; }.resident-picker-list > button small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }.resident-picker-list > button > svg { width: 16px; color: #8da3b7; }.resident-picker-list > button > svg:nth-last-child(2) { color: var(--brand); }
+.profile-unit-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-top: 2px; }
+.profile-unit-options button { min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 9px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: white; text-align: left; cursor: pointer; }.profile-unit-options button:hover,.profile-unit-options button.active { border-color: #93c5fd; background: var(--brand-soft); }.profile-unit-options button strong,.profile-unit-options button small { display: block; }.profile-unit-options button strong { font-size: 11px; }.profile-unit-options button small { margin-top: 3px; color: var(--muted); font-size: 9px; }.profile-unit-options button > svg { width: 16px; color: var(--brand); }
 .top-actions { display: flex; align-items: center; gap: 9px; }
 .search-trigger { width: min(280px, 28vw); min-height: 40px; display: flex; align-items: center; gap: 9px; padding: 0 11px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); background: #f8fafb; text-align: left; cursor: pointer; }
 .search-trigger svg { width: 17px; }
@@ -1917,6 +1942,16 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .mobile-profile-trigger .avatar { width: 32px; height: 32px; font-size: 11px; }
   .mobile-profile-menu-wrap .profile-dropdown { top: calc(100% + 8px); right: 0; }
   .profile-panel-header { min-height: 108px; padding: 22px 18px; }
+  .resident-picker-header { min-height: 108px; padding: 22px 18px; }
+  .resident-picker-header h2 { font-size: 22px; }
+  .resident-picker-header p:last-child { font-size: 11px; }
+  .resident-picker-body { padding: 20px 18px 30px; }
+  .resident-picker-toolbar { align-items: stretch; flex-direction: column; gap: 9px; }
+  .resident-picker-toolbar > span { padding-left: 2px; }
+  .resident-picker-list > button { min-height: 64px; grid-template-columns: 36px minmax(0,1fr) auto 14px; gap: 9px; padding: 9px; }
+  .resident-picker-list > button > .status-badge { grid-column: 2; justify-self: start; }
+  .resident-picker-list > button > svg:nth-last-child(2) { display: none; }
+  .profile-unit-options { grid-template-columns: 1fr; }
   .profile-panel-header h2 { font-size: 22px; }
   .profile-panel-header p:last-child { font-size: 11px; }
   .profile-panel-body { padding: 20px 18px 30px; }
