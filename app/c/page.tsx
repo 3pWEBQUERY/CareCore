@@ -204,6 +204,22 @@ export default function Home() {
   }, [toast]);
 
   useEffect(() => {
+    let active = true;
+    void fetch("/api/dashboard/layout", { credentials: "same-origin" })
+      .then((response) => response.ok ? response.json() as Promise<{ layout: { order?: DashboardWidgetId[]; hidden?: DashboardWidgetId[] } | null }> : null)
+      .then((payload) => {
+        if (!active || !payload?.layout) return;
+        const stored = payload.layout;
+        const allowed = new Set(defaultDashboardOrder);
+        const order = (stored.order ?? []).filter((id): id is DashboardWidgetId => allowed.has(id));
+        setWidgetOrder([...order, ...defaultDashboardOrder.filter((id) => !order.includes(id))]);
+        setHiddenWidgets((stored.hidden ?? []).filter((id): id is DashboardWidgetId => allowed.has(id)));
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
     const context = (document as Document & { modelContext?: WebMCPContext }).modelContext;
     if (!context?.registerTool) return;
     const lifecycle = new AbortController();
@@ -252,6 +268,7 @@ export default function Home() {
 
   function persistDashboardLayout(nextOrder: DashboardWidgetId[], nextHidden: DashboardWidgetId[]) {
     window.localStorage.setItem(dashboardLayoutStorageKey, JSON.stringify({ order: nextOrder, hidden: nextHidden }));
+    void fetch("/api/dashboard/layout", { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ order: nextOrder, hidden: nextHidden }) }).catch(() => undefined);
   }
 
   function toggleWidget(widgetId: DashboardWidgetId) {
@@ -264,6 +281,7 @@ export default function Home() {
     setWidgetOrder(defaultDashboardOrder);
     setHiddenWidgets([]);
     window.localStorage.removeItem(dashboardLayoutStorageKey);
+    void fetch("/api/dashboard/layout", { method: "DELETE", credentials: "same-origin" }).catch(() => undefined);
   }
 
   function moveWidget(targetId: DashboardWidgetId) {
