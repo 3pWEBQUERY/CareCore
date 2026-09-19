@@ -1857,7 +1857,7 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .assessment-table-head,.assessment-list > article { grid-template-columns: 35px minmax(125px,1fr) minmax(150px,1fr) minmax(90px,.7fr) minmax(120px,.8fr) 75px; }
 }
 
-@media (max-width: 780px) {
+@media (max-width: 960px) {
   .leadership-users .leadership-workspace { padding-top: 24px; }
   .leadership-users .leadership-heading h1 { font-size: 32px; }
   .leadership-users .admin-table-header { min-height: auto; padding: 18px; }
