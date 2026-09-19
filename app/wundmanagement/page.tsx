@@ -80,7 +80,7 @@ const navigation: NavGroup[] = [
     { id: "shift", label: "Schicht", icon: "shift", href: "/betrieb/schicht", children: ["Mein Dienst", "Schichtverlauf"] },
     { id: "tasks", label: "Aufgaben", icon: "tasks", children: ["Meine Aufgaben", "Teamaufgaben"], badge: 3 },
     { id: "handover", label: "Übergabe", icon: "handover", children: ["Meine Übergabe", "Seit letztem Dienst"] },
-    { id: "schedule", label: "Dienstplanung", icon: "calendar", children: ["Mein Dienstplan", "Teamplanung"] },
+    { id: "schedule", label: "Dienste", icon: "calendar", children: ["Mein Dienstplan", "Teamplanung"] },
   ] },
   { id: "workforce", label: "Personal", modules: [
     { id: "team", label: "Team", icon: "team", children: ["Neuigkeiten & Kanäle", "Nachrichten"] },
@@ -144,6 +144,10 @@ export default function WoundOverviewPage() {
   const [selectedWoundId, setSelectedWoundId] = useState("w1");
   const [searchOpen, setSearchOpen] = useState(false);
   const [toast, setToast] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileGroupId, setMobileGroupId] = useState<string | null>("clinical");
+  const mobileGroup = navigation.find((group) => group.id === mobileGroupId);
+  const mobileModules = mobileGroup?.modules ?? [];
   const selectedWound = wounds.find((wound) => wound.id === selectedWoundId) ?? wounds[0];
 
   const openSearch = useCallback(() => setSearchOpen(true), [setSearchOpen]);
@@ -172,6 +176,20 @@ export default function WoundOverviewPage() {
     const route = routeFor(moduleId, child);
     if (route) { router.push(route); return; }
     setToast(`${child} geöffnet`);
+  }
+
+  function chooseMobileGroup(groupId: string) {
+    const group = navigation.find((item) => item.id === groupId);
+    const firstModule = group?.modules[0];
+    const firstChild = firstModule?.children[0];
+    setMobileGroupId(groupId);
+    setMobileMenuOpen(false);
+    if (firstModule && firstChild) selectSubmenu(firstModule.id, firstChild);
+  }
+
+  function chooseMobileChild(moduleId: string, child: string) {
+    setMobileMenuOpen(false);
+    selectSubmenu(moduleId, child);
   }
 
   return <div className="app-shell wounds-page">
@@ -215,7 +233,8 @@ export default function WoundOverviewPage() {
       </main>
     </div>
 
-    <nav className="bottom-nav" aria-label="Mobile Navigation"><button type="button" onClick={() => router.push("/c")}><Icon name="home"/><span>Startseite</span></button><button type="button" onClick={() => router.push("/c/bewohner")}><Icon name="residents"/><span>Bewohner</span></button><button type="button" onClick={() => setToast("Aufgaben geöffnet")}><Icon name="tasks"/><span>Aufgaben</span></button><button type="button" onClick={() => setToast("Team geöffnet")}><Icon name="team"/><span>Team</span></button><button className="active" type="button" onClick={() => setToast("Wundmanagement geöffnet")}><Icon name="wounds"/><span>Wunden</span></button></nav>
+    {mobileMenuOpen && <div className="mobile-nav-menu" role="dialog" aria-label="Hauptmenü"><div className="mobile-nav-menu-head"><div>{mobileGroup && <button className="mobile-nav-back" type="button" onClick={() => setMobileGroupId(null)}><Icon name="chevron"/> Alle Hauptbereiche</button>}<p className="eyebrow">CareCore Navigation</p><strong>{mobileGroup?.label ?? "Hauptbereiche"}</strong></div><button type="button" aria-label="Hauptmenü schliessen" onClick={() => setMobileMenuOpen(false)}><Icon name="close"/></button></div>{mobileGroup ? <div className="mobile-nav-subgroups">{mobileGroup.modules.map((module) => <section key={module.id}><h3><Icon name={module.icon}/>{module.label}</h3><div>{module.children.map((child) => <button type="button" key={child} onClick={() => chooseMobileChild(module.id, child)}>{child}<Icon name="chevron"/></button>)}</div></section>)}</div> : <div className="mobile-nav-groups">{navigation.map((group) => <button type="button" key={group.id} onClick={() => chooseMobileGroup(group.id)}><span className="mobile-nav-group-icon"><Icon name={group.modules[0]?.icon ?? "pulse"}/></span><span><strong>{group.label}</strong><small>{group.modules.length} Bereiche</small></span><Icon name="chevron"/></button>)}</div>}</div>}
+    <nav className="bottom-nav" aria-label="Mobile Navigation"><button type="button" onClick={() => router.push("/c")}><Icon name="home"/><span>Startseite</span></button>{mobileModules.slice(0, 4).map((module) => { const href = routeFor(module.id, module.children[0]); return <button className={module.id === "wounds" ? "active" : ""} type="button" key={module.id} onClick={() => href && router.push(href)}><Icon name={module.icon}/><span>{module.label}</span></button>; })}<button className={mobileMenuOpen ? "active" : ""} type="button" aria-haspopup="dialog" aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen((value) => !value)}><Icon name="sidebar"/><span>Mehr</span></button></nav>
 
     {searchOpen && <div className="overlay" role="presentation" onClick={(event) => event.currentTarget === event.target && setSearchOpen(false)}><section className="search-dialog" role="dialog" aria-modal="true" aria-label="Globale Suche"><div className="search-input-wrap"><Icon name="search"/><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Bewohner oder Wundfall suchen…" aria-label="Suchbegriff"/><button type="button" onClick={() => setSearchOpen(false)} aria-label="Suche schliessen">ESC</button></div><div className="search-results"><span className="search-group-label">Wundfälle</span>{filteredWounds.map((wound) => <button className="search-result" type="button" key={wound.id} onClick={() => { setSelectedWoundId(wound.id); setSearchOpen(false); }}><span className="result-icon"><Icon name="wounds"/></span><span><strong>{wound.resident} · {wound.location}</strong><small>{wound.room} · {wound.diagnosis}</small></span></button>)}</div></section></div>}
     {toast && <div className="toast" role="status"><Icon name="check"/>{toast}</div>}

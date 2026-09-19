@@ -186,6 +186,25 @@ export default function ResidentsPage() {
   const [selectedResident, setSelectedResident] = useState<ResidentRecordData | null>(null);
   const [intakeEditorOpen, setIntakeEditorOpen] = useState(false);
   const [toast, setToast] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileGroupId, setMobileGroupId] = useState<string | null>("clinical");
+  const mobileGroup = navigation.find((group) => group.id === mobileGroupId);
+  const mobileModules = mobileGroup?.modules ?? [];
+
+  function chooseMobileGroup(groupId: string) {
+    const group = navigation.find((item) => item.id === groupId);
+    const firstModule = group?.modules[0];
+    const firstChild = firstModule?.children[0];
+    setMobileGroupId(groupId);
+    setMobileMenuOpen(false);
+    const href = firstModule && firstChild ? routeFor(firstModule.id, firstChild) : null;
+    if (href) router.push(href);
+  }
+
+  function chooseMobileChild(moduleId: string, child: string) {
+    const href = routeFor(moduleId, child);
+    if (href) { setMobileMenuOpen(false); router.push(href); }
+  }
 
   const openSearch = useCallback(() => {
     setSelectedResident(null);
@@ -259,7 +278,8 @@ export default function ResidentsPage() {
       </main>
     </div>
 
-    <nav className="bottom-nav" aria-label="Mobile Navigation"><button type="button" onClick={() => router.push("/c")}><Icon name="home"/><span>Startseite</span></button><button className="active" type="button"><Icon name="residents"/><span>Bewohner</span></button><button type="button" onClick={() => setToast("Aufgaben geöffnet")}><Icon name="tasks"/><span>Aufgaben</span></button><button type="button" onClick={() => setToast("Team geöffnet")}><Icon name="team"/><span>Team</span></button><button type="button" onClick={() => setToast("Mehr geöffnet")}><Icon name="settings"/><span>Mehr</span></button></nav>
+    {mobileMenuOpen && <div className="mobile-nav-menu" role="dialog" aria-label="Hauptmenü"><div className="mobile-nav-menu-head"><div>{mobileGroup && <button className="mobile-nav-back" type="button" onClick={() => setMobileGroupId(null)}><Icon name="chevron"/> Alle Hauptbereiche</button>}<p className="eyebrow">CareCore Navigation</p><strong>{mobileGroup?.label ?? "Hauptbereiche"}</strong></div><button type="button" aria-label="Hauptmenü schliessen" onClick={() => setMobileMenuOpen(false)}><Icon name="close"/></button></div>{mobileGroup ? <div className="mobile-nav-subgroups">{mobileGroup.modules.map((module) => <section key={module.id}><h3><Icon name={module.icon as IconName}/>{module.label}</h3><div>{module.children.map((child) => <button type="button" key={child} onClick={() => chooseMobileChild(module.id, child)}>{child}<Icon name="chevron"/></button>)}</div></section>)}</div> : <div className="mobile-nav-groups">{navigation.map((group) => <button type="button" key={group.id} onClick={() => chooseMobileGroup(group.id)}><span className="mobile-nav-group-icon"><Icon name={(group.modules[0]?.icon ?? "pulse") as IconName}/></span><span><strong>{group.label}</strong><small>{group.modules.length} Bereiche</small></span><Icon name="chevron"/></button>)}</div>}</div>}
+    <nav className="bottom-nav" aria-label="Mobile Navigation"><button type="button" onClick={() => router.push("/c")}><Icon name="home"/><span>Startseite</span></button>{mobileModules.slice(0, 4).map((module) => { const href = routeFor(module.id, module.children[0]); return <button className={module.id === "residents" ? "active" : ""} type="button" key={module.id} onClick={() => href && router.push(href)}><Icon name={module.icon as IconName}/><span>{module.label}</span></button>; })}<button className={mobileMenuOpen ? "active" : ""} type="button" aria-haspopup="dialog" aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen((value) => !value)}><Icon name="sidebar"/><span>Mehr</span></button></nav>
 
     {searchOpen && <div className="overlay" role="presentation" onClick={(event) => event.currentTarget === event.target && setSearchOpen(false)}><section id="resident-global-search" className="search-dialog" role="dialog" aria-modal="true" aria-label="Globale Suche"><div className="search-input-wrap"><Icon name="search"/><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Bewohner, Dokumente oder Funktionen suchen…" aria-label="Suchbegriff"/><button type="button" onClick={() => setSearchOpen(false)} aria-label="Suche schliessen">ESC</button></div><div className="search-results"><span className="search-group-label">Bewohner</span>{filteredResidents.map((resident) => <button className="search-result" type="button" key={resident.name} onClick={() => { setSearchOpen(false); setSelectedResident(resident); }}><span className="result-icon"><Icon name="residents"/></span><span><strong>{resident.name}</strong><small>{resident.room} · {resident.unit}</small></span></button>)}</div></section></div>}
 
