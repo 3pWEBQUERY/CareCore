@@ -110,7 +110,7 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
 
     {flyout && <aside className="sidebar-flyout" aria-label={`${flyout.label} Untermenü`} onMouseLeave={() => setFlyoutGroup(null)}>
       <div className="sidebar-flyout-head"><div className="sidebar-flyout-icon"><RailIcon name={groupIcons[flyout.id] ?? "pulse"}/></div><div><span>Hauptbereich</span><strong>{flyout.label}</strong></div><button type="button" aria-label="Untermenü schliessen" onClick={() => setFlyoutGroup(null)}><RailIcon name="close"/></button></div>
-      <div className="sidebar-flyout-body"><span className="sidebar-flyout-label">Module</span>{flyout.modules.map((module) => <section className="sidebar-flyout-module" key={module.id}><strong>{module.label}</strong>{module.children.map((child) => <button className={`sidebar-flyout-link ${module.id === activeModule && child === activeChild ? "active" : ""}`} type="button" key={child} onClick={() => selectChild(module.id, child)}><span>{child}</span><RailIcon name="chevron"/></button>)}</section>)}</div>
+      <div className="sidebar-flyout-body">{flyout.modules.map((module) => <section className="sidebar-flyout-module" key={module.id}><strong>{module.label}</strong>{module.children.map((child) => <button className={`sidebar-flyout-link ${module.id === activeModule && child === activeChild ? "active" : ""}`} type="button" key={child} onClick={() => selectChild(module.id, child)}><span>{child}</span><RailIcon name="chevron"/></button>)}</section>)}</div>
     </aside>}
   </>;
 }
