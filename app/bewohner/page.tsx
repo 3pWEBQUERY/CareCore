@@ -189,7 +189,7 @@ export default function ResidentsPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileGroupId, setMobileGroupId] = useState<string | null>("clinical");
   const mobileGroup = navigation.find((group) => group.id === mobileGroupId);
-  const mobileModules = mobileGroup?.modules ?? [];
+  const mobileModules = mobileGroup ? [...mobileGroup.modules.filter((module) => module.id === "residents"), ...mobileGroup.modules.filter((module) => module.id !== "residents")].slice(0, 3) : [];
 
   function chooseMobileGroup(groupId: string) {
     const group = navigation.find((item) => item.id === groupId);

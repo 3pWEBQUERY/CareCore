@@ -147,7 +147,7 @@ export default function WoundOverviewPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileGroupId, setMobileGroupId] = useState<string | null>("clinical");
   const mobileGroup = navigation.find((group) => group.id === mobileGroupId);
-  const mobileModules = mobileGroup?.modules ?? [];
+  const mobileModules = mobileGroup ? [...mobileGroup.modules.filter((module) => module.id === "wounds"), ...mobileGroup.modules.filter((module) => module.id !== "wounds")].slice(0, 3) : [];
   const selectedWound = wounds.find((wound) => wound.id === selectedWoundId) ?? wounds[0];
 
   const openSearch = useCallback(() => setSearchOpen(true), [setSearchOpen]);
