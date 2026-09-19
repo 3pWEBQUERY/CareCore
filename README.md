@@ -8,6 +8,16 @@ CareCore ist eine Next.js-Anwendung mit geschütztem Pflegearbeitsplatz unter `/
 
 Beim ersten Anmeldeversuch werden die Tabellen `carecore_users` und `carecore_sessions` angelegt und der initiale Administrator sicher mit einem Scrypt-Passworthash eingetragen. Alternativ kann `database/schema.sql` einmalig im Neon SQL Editor ausgeführt werden.
 
+## Gesamtes Datenbankschema migrieren
+
+Das vollständige CareCore-Schema liegt in `database/schema.sql`. Es deckt Organisationen, Wohnbereiche, Bewohner, Pflegeplanung, Dokumentation, Assessments, Vitalwerte, Medikation, Wunden, Ernährung, Dienste, Aufgaben, Übergaben, Kommunikation, Dokumente, Schulungen, Qualität, RAI, KI-Entwürfe, Benachrichtigungen und Auditierung ab.
+
+Mit einer gültigen Neon-Verbindungsadresse wird es idempotent eingespielt:
+
+```bash
+node --env-file=.env.local database/apply-schema.mjs
+```
+
 Für Vercel muss `DATABASE_URL` in den Umgebungsvariablen des Projekts für Production, Preview und Development gesetzt werden. Die Anwendung benötigt den normalen Next.js-Serverbetrieb; ein statischer Export ist wegen Login, Sessions und Datenbankzugriff nicht möglich.
 
 ## Getting Started
