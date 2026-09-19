@@ -1922,7 +1922,7 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .tasks-card { position: static; max-height: none; overflow: visible; }
   .timeline-card,.residents-card { margin-top: 16px; }
   .residents-card { grid-column: auto; }
-  .mobile-nav-menu { width: min(calc(100% - 24px), 470px); position: fixed; inset: auto 50% calc(82px + env(safe-area-inset-bottom)) auto; z-index: 36; max-height: min(68vh, 520px); overflow-y: auto; transform: translateX(50%); border: 1px solid rgba(255,255,255,.28); border-radius: 24px 24px 20px 20px; background: rgba(12,31,58,.72); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 18px 42px rgba(9,31,64,.3); backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%); animation: mobile-glass-pop 180ms cubic-bezier(.2,.8,.2,1); }
+  .mobile-nav-menu { width: min(calc(100% - 24px), 470px); position: fixed; inset: auto 50% max(12px,env(safe-area-inset-bottom)) auto; z-index: 34; max-height: min(74vh, 560px); overflow-y: auto; padding-bottom: 78px; transform: translateX(50%); border: 1px solid rgba(255,255,255,.28); border-radius: 28px; background: rgba(12,31,58,.78); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 18px 42px rgba(9,31,64,.3); backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%); animation: mobile-glass-pop 220ms cubic-bezier(.2,.8,.2,1); }
   .mobile-nav-menu-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 17px 18px 13px; border-bottom: 1px solid rgba(255,255,255,.14); color: white; }
   .mobile-nav-menu-head .eyebrow { margin: 0 0 4px; color: #93c5fd; font-size: 9px; }
   .mobile-nav-menu-head strong { font-size: 16px; }
