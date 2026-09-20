@@ -88,13 +88,26 @@ function TaskEditor({ open, onClose, showToast }: { open: boolean; onClose: () =
   const [category, setCategory] = useState("Pflege");
   const [resident, setResident] = useState("Hans Müller · Zimmer 207");
   const [priority, setPriority] = useState("Normal");
-  const [dueDate, setDueDate] = useState("2026-09-15");
+  const [dueDate, setDueDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [dueTime, setDueTime] = useState("10:00");
   const [owner, setOwner] = useState("Anna Meier");
   const [repeat, setRepeat] = useState("Einmalig");
   const [description, setDescription] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  async function createTask(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setSaving(true); setError("");
+    try {
+      const response = await fetch("/api/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, description: `${category}: ${description}`.trim(), priority: priority === "Kritisch" ? "critical" : priority === "Dringend" ? "high" : "normal", residentName: resident.split(" · ")[0], ownerName: owner, dueAt: new Date(`${dueDate}T${dueTime}:00`).toISOString() }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Aufgabe konnte nicht erstellt werden.");
+      window.dispatchEvent(new Event("carecore:tasks-changed"));
+      onClose(); showToast(`${title} wurde erstellt`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Speichern fehlgeschlagen."); }
+    finally { setSaving(false); }
+  }
   if (!open) return null;
-  return <div className="area-editor-overlay" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && onClose()}><section className="area-editor-panel task-editor-panel" role="dialog" aria-modal="true" aria-labelledby="task-editor-title"><header className="area-editor-header"><div><p className="eyebrow">CareCore Tasks · Aufgaben</p><h2 id="task-editor-title">Aufgabe erstellen</h2><p>Plane eine klare Intervention und weise sie direkt einer verantwortlichen Person zu.</p></div><button className="area-editor-close" type="button" onClick={onClose} aria-label="Aufgabeneditor schliessen">×</button></header><form className="area-editor-form" onSubmit={(event) => { event.preventDefault(); onClose(); showToast(`${title || "Neue Aufgabe"} wurde für ${owner} erstellt`); }}><div className="area-editor-intro"><span className="area-editor-icon"><ModuleIcon name="tasks"/></span><div><strong>Neue Teamaufgabe</strong><p>Die Aufgabe erscheint im persönlichen und im gemeinsamen Arbeitsbereich.</p></div><span className="duty-assignment-status"><i/>Entwurf</span></div><div className="area-editor-grid"><label className="area-editor-wide">Aufgabentitel<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="z. B. Trinkmenge dokumentieren" required/></label><label>Kategorie<ScheduleSelect label="Kategorie" value={category} options={["Pflege", "Medikation", "Vitalwerte", "Dokumentation", "Wundmanagement", "Ernährung"]} onChange={setCategory}/></label><label>Priorität<ScheduleSelect label="Priorität" value={priority} options={["Normal", "Dringend", "Kritisch"]} onChange={setPriority}/></label><label className="area-editor-wide">Bewohner oder Kontext<ScheduleSelect label="Bewohner oder Kontext" value={resident} options={["Hans Müller · Zimmer 207", "Maria Keller · Zimmer 204", "Erika Meier · Zimmer 211", "Wohnbereich 2 · Tagesabschluss"]} onChange={setResident}/></label><label>Fällig am<ScheduleDatePicker label="Fällig am" value={dueDate} onChange={setDueDate}/></label><label>Fällig um<ScheduleSelect label="Fällig um" value={dueTime} options={["08:00", "09:00", "10:00", "11:30", "14:00", "16:00"]} onChange={setDueTime}/></label><label>Verantwortlich<ScheduleSelect label="Verantwortlich" value={owner} options={teamMembers.map((person) => person.name)} onChange={setOwner}/></label><label>Wiederholung<ScheduleSelect label="Wiederholung" value={repeat} options={["Einmalig", "Täglich", "Wöchentlich", "Individuell"]} onChange={setRepeat}/></label><label className="area-editor-wide">Beschreibung oder Intervention<textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Beschreibe den nächsten konkreten Schritt …" rows={5}/></label><fieldset className="area-editor-wide duty-assignment-options"><legend>Aufgabenoptionen</legend><div className="area-service-options"><label><input type="checkbox" defaultChecked/><span>Im Team sichtbar</span></label><label><input type="checkbox" defaultChecked/><span>Erinnerung zum Fälligkeitstermin</span></label><label><input type="checkbox"/><span>Nach Erledigung dokumentieren</span></label></div></fieldset></div><div className="duty-assignment-summary"><span><strong>{title || "Neue Aufgabe"}</strong><small>{resident} · {category}</small></span><span><strong>{formatScheduleDate(dueDate)} · {dueTime}</strong><small>{owner} · {priority}</small></span></div><footer className="area-editor-actions"><button className="secondary-button" type="button" onClick={onClose}>Abbrechen</button><button className="primary-button" type="submit"><ModuleIcon name="check"/> Aufgabe erstellen</button></footer></form></section></div>;
+  return <div className="area-editor-overlay" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && onClose()}><section className="area-editor-panel task-editor-panel" role="dialog" aria-modal="true" aria-labelledby="task-editor-title"><header className="area-editor-header"><div><p className="eyebrow">CareCore Tasks · Aufgaben</p><h2 id="task-editor-title">Aufgabe erstellen</h2><p>Plane eine klare Intervention und weise sie direkt einer verantwortlichen Person zu.</p></div><button className="area-editor-close" type="button" onClick={onClose} aria-label="Aufgabeneditor schliessen">×</button></header><form className="area-editor-form" onSubmit={createTask}><div className="area-editor-intro"><span className="area-editor-icon"><ModuleIcon name="tasks"/></span><div><strong>Neue Teamaufgabe</strong><p>Die Aufgabe erscheint im persönlichen und im gemeinsamen Arbeitsbereich.</p></div><span className="duty-assignment-status"><i/>Entwurf</span></div><div className="area-editor-grid"><label className="area-editor-wide">Aufgabentitel<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="z. B. Trinkmenge dokumentieren" required/></label><label>Kategorie<ScheduleSelect label="Kategorie" value={category} options={["Pflege", "Medikation", "Vitalwerte", "Dokumentation", "Wundmanagement", "Ernährung"]} onChange={setCategory}/></label><label>Priorität<ScheduleSelect label="Priorität" value={priority} options={["Normal", "Dringend", "Kritisch"]} onChange={setPriority}/></label><label className="area-editor-wide">Bewohner oder Kontext<ScheduleSelect label="Bewohner oder Kontext" value={resident} options={["Hans Müller · Zimmer 207", "Maria Keller · Zimmer 204", "Erika Meier · Zimmer 211", "Wohnbereich 2 · Tagesabschluss"]} onChange={setResident}/></label><label>Fällig am<ScheduleDatePicker label="Fällig am" value={dueDate} onChange={setDueDate}/></label><label>Fällig um<ScheduleSelect label="Fällig um" value={dueTime} options={["08:00", "09:00", "10:00", "11:30", "14:00", "16:00"]} onChange={setDueTime}/></label><label>Verantwortlich<ScheduleSelect label="Verantwortlich" value={owner} options={teamMembers.map((person) => person.name)} onChange={setOwner}/></label><label>Wiederholung<ScheduleSelect label="Wiederholung" value={repeat} options={["Einmalig", "Täglich", "Wöchentlich", "Individuell"]} onChange={setRepeat}/></label><label className="area-editor-wide">Beschreibung oder Intervention<textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Beschreibe den nächsten konkreten Schritt …" rows={5}/></label><fieldset className="area-editor-wide duty-assignment-options"><legend>Aufgabenoptionen</legend><div className="area-service-options"><label><input type="checkbox" defaultChecked/><span>Im Team sichtbar</span></label><label><input type="checkbox" defaultChecked/><span>Erinnerung zum Fälligkeitstermin</span></label><label><input type="checkbox"/><span>Nach Erledigung dokumentieren</span></label></div></fieldset></div><div className="duty-assignment-summary"><span><strong>{title || "Neue Aufgabe"}</strong><small>{resident} · {category}</small></span><span><strong>{formatScheduleDate(dueDate)} · {dueTime}</strong><small>{owner} · {priority}</small></span></div><footer className="area-editor-actions"><button className="secondary-button" type="button" onClick={onClose}>Abbrechen</button><button className="primary-button" type="submit" disabled={saving}><ModuleIcon name="check"/> {saving ? "Speichern…" : "Aufgabe erstellen"}</button></footer>{error && <p role="alert">{error}</p>}</form></section></div>;
 }
 
 function ShiftStartEditor({ open, onClose, showToast }: { open: boolean; onClose: () => void; showToast: (message: string) => void }) {
@@ -137,22 +150,6 @@ const shiftHistory = [
   { date: "Montag, 7. September 2026", time: "13:30–22:00", unit: "Wohnbereich 2", handover: "Vollständig", entries: 20, tone: "stable" as Tone },
 ];
 
-const myTasks: Task[] = [
-  { id: "t1", time: "08:30", title: "Trinkmenge dokumentieren", detail: "Peter Aebischer · Zimmer 115", category: "Ernährung", tone: "attention", due: "Heute fällig" },
-  { id: "t2", time: "09:15", title: "Sturzprophylaxe evaluieren", detail: "Hans Müller · Pflegeakte", category: "Pflegeplanung", tone: "critical", due: "Überfällig" },
-  { id: "t3", time: "10:00", title: "SpO₂ nach Mobilisation messen", detail: "Peter Aebischer · Zimmer 115", category: "Vitalwerte", tone: "info", due: "Heute fällig" },
-  { id: "t4", time: "11:30", title: "Wundverband kontrollieren", detail: "Erika Meier · linker Unterarm", category: "Wundmanagement", tone: "attention", due: "Heute fällig" },
-  { id: "t5", time: "14:00", title: "Angehörige zurückrufen", detail: "Maria Keller · Tochter informiert", category: "Kommunikation", tone: "info", due: "Geplant" },
-  { id: "t6", time: "15:00", title: "Pflegebericht abschliessen", detail: "Wohnbereich 2 · Tagesabschluss", category: "Dokumentation", tone: "stable", due: "Geplant" },
-];
-
-const teamTasks = [
-  { ...myTasks[1], owner: "Lea Frei", status: "In Bearbeitung" },
-  { ...myTasks[3], owner: "Nora Baumann", status: "Offen" },
-  { id: "tt1", time: "12:00", title: "Mittagsrunde vorbereiten", detail: "Medikationswagen · alle Stationen", category: "Medikation", tone: "info" as Tone, owner: "Sven Keller", status: "Offen" },
-  { id: "tt2", time: "13:30", title: "Neuaufnahme begleiten", detail: "Zimmer 306 · Eintritt Walter Brunner", category: "Aufnahme", tone: "attention" as Tone, owner: "Anna Meier", status: "In Bearbeitung" },
-  { id: "tt3", time: "16:00", title: "Materialwagen auffüllen", detail: "Pflegezimmer · Verbandmaterial", category: "Material", tone: "stable" as Tone, owner: "Lea Frei", status: "Erledigt" },
-];
 
 const handoverEvents = [
   { time: "07:42", title: "Vitalwerte erfasst", detail: "Hans Müller · Blutdruck 132/78, Puls 72/min", tone: "stable" as Tone },
@@ -246,13 +243,74 @@ function ShiftHistoryView({ showToast }: { showToast: (message: string) => void 
   return <><Summary items={[{ icon: "calendar", value: "24", label: "Dienste im Quartal" }, { icon: "check", value: "22", label: "Übergaben vollständig" }, { icon: "note", value: "99", label: "Dokumentationen", tone: "info" }, { icon: "alert", value: "2", label: "Hinweise offen", tone: "attention" }]}/><section className="card operations-list-card"><div className="operations-toolbar"><div><h2 className="card-title">Abgeschlossene Dienste</h2><p className="card-subtitle">{filtered.length} von {shiftHistory.length} Einträgen</p></div><label className="resident-search"><ModuleIcon name="search"/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Datum oder Wohnbereich" aria-label="Schichtverlauf durchsuchen"/></label><button className="secondary-button" type="button" onClick={() => showToast("Schichtbericht wird vorbereitet")}>Exportieren</button></div><div className="operations-history-list">{filtered.map((entry) => <article key={entry.date}><span className="operations-date"><strong>{entry.date.split(",")[0]}</strong><small>{entry.date.split(", ").slice(1).join(", ")}</small></span><span><strong>{entry.time}</strong><small>{entry.unit}</small></span><span><strong>{entry.entries} Dokumentationen</strong><small>Übergabe: {entry.handover}</small></span><span className={`status-badge ${entry.tone}`}>{entry.handover === "Vollständig" ? "Abgeschlossen" : "Prüfung nötig"}</span><button type="button" onClick={() => showToast(`${entry.date} geöffnet`)}>Ansehen <ModuleIcon name="chevron"/></button></article>)}</div>{filtered.length === 0 && <div className="resident-empty"><ModuleIcon name="search"/><strong>Keine Dienste gefunden</strong><p>Suchbegriff anpassen.</p></div>}</section></>;
 }
 
+type TaskRow = { id: string; title: string; description: string | null; priority: string; status: string; due_at: string | null; assigned_to: string | null; resident_name: string; owner_name: string; care_unit: string };
 function TaskView({ team, showToast }: { team: boolean; showToast: (message: string) => void }) {
   const [filter, setFilter] = useState("Alle");
-  const [completed, setCompleted] = useState<string[]>(team ? ["tt3"] : ["t6"]);
-  const items = team ? teamTasks : myTasks;
+  const [rows, setRows] = useState<TaskRow[]>([]);
+  const [userId, setUserId] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const response = await fetch("/api/tasks", { cache: "no-store" });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Aufgaben konnten nicht geladen werden.");
+        if (active) { setRows(data.tasks); setUserId(data.currentUserId); }
+      } catch (cause) { if (active) setError(cause instanceof Error ? cause.message : "Laden fehlgeschlagen."); }
+    };
+    void load();
+    window.addEventListener("carecore:tasks-changed", load);
+    return () => { active = false; window.removeEventListener("carecore:tasks-changed", load); };
+  }, []);
+  const items = team ? rows : rows.filter((row) => row.assigned_to === userId);
+  const [now] = useState(() => Date.now());
+  const [today] = useState(() => new Date().toDateString());
+  const filtered = items.filter((row) => {
+    if (filter === "Alle") return true;
+    if (filter === "Erledigt") return row.status === "completed";
+    if (filter === "Offen") return row.status === "open";
+    if (filter === "In Bearbeitung") return row.status === "in_progress";
+    if (filter === "Überfällig") return row.status !== "completed" && Boolean(row.due_at && new Date(row.due_at).getTime() < now);
+    if (filter === "Heute fällig") return Boolean(row.due_at && new Date(row.due_at).toDateString() === today);
+    return true;
+  });
   const filters = team ? ["Alle", "Offen", "In Bearbeitung", "Erledigt"] : ["Alle", "Offen", "Heute fällig", "Überfällig"];
-  const filtered = items.filter((item) => filter === "Alle" || (team ? item.status === filter : item.due === filter));
-  return <><Summary items={[{ icon: "tasks", value: team ? "18" : "6", label: team ? "Aufgaben im Team" : "Aufgaben für dich" }, { icon: "alert", value: team ? "5" : "2", label: "dringend", tone: "critical" }, { icon: "calendar", value: team ? "9" : "4", label: "heute fällig", tone: "attention" }, { icon: "check", value: team ? "4" : "1", label: "heute erledigt", tone: "info" }]}/><section className="card operations-list-card"><div className="operations-toolbar"><div><h2 className="card-title">{team ? "Aufgaben im Team" : "Deine Aufgaben"}</h2><p className="card-subtitle">{filtered.length} Aufgaben sichtbar</p></div><div className="operations-filter-buttons">{filters.map((item) => <button className={filter === item ? "active" : ""} type="button" key={item} aria-pressed={filter === item} onClick={() => setFilter(item)}>{item}</button>)}</div></div><div className="task-list">{filtered.map((task) => { const isDone = completed.includes(task.id) || (team && task.status === "Erledigt"); return <article className={`task-row ${isDone ? "complete" : ""}`} key={task.id}><button className="task-check" type="button" aria-label={`${task.title} ${isDone ? "rückgängig" : "erledigt markieren"}`} onClick={() => setCompleted((current) => isDone ? current.filter((id) => id !== task.id) : [...current, task.id])}><ModuleIcon name={isDone ? "check" : "plus"}/></button><time>{task.time}</time><span className={`operations-timeline-icon ${task.tone}`}><ModuleIcon name={task.category === "Medikation" ? "med" : task.category === "Vitalwerte" ? "vitals" : task.category === "Wundmanagement" ? "wounds" : "note"}/></span><div><strong>{task.title}</strong><small>{task.detail}</small></div>{team && <span className="task-owner"><span className="avatar">{task.owner?.split(" ").map((part) => part[0]).join("")}</span>{task.owner}</span>}<span className={`status-badge ${isDone ? "stable" : task.tone}`}>{isDone ? "Erledigt" : team ? task.status : task.due}</span><button className="quiet-button" type="button" onClick={() => showToast(`${task.title} geöffnet`)}>Details</button></article>; })}{filtered.length === 0 && <div className="resident-empty"><ModuleIcon name="check"/><strong>Keine Aufgaben in diesem Filter</strong><p>Filter zurücksetzen oder neue Aufgabe erstellen.</p></div>}</div></section></>;
+  async function toggleTask(row: TaskRow) {
+    const completed = row.status !== "completed";
+    try {
+      const response = await fetch("/api/tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: row.id, completed }) });
+      if (!response.ok) throw new Error("Aufgabe konnte nicht aktualisiert werden.");
+      setRows((current) => current.map((item) => item.id === row.id ? { ...item, status: completed ? "completed" : "open" } : item));
+      showToast(completed ? "Aufgabe erledigt" : "Aufgabe wieder geöffnet");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Speichern fehlgeschlagen."); }
+  }
+  return <>
+    <Summary items={[
+      { icon: "tasks", value: String(items.length), label: team ? "Aufgaben im Team" : "Aufgaben für dich" },
+      { icon: "alert", value: String(items.filter((row) => ["high", "critical"].includes(row.priority) && row.status !== "completed").length), label: "dringend", tone: "critical" },
+      { icon: "calendar", value: String(items.filter((row) => row.due_at && new Date(row.due_at).toDateString() === today).length), label: "heute fällig", tone: "attention" },
+      { icon: "check", value: String(items.filter((row) => row.status === "completed").length), label: "erledigt", tone: "info" }
+    ]}/>
+    <section className="card operations-list-card">
+      <div className="operations-toolbar"><div><h2 className="card-title">{team ? "Aufgaben im Team" : "Deine Aufgaben"}</h2><p className="card-subtitle">{filtered.length} Aufgaben sichtbar</p></div><div className="operations-filter-buttons">{filters.map((item) => <button className={filter === item ? "active" : ""} type="button" key={item} aria-pressed={filter === item} onClick={() => setFilter(item)}>{item}</button>)}</div></div>
+      {error && <p role="alert">{error}</p>}
+      <div className="task-list">{filtered.map((task) => {
+        const done = task.status === "completed";
+        const tone: Tone = task.priority === "critical" ? "critical" : task.priority === "high" ? "attention" : "info";
+        const due = task.due_at ? new Date(task.due_at) : null;
+        return <article className={`task-row ${done ? "complete" : ""}`} key={task.id}>
+          <button className="task-check" type="button" aria-label={`${task.title} ${done ? "rückgängig" : "erledigt markieren"}`} onClick={() => void toggleTask(task)}><ModuleIcon name={done ? "check" : "plus"}/></button>
+          <time>{due ? due.toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" }) : "—"}</time>
+          <span className={`operations-timeline-icon ${tone}`}><ModuleIcon name="tasks"/></span>
+          <div><strong>{task.title}</strong><small>{[task.resident_name, task.description].filter(Boolean).join(" · ")}</small></div>
+          {team && <span className="task-owner"><span className="avatar">{task.owner_name.split(" ").map((part) => part[0]).join("")}</span>{task.owner_name}</span>}
+          <span className={`status-badge ${done ? "stable" : tone}`}>{done ? "Erledigt" : task.status === "in_progress" ? "In Bearbeitung" : due && due.getTime() < now ? "Überfällig" : "Offen"}</span>
+          <button className="quiet-button" type="button" onClick={() => showToast(task.description || task.title)}>Details</button>
+        </article>;
+      })}{!filtered.length && <div className="resident-empty"><ModuleIcon name="check"/><strong>Keine Aufgaben in diesem Filter</strong><p>Filter zurücksetzen oder neue Aufgabe erstellen.</p></div>}</div>
+    </section>
+  </>;
 }
 
 function HandoverView({ lastShift, showToast }: { lastShift: boolean; showToast: (message: string) => void }) {

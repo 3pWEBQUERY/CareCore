@@ -1,33 +1,49 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import ModulePageShell, { ModuleIcon, type ModuleIconName } from "@/app/components/module-page-shell";
 
-type NotificationTone = "critical" | "attention" | "info" | "stable";
-type NotificationFilter = "Alle" | "Ungelesen" | "Kritisch";
-type NotificationEntry = { id: number; icon: ModuleIconName; tone: NotificationTone; category: string; title: string; description: string; time: string; read: boolean };
+type Filter = "Alle" | "Ungelesen" | "Kritisch";
+type Item = { id: string; title: string; body: string | null; type: string; priority: string; link_url: string | null; read_at: string | null; created_at: string };
 
-const initialNotifications: NotificationEntry[] = [
-  { id: 1, icon: "alert", tone: "critical", category: "Kritischer Hinweis", title: "Sturzrisiko bei Hans Müller", description: "Bitte neurologische Kontrolle dokumentieren und den Verlauf ergänzen.", time: "Heute · 08:12", read: false },
-  { id: 2, icon: "tasks", tone: "attention", category: "Aufgabe", title: "Medikationsrunde bald fällig", description: "Die Runde für Wohnbereich 2 beginnt in 30 Minuten.", time: "Heute · 07:46", read: false },
-  { id: 3, icon: "handover", tone: "info", category: "Übergabe", title: "Neue Übergabe verfügbar", description: "Der Spätdienst hat drei Hinweise für dein Team ergänzt.", time: "Heute · 06:58", read: false },
-  { id: 4, icon: "vitals", tone: "critical", category: "Vitalwert", title: "Blutdruck ausserhalb Grenzwert", description: "Walter Brunner · 168/96 mmHg · erneute Kontrolle empfohlen.", time: "Gestern · 21:34", read: false },
-  { id: 5, icon: "wounds", tone: "stable", category: "Dokumentation", title: "Wunddokumentation aktualisiert", description: "Frau Schneider · rechter Unterschenkel · Verlauf gespeichert.", time: "Gestern · 17:20", read: true },
-  { id: 6, icon: "team", tone: "info", category: "Team & Nachrichten", title: "Neue Nachricht von Lukas Meier", description: "Bitte den aktualisierten Dienstübergabe-Standard prüfen.", time: "Gestern · 15:05", read: true },
-  { id: 7, icon: "docs", tone: "stable", category: "Systemhinweis", title: "Standard aktualisiert", description: "Der Standard zur Sturzprophylaxe ist ab sofort verfügbar.", time: "12.09.2026 · 09:00", read: true },
-];
+function appearance(item: Item): { icon: ModuleIconName; tone: string; category: string } {
+  if (["critical", "high"].includes(item.priority)) return { icon: "alert", tone: "critical", category: "Wichtiger Hinweis" };
+  if (item.type === "medication") return { icon: "med", tone: "attention", category: "Medikation" };
+  if (item.type === "task") return { icon: "tasks", tone: "attention", category: "Aufgabe" };
+  return { icon: "bell", tone: "info", category: "Benachrichtigung" };
+}
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState(initialNotifications);
-  const [filter, setFilter] = useState<NotificationFilter>("Alle");
-  const unreadCount = notifications.filter((notification) => !notification.read).length;
-  const visibleNotifications = useMemo(() => notifications.filter((notification) => {
-    if (filter === "Ungelesen") return !notification.read;
-    if (filter === "Kritisch") return notification.tone === "critical";
-    return true;
-  }), [filter, notifications]);
+  const router = useRouter();
+  const [items, setItems] = useState<Item[]>([]);
+  const [filter, setFilter] = useState<Filter>("Alle");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let active = true;
+    fetch("/api/notifications", { cache: "no-store" }).then(async (response) => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Benachrichtigungen konnten nicht geladen werden.");
+      if (active) setItems(data.notifications);
+    }).catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : "Laden fehlgeschlagen."); });
+    return () => { active = false; };
+  }, []);
+  const unread = items.filter((item) => !item.read_at).length;
+  const visible = useMemo(() => items.filter((item) => filter === "Alle" || (filter === "Ungelesen" ? !item.read_at : ["high", "critical"].includes(item.priority))), [filter, items]);
+  async function markRead(id?: string) {
+    const response = await fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(id ? { id } : { all: true }) });
+    if (!response.ok) throw new Error("Lesestatus konnte nicht gespeichert werden.");
+    const now = new Date().toISOString();
+    setItems((current) => current.map((item) => !id || item.id === id ? { ...item, read_at: item.read_at || now } : item));
+  }
 
-  return <ModulePageShell pageClass="notifications-page" locationSecondary="Persönlicher Bereich">
-    {(showToast) => <main className="workspace notifications-workspace"><section className="page-heading notifications-page-heading"><div className="heading-copy"><p className="eyebrow">CareCore Inbox</p><h1>Benachrichtigungen</h1><p>Alle relevanten Hinweise für deinen Arbeitsbereich an einem Ort.</p></div><button className="secondary-button" type="button" disabled={unreadCount === 0} onClick={() => { setNotifications((current) => current.map((notification) => ({ ...notification, read: true }))); showToast("Alle Benachrichtigungen als gelesen markiert"); }}><ModuleIcon name="check"/>Alle gelesen</button></section><section className="summary-strip notifications-summary"><div className="summary-item"><span className="summary-icon"><ModuleIcon name="bell"/></span><span><strong className="summary-value">{notifications.length}</strong><small className="summary-label">Hinweise gesamt</small></span></div><div className="summary-item"><span className="summary-icon attention"><ModuleIcon name="alert"/></span><span><strong className="summary-value">{unreadCount}</strong><small className="summary-label">Ungelesen</small></span></div><div className="summary-item"><span className="summary-icon critical"><ModuleIcon name="quality"/></span><span><strong className="summary-value">{notifications.filter((notification) => notification.tone === "critical").length}</strong><small className="summary-label">Kritische Hinweise</small></span></div><div className="summary-item"><span className="summary-icon info"><ModuleIcon name="calendar"/></span><span><strong className="summary-value">4</strong><small className="summary-label">Heute eingegangen</small></span></div></section><section className="card notifications-inbox"><div className="card-header notifications-inbox-header"><div><p className="eyebrow">Posteingang</p><h2 className="card-title">Deine Hinweise</h2><p className="card-subtitle">{visibleNotifications.length} von {notifications.length} Benachrichtigungen</p></div><div className="notifications-filter-bar" role="group" aria-label="Benachrichtigungen filtern">{(["Alle", "Ungelesen", "Kritisch"] as NotificationFilter[]).map((option) => <button className={filter === option ? "active" : ""} type="button" key={option} onClick={() => setFilter(option)}>{option}{option === "Ungelesen" && <span>{unreadCount}</span>}</button>)}</div></div><div className="notifications-page-list">{visibleNotifications.map((notification) => <button className={`notifications-page-row ${notification.read ? "read" : "unread"}`} type="button" key={notification.id} onClick={() => { setNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, read: true } : item)); showToast(`${notification.title} geöffnet`); }}><span className={`notifications-page-icon ${notification.tone}`}><ModuleIcon name={notification.icon}/></span><span className="notifications-page-copy"><span className="notifications-page-category">{notification.category}</span><strong>{notification.title}</strong><small>{notification.description}</small></span><span className="notifications-page-meta">{!notification.read && <span className="notification-unread" aria-label="Ungelesen"/>}<time>{notification.time}</time><ModuleIcon name="chevron"/></span></button>)}{visibleNotifications.length === 0 && <div className="notifications-empty"><ModuleIcon name="check"/><strong>Keine passenden Benachrichtigungen</strong><p>In diesem Filter sind aktuell keine Hinweise vorhanden.</p></div>}</div></section></main>}
+  return <ModulePageShell pageClass="notifications-page" locationSecondary="Persönlicher Bereich">{(showToast) =>
+    <main className="workspace notifications-workspace">
+      <section className="page-heading notifications-page-heading"><div className="heading-copy"><p className="eyebrow">CareCore Inbox</p><h1>Benachrichtigungen</h1><p>Alle relevanten Hinweise für deinen Arbeitsbereich an einem Ort.</p></div><button className="secondary-button" type="button" disabled={!unread} onClick={() => void markRead().then(() => showToast("Alle Benachrichtigungen als gelesen markiert")).catch((cause) => setError(cause.message))}><ModuleIcon name="check"/>Alle gelesen</button></section>
+      <section className="summary-strip notifications-summary"><div className="summary-item"><span className="summary-icon"><ModuleIcon name="bell"/></span><span><strong className="summary-value">{items.length}</strong><small className="summary-label">Hinweise gesamt</small></span></div><div className="summary-item"><span className="summary-icon attention"><ModuleIcon name="alert"/></span><span><strong className="summary-value">{unread}</strong><small className="summary-label">Ungelesen</small></span></div><div className="summary-item"><span className="summary-icon critical"><ModuleIcon name="quality"/></span><span><strong className="summary-value">{items.filter((item) => ["high", "critical"].includes(item.priority)).length}</strong><small className="summary-label">Wichtige Hinweise</small></span></div><div className="summary-item"><span className="summary-icon info"><ModuleIcon name="calendar"/></span><span><strong className="summary-value">{items.filter((item) => new Date(item.created_at).toDateString() === new Date().toDateString()).length}</strong><small className="summary-label">Heute eingegangen</small></span></div></section>
+      <section className="card notifications-inbox"><div className="card-header notifications-inbox-header"><div><p className="eyebrow">Posteingang</p><h2 className="card-title">Deine Hinweise</h2><p className="card-subtitle">{visible.length} von {items.length} Benachrichtigungen</p></div><div className="notifications-filter-bar" role="group" aria-label="Benachrichtigungen filtern">{(["Alle", "Ungelesen", "Kritisch"] as Filter[]).map((option) => <button className={filter === option ? "active" : ""} type="button" key={option} onClick={() => setFilter(option)}>{option}{option === "Ungelesen" && <span>{unread}</span>}</button>)}</div></div>
+        <div className="notifications-page-list">{error && <p role="alert">{error}</p>}{visible.map((item) => { const ui = appearance(item); return <button className={`notifications-page-row ${item.read_at ? "read" : "unread"}`} type="button" key={item.id} onClick={() => void markRead(item.id).then(() => { if (item.link_url?.startsWith("/c/")) router.push(item.link_url); else showToast(`${item.title} geöffnet`); }).catch((cause) => setError(cause.message))}><span className={`notifications-page-icon ${ui.tone}`}><ModuleIcon name={ui.icon}/></span><span className="notifications-page-copy"><span className="notifications-page-category">{ui.category}</span><strong>{item.title}</strong><small>{item.body}</small></span><span className="notifications-page-meta">{!item.read_at && <span className="notification-unread" aria-label="Ungelesen"/>}<time>{new Date(item.created_at).toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</time><ModuleIcon name="chevron"/></span></button>; })}{!visible.length && !error && <div className="notifications-empty"><ModuleIcon name="check"/><strong>Keine passenden Benachrichtigungen</strong><p>In diesem Filter sind aktuell keine Hinweise vorhanden.</p></div>}</div>
+      </section>
+    </main>}
   </ModulePageShell>;
 }

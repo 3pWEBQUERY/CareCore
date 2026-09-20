@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import AppHeader from "../components/app-header";
 import AppSidebar from "../components/app-sidebar";
@@ -96,26 +96,10 @@ function Icon({ name, className = "" }: { name: IconName; className?: string }) 
   return <Component className={className} aria-hidden="true" weight="regular"/>;
 }
 
-const changes = [
-  { initials: "HM", name: "Herr Hans Müller", note: "Sturz um 02:10 Uhr. Keine sichtbaren Verletzungen, engmaschige Beobachtung läuft.", time: "02:10", status: "Kritisch", type: "critical" },
-  { initials: "MK", name: "Frau Maria Keller", note: "Schmerzen im rechten Knie, NRS 6. Bedarfsmedikation um 05:40 verabreicht.", time: "05:40", status: "Beobachten", type: "attention" },
-  { initials: "EM", name: "Frau Erika Meier", note: "Metoprolol ab heute auf 50 mg angepasst. Erste Gabe zur Medikamentenrunde.", time: "Gestern", status: "Geändert", type: "info" },
-] as const;
+type DashboardChange = { id: string; initials: string; name: string; note: string; time: string; status: string; type: string };
 
-const residents = [
-  { initials: "MK", name: "Maria Keller", room: "Zimmer 204", risk: "Sturzrisiko" },
-  { initials: "HM", name: "Hans Müller", room: "Zimmer 207", risk: "Beobachtung", critical: true },
-  { initials: "EM", name: "Erika Meier", room: "Zimmer 211", risk: "Medikation neu" },
-  { initials: "RB", name: "Ruth Baumann", room: "Zimmer 214", risk: "Stabil" },
-];
-
-const initialTasks = [
-  { id: 1, title: "Blutzucker kontrollieren", resident: "Frau Keller · Zimmer 204", time: "07:30", completed: false, overdue: true },
-  { id: 2, title: "Medikation verabreichen", resident: "Frau Meier · Zimmer 211", time: "07:45", completed: false },
-  { id: 3, title: "Sturz-Nachkontrolle", resident: "Herr Müller · Zimmer 207", time: "08:00", completed: false },
-  { id: 4, title: "Morgenpflege dokumentieren", resident: "Frau Baumann · Zimmer 214", time: "08:15", completed: true },
-  { id: 5, title: "Trinkmenge erfassen", resident: "Herr Aebischer · Zimmer 215", time: "08:30", completed: false },
-];
+type DashboardTask = { id: string; title: string; resident: string; time: string; completed: boolean; overdue: boolean };
+type DashboardResident = { initials: string; name: string; room: string; risk: string; critical?: boolean };
 
 type DashboardWidgetId = "summary" | "critical" | "changes" | "shift" | "tasks" | "residents";
 
@@ -147,12 +131,17 @@ function readStoredDashboardLayout() {
 
 export default function Home() {
   const router = useRouter();
-  const [tasks, setTasks] = useState(initialTasks);
+  const [tasks, setTasks] = useState<DashboardTask[]>([]);
+  const tasksRef = useRef(tasks);
+  useEffect(() => { tasksRef.current = tasks; }, [tasks]);
+  const [assignedResidents, setAssignedResidents] = useState<DashboardResident[]>([]);
+  const [changes, setChanges] = useState<DashboardChange[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [residentOpen, setResidentOpen] = useState(false);
   const [toast, setToast] = useState("");
   const [employeeName, setEmployeeName] = useState("Anna");
+  const [primaryCareUnitName, setPrimaryCareUnitName] = useState("");
   const [dashboardEditing, setDashboardEditing] = useState(false);
   const [widgetOrder, setWidgetOrder] = useState<DashboardWidgetId[]>(() => readStoredDashboardLayout().order);
   const [hiddenWidgets, setHiddenWidgets] = useState<DashboardWidgetId[]>(() => readStoredDashboardLayout().hidden);
@@ -223,9 +212,31 @@ export default function Home() {
   useEffect(() => {
     let active = true;
     void fetch("/api/work-context", { credentials: "same-origin" })
-      .then((response) => response.ok ? response.json() as Promise<{ profile?: { displayName?: string } }> : null)
-      .then((context) => { if (active && context?.profile?.displayName) setEmployeeName(context.profile.displayName); })
+      .then((response) => response.ok ? response.json() as Promise<{ profile?: { displayName?: string; primaryCareUnitName?: string } }> : null)
+      .then((context) => { if (active && context?.profile?.displayName) { setEmployeeName(context.profile.displayName); setPrimaryCareUnitName(context.profile.primaryCareUnitName ?? ""); } })
       .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void Promise.all([fetch("/api/tasks", { cache: "no-store" }), fetch("/api/residents", { cache: "no-store" })]).then(async ([tasksResponse, residentsResponse]) => {
+      if (!tasksResponse.ok || !residentsResponse.ok) throw new Error("Dashboard-Daten konnten nicht geladen werden.");
+      const taskData = await tasksResponse.json() as { tasks: Array<{ id: string; title: string; resident_name: string; due_at: string | null; status: string; assigned_to: string | null }>; currentUserId: string };
+      const residentData = await residentsResponse.json() as { residents: Array<{ first_name: string; last_name: string; room: string; care_unit: string; note: string; severity: string }> };
+      if (!active) return;
+      setTasks(taskData.tasks.filter((item) => item.assigned_to === taskData.currentUserId).map((item) => ({ id: item.id, title: item.title, resident: item.resident_name, time: item.due_at ? new Date(item.due_at).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" }) : "—", completed: item.status === "completed", overdue: Boolean(item.due_at && new Date(item.due_at).getTime() < Date.now()) })));
+      setAssignedResidents(residentData.residents.filter((item) => !primaryCareUnitName || item.care_unit === primaryCareUnitName).map((item) => ({ initials: `${item.first_name[0] ?? ""}${item.last_name[0] ?? ""}`, name: `${item.first_name} ${item.last_name}`, room: item.room || "Zimmer offen", risk: item.note, critical: item.severity === "critical" })));
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [primaryCareUnitName]);
+
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/dashboard/changes", { cache: "no-store" }).then(async (response) => response.ok ? response.json() as Promise<{ changes: Array<{ id: string; first_name: string; last_name: string; title: string | null; body: string; importance: string; occurred_at: string }> }> : null).then((data) => {
+      if (!active || !data) return;
+      setChanges(data.changes.map((item) => ({ id: item.id, initials: `${item.first_name[0]}${item.last_name[0]}`, name: `${item.first_name} ${item.last_name}`, note: item.body, time: new Date(item.occurred_at).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" }), type: ["critical", "important"].includes(item.importance) ? "critical" : item.importance === "observation" ? "attention" : "info", status: item.title || "Dokumentiert" })));
+    }).catch(() => undefined);
     return () => { active = false; };
   }, []);
 
@@ -239,15 +250,17 @@ export default function Home() {
       description: "Markiert eine sichtbare Aufgabe der aktuellen Schicht als erledigt.",
       inputSchema: {
         type: "object",
-        properties: { taskId: { type: "integer", minimum: 1, maximum: 5 } },
+        properties: { taskId: { type: "string", format: "uuid" } },
         required: ["taskId"],
         additionalProperties: false,
       },
       annotations: { readOnlyHint: false, untrustedContentHint: false },
-      execute(input: unknown) {
+      async execute(input: unknown) {
         const taskId = (input as { taskId?: unknown })?.taskId;
-        const task = initialTasks.find((item) => item.id === taskId);
-        if (!task || typeof taskId !== "number") throw new Error("Unbekannte Aufgaben-ID");
+        const task = tasksRef.current.find((item) => item.id === taskId);
+        if (!task || typeof taskId !== "string") throw new Error("Unbekannte Aufgaben-ID");
+        const response = await fetch("/api/tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: taskId, completed: true }) });
+        if (!response.ok) throw new Error("Aufgabe konnte nicht gespeichert werden");
         setTasks((current) => current.map((item) => item.id === taskId ? { ...item, completed: true } : item));
         setToast(`„${task.title}“ als erledigt markiert`);
         return { taskId, status: "completed" };
@@ -262,7 +275,7 @@ export default function Home() {
   }, []);
 
   const completed = tasks.filter((task) => task.completed).length;
-  const progress = Math.round((completed / tasks.length) * 100);
+  const progress = tasks.length ? Math.round((completed / tasks.length) * 100) : 0;
   const filteredResults = useMemo(() => [
     { title: "Frau Maria Keller", meta: "Bewohnerin · Zimmer 204", icon: "residents" as IconName },
     { title: "Herr Hans Müller", meta: "Bewohner · Zimmer 207", icon: "residents" as IconName },
@@ -270,10 +283,13 @@ export default function Home() {
     { title: "Meine Übergabe", meta: "3 offene Punkte", icon: "handover" as IconName },
   ].filter((result) => `${result.title} ${result.meta}`.toLowerCase().includes(query.toLowerCase())), [query]);
 
-  function toggleTask(id: number) {
+  async function toggleTask(id: string) {
     const task = tasks.find((item) => item.id === id);
+    if (!task) return;
+    const response = await fetch("/api/tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, completed: !task.completed }) });
+    if (!response.ok) { setToast("Aufgabe konnte nicht gespeichert werden"); return; }
     setTasks((current) => current.map((item) => item.id === id ? { ...item, completed: !item.completed } : item));
-    if (task && !task.completed) setToast(`„${task.title}“ als erledigt markiert`);
+    if (!task.completed) setToast(`„${task.title}“ als erledigt markiert`);
   }
 
   function persistDashboardLayout(nextOrder: DashboardWidgetId[], nextHidden: DashboardWidgetId[]) {
@@ -306,12 +322,12 @@ export default function Home() {
   }
 
   const dashboardContent: Record<DashboardWidgetId, ReactNode> = {
-    summary: <section className="summary-strip" aria-label="Schichtübersicht"><div className="summary-item"><span className="summary-icon"><Icon name="residents"/></span><span><strong className="summary-value">7</strong><span className="summary-label">Bewohner zugeteilt</span></span></div><div className="summary-item"><span className="summary-icon"><Icon name="tasks"/></span><span><strong className="summary-value">18</strong><span className="summary-label">Aufgaben geplant</span></span></div><div className="summary-item"><span className="summary-icon attention"><Icon name="pulse"/></span><span><strong className="summary-value">3</strong><span className="summary-label">wichtige Änderungen</span></span></div><div className="summary-item"><span className="summary-icon info"><Icon name="handover"/></span><span><strong className="summary-value">1</strong><span className="summary-label">Übergabe offen</span></span></div></section>,
-    critical: <section className="critical-alert" aria-label="Kritischer Hinweis"><span className="critical-symbol"><Icon name="alert"/></span><div><strong>Unmittelbar prüfen · Herr Müller</strong><p>Sturz in der Nacht. Nächste neurologische Kontrolle um 08:00 Uhr.</p></div><button className="secondary-button" type="button" onClick={() => setResidentOpen(true)}>Fall öffnen <Icon name="chevron" className="button-icon"/></button></section>,
-    changes: <section className="card" aria-labelledby="changes-title"><div className="card-header"><div><h2 className="card-title" id="changes-title">Seit deinem letzten Dienst</h2><p className="card-subtitle">Relevante Veränderungen · letzte 16 Stunden</p></div><button className="filter-pill" type="button">Alle 3</button></div><div className="changes-list">{changes.map((change) => <button className="change-row" key={change.name} type="button" onClick={() => setResidentOpen(true)}><span className={`resident-avatar ${change.type === "critical" ? "critical" : ""}`}>{change.initials}<span className="avatar-status"/></span><span className="change-main"><strong>{change.name}</strong><p>{change.note}</p></span><span className="change-meta"><span>{change.time}</span><span className={`status-badge ${change.type}`}>{change.status}</span><Icon name="chevron" className="chevron"/></span></button>)}</div></section>,
+    summary: <section className="summary-strip" aria-label="Schichtübersicht"><div className="summary-item"><span className="summary-icon"><Icon name="residents"/></span><span><strong className="summary-value">{assignedResidents.length}</strong><span className="summary-label">Bewohner zugeteilt</span></span></div><div className="summary-item"><span className="summary-icon"><Icon name="tasks"/></span><span><strong className="summary-value">{tasks.length}</strong><span className="summary-label">Aufgaben geplant</span></span></div><div className="summary-item"><span className="summary-icon attention"><Icon name="pulse"/></span><span><strong className="summary-value">{assignedResidents.filter((item) => item.critical).length}</strong><span className="summary-label">wichtige Hinweise</span></span></div><div className="summary-item"><span className="summary-icon info"><Icon name="handover"/></span><span><strong className="summary-value">{tasks.filter((item) => !item.completed).length}</strong><span className="summary-label">Aufgaben offen</span></span></div></section>,
+    critical: <section className="critical-alert" aria-label="Kritischer Hinweis"><span className="critical-symbol"><Icon name="alert"/></span><div><strong>{changes.find((item) => item.type === "critical") ? `Unmittelbar prüfen · ${changes.find((item) => item.type === "critical")?.name}` : "Keine kritischen Hinweise"}</strong><p>{changes.find((item) => item.type === "critical")?.note ?? "Aktuell liegen keine kritischen Dokumentationen vor."}</p></div><button className="secondary-button" type="button" onClick={() => router.push("/c/pflegedokumentation/verlauf")}>Verlauf öffnen <Icon name="chevron" className="button-icon"/></button></section>,
+    changes: <section className="card" aria-labelledby="changes-title"><div className="card-header"><div><h2 className="card-title" id="changes-title">Seit deinem letzten Dienst</h2><p className="card-subtitle">Relevante Veränderungen · letzte 16 Stunden</p></div><button className="filter-pill" type="button">Alle {changes.length}</button></div><div className="changes-list">{changes.map((change) => <button className="change-row" key={change.id} type="button" onClick={() => router.push("/c/pflegedokumentation/verlauf")}><span className={`resident-avatar ${change.type === "critical" ? "critical" : ""}`}>{change.initials}<span className="avatar-status"/></span><span className="change-main"><strong>{change.name}</strong><p>{change.note}</p></span><span className="change-meta"><span>{change.time}</span><span className={`status-badge ${change.type}`}>{change.status}</span><Icon name="chevron" className="chevron"/></span></button>)}</div></section>,
     shift: <section className="card timeline-card" aria-labelledby="timeline-title"><div className="card-header"><div><h2 className="card-title" id="timeline-title">Meine Schicht</h2><p className="card-subtitle">Der Plan passt sich neuen Ereignissen an</p></div><button className="quiet-button" type="button" onClick={() => setToast("Gesamte Schichtansicht geöffnet")}>Gesamter Plan</button></div><div className="timeline-list"><Timeline time="06:45" title="Übergabe Nachtdienst" detail="Wohnbereich 2 · Teamraum" state="Erledigt" variant="done" rail/><Timeline time="07:30" title="Medikamentenrunde" detail="7 Bewohner · 1 Anpassung" state="Jetzt" variant="current" rail/><Timeline time="08:00" title="Blutzucker & Sturzkontrolle" detail="Frau Keller · Herr Müller" state="In 18 Min." rail/><Timeline time="09:30" title="Arztvisite" detail="Zimmer 204, 207 und 211" state="Geplant" rail/><Timeline time="10:00" title="Verbandwechsel" detail="Frau Baumann · Zimmer 214" state="Geplant"/></div></section>,
-    tasks: <section className="card tasks-card" aria-labelledby="tasks-title"><div className="card-header"><div><h2 className="card-title" id="tasks-title">Als Nächstes</h2><p className="card-subtitle">{tasks.filter((task) => !task.completed).length} Aufgaben bis 09:00 Uhr</p></div><div className="progress-ring" style={{ "--progress": `${progress}%` } as CSSProperties} aria-label={`${progress} Prozent erledigt`}><span>{progress}%</span></div></div><div className="dashboard-task-list">{tasks.map((task) => <div className={`dashboard-task-row ${task.completed ? "completed" : ""}`} key={task.id}><button className="dashboard-task-check" type="button" aria-label={`${task.title} ${task.completed ? "wieder öffnen" : "erledigen"}`} onClick={() => toggleTask(task.id)}><Icon name="check"/></button><span className="dashboard-task-copy"><strong className="dashboard-task-title">{task.title}</strong><span className="dashboard-task-resident">{task.resident}</span></span><time className={`dashboard-task-time ${task.overdue && !task.completed ? "overdue" : ""}`}>{task.time}</time></div>)}</div><div className="tasks-footer"><button className="quiet-button" type="button" onClick={() => setToast("Alle 18 Aufgaben geöffnet")}>Alle 18 Aufgaben <Icon name="chevron" className="button-icon"/></button></div></section>,
-    residents: <section className="card residents-card" aria-labelledby="residents-title"><div className="card-header"><div><h2 className="card-title" id="residents-title">Meine Bewohner</h2><p className="card-subtitle">4 von 7 mit aktuellen Hinweisen</p></div><button className="quiet-button" type="button" onClick={() => router.push("/c/bewohner")}>Alle anzeigen</button></div><div className="resident-grid">{residents.map((resident) => <button className="resident-tile" type="button" key={resident.name} onClick={() => setResidentOpen(true)}><span className={`resident-avatar ${resident.critical ? "critical" : ""}`}>{resident.initials}</span><span><strong>{resident.name}</strong><p>{resident.room} · <span className="risk-label">{resident.risk}</span></p></span></button>)}</div></section>,
+    tasks: <section className="card tasks-card" aria-labelledby="tasks-title"><div className="card-header"><div><h2 className="card-title" id="tasks-title">Als Nächstes</h2><p className="card-subtitle">{tasks.filter((task) => !task.completed).length} Aufgaben offen</p></div><div className="progress-ring" style={{ "--progress": `${progress}%` } as CSSProperties} aria-label={`${progress} Prozent erledigt`}><span>{progress}%</span></div></div><div className="dashboard-task-list">{tasks.map((task) => <div className={`dashboard-task-row ${task.completed ? "completed" : ""}`} key={task.id}><button className="dashboard-task-check" type="button" aria-label={`${task.title} ${task.completed ? "wieder öffnen" : "erledigen"}`} onClick={() => void toggleTask(task.id)}><Icon name="check"/></button><span className="dashboard-task-copy"><strong className="dashboard-task-title">{task.title}</strong><span className="dashboard-task-resident">{task.resident}</span></span><time className={`dashboard-task-time ${task.overdue && !task.completed ? "overdue" : ""}`}>{task.time}</time></div>)}</div><div className="tasks-footer"><button className="quiet-button" type="button" onClick={() => router.push("/c/betrieb/aufgaben")}>Alle Aufgaben <Icon name="chevron" className="button-icon"/></button></div></section>,
+    residents: <section className="card residents-card" aria-labelledby="residents-title"><div className="card-header"><div><h2 className="card-title" id="residents-title">Meine Bewohner</h2><p className="card-subtitle">{assignedResidents.length} im gewählten Wohnbereich</p></div><button className="quiet-button" type="button" onClick={() => router.push("/c/bewohner")}>Alle anzeigen</button></div><div className="resident-grid">{assignedResidents.map((resident) => <button className="resident-tile" type="button" key={resident.name} onClick={() => router.push("/c/bewohner")}><span className={`resident-avatar ${resident.critical ? "critical" : ""}`}>{resident.initials}</span><span><strong>{resident.name}</strong><p>{resident.room} · <span className="risk-label">{resident.risk}</span></p></span></button>)}</div></section>,
   };
 
   return <div className="app-shell">

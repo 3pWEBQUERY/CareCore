@@ -18,6 +18,14 @@ Mit einer gültigen Neon-Verbindungsadresse wird es idempotent eingespielt:
 node --env-file=.env.local database/apply-schema.mjs
 ```
 
+Danach können leere Fach-Tabellen mit wiederholbar ausführbaren Beispieldaten befüllt werden:
+
+```bash
+npm run db:seed
+```
+
+Der Seed überspringt Tabellen, die bereits Daten enthalten. Vorhandene Bewohner-, Mitarbeiter- und Organisationsdaten werden nicht überschrieben. In der aktuellen Demo lesen und schreiben Bewohneraufnahme, Aufgaben, Pflegedokumentation und Benachrichtigungen über Neon. Die Startseite zeigt Bewohner, Aufgaben und dokumentierte Änderungen aus Neon. Andere Fachansichten enthalten teilweise noch lokale Demonstrationsdaten und sind noch keine vollständig persistierten Arbeitsabläufe.
+
 Für Vercel muss `DATABASE_URL` in den Umgebungsvariablen des Projekts für Production, Preview und Development gesetzt werden. Die Anwendung benötigt den normalen Next.js-Serverbetrieb; ein statischer Export ist wegen Login, Sessions und Datenbankzugriff nicht möglich.
 
 ## Getting Started

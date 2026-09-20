@@ -23,6 +23,7 @@ import {
 } from "@phosphor-icons/react";
 
 export type ResidentRecordData = {
+  id?: string;
   initials: string;
   name: string;
   room: string;
