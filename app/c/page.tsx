@@ -152,6 +152,7 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [residentOpen, setResidentOpen] = useState(false);
   const [toast, setToast] = useState("");
+  const [employeeName, setEmployeeName] = useState("Anna");
   const [dashboardEditing, setDashboardEditing] = useState(false);
   const [widgetOrder, setWidgetOrder] = useState<DashboardWidgetId[]>(() => readStoredDashboardLayout().order);
   const [hiddenWidgets, setHiddenWidgets] = useState<DashboardWidgetId[]>(() => readStoredDashboardLayout().hidden);
@@ -215,6 +216,15 @@ export default function Home() {
         setWidgetOrder([...order, ...defaultDashboardOrder.filter((id) => !order.includes(id))]);
         setHiddenWidgets((stored.hidden ?? []).filter((id): id is DashboardWidgetId => allowed.has(id)));
       })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/work-context", { credentials: "same-origin" })
+      .then((response) => response.ok ? response.json() as Promise<{ profile?: { displayName?: string } }> : null)
+      .then((context) => { if (active && context?.profile?.displayName) setEmployeeName(context.profile.displayName); })
       .catch(() => undefined);
     return () => { active = false; };
   }, []);
@@ -311,7 +321,7 @@ export default function Home() {
       <AppHeader searchOpen={searchOpen} onSearch={openSearch} onToast={setToast}/>
 
       <main className="workspace">
-        <section className="page-heading" aria-labelledby="page-title"><div className="heading-copy"><p className="eyebrow">Montag, 7. September · Frühdienst</p><h1 id="page-title">Guten Morgen, Anna.</h1><p>Deine Schicht auf Wohnbereich 2 ist vorbereitet.</p></div><div className="dashboard-heading-actions"><button className="secondary-button" type="button" aria-pressed={dashboardEditing} onClick={() => setDashboardEditing((value) => !value)}>{dashboardEditing ? "Fertig" : "Arbeitsplatz bearbeiten"}</button><button className="primary-button" type="button" onClick={() => setToast("Neue Dokumentation vorbereitet")}><Icon name="plus" className="button-icon"/>Dokumentieren</button></div></section>
+        <section className="page-heading" aria-labelledby="page-title"><div className="heading-copy"><p className="eyebrow">Montag, 7. September · Frühdienst</p><h1 id="page-title">Guten Morgen, {employeeName}.</h1><p>Deine Schicht auf Wohnbereich 2 ist vorbereitet.</p></div><div className="dashboard-heading-actions"><button className="secondary-button" type="button" aria-pressed={dashboardEditing} onClick={() => setDashboardEditing((value) => !value)}>{dashboardEditing ? "Fertig" : "Arbeitsplatz bearbeiten"}</button><button className="primary-button" type="button" onClick={() => setToast("Neue Dokumentation vorbereitet")}><Icon name="plus" className="button-icon"/>Dokumentieren</button></div></section>
 
         {dashboardEditing && <section className="dashboard-customizer" aria-label="Arbeitsplatz bearbeiten"><div><p className="eyebrow">Persönlicher Arbeitsplatz</p><h2>Komponenten anordnen</h2><p>Ziehe sichtbare Komponenten auf dem Dashboard an die gewünschte Stelle oder blende sie ein und aus.</p></div><div className="dashboard-customizer-list">{dashboardWidgets.map((widget) => <button className={!hiddenWidgets.includes(widget.id) ? "active" : ""} type="button" key={widget.id} onClick={() => toggleWidget(widget.id)}><span>{!hiddenWidgets.includes(widget.id) ? "✓" : "+"}</span><div><strong>{widget.label}</strong><small>{widget.description}</small></div></button>)}</div><button className="quiet-button" type="button" onClick={resetDashboardLayout}>Standard wiederherstellen</button></section>}
 
