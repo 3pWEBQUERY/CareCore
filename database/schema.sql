@@ -5,12 +5,20 @@ CREATE TABLE IF NOT EXISTS carecore_users (
   role VARCHAR(40) NOT NULL DEFAULT 'user',
   password_hash TEXT NOT NULL,
   active BOOLEAN NOT NULL DEFAULT TRUE,
+  archived_at TIMESTAMPTZ,
+  archived_by UUID REFERENCES carecore_users(id) ON DELETE SET NULL,
+  archive_reason TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE carecore_users ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+ALTER TABLE carecore_users ADD COLUMN IF NOT EXISTS archived_by UUID REFERENCES carecore_users(id) ON DELETE SET NULL;
+ALTER TABLE carecore_users ADD COLUMN IF NOT EXISTS archive_reason TEXT;
+
 CREATE UNIQUE INDEX IF NOT EXISTS carecore_users_username_lower_idx
   ON carecore_users (LOWER(username));
+CREATE INDEX IF NOT EXISTS carecore_users_archived_idx ON carecore_users (archived_at DESC) WHERE archived_at IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS carecore_sessions (
   id UUID PRIMARY KEY,
