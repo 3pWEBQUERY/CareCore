@@ -1979,7 +1979,7 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .page-heading { align-items: flex-start; }
   .page-heading .primary-button { display: none; }
   .dashboard-heading-actions { width: 100%; justify-content: space-between; }
-  .dashboard-heading-actions .secondary-button { min-height: 38px; }
+  .dashboard-heading-actions .secondary-button { display: none; }
   .dashboard-customizer { grid-template-columns: 1fr; gap: 13px; padding: 15px; }
   .dashboard-customizer-list { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 3px; }
   .dashboard-customizer-list button { flex: 0 0 auto; }
