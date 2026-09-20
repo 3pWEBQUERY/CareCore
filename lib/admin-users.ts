@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
+import { hashPassword } from "@/lib/auth";
 
 export type ManagedUser = { id: string; username: string; displayName: string; role: string; jobTitle: string; phone: string; primaryCareUnitId: string | null; primaryCareUnitName: string | null; active: boolean; archivedAt: string | null; createdAt: string; lastSeenAt: string | null };
 export type AdminCareUnit = { id: string; name: string; detail: string };
@@ -54,6 +55,24 @@ export async function updateManagedUser(actorId: string, userId: string, input: 
     }
   }
   await audit(actorId, userId, input.action ?? "updated", input);
+  return listManagedUsers();
+}
+
+export async function createManagedUser(actorId: string, input: { displayName: string; username: string; password: string; role: string; jobTitle?: string; phone?: string; primaryCareUnitId?: string | null }) {
+  await ensureAdminUsersSchema();
+  const displayName = input.displayName.trim().slice(0, 120); const username = input.username.trim().slice(0, 80); const role = input.role.trim().slice(0, 40);
+  if (!displayName || !username || !role || input.password.length < 10) throw new Error("INVALID_EMPLOYEE_INPUT");
+  const sql = database();
+  if (input.primaryCareUnitId) {
+    const unit = await sql`SELECT id FROM carecore_care_units WHERE id = ${input.primaryCareUnitId} AND active = TRUE LIMIT 1` as unknown as Array<{ id: string }>;
+    if (!unit[0]) throw new Error("CARE_UNIT_NOT_FOUND");
+  }
+  const id = randomUUID();
+  const passwordHash = await hashPassword(input.password);
+  await sql`INSERT INTO carecore_users (id, username, display_name, role, password_hash) VALUES (${id}, ${username}, ${displayName}, ${role}, ${passwordHash})`;
+  await sql`INSERT INTO carecore_user_profiles (user_id, job_title, phone, primary_care_unit_id) VALUES (${id}, ${input.jobTitle?.trim().slice(0, 140) || null}, ${input.phone?.trim().slice(0, 60) || null}, ${input.primaryCareUnitId ?? null})`;
+  if (input.primaryCareUnitId) await sql`INSERT INTO carecore_user_unit_assignments (user_id, care_unit_id, assignment_role, is_primary) VALUES (${id}, ${input.primaryCareUnitId}, 'Mitarbeitende:r', TRUE)`;
+  await audit(actorId, id, "created", { displayName, username, role, primaryCareUnitId: input.primaryCareUnitId ?? null });
   return listManagedUsers();
 }
 

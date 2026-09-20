@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
-import { deleteManagedUser, listManagedUsers, updateManagedUser } from "@/lib/admin-users";
+import { createManagedUser, deleteManagedUser, listManagedUsers, updateManagedUser } from "@/lib/admin-users";
 
 export const runtime = "nodejs";
 
@@ -16,8 +16,18 @@ function errorResponse(error: unknown) {
   if (error instanceof Error && ["CANNOT_LOCK_SELF", "CANNOT_DELETE_SELF"].includes(error.message)) return NextResponse.json({ error: "Das eigene Administrationskonto kann nicht gesperrt oder gelöscht werden." }, { status: 400 });
   if (error instanceof Error && error.message === "CARE_UNIT_NOT_FOUND") return NextResponse.json({ error: "Der gewählte Wohnbereich ist nicht verfügbar." }, { status: 400 });
   if (error instanceof Error && error.message === "INVALID_USER_INPUT") return NextResponse.json({ error: "Name, Benutzername und Rolle sind erforderlich." }, { status: 400 });
+  if (error instanceof Error && error.message === "INVALID_EMPLOYEE_INPUT") return NextResponse.json({ error: "Name, Benutzername, Rolle und ein mindestens 10-stelliges Startpasswort sind erforderlich." }, { status: 400 });
   console.error("Admin users request failed", error);
   return NextResponse.json({ error: "Benutzerverwaltung konnte nicht aktualisiert werden." }, { status: 500 });
+}
+
+export async function POST(request: Request) {
+  try {
+    const actor = await adminUser(); if (!actor) return NextResponse.json({ error: "Keine Administrationsberechtigung." }, { status: 403 });
+    const body = await request.json() as Record<string, unknown>;
+    if (typeof body.displayName !== "string" || typeof body.username !== "string" || typeof body.password !== "string" || typeof body.role !== "string") return NextResponse.json({ error: "Unvollständige Mitarbeiterangaben." }, { status: 400 });
+    return NextResponse.json(await createManagedUser(actor.id, { displayName: body.displayName, username: body.username, password: body.password, role: body.role, jobTitle: typeof body.jobTitle === "string" ? body.jobTitle : undefined, phone: typeof body.phone === "string" ? body.phone : undefined, primaryCareUnitId: typeof body.primaryCareUnitId === "string" || body.primaryCareUnitId === null ? body.primaryCareUnitId : undefined }), { status: 201 });
+  } catch (error) { return errorResponse(error); }
 }
 
 export async function GET() {

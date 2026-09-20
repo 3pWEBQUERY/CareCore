@@ -1,3 +1,3 @@
-import LeadershipWorkspace from "../../components/leadership-workspace";
+import { redirect } from "next/navigation";
 
-export default function UsersPage() { return <LeadershipWorkspace view="users"/>; }
+export default function LegacyUsersPage() { redirect("/c/leitung/administration/mitarbeiter"); }

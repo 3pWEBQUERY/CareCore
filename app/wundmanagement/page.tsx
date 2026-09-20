@@ -90,7 +90,7 @@ const navigation: NavGroup[] = [
   { id: "management", label: "Leitung", modules: [
     { id: "quality", label: "Qualität", icon: "quality", children: ["Ereignisse", "Massnahmen"] },
     { id: "insights", label: "Kennzahlen & Analysen", icon: "chart", children: ["Pflege", "Leitung", "Personal"] },
-    { id: "admin", label: "Administration", icon: "settings", children: ["Organisation", "Benutzer & Rollen", "Konfiguration"] },
+    { id: "admin", label: "Administration", icon: "settings", children: ["Organisation", "Mitarbeiter", "Konfiguration"] },
   ] },
   { id: "intelligence", label: "Intelligenz", modules: [{ id: "ai", label: "CareCore KI", icon: "ai", children: ["Assistenz", "KI-Entwürfe"] }] },
   { id: "rai", label: "CareCore RAI", modules: [{ id: "rai", label: "RAI Arbeitsplatz", icon: "assess", children: ["Übersicht", "interRAI-Erfassung", "Fälligkeiten", "Berichte"] }] },
@@ -115,7 +115,7 @@ function routeFor(moduleId: string, child: string) {
     docs: { "Dokumente": "/personal/dokumente", "Standards & Weisungen": "/personal/dokumente/standards" },
     quality: { "Ereignisse": "/leitung/qualitaet", "Massnahmen": "/leitung/qualitaet/massnahmen" },
     insights: { "Pflege": "/leitung/kennzahlen", "Leitung": "/leitung/kennzahlen/leitung", "Personal": "/leitung/kennzahlen/personal" },
-    admin: { "Organisation": "/leitung/administration", "Benutzer & Rollen": "/leitung/administration/benutzer", "Konfiguration": "/leitung/administration/konfiguration" },
+    admin: { "Organisation": "/leitung/administration", "Mitarbeiter": "/leitung/administration/mitarbeiter", "Konfiguration": "/leitung/administration/konfiguration" },
     ai: { "Assistenz": "/intelligenz", "KI-Entwürfe": "/intelligenz/entwuerfe" },
     rai: { "Übersicht": "/rai", "interRAI-Erfassung": "/rai/erfassung", "Fälligkeiten": "/rai/faelligkeiten", "Berichte": "/rai/berichte" },
   };
