@@ -1544,7 +1544,7 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .leadership-users .leadership-kpi-value { font-size: 34px; }
 .leadership-users .leadership-kpi strong { font-size: 13px; }
 .leadership-users .leadership-kpi small { font-size: 11px; }
-.leadership-users .admin-users-layout { grid-template-columns: minmax(0,1.4fr) minmax(390px,.6fr); gap: 24px; }
+.leadership-users .admin-users-layout { grid-template-columns: minmax(0,1fr); gap: 24px; }.leadership-users .admin-access-card { display: none; }
 .leadership-users .admin-users-card,.leadership-users .admin-access-card { border-radius: 8px; }
 .leadership-users .admin-table-header { min-height: 128px; padding: 24px 22px; }
 .leadership-users .admin-table-header .card-title { font-size: 20px; }
