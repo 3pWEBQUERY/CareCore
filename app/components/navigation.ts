@@ -29,6 +29,7 @@ export const navigation: NavGroup[] = [
     { id: "quality", label: "Qualität", icon: "quality", children: ["Ereignisse", "Massnahmen"] },
     { id: "insights", label: "Kennzahlen & Analysen", icon: "chart", children: ["Pflege", "Leitung", "Personal"] },
     { id: "admin", label: "Administration", icon: "settings", children: ["Organisation", "Mitarbeiter", "Konfiguration"] },
+    { id: "teamlead", label: "Teamleitung", icon: "team", children: ["Mitarbeiter", "Dienste", "Aufgaben"] },
   ] },
   { id: "intelligence", label: "Intelligenz", modules: [{ id: "ai", label: "CareCore KI", icon: "ai", children: ["Assistenz", "KI-Entwürfe"] }] },
   { id: "rai", label: "CareCore RAI", modules: [{ id: "rai", label: "RAI Arbeitsplatz", icon: "assess", children: ["Übersicht", "interRAI-Erfassung", "Fälligkeiten", "Berichte"] }] },
@@ -53,6 +54,7 @@ const routes: Record<string, Record<string, string>> = {
   quality: { "Ereignisse": "/leitung/qualitaet", "Massnahmen": "/leitung/qualitaet/massnahmen" },
   insights: { "Pflege": "/leitung/kennzahlen", "Leitung": "/leitung/kennzahlen/leitung", "Personal": "/leitung/kennzahlen/personal" },
   admin: { "Organisation": "/leitung/administration", "Mitarbeiter": "/leitung/administration/mitarbeiter", "Konfiguration": "/leitung/administration/konfiguration" },
+  teamlead: { "Mitarbeiter": "/leitung/teamleitung/mitarbeiter", "Dienste": "/leitung/teamleitung/dienste", "Aufgaben": "/leitung/teamleitung/aufgaben" },
   ai: { "Assistenz": "/intelligenz", "KI-Entwürfe": "/intelligenz/entwuerfe" },
   rai: { "Übersicht": "/rai", "interRAI-Erfassung": "/rai/erfassung", "Fälligkeiten": "/rai/faelligkeiten", "Berichte": "/rai/berichte" },
 };
@@ -60,4 +62,12 @@ const routes: Record<string, Record<string, string>> = {
 export function routeFor(moduleId: string, child: string) {
   const route = routes[moduleId]?.[child];
   return route ? `/c${route}` : null;
+}
+
+export function navigationForRole(role?: string | null): NavGroup[] {
+  const canLead = role === "admin" || role === "leitung";
+  return navigation.map((group) => group.id !== "management" ? group : {
+    ...group,
+    modules: group.modules.filter((module) => module.id !== "teamlead" || canLead),
+  });
 }

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { useRouter } from "next/navigation";
 import AppHeader from "./app-header";
 import AppSidebar from "./app-sidebar";
-import { navigation, routeFor, type ModuleIconName } from "./navigation";
+import { navigationForRole, routeFor, type ModuleIconName } from "./navigation";
 import {
   ArrowsLeftRight,
   Bell,
@@ -76,7 +76,17 @@ export default function ModulePageShell({ activeModule, activeChild, pageClass, 
   const [searchQuery, setSearchQuery] = useState("");
   const [toast, setToast] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileGroupId, setMobileGroupId] = useState<string | null>(() => navigation.find((group) => group.modules.some((module) => module.id === activeModule))?.id ?? null);
+  const [role, setRole] = useState<string | null>(null);
+  const visibleNavigation = useMemo(() => navigationForRole(role), [role]);
+  const [mobileGroupId, setMobileGroupId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/work-context").then((response) => response.ok ? response.json() : null).then((data) => setRole(data?.profile?.role ?? null)).catch(() => undefined);
+  }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setMobileGroupId(visibleNavigation.find((group) => group.modules.some((module) => module.id === activeModule))?.id ?? null), 0);
+    return () => window.clearTimeout(timer);
+  }, [activeModule, visibleNavigation]);
 
   const openSearch = useCallback(() => setSearchOpen(true), []);
   const filteredResults = useMemo(() => globalResults.filter((item) => `${item.title} ${item.meta}`.toLocaleLowerCase("de-CH").includes(searchQuery.trim().toLocaleLowerCase("de-CH"))), [searchQuery]);
@@ -96,12 +106,12 @@ export default function ModulePageShell({ activeModule, activeChild, pageClass, 
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  const mobileGroup = navigation.find((group) => group.id === mobileGroupId);
+  const mobileGroup = visibleNavigation.find((group) => group.id === mobileGroupId);
   const mobileNeedsMenu = mobileGroup ? mobileGroup.modules.length > 4 : true;
   const mobileVisibleModules = mobileGroup ? mobileGroup.modules.length <= 4 ? mobileGroup.modules : [...mobileGroup.modules.filter((module) => module.id === activeModule), ...mobileGroup.modules.filter((module) => module.id !== activeModule)].slice(0, 3) : [];
 
   function chooseMobileGroup(groupId: string) {
-    const group = navigation.find((item) => item.id === groupId);
+    const group = visibleNavigation.find((item) => item.id === groupId);
     const firstModule = group?.modules[0];
     const firstChild = firstModule?.children[0];
     setMobileGroupId(groupId);
@@ -126,7 +136,7 @@ export default function ModulePageShell({ activeModule, activeChild, pageClass, 
       {children(setToast)}
     </div>
 
-    {mobileMenuOpen && <div className="mobile-nav-menu" role="dialog" aria-label="Hauptmenü"><div className="mobile-nav-menu-head"><div>{mobileGroup && <button className="mobile-nav-back" type="button" onClick={() => setMobileGroupId(null)}><ModuleIcon name="chevron"/> Alle Hauptbereiche</button>}<p className="eyebrow">CareCore Navigation</p><strong>{mobileGroup?.label ?? "Hauptbereiche"}</strong></div><button type="button" aria-label="Hauptmenü schliessen" onClick={() => setMobileMenuOpen(false)}><ModuleIcon name="close"/></button></div>{mobileGroup ? <div className="mobile-nav-subgroups">{mobileGroup.modules.map((module) => <section key={module.id}><h3><ModuleIcon name={module.icon}/>{module.label}</h3><div>{module.children.map((child) => <button type="button" key={child} onClick={() => chooseMobileChild(module.id, child)}>{child}<ModuleIcon name="chevron"/></button>)}</div></section>)}</div> : <div className="mobile-nav-groups">{navigation.map((group) => <button className={group.id === mobileGroupId ? "active" : ""} type="button" key={group.id} onClick={() => chooseMobileGroup(group.id)}><span className="mobile-nav-group-icon"><ModuleIcon name={group.modules[0]?.icon ?? "pulse"}/></span><span><strong>{group.label}</strong><small>{group.modules.length} Bereiche</small></span><ModuleIcon name="chevron"/></button>)}</div>}</div>}
+    {mobileMenuOpen && <div className="mobile-nav-menu" role="dialog" aria-label="Hauptmenü"><div className="mobile-nav-menu-head"><div>{mobileGroup && <button className="mobile-nav-back" type="button" onClick={() => setMobileGroupId(null)}><ModuleIcon name="chevron"/> Alle Hauptbereiche</button>}<p className="eyebrow">CareCore Navigation</p><strong>{mobileGroup?.label ?? "Hauptbereiche"}</strong></div><button type="button" aria-label="Hauptmenü schliessen" onClick={() => setMobileMenuOpen(false)}><ModuleIcon name="close"/></button></div>{mobileGroup ? <div className="mobile-nav-subgroups">{mobileGroup.modules.map((module) => <section key={module.id}><h3><ModuleIcon name={module.icon}/>{module.label}</h3><div>{module.children.map((child) => <button type="button" key={child} onClick={() => chooseMobileChild(module.id, child)}>{child}<ModuleIcon name="chevron"/></button>)}</div></section>)}</div> : <div className="mobile-nav-groups">{visibleNavigation.map((group) => <button className={group.id === mobileGroupId ? "active" : ""} type="button" key={group.id} onClick={() => chooseMobileGroup(group.id)}><span className="mobile-nav-group-icon"><ModuleIcon name={group.modules[0]?.icon ?? "pulse"}/></span><span><strong>{group.label}</strong><small>{group.modules.length} Bereiche</small></span><ModuleIcon name="chevron"/></button>)}</div>}</div>}
     <nav className="bottom-nav" aria-label="Mobile Navigation"><button className={activeModule === "home" ? "active" : ""} type="button" onClick={() => { setMobileGroupId(null); setMobileMenuOpen(false); router.push("/c"); }}><ModuleIcon name="home"/><span>Startseite</span></button>{!mobileGroup ? <button className={mobileMenuOpen ? "active" : ""} type="button" aria-haspopup="dialog" aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen((value) => !value)}><ModuleIcon name="sidebar"/><span>Menü</span></button> : <>{mobileVisibleModules.map((module) => { const href = routeFor(module.id, module.children[0]); return <button className={activeModule === module.id ? "active" : ""} type="button" key={module.id} onClick={() => href && router.push(href)}><ModuleIcon name={module.icon}/><span>{module.label}</span></button>; })}{mobileNeedsMenu && <button className={mobileMenuOpen ? "active" : ""} type="button" aria-haspopup="dialog" aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen((value) => !value)}><ModuleIcon name="sidebar"/><span>Mehr</span></button>}</>}</nav>
 
     {searchOpen && <div className="overlay" role="presentation" onClick={(event) => event.currentTarget === event.target && setSearchOpen(false)}><section className="search-dialog" role="dialog" aria-modal="true" aria-label="Globale Suche"><div className="search-input-wrap"><ModuleIcon name="search"/><input autoFocus value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Bewohner, Dokumente oder Funktionen suchen…" aria-label="Suchbegriff"/><button type="button" onClick={() => setSearchOpen(false)} aria-label="Suche schliessen">ESC</button></div><div className="search-results"><span className="search-group-label">{searchQuery ? "Suchergebnisse" : "Schnellzugriff"}</span>{filteredResults.map((result) => <button className="search-result" type="button" key={result.title} onClick={() => { setSearchOpen(false); router.push(`/c${result.href}`); }}><span className="result-icon"><ModuleIcon name={result.icon}/></span><span><strong>{result.title}</strong><small>{result.meta}</small></span></button>)}</div></section></div>}

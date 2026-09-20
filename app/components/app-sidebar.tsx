@@ -9,7 +9,7 @@ import {
   Heartbeat, House, ListChecks, MagnifyingGlass, NotePencil, Pill, Plus, Pulse,
   ShieldCheck, SignOut, Sparkle, Stethoscope, UsersThree, Warning, X,
 } from "@phosphor-icons/react";
-import { navigation, routeFor, type ModuleIconName } from "./navigation";
+import { navigationForRole, routeFor, type ModuleIconName } from "./navigation";
 
 const icons = {
   home: House, residents: UsersThree, tasks: ListChecks, handover: ArrowsLeftRight,
@@ -73,6 +73,12 @@ export function SidebarTooltip({ label }: { label: string }) {
 export default function AppSidebar({ activeModule, activeChild, onToast }: AppSidebarProps) {
   const router = useRouter();
   const [flyoutGroup, setFlyoutGroup] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const visibleNavigation = navigationForRole(role);
+
+  useEffect(() => {
+    fetch("/api/work-context").then((response) => response.ok ? response.json() : null).then((data) => setRole(data?.profile?.role ?? null)).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setFlyoutGroup(null); };
@@ -94,16 +100,16 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
     }
   }
 
-  const activeGroup = navigation.find((group) => group.modules.some((module) => module.id === activeModule));
+  const activeGroup = visibleNavigation.find((group) => group.modules.some((module) => module.id === activeModule));
   const groupIcons: Record<string, ModuleIconName> = { clinical: "residents", operations: "calendar", workforce: "team", management: "chart", intelligence: "ai", rai: "assess" };
-  const flyout = navigation.find((group) => group.id === flyoutGroup);
+  const flyout = visibleNavigation.find((group) => group.id === flyoutGroup);
 
   return <>
     <aside className="sidebar sidebar-rail" aria-label="Hauptnavigation">
       <div className="sidebar-rail-head"><span className="brand-mark" aria-label="CareCore"><RailIcon name="pulse"/></span></div>
       <nav className="sidebar-rail-scroll">
         <button className={`sidebar-rail-button ${activeModule === "home" ? "active" : ""}`} type="button" aria-label="Startseite" onClick={() => { setFlyoutGroup(null); router.push("/c"); }}><RailIcon name="home"/><SidebarTooltip label="Startseite"/></button>
-        {navigation.map((group) => <button className={`sidebar-rail-button ${activeGroup?.id === group.id ? "active" : ""}`} type="button" key={group.id} aria-label={group.label} aria-expanded={flyoutGroup === group.id} onClick={() => openGroup(group.id)}><RailIcon name={groupIcons[group.id] ?? "pulse"}/><SidebarTooltip label={group.label}/></button>)}
+        {visibleNavigation.map((group) => <button className={`sidebar-rail-button ${activeGroup?.id === group.id ? "active" : ""}`} type="button" key={group.id} aria-label={group.label} aria-expanded={flyoutGroup === group.id} onClick={() => openGroup(group.id)}><RailIcon name={groupIcons[group.id] ?? "pulse"}/><SidebarTooltip label={group.label}/></button>)}
       </nav>
       <div className="sidebar-rail-footer"><button className={`sidebar-rail-button ${activeModule === "settings" ? "active" : ""}`} type="button" aria-label="Einstellungen" onClick={() => { setFlyoutGroup(null); router.push("/c/einstellungen"); }}><RailIcon name="settings"/><SidebarTooltip label="Einstellungen"/></button><button className="sidebar-rail-button" type="button" aria-label="Hilfe & Support" onClick={() => onToast?.("Hilfe & Support geöffnet")}><RailIcon name="docs"/><SidebarTooltip label="Hilfe & Support"/></button></div>
     </aside>
