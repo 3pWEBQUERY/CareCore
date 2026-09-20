@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ModulePageShell, { ModuleIcon, type ModuleIconName } from "@/app/components/module-page-shell";
 import { LeadershipVariant, LocationEditor } from "./leadership-variants";
+import type { AdminUserStats } from "@/lib/admin-users";
 
 export type LeadershipView = "qualityEvents" | "qualityActions" | "careInsights" | "leadershipInsights" | "workforceInsights" | "organization" | "users" | "configuration";
 type Tone = "stable" | "attention" | "critical" | "info";
@@ -15,7 +16,7 @@ const meta: Record<LeadershipView, { module: string; child: string; eyebrow: str
   leadershipInsights: { module: "insights", child: "Leitung", eyebrow: "CareCore Insights", title: "Leitungskennzahlen", description: "Belegung, Qualität und Risiken für den täglichen Führungsentscheid.", action: "Zeitraum wählen", kpis: [["88 %", "Belegung", "46 von 52 Plätzen", "stable"], ["7", "Hinweise offen", "2 kritisch", "attention"], ["80 %", "Jahresziele", "Q3 Fortschritt", "info"], ["0", "P1 Eskalationen", "aktuell", "stable"]] },
   workforceInsights: { module: "insights", child: "Personal", eyebrow: "CareCore Insights", title: "Personalkennzahlen", description: "Besetzung, Verfügbarkeit und Kompetenzmix im Überblick.", action: "Auswertung exportieren", kpis: [["92 %", "Besetzung", "kommende Woche", "stable"], ["4", "Abwesenheiten", "noch offen", "attention"], ["100 %", "Kompetenzmix", "Mindestbesetzung", "info"], ["6", "offene Dienste", "zu planen", "critical"]] },
   organization: { module: "admin", child: "Organisation", eyebrow: "CareCore Admin", title: "Organisation", description: "Standorte, Wohnbereiche und Verantwortlichkeiten zentral steuern.", action: "Bereich hinzufügen", kpis: [["4", "Wohnbereiche", "46 Plätze belegt", "info"], ["62", "Mitarbeitende", "in 8 Rollen", "stable"], ["12", "Teams", "hausweit", "info"], ["1", "Änderung offen", "Wohnbereich 3", "attention"]] },
-  users: { module: "admin", child: "Mitarbeiter", eyebrow: "CareCore Admin", title: "Mitarbeiter", description: "Mitarbeiterprofile, Rollen und Zugriffe sicher verwalten.", action: "Mitarbeiter erstellen", kpis: [["62", "Mitarbeiter aktiv", "0 archiviert", "stable"], ["8", "Rollen", "4 Pflegeprofile", "info"], ["3", "Einladungen offen", "seit gestern", "attention"], ["100 %", "Auditstatus", "letzte Prüfung heute", "stable"]] },
+  users: { module: "admin", child: "Mitarbeiter", eyebrow: "CareCore Admin", title: "Mitarbeiter", description: "Mitarbeiterprofile, Rollen und Zugriffe sicher verwalten.", action: "Mitarbeiter erstellen", kpis: [["—", "Mitarbeiter aktiv", "Daten werden geladen", "info"], ["—", "Rollen", "Daten werden geladen", "info"], ["—", "Ohne Arbeitsbereich", "Daten werden geladen", "info"], ["—", "Auditstatus", "Daten werden geladen", "info"]] },
   configuration: { module: "admin", child: "Konfiguration", eyebrow: "CareCore Admin", title: "Konfiguration", description: "Systemweite Einstellungen, Integrationen und Aufbewahrung sicher pflegen.", action: "Einstellung ändern", kpis: [["18", "Einstellungen aktiv", "keine Fehler", "stable"], ["2", "Schnittstellen", "verbunden", "info"], ["1", "Prüfung empfohlen", "Archivierung", "attention"], ["100 %", "Auditstatus", "konform", "stable"]] },
 };
 
@@ -53,7 +54,7 @@ const boardItems: Record<LeadershipView, BoardItem[]> = {
   users: [
     { id: "u1", title: "Anna Meier", detail: "Pflegefachfrau HF · Vollzugriff Pflege", metric: "Heute, 08:02", status: "Aktiv", tone: "stable", icon: "team" },
     { id: "u2", title: "Lea Frei", detail: "Fachfrau Gesundheit · eingeschränkter Zugriff", metric: "Gestern", status: "Aktiv", tone: "info", icon: "team" },
-    { id: "u3", title: "Dr. Martin Weber", detail: "Belegarzt · Einladung ausstehend", metric: "Offen", status: "Einladung", tone: "attention", icon: "team" },
+    { id: "u3", title: "Dr. Martin Weber", detail: "Belegarzt · Arbeitsbereich noch zuweisen", metric: "Prüfen", status: "Zuweisung", tone: "attention", icon: "team" },
   ],
   configuration: [
     { id: "cf1", title: "Benachrichtigungen", detail: "Eskalationen und fällige Aufgaben", metric: "12.09.2026", status: "Aktiv", tone: "stable", icon: "bell" },
@@ -70,13 +71,21 @@ export default function LeadershipWorkspace({ view }: { view: LeadershipView }) 
   const [completed, setCompleted] = useState<string[]>([]);
   const [locationEditorOpen, setLocationEditorOpen] = useState(false);
   const [employeeCreatorOpen, setEmployeeCreatorOpen] = useState(false);
+  const [employeeStats, setEmployeeStats] = useState<AdminUserStats | null>(null);
+  useEffect(() => { if (view !== "users") return; let active = true; void fetch("/api/admin/users").then((response) => response.ok ? response.json() as Promise<{ stats: AdminUserStats }> : null).then((payload) => { if (active && payload?.stats) setEmployeeStats(payload.stats); }).catch(() => undefined); return () => { active = false; }; }, [view]);
   const selected = rows.find((row) => row.id === selectedId) ?? rows[0];
   const visibleRows = useMemo(() => rows.filter((row) => `${row.title} ${row.detail} ${row.metric} ${row.status}`.toLocaleLowerCase("de-CH").includes(query.trim().toLocaleLowerCase("de-CH"))), [query, rows]);
 
+  const kpis = view === "users" && employeeStats ? [
+    [String(employeeStats.activeEmployees), "Mitarbeiter aktiv", `${employeeStats.archivedEmployees} archiviert`, "stable" as Tone],
+    [String(employeeStats.roleCount), "Rollen", `${employeeStats.customRoleCount} eigene Rolle${employeeStats.customRoleCount === 1 ? "" : "n"}`, "info" as Tone],
+    [String(employeeStats.unassignedActiveEmployees), "Ohne Arbeitsbereich", employeeStats.unassignedActiveEmployees === 0 ? "alle Profile zugeteilt" : "aktive Profile zuweisen", employeeStats.unassignedActiveEmployees === 0 ? "stable" as Tone : "attention" as Tone],
+    [employeeStats.auditEntriesLast30Days > 0 ? "Aktiv" : "Offen", "Auditstatus", employeeStats.lastAuditAt ? `letzte Änderung ${new Intl.DateTimeFormat("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(employeeStats.lastAuditAt))}` : "noch keine Änderung", employeeStats.auditEntriesLast30Days > 0 ? "stable" as Tone : "attention" as Tone],
+  ] : page.kpis;
   return <ModulePageShell activeModule={page.module} activeChild={page.child} pageClass={`leadership-page leadership-${view}`} locationSecondary="Gesamtes Haus · alle Wohnbereiche">
     {(showToast) => <main className="workspace leadership-workspace">
       <section className="leadership-heading page-heading"><div className="heading-copy"><p className="eyebrow">{page.eyebrow}</p><h1>{page.title}</h1><p>{page.description}</p></div><button className="primary-button" type="button" onClick={() => view === "organization" ? setLocationEditorOpen(true) : view === "users" ? setEmployeeCreatorOpen(true) : showToast(`${page.action} vorbereitet`)}><ModuleIcon name="plus" className="button-icon"/>{page.action}</button></section>
-      <section className="leadership-kpis" aria-label="Leitungskennzahlen">{page.kpis.map(([value, label, note, tone]) => <article key={label} className={tone ? `leadership-kpi ${tone}` : "leadership-kpi"}><span className="leadership-kpi-value">{value}</span><strong>{label}</strong><small>{note}</small></article>)}</section>
+      <section className="leadership-kpis" aria-label="Leitungskennzahlen">{kpis.map(([value, label, note, tone]) => <article key={label} className={tone ? `leadership-kpi ${tone}` : "leadership-kpi"}><span className="leadership-kpi-value">{value}</span><strong>{label}</strong><small>{note}</small></article>)}</section>
       <LeadershipVariant view={view} rows={rows} visibleRows={visibleRows} selected={selected} query={query} setQuery={setQuery} setSelectedId={setSelectedId} completed={completed} setCompleted={setCompleted} showToast={showToast} employeeCreatorOpen={employeeCreatorOpen} onCloseEmployeeCreator={() => setEmployeeCreatorOpen(false)}/>
       <LocationEditor open={locationEditorOpen} onClose={() => setLocationEditorOpen(false)} showToast={showToast}/>
       <div className="leadership-board legacy-leadership-board" aria-hidden="true">

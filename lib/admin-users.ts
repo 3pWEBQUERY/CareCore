@@ -5,6 +5,7 @@ import { hashPassword } from "@/lib/auth";
 export type ManagedUser = { id: string; username: string; displayName: string; role: string; jobTitle: string; phone: string; primaryCareUnitId: string | null; primaryCareUnitName: string | null; active: boolean; archivedAt: string | null; createdAt: string; lastSeenAt: string | null };
 export type AdminCareUnit = { id: string; name: string; detail: string };
 export type ManagedRole = { id: string; key: string; name: string; description: string; permissions: string[]; systemRole: boolean; userCount: number; createdAt: string };
+export type AdminUserStats = { activeEmployees: number; archivedEmployees: number; roleCount: number; customRoleCount: number; unassignedActiveEmployees: number; auditEntriesLast30Days: number; lastAuditAt: string | null };
 const roleKeys = ["residents.read", "residents.write", "documentation.write", "medication.manage", "schedule.manage", "team.manage", "quality.manage", "insights.read", "administration.manage", "rai.manage", "ai.use"];
 
 function database() {
@@ -28,12 +29,17 @@ async function ensureAdminUsersSchema() {
   await schemaPromise;
 }
 
-export async function listManagedUsers(): Promise<{ users: ManagedUser[]; careUnits: AdminCareUnit[]; roles: ManagedRole[] }> {
+export async function listManagedUsers(): Promise<{ users: ManagedUser[]; careUnits: AdminCareUnit[]; roles: ManagedRole[]; stats: AdminUserStats }> {
   await ensureAdminUsersSchema();
   const sql = database();
   const users = await sql`SELECT u.id, u.username, u.display_name, u.role, u.active, u.archived_at, u.created_at, p.job_title, p.phone, p.primary_care_unit_id, p.last_seen_at, cu.name AS primary_care_unit_name FROM carecore_users u LEFT JOIN carecore_user_profiles p ON p.user_id = u.id LEFT JOIN carecore_care_units cu ON cu.id = p.primary_care_unit_id ORDER BY u.archived_at NULLS FIRST, u.active DESC, u.display_name ASC` as unknown as Array<{ id: string; username: string; display_name: string; role: string; active: boolean; archived_at: string | null; created_at: string; job_title: string | null; phone: string | null; primary_care_unit_id: string | null; last_seen_at: string | null; primary_care_unit_name: string | null }>;
   const careUnits = await sql`SELECT id, name, COALESCE(floor, '') AS floor FROM carecore_care_units WHERE active = TRUE ORDER BY name` as unknown as Array<{ id: string; name: string; floor: string }>;
-  return { users: users.map((user) => ({ id: user.id, username: user.username, displayName: user.display_name, role: user.role, jobTitle: user.job_title ?? "Noch nicht angegeben", phone: user.phone ?? "", primaryCareUnitId: user.primary_care_unit_id, primaryCareUnitName: user.primary_care_unit_name, active: user.active, archivedAt: user.archived_at, createdAt: user.created_at, lastSeenAt: user.last_seen_at })), careUnits: careUnits.map((unit) => ({ id: unit.id, name: unit.name, detail: unit.floor || "Wohnbereich" })), roles: await listManagedRoles() };
+  const roles = await listManagedRoles();
+  const audit = await sql`SELECT COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')::int AS recent_count, MAX(created_at) AS last_audit_at FROM carecore_audit_log WHERE entity_type IN ('user', 'role')` as unknown as Array<{ recent_count: number; last_audit_at: string | null }>;
+  const activeEmployees = users.filter((user) => user.active).length;
+  const archivedEmployees = users.filter((user) => !user.active).length;
+  const unassignedActiveEmployees = users.filter((user) => user.active && !user.primary_care_unit_id).length;
+  return { users: users.map((user) => ({ id: user.id, username: user.username, displayName: user.display_name, role: user.role, jobTitle: user.job_title ?? "Noch nicht angegeben", phone: user.phone ?? "", primaryCareUnitId: user.primary_care_unit_id, primaryCareUnitName: user.primary_care_unit_name, active: user.active, archivedAt: user.archived_at, createdAt: user.created_at, lastSeenAt: user.last_seen_at })), careUnits: careUnits.map((unit) => ({ id: unit.id, name: unit.name, detail: unit.floor || "Wohnbereich" })), roles, stats: { activeEmployees, archivedEmployees, roleCount: roles.length, customRoleCount: roles.filter((role) => !role.systemRole).length, unassignedActiveEmployees, auditEntriesLast30Days: Number(audit[0]?.recent_count ?? 0), lastAuditAt: audit[0]?.last_audit_at ?? null } };
 }
 
 export async function listManagedRoles(): Promise<ManagedRole[]> {
