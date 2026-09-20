@@ -1,46 +1,110 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { Archive, ArrowClockwise, CalendarDots, CheckCircle, ClipboardText, Clock, DotsThree, Plus, UserPlus, UsersThree, WarningCircle } from "@phosphor-icons/react";
 import ModulePageShell from "@/app/components/module-page-shell";
 
 type View = "employees" | "shifts" | "tasks";
 type Employee = { id: string; display_name: string; username?: string; role: string; active: boolean; archived_at?: string | null; care_unit_name?: string };
-type TeamleadRow = Employee & { id: string; name?: string; title?: string; starts_at?: string; assignee?: string; description?: string; status?: string };
+type TeamleadRow = Employee & { name?: string; title?: string; starts_at?: string; ends_at?: string; assignee?: string; assignees?: string; description?: string; status?: string; priority?: string; due_at?: string | null; care_unit_name?: string };
+type Unit = { id: string; name: string };
+
+const config = {
+  employees: { title: "Mitarbeiter", eyebrow: "TEAMLEITUNG · PERSONAL", subtitle: "Dein Team im Blick – Zuständigkeiten, Rollen und Verfügbarkeit an einem Ort.", action: "Mitarbeiter erstellen" },
+  shifts: { title: "Dienste", eyebrow: "TEAMLEITUNG · EINSATZPLANUNG", subtitle: "Dienste planen, besetzen und zuverlässig mit dem Team abstimmen.", action: "Dienst erstellen" },
+  tasks: { title: "Aufgaben", eyebrow: "TEAMLEITUNG · ARBEITSSTEUERUNG", subtitle: "Verantwortlichkeiten klar verteilen und den Fortschritt im Team nachhalten.", action: "Aufgabe erstellen" },
+} as const;
+
+const endpointFor = (view: View) => `/api/teamlead/${view === "employees" ? "employees" : view === "shifts" ? "shifts" : "tasks"}`;
+const initials = (value: string) => value.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+const labelRole = (role?: string) => ({ admin: "Administration", leitung: "Leitung", pflege: "Pflege", arzt: "Ärztlicher Dienst", "mitarbeitende:r": "Mitarbeitende:r" }[role ?? ""] ?? "Mitarbeitende:r");
+const priorityLabel = (priority?: string) => ({ low: "Niedrig", normal: "Normal", high: "Hoch", critical: "Kritisch" }[priority ?? ""] ?? "Normal");
+const formatDate = (value?: string | null) => value ? new Intl.DateTimeFormat("de-CH", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(value)) : "Nicht terminiert";
 
 export default function TeamleadWorkspace({ view }: { view: View }) {
   const [role, setRole] = useState<string | null>(null);
   const [rows, setRows] = useState<TeamleadRow[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [units, setUnits] = useState<Array<{ id: string; name: string }>>([]);
-  const [message, setMessage] = useState("");
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [notice, setNotice] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
+  const content = config[view];
 
-  async function load() {
-    const context = await fetch("/api/work-context").then((r) => r.ok ? r.json() : null).catch(() => null);
+  const load = useCallback(async () => {
+    const [context, result] = await Promise.all([
+      fetch("/api/work-context").then((response) => response.ok ? response.json() : null).catch(() => null),
+      fetch(endpointFor(view), { cache: "no-store" }).then((response) => response.ok ? response.json() : null).catch(() => null),
+    ]);
     setRole(context?.profile?.role ?? null);
-    const endpoint = view === "employees" ? "/api/teamlead/employees" : view === "shifts" ? "/api/teamlead/shifts" : "/api/teamlead/tasks";
-    const result = await fetch(endpoint).then((r) => r.ok ? r.json() : null).catch(() => null);
-    setRows((result?.employees ?? result?.shifts ?? result?.tasks ?? []) as TeamleadRow[]); setEmployees((result?.employees ?? []) as Employee[]); setUnits((result?.units ?? []) as Array<{ id: string; name: string }>);
-  }
+    setRows((result?.employees ?? result?.shifts ?? result?.tasks ?? []) as TeamleadRow[]);
+    setEmployees((result?.employees ?? []) as Employee[]);
+    setUnits((result?.units ?? []) as Unit[]);
+  }, [view]);
+
+  // This effect fetches external state when the selected workspace changes.
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { void load(); }, [view]);
+  useEffect(() => { void load(); }, [load]);
+
   const canLead = role === "admin" || role === "leitung";
-  const title = view === "employees" ? "Mitarbeiter" : view === "shifts" ? "Dienste" : "Aufgaben";
-  const subtitle = view === "employees" ? "Mitarbeitende, Rollen und Zugriffe im Team verwalten." : view === "shifts" ? "Dienste planen und Mitarbeitenden zuweisen." : "Aufgaben erstellen, delegieren und nachvollziehbar archivieren.";
-  async function submit(event: React.FormEvent) {
+  const isArchived = useCallback((row: TeamleadRow) => Boolean(row.archived_at || row.status === "cancelled" || row.active === false), []);
+  const totals = useMemo(() => ({
+    active: rows.filter((row) => !isArchived(row)).length,
+    attention: view === "employees" ? rows.filter((row) => row.role === "leitung").length : view === "shifts" ? rows.filter((row) => row.status === "planned").length : rows.filter((row) => row.priority === "high" || row.priority === "critical").length,
+    archived: rows.filter(isArchived).length,
+  }), [isArchived, rows, view]);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const endpoint = view === "employees" ? "/api/teamlead/employees" : view === "shifts" ? "/api/teamlead/shifts" : "/api/teamlead/tasks";
     const payload = view === "shifts" ? { ...form, employeeIds: form.employeeId ? [form.employeeId] : [] } : form;
-    const response = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
-    if (!response.ok) { setMessage((await response.json()).error ?? "Speichern fehlgeschlagen."); return; }
-    setMessage(`${title} gespeichert.`); setForm({}); setShowForm(false); await load();
+    const response = await fetch(endpointFor(view), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) { setNotice(body.error ?? "Die Änderung konnte nicht gespeichert werden."); return; }
+    setNotice(`${content.title} wurde gespeichert.`); setForm({}); setShowForm(false); await load();
   }
-  async function action(id: string, actionName: string) { await fetch(view === "employees" ? "/api/teamlead/employees" : view === "shifts" ? "/api/teamlead/shifts" : "/api/teamlead/tasks", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, action: actionName }) }); await load(); }
-  return <ModulePageShell activeModule="teamlead" activeChild={title} pageClass="leadership-page">{() => <main className="workspace teamlead-workspace">
-    <div className="page-heading"><div><p className="eyebrow">CARECORE TEAMLEITUNG</p><h1>{title}</h1><p className="page-subtitle">{subtitle}</p></div><button className="primary-button" type="button" onClick={() => setShowForm(true)}>+ {view === "employees" ? "Mitarbeiter erstellen" : view === "shifts" ? "Dienst erstellen" : "Aufgabe erstellen"}</button></div>
-    {!canLead ? <section className="leadership-card"><h2>Zugriff beschränkt</h2><p>Dieser Bereich ist nur für Administratoren und Leitungen verfügbar.</p></section> : <section className="leadership-card"><div className="section-heading"><div><p className="eyebrow">TEAMLEITUNG</p><h2>{rows.length} Einträge</h2></div></div><div className="teamlead-list">{rows.map((row) => <article className="teamlead-row" key={row.id}><div><strong>{row.display_name ?? row.name ?? row.title}</strong><span>{row.role ?? row.care_unit_name ?? row.assignee ?? ""}</span><small>{row.username ?? row.starts_at ? `${row.username ?? ""}${row.starts_at ? ` · ${new Date(row.starts_at).toLocaleString("de-CH")}` : ""}` : row.description ?? ""}</small></div><div className="teamlead-row-actions">{(row.archived_at || row.status === "cancelled" || row.active === false) ? <button type="button" onClick={() => action(row.id, "restore")}>Wiederherstellen</button> : <button type="button" onClick={() => action(row.id, "archive")}>Archivieren</button>}</div></article>)}</div></section>}
-    {message && <p className="form-success">{message}</p>}
-    {showForm && <div className="area-editor-overlay" role="dialog" aria-modal="true"><section className="area-editor-panel"><div className="area-editor-head"><div><p className="eyebrow">TEAMLEITUNG</p><h2>{title} erstellen</h2></div><button type="button" onClick={() => setShowForm(false)}>×</button></div><form id="teamlead-form" className="area-editor-form" onSubmit={submit}>{view === "employees" && <><label>Name<input required value={form.displayName ?? ""} onChange={(e) => setForm({ ...form, displayName: e.target.value })}/></label><label>Benutzername<input required value={form.username ?? ""} onChange={(e) => setForm({ ...form, username: e.target.value })}/></label><label>Startpasswort<input required minLength={10} type="password" value={form.password ?? ""} onChange={(e) => setForm({ ...form, password: e.target.value })}/></label><label>Rolle<select value={form.role ?? "mitarbeitende:r"} onChange={(e) => setForm({ ...form, role: e.target.value })}><option value="mitarbeitende:r">Mitarbeitende:r</option><option value="pflege">Pflege</option><option value="arzt">Arzt</option><option value="leitung">Leitung</option></select></label><label>Wohnbereich<select value={form.primaryCareUnitId ?? ""} onChange={(e) => setForm({ ...form, primaryCareUnitId: e.target.value })}><option value="">Nicht festgelegt</option>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}</select></label></>}{view === "shifts" && <><label>Bezeichnung<input required value={form.name ?? ""} onChange={(e) => setForm({ ...form, name: e.target.value })}/></label><label>Wohnbereich<select value={form.careUnitId ?? ""} onChange={(e) => setForm({ ...form, careUnitId: e.target.value })}><option value="">Alle Bereiche</option>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}</select></label><label>Beginn<input required type="datetime-local" value={form.startsAt ?? ""} onChange={(e) => setForm({ ...form, startsAt: e.target.value })}/></label><label>Ende<input required type="datetime-local" value={form.endsAt ?? ""} onChange={(e) => setForm({ ...form, endsAt: e.target.value })}/></label><label>Mitarbeiter<select value={form.employeeId ?? ""} onChange={(e) => setForm({ ...form, employeeId: e.target.value })}><option value="">Noch nicht zuweisen</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.display_name}</option>)}</select></label></>}{view === "tasks" && <><label>Titel<input required value={form.title ?? ""} onChange={(e) => setForm({ ...form, title: e.target.value })}/></label><label>Beschreibung<textarea value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })}/></label><label>Priorität<select value={form.priority ?? "normal"} onChange={(e) => setForm({ ...form, priority: e.target.value })}><option value="low">Niedrig</option><option value="normal">Normal</option><option value="high">Hoch</option><option value="critical">Kritisch</option></select></label><label>Zuweisen<select value={form.assignedTo ?? ""} onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}><option value="">Nicht zugewiesen</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.display_name}</option>)}</select></label><label>Fällig am<input type="datetime-local" value={form.dueAt ?? ""} onChange={(e) => setForm({ ...form, dueAt: e.target.value })}/></label></>}</form><div className="area-editor-actions"><button type="button" onClick={() => setShowForm(false)}>Abbrechen</button><button className="primary-button" type="submit" form="teamlead-form">Speichern</button></div></section></div>}
+  async function updateState(id: string, action: "archive" | "restore") {
+    const response = await fetch(endpointFor(view), { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, action }) });
+    if (!response.ok) { setNotice("Die Änderung konnte nicht gespeichert werden."); return; }
+    setNotice(action === "archive" ? "Eintrag wurde archiviert." : "Eintrag wurde wiederhergestellt."); await load();
+  }
+  const metrics = view === "employees"
+    ? [[totals.active, "Aktive Mitarbeitende", "im Team verfügbar"], [totals.attention, "Leitungsrollen", "mit erweiterter Berechtigung"], [totals.archived, "Archiviert", "nicht im Tagesgeschäft"]]
+    : view === "shifts"
+      ? [[totals.active, "Geplante Dienste", "im aktuellen Plan"], [totals.attention, "Noch offen", "Besetzung prüfen"], [rows.filter((row) => row.assignees).length, "Besetzt", "mit Teamzuweisung"]]
+      : [[totals.active, "Aktive Aufgaben", "im Team in Bearbeitung"], [totals.attention, "Hohe Priorität", "brauchen heute Fokus"], [totals.archived, "Archiviert", "abgeschlossen oder verworfen"]];
+
+  return <ModulePageShell activeModule="teamlead" activeChild={content.title} pageClass="leadership-page">{() => <main className="workspace teamlead-workspace">
+    <header className="teamlead-hero"><div><p className="eyebrow">{content.eyebrow}</p><h1>{content.title}</h1><p>{content.subtitle}</p></div><button className="primary-button teamlead-create" type="button" onClick={() => setShowForm(true)}>{view === "employees" ? <UserPlus/> : <Plus/>}{content.action}</button></header>
+    {!canLead ? <section className="teamlead-denied"><WarningCircle/><div><strong>Zugriff beschränkt</strong><p>Dieser Bereich ist ausschließlich für Administratoren und Leitungen verfügbar.</p></div></section> : <>
+      <section className="teamlead-metrics">{metrics.map(([value, label, detail], index) => <article key={label as string}><span className={`teamlead-metric-icon tone-${index}`}>{index === 0 ? view === "employees" ? <UsersThree/> : view === "shifts" ? <CalendarDots/> : <ClipboardText/> : index === 1 ? <WarningCircle/> : <Archive/>}</span><div><strong>{value}</strong><span>{label}</span><small>{detail}</small></div></article>)}</section>
+      {view === "employees" && <EmployeesView rows={rows} isArchived={isArchived} onUpdate={updateState}/>}
+      {view === "shifts" && <ShiftsView rows={rows} isArchived={isArchived} onUpdate={updateState}/>}
+      {view === "tasks" && <TasksView rows={rows} isArchived={isArchived} onUpdate={updateState}/>}
+    </>}
+    {notice && <p className="teamlead-notice"><CheckCircle/>{notice}</p>}
+    {showForm && <TeamleadForm view={view} form={form} setForm={setForm} units={units} employees={employees} onClose={() => setShowForm(false)} onSubmit={submit}/>}
   </main>}</ModulePageShell>;
+}
+
+function EmployeesView({ rows, isArchived, onUpdate }: { rows: TeamleadRow[]; isArchived: (row: TeamleadRow) => boolean; onUpdate: (id: string, action: "archive" | "restore") => void }) {
+  return <section className="teamlead-grid teamlead-employees-grid"><article className="teamlead-panel"><div className="teamlead-panel-head"><div><p className="eyebrow">TEAMVERZEICHNIS</p><h2>Mitarbeitende & Rollen</h2><span>{rows.length} Profile im Überblick</span></div><button type="button" className="teamlead-icon-button" aria-label="Weitere Optionen"><DotsThree/></button></div><div className="teamlead-table teamlead-employee-table"><div className="teamlead-table-head"><span>Mitarbeiter</span><span>Rolle</span><span>Arbeitsplatz</span><span>Status</span><span/></div>{rows.map((row) => <div className="teamlead-table-row" key={row.id}><div className="teamlead-person"><b>{initials(row.display_name)}</b><span><strong>{row.display_name}</strong><small>@{row.username}</small></span></div><span className="teamlead-role">{labelRole(row.role)}</span><span>{row.care_unit_name || "Kein fester Bereich"}</span><span className={`teamlead-status ${isArchived(row) ? "archived" : "active"}`}><i/>{isArchived(row) ? "Archiviert" : "Aktiv"}</span><button className="teamlead-row-menu" type="button" onClick={() => onUpdate(row.id, isArchived(row) ? "restore" : "archive")}>{isArchived(row) ? <ArrowClockwise/> : <Archive/>}<span>{isArchived(row) ? "Aktivieren" : "Archivieren"}</span></button></div>)}</div></article><aside className="teamlead-aside"><article className="teamlead-panel teamlead-role-card"><p className="eyebrow">ROLLEN & ZUGRIFFE</p><h2>Verteilung im Team</h2><div className="teamlead-role-breakdown">{["leitung", "pflege", "arzt", "mitarbeitende:r"].map((role) => <div key={role}><span><i className={`role-dot ${role}`}/>{labelRole(role)}</span><strong>{rows.filter((row) => row.role === role && !isArchived(row)).length}</strong></div>)}</div></article><article className="teamlead-info-card"><UsersThree/><div><strong>Team aktuell halten</strong><p>Archivierte Profile sind vom Tagesgeschäft getrennt und bleiben nachvollziehbar.</p></div></article></aside></section>;
+}
+
+function ShiftsView({ rows, isArchived, onUpdate }: { rows: TeamleadRow[]; isArchived: (row: TeamleadRow) => boolean; onUpdate: (id: string, action: "archive" | "restore") => void }) {
+  return <section className="teamlead-grid teamlead-shifts-grid"><article className="teamlead-panel"><div className="teamlead-panel-head"><div><p className="eyebrow">DIENSTPLANUNG</p><h2>Geplante Einsätze</h2><span>Besetzung und Verantwortlichkeiten auf einen Blick</span></div><button type="button" className="secondary-button">Diese Woche</button></div><div className="teamlead-shift-list">{rows.map((row) => <article className={`teamlead-shift ${isArchived(row) ? "archived" : ""}`} key={row.id}><time><strong>{row.starts_at ? new Date(row.starts_at).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" }) : "—"}</strong><small>{row.ends_at ? new Date(row.ends_at).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" }) : ""}</small></time><span className="teamlead-shift-line"/><div><strong>{row.name}</strong><span>{row.care_unit_name || "Bereich übergreifend"}</span><small>{row.assignees || "Noch niemand zugewiesen"}</small></div><span className={`teamlead-status ${isArchived(row) ? "archived" : "active"}`}><i/>{isArchived(row) ? "Archiviert" : row.assignees ? "Besetzt" : "Offen"}</span><button className="teamlead-icon-button" type="button" aria-label={isArchived(row) ? "Dienst wiederherstellen" : "Dienst archivieren"} onClick={() => onUpdate(row.id, isArchived(row) ? "restore" : "archive")}>{isArchived(row) ? <ArrowClockwise/> : <Archive/>}</button></article>)}</div></article><aside className="teamlead-aside"><article className="teamlead-panel teamlead-planning-card"><p className="eyebrow">PLANUNGSSTATUS</p><h2>Heute im Fokus</h2><div><span><Clock/>Schichtübergaben prüfen</span><strong>{rows.filter((row) => !isArchived(row)).length}</strong></div><div><span><UsersThree/>Offene Besetzung</span><strong>{rows.filter((row) => !row.assignees && !isArchived(row)).length}</strong></div></article><article className="teamlead-info-card"><CalendarDots/><div><strong>Planung mit Kontext</strong><p>Alle erstellten Dienste und Zuweisungen werden direkt in Neon gespeichert.</p></div></article></aside></section>;
+}
+
+function TasksView({ rows, isArchived, onUpdate }: { rows: TeamleadRow[]; isArchived: (row: TeamleadRow) => boolean; onUpdate: (id: string, action: "archive" | "restore") => void }) {
+  const open = rows.filter((row) => !isArchived(row)); const archived = rows.filter(isArchived);
+  return <section className="teamlead-task-layout"><article className="teamlead-panel"><div className="teamlead-panel-head"><div><p className="eyebrow">AUFGABENBOARD</p><h2>Teamaufgaben steuern</h2><span>Prioritäten und Verantwortung transparent koordinieren</span></div><button type="button" className="secondary-button">Alle Aufgaben</button></div><div className="teamlead-kanban"><TaskColumn title="Aktiv" count={open.length} rows={open} onUpdate={onUpdate}/><TaskColumn title="Archiv" count={archived.length} rows={archived} onUpdate={onUpdate} archived/></div></article><article className="teamlead-info-card"><ClipboardText/><div><strong>Klare Zuständigkeit</strong><p>Neue Aufgaben können direkt einer Person zugewiesen und mit einer Fälligkeit versehen werden.</p></div></article></section>;
+}
+
+function TaskColumn({ title, count, rows, onUpdate, archived = false }: { title: string; count: number; rows: TeamleadRow[]; onUpdate: (id: string, action: "archive" | "restore") => void; archived?: boolean }) {
+  return <section className="teamlead-task-column"><header><span>{title}</span><b>{count}</b></header><div>{rows.map((row) => <article className="teamlead-task-card" key={row.id}><div><span className={`priority-mark ${row.priority ?? "normal"}`}/><small>{priorityLabel(row.priority)}</small></div><strong>{row.title}</strong><p>{row.description || "Keine zusätzliche Beschreibung"}</p><footer><span>{row.assignee || "Nicht zugewiesen"}</span><time>{formatDate(row.due_at)}</time></footer><button type="button" onClick={() => onUpdate(row.id, archived ? "restore" : "archive")}>{archived ? <ArrowClockwise/> : <Archive/>}{archived ? "Wiederherstellen" : "Archivieren"}</button></article>)}</div></section>;
+}
+
+function TeamleadForm({ view, form, setForm, units, employees, onClose, onSubmit }: { view: View; form: Record<string, string>; setForm: (value: Record<string, string>) => void; units: Unit[]; employees: Employee[]; onClose: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
+  const update = (key: string, value: string) => setForm({ ...form, [key]: value });
+  const label = config[view].action;
+  return <div className="area-editor-overlay teamlead-editor-overlay" role="dialog" aria-modal="true" aria-label={label}><section className="area-editor-panel teamlead-editor"><div className="area-editor-head"><div><p className="eyebrow">CARECORE TEAMLEITUNG</p><h2>{label}</h2><p>Die Angaben können später jederzeit angepasst werden.</p></div><button type="button" onClick={onClose} aria-label="Editor schliessen">×</button></div><form id="teamlead-form" className="area-editor-form" onSubmit={onSubmit}>{view === "employees" && <><label>Name<input required value={form.displayName ?? ""} onChange={(event) => update("displayName", event.target.value)}/></label><label>Benutzername<input required value={form.username ?? ""} onChange={(event) => update("username", event.target.value)}/></label><label>Startpasswort<input required minLength={10} type="password" value={form.password ?? ""} onChange={(event) => update("password", event.target.value)}/></label><label>Rolle<select value={form.role ?? "mitarbeitende:r"} onChange={(event) => update("role", event.target.value)}><option value="mitarbeitende:r">Mitarbeitende:r</option><option value="pflege">Pflege</option><option value="arzt">Ärztlicher Dienst</option><option value="leitung">Leitung</option></select></label><label className="form-span-2">Fester Wohnbereich<select value={form.primaryCareUnitId ?? ""} onChange={(event) => update("primaryCareUnitId", event.target.value)}><option value="">Nicht festgelegt</option>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}</select></label></>}{view === "shifts" && <><label>Bezeichnung<input required placeholder="z. B. Frühdienst" value={form.name ?? ""} onChange={(event) => update("name", event.target.value)}/></label><label>Wohnbereich<select value={form.careUnitId ?? ""} onChange={(event) => update("careUnitId", event.target.value)}><option value="">Bereich übergreifend</option>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}</select></label><label>Beginn<input required type="datetime-local" value={form.startsAt ?? ""} onChange={(event) => update("startsAt", event.target.value)}/></label><label>Ende<input required type="datetime-local" value={form.endsAt ?? ""} onChange={(event) => update("endsAt", event.target.value)}/></label><label className="form-span-2">Mitarbeiter zuweisen<select value={form.employeeId ?? ""} onChange={(event) => update("employeeId", event.target.value)}><option value="">Noch nicht zuweisen</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.display_name}</option>)}</select></label></>}{view === "tasks" && <><label className="form-span-2">Titel<input required placeholder="Was soll erledigt werden?" value={form.title ?? ""} onChange={(event) => update("title", event.target.value)}/></label><label className="form-span-2">Beschreibung<textarea value={form.description ?? ""} onChange={(event) => update("description", event.target.value)}/></label><label>Priorität<select value={form.priority ?? "normal"} onChange={(event) => update("priority", event.target.value)}><option value="low">Niedrig</option><option value="normal">Normal</option><option value="high">Hoch</option><option value="critical">Kritisch</option></select></label><label>Zuweisen<select value={form.assignedTo ?? ""} onChange={(event) => update("assignedTo", event.target.value)}><option value="">Nicht zugewiesen</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.display_name}</option>)}</select></label><label className="form-span-2">Fällig am<input type="datetime-local" value={form.dueAt ?? ""} onChange={(event) => update("dueAt", event.target.value)}/></label></>}</form><div className="area-editor-actions"><button type="button" onClick={onClose}>Abbrechen</button><button className="primary-button" type="submit" form="teamlead-form">{label}</button></div></section></div>;
 }
