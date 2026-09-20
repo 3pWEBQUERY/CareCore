@@ -612,6 +612,18 @@ CREATE TABLE IF NOT EXISTS carecore_audit_log (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS carecore_roles (
+  id UUID PRIMARY KEY,
+  key VARCHAR(40) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  permissions JSONB NOT NULL DEFAULT '[]'::jsonb,
+  system_role BOOLEAN NOT NULL DEFAULT FALSE,
+  created_by UUID REFERENCES carecore_users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS carecore_sites_organization_idx ON carecore_sites (organization_id);
 CREATE INDEX IF NOT EXISTS carecore_dashboard_layouts_updated_idx ON carecore_user_dashboard_layouts (updated_at DESC);
 CREATE INDEX IF NOT EXISTS carecore_units_site_idx ON carecore_care_units (site_id);
@@ -636,6 +648,15 @@ CREATE INDEX IF NOT EXISTS carecore_quality_events_status_time_idx ON carecore_q
 CREATE INDEX IF NOT EXISTS carecore_rai_resident_status_idx ON carecore_rai_assessments (resident_id, status, due_on);
 CREATE INDEX IF NOT EXISTS carecore_notifications_user_unread_idx ON carecore_notifications (user_id, created_at DESC) WHERE read_at IS NULL;
 CREATE INDEX IF NOT EXISTS carecore_audit_entity_idx ON carecore_audit_log (entity_type, entity_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS carecore_roles_key_idx ON carecore_roles (key);
+
+INSERT INTO carecore_roles (id, key, name, description, permissions, system_role) VALUES
+  ('00000000-0000-4000-8000-000000000701', 'admin', 'Administration', 'Vollzugriff auf Organisation und Verwaltung.', '["residents.read","residents.write","documentation.write","medication.manage","schedule.manage","team.manage","quality.manage","insights.read","administration.manage","rai.manage","ai.use"]'::jsonb, TRUE),
+  ('00000000-0000-4000-8000-000000000702', 'leitung', 'Leitung', 'Leitung, Auswertungen und Teamsteuerung.', '["residents.read","residents.write","documentation.write","schedule.manage","team.manage","quality.manage","insights.read"]'::jsonb, TRUE),
+  ('00000000-0000-4000-8000-000000000703', 'pflege', 'Pflege', 'Pflegearbeitsplatz mit Dokumentation.', '["residents.read","residents.write","documentation.write","medication.manage"]'::jsonb, TRUE),
+  ('00000000-0000-4000-8000-000000000704', 'arzt', 'Ärztlicher Dienst', 'Medizinischer Fachzugriff.', '["residents.read","documentation.write","medication.manage"]'::jsonb, TRUE),
+  ('00000000-0000-4000-8000-000000000705', 'mitarbeitende:r', 'Mitarbeitende:r', 'Eingeschränkter Fachzugriff.', '["residents.read"]'::jsonb, TRUE)
+ON CONFLICT (key) DO NOTHING;
 
 INSERT INTO carecore_users (id, username, display_name, role, password_hash)
 VALUES (
