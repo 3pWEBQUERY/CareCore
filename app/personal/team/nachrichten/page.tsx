@@ -1,3 +1,3 @@
-import GovernanceWorkspace from "../../../verwaltung/components/governance-workspace";
+import MessagesWorkspace from "../components/messages-workspace";
 
-export default function TeamMessagesPage() { return <GovernanceWorkspace view="teamMessages"/>; }
+export default function TeamMessagesPage() { return <MessagesWorkspace/>; }
