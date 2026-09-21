@@ -145,6 +145,21 @@ CREATE TABLE IF NOT EXISTS carecore_residents (
   UNIQUE (organization_id, external_number)
 );
 
+-- Biography is deliberately separate from clinical notes: it is a resident-owned
+-- narrative that supports person-centred care and is updated independently.
+CREATE TABLE IF NOT EXISTS carecore_resident_biographies (
+  resident_id UUID PRIMARY KEY REFERENCES carecore_residents(id) ON DELETE CASCADE,
+  life_story TEXT NOT NULL DEFAULT '',
+  important_people TEXT NOT NULL DEFAULT '',
+  daily_routines TEXT NOT NULL DEFAULT '',
+  preferences TEXT NOT NULL DEFAULT '',
+  strengths TEXT NOT NULL DEFAULT '',
+  sensitive_topics TEXT NOT NULL DEFAULT '',
+  updated_by UUID REFERENCES carecore_users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS carecore_resident_stays (
   id UUID PRIMARY KEY,
   resident_id UUID NOT NULL REFERENCES carecore_residents(id) ON DELETE CASCADE,

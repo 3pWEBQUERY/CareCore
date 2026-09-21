@@ -41,7 +41,7 @@ type ResidentRecordProps = {
   onAction: (message: string) => void;
 };
 
-type RecordView = "overview" | "master-data" | "documentation" | "care-record" | "history" | "documents";
+type RecordView = "overview" | "master-data" | "documentation" | "care-record" | "history" | "documents" | "biography";
 type DocumentationFlag = "important" | "visit" | "observation" | "handover";
 type HistoryFilter = "Alle" | "Pflege" | "Vitalwerte" | "Medikation" | "Termine";
 
@@ -100,7 +100,20 @@ type ResidentDocument = {
   status: "Aktuell" | "Neu" | "Unterschrift offen";
 };
 
-const recordTabs = ["Übersicht", "Stammdaten", "Dokumentation", "Pflegeakte", "Verlauf", "Dokumente"];
+const recordTabs = ["Übersicht", "Stammdaten", "Dokumentation", "Pflegeakte", "Verlauf", "Dokumente", "Biografie"];
+
+type ResidentBiography = {
+  lifeStory: string;
+  importantPeople: string;
+  dailyRoutines: string;
+  preferences: string;
+  strengths: string;
+  sensitiveTopics: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+const emptyBiography: ResidentBiography = { lifeStory: "", importantPeople: "", dailyRoutines: "", preferences: "", strengths: "", sensitiveTopics: "", updatedAt: null, updatedBy: null };
 
 const careDomains: CareDomain[] = [
   { id: "mobility", label: "Mobilität & Bewegung", status: "attention", statusLabel: "Beobachten", summary: "Mobilisation mit Rollator und Begleitung. Erhöhtes Sturzrisiko bei Lagewechseln und in der Nacht.", goal: "Sichere Mobilität im Wohnbereich erhalten und weitere Sturzereignisse vermeiden.", measures: ["Transfers mit verbaler Anleitung begleiten", "Rollator vor jedem Aufstehen bereitstellen", "Sturzprophylaxe und neurologische Kontrollen fortführen"] },
@@ -158,6 +171,11 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("Alle");
   const [documentSearch, setDocumentSearch] = useState("");
   const [documentCategory, setDocumentCategory] = useState("Alle");
+  const [biography, setBiography] = useState<ResidentBiography>(emptyBiography);
+  const [biographyEditing, setBiographyEditing] = useState(false);
+  const [biographyLoading, setBiographyLoading] = useState(Boolean(resident.id));
+  const [biographySaving, setBiographySaving] = useState(false);
+  const [biographyError, setBiographyError] = useState("");
   const selectedEntry = entries.find((entry) => entry.id === selectedEntryId) ?? null;
   const activeCareDomain = careDomains.find((domain) => domain.id === activeCareDomainId) ?? careDomains[0];
   const visibleHistoryEntries = historyEntries.filter((entry) => historyFilter === "Alle" || entry.category === historyFilter);
@@ -182,6 +200,24 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
     contentRef.current?.scrollTo({ top: 0, behavior: "auto" });
   }, [activeView, selectedEntryId]);
 
+  useEffect(() => {
+    if (!resident.id) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setBiographyLoading(true);
+      fetch(`/api/residents/${resident.id}/biography`, { cache: "no-store" })
+        .then(async (response) => ({ response, data: await response.json().catch(() => null) }))
+        .then(({ response, data }) => {
+          if (!active) return;
+          if (response.ok && data?.biography) { setBiography(data.biography); setBiographyError(""); }
+          else setBiographyError(data?.error || "Biografie konnte nicht geladen werden.");
+        })
+        .catch(() => active && setBiographyError("Biografie konnte nicht geladen werden."))
+        .finally(() => active && setBiographyLoading(false));
+    }, 0);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [resident.id]);
+
   function openDocumentation(entry?: DocumentationEntry) {
     setSelectedEntryId(entry?.id ?? null);
     setDocumentationText(entry?.text ?? "");
@@ -200,6 +236,19 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
     else if (tab === "Pflegeakte") setActiveView("care-record");
     else if (tab === "Verlauf") setActiveView("history");
     else if (tab === "Dokumente") setActiveView("documents");
+    else if (tab === "Biografie") setActiveView("biography");
+  }
+
+  async function saveBiography() {
+    if (!resident.id) { setBiographyError("Diese Demoakte hat keine gespeicherte Bewohner-ID."); return; }
+    setBiographySaving(true); setBiographyError("");
+    try {
+      const response = await fetch(`/api/residents/${resident.id}/biography`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(biography) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) { setBiographyError(data?.error || "Biografie konnte nicht gespeichert werden."); return; }
+      setBiography(data.biography); setBiographyEditing(false); onAction("Biografie gespeichert");
+    } catch { setBiographyError("Biografie konnte nicht gespeichert werden."); }
+    finally { setBiographySaving(false); }
   }
 
   function saveDocumentation(event: FormEvent<HTMLFormElement>) {
@@ -227,7 +276,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
 
         <nav className="resident-record-tabs" aria-label="Bereiche der Bewohnerakte">
           {recordTabs.map((tab) => {
-            const active = (tab === "Übersicht" && activeView === "overview") || (tab === "Stammdaten" && activeView === "master-data") || (tab === "Dokumentation" && activeView === "documentation") || (tab === "Pflegeakte" && activeView === "care-record") || (tab === "Verlauf" && activeView === "history") || (tab === "Dokumente" && activeView === "documents");
+            const active = (tab === "Übersicht" && activeView === "overview") || (tab === "Stammdaten" && activeView === "master-data") || (tab === "Dokumentation" && activeView === "documentation") || (tab === "Pflegeakte" && activeView === "care-record") || (tab === "Verlauf" && activeView === "history") || (tab === "Dokumente" && activeView === "documents") || (tab === "Biografie" && activeView === "biography");
             return <button className={active ? "active" : ""} type="button" key={tab} aria-current={active ? "page" : undefined} onClick={() => selectTab(tab)}>{tab}</button>;
           })}
         </nav>
@@ -457,6 +506,49 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
                 </section>
               </aside>
             </div>
+          </main>
+        ) : activeView === "biography" ? (
+          <main className="resident-record-content biography-view" ref={contentRef} key="biography">
+            <div className="record-subpage-heading biography-heading">
+              <div><span className="record-section-label">Bewohnerakte</span><h3>Biografie</h3><p>Was {resident.name} geprägt hat, stärkt und im Alltag wichtig ist – für eine persönliche, respektvolle Pflege.</p></div>
+              <div className="biography-heading-actions">
+                {biographyEditing && <button className="secondary-button" type="button" onClick={() => { setBiographyEditing(false); setBiographyError(""); }}>Abbrechen</button>}
+                <button className="primary-button" type="button" disabled={biographyLoading || biographySaving} onClick={() => biographyEditing ? void saveBiography() : setBiographyEditing(true)}>{biographyEditing ? <><Check aria-hidden="true"/> {biographySaving ? "Speichern…" : "Biografie speichern"}</> : <><NotePencil aria-hidden="true"/> Biografie bearbeiten</>}</button>
+              </div>
+            </div>
+
+            <section className="biography-intro" aria-label="Hinweis zur Biografie">
+              <span><User aria-hidden="true"/></span><div><strong>Personzentriert begleiten</strong><p>Biografische Angaben werden nur für die Betreuung und Pflege verwendet. Ergänze nur Informationen, die für den Alltag des Bewohners hilfreich sind.</p></div>
+              <small>{biography.updatedAt ? `Zuletzt gepflegt ${new Intl.DateTimeFormat("de-CH", { day: "2-digit", month: "long", year: "numeric" }).format(new Date(biography.updatedAt))}${biography.updatedBy ? ` · ${biography.updatedBy}` : ""}` : "Noch nicht dokumentiert"}</small>
+            </section>
+
+            {biographyError && <div className="biography-error" role="alert">{biographyError}</div>}
+            {biographyLoading ? <div className="biography-loading">Biografie wird geladen…</div> : <div className={`biography-layout ${biographyEditing ? "is-editing" : ""}`}>
+              <section className="record-card biography-story-card">
+                <div className="record-card-heading"><div><span className="record-section-label">Lebensweg</span><h3>Meine Geschichte</h3></div><span>{biography.lifeStory ? "Hinterlegt" : "Noch offen"}</span></div>
+                {biographyEditing ? <label className="biography-field"><span>Lebensgeschichte</span><textarea value={biography.lifeStory} onChange={(event) => setBiography((current) => ({ ...current, lifeStory: event.target.value }))} placeholder="Wichtige Lebensstationen, Herkunft, Beruf, Familie und prägende Erlebnisse …" rows={10}/></label> : <div className="biography-reading"><p>{biography.lifeStory || "Noch keine Lebensgeschichte hinterlegt. Ergänze sie gemeinsam mit dem Bewohner oder seinen Angehörigen."}</p></div>}
+              </section>
+
+              <aside className="biography-side">
+                <section className="record-card biography-facts-card">
+                  <div className="record-card-heading"><div><span className="record-section-label">Persönliches Umfeld</span><h3>Wichtige Menschen</h3></div></div>
+                  {biographyEditing ? <label className="biography-field"><span>Familie, Freunde und Bezugspersonen</span><textarea value={biography.importantPeople} onChange={(event) => setBiography((current) => ({ ...current, importantPeople: event.target.value }))} placeholder="z. B. Angehörige, enge Freundschaften, wichtige Beziehungen …" rows={6}/></label> : <div className="biography-reading compact"><p>{biography.importantPeople || "Noch keine Bezugspersonen beschrieben."}</p></div>}
+                </section>
+                <section className="record-card biography-facts-card">
+                  <div className="record-card-heading"><div><span className="record-section-label">Ressourcen</span><h3>Stärken &amp; Interessen</h3></div></div>
+                  {biographyEditing ? <label className="biography-field"><span>Interessen, Fähigkeiten und Ressourcen</span><textarea value={biography.strengths} onChange={(event) => setBiography((current) => ({ ...current, strengths: event.target.value }))} placeholder="z. B. Musik, Garten, Handwerk, Gespräche oder liebgewonnene Fähigkeiten …" rows={6}/></label> : <div className="biography-reading compact"><p>{biography.strengths || "Noch keine Ressourcen beschrieben."}</p></div>}
+                </section>
+              </aside>
+
+              <section className="record-card biography-daily-card">
+                <div className="record-card-heading"><div><span className="record-section-label">Alltag</span><h3>Gewohnheiten und Vorlieben</h3></div></div>
+                <div className="biography-daily-grid">
+                  <div>{biographyEditing ? <label className="biography-field"><span>Gewohnheiten &amp; Rituale</span><textarea value={biography.dailyRoutines} onChange={(event) => setBiography((current) => ({ ...current, dailyRoutines: event.target.value }))} placeholder="Tagesstruktur, Morgen- oder Abendrituale, Gewohnheiten …" rows={6}/></label> : <><span>Gewohnheiten &amp; Rituale</span><p>{biography.dailyRoutines || "Noch keine Gewohnheiten dokumentiert."}</p></>}</div>
+                  <div>{biographyEditing ? <label className="biography-field"><span>Vorlieben &amp; Abneigungen</span><textarea value={biography.preferences} onChange={(event) => setBiography((current) => ({ ...current, preferences: event.target.value }))} placeholder="Essen, Musik, Ansprache, Beschäftigungen und persönliche Vorlieben …" rows={6}/></label> : <><span>Vorlieben &amp; Abneigungen</span><p>{biography.preferences || "Noch keine Vorlieben dokumentiert."}</p></>}</div>
+                  <div className="biography-sensitive">{biographyEditing ? <label className="biography-field"><span>Sensible Themen</span><textarea value={biography.sensitiveTopics} onChange={(event) => setBiography((current) => ({ ...current, sensitiveTopics: event.target.value }))} placeholder="Themen, Situationen oder Auslöser, die besonders achtsam behandelt werden sollen …" rows={6}/></label> : <><span>Sensible Themen</span><p>{biography.sensitiveTopics || "Keine sensiblen Themen hinterlegt."}</p></>}</div>
+                </div>
+              </section>
+            </div>}
           </main>
         ) : activeView === "history" ? (
           <main className="resident-record-content record-history-view" ref={contentRef} key="history">
