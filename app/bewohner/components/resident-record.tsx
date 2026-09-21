@@ -14,9 +14,12 @@ import {
   ListChecks,
   MagnifyingGlass,
   NotePencil,
+  PencilSimple,
   Pill,
+  Plus,
   Pulse,
   Stethoscope,
+  Trash,
   User,
   Warning,
   X,
@@ -113,7 +116,21 @@ type ResidentBiography = {
   updatedBy: string | null;
 };
 
+type ResidentContact = {
+  id: string;
+  full_name: string;
+  relationship: string | null;
+  phone: string | null;
+  email: string | null;
+  is_primary: boolean;
+  is_emergency_contact: boolean;
+  updated_at: string;
+};
+
+type ContactDraft = { fullName: string; relationship: string; phone: string; email: string; isPrimary: boolean; isEmergencyContact: boolean };
+
 const emptyBiography: ResidentBiography = { lifeStory: "", importantPeople: "", dailyRoutines: "", preferences: "", strengths: "", sensitiveTopics: "", updatedAt: null, updatedBy: null };
+const emptyContact: ContactDraft = { fullName: "", relationship: "", phone: "", email: "", isPrimary: false, isEmergencyContact: true };
 
 const careDomains: CareDomain[] = [
   { id: "mobility", label: "Mobilität & Bewegung", status: "attention", statusLabel: "Beobachten", summary: "Mobilisation mit Rollator und Begleitung. Erhöhtes Sturzrisiko bei Lagewechseln und in der Nacht.", goal: "Sichere Mobilität im Wohnbereich erhalten und weitere Sturzereignisse vermeiden.", measures: ["Transfers mit verbaler Anleitung begleiten", "Rollator vor jedem Aufstehen bereitstellen", "Sturzprophylaxe und neurologische Kontrollen fortführen"] },
@@ -176,6 +193,11 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
   const [biographyLoading, setBiographyLoading] = useState(Boolean(resident.id));
   const [biographySaving, setBiographySaving] = useState(false);
   const [biographyError, setBiographyError] = useState("");
+  const [contacts, setContacts] = useState<ResidentContact[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(Boolean(resident.id));
+  const [contactsError, setContactsError] = useState("");
+  const [contactEditor, setContactEditor] = useState<{ id: string | null; draft: ContactDraft } | null>(null);
+  const [contactSaving, setContactSaving] = useState(false);
   const selectedEntry = entries.find((entry) => entry.id === selectedEntryId) ?? null;
   const activeCareDomain = careDomains.find((domain) => domain.id === activeCareDomainId) ?? careDomains[0];
   const visibleHistoryEntries = historyEntries.filter((entry) => historyFilter === "Alle" || entry.category === historyFilter);
@@ -218,6 +240,24 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
     return () => { active = false; window.clearTimeout(timer); };
   }, [resident.id]);
 
+  useEffect(() => {
+    if (!resident.id) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setContactsLoading(true);
+      fetch(`/api/residents/${resident.id}/contacts`, { cache: "no-store" })
+        .then(async (response) => ({ response, data: await response.json().catch(() => null) }))
+        .then(({ response, data }) => {
+          if (!active) return;
+          if (response.ok) { setContacts(data.contacts ?? []); setContactsError(""); }
+          else setContactsError(data?.error || "Kontaktpersonen konnten nicht geladen werden.");
+        })
+        .catch(() => active && setContactsError("Kontaktpersonen konnten nicht geladen werden."))
+        .finally(() => active && setContactsLoading(false));
+    }, 0);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [resident.id]);
+
   function openDocumentation(entry?: DocumentationEntry) {
     setSelectedEntryId(entry?.id ?? null);
     setDocumentationText(entry?.text ?? "");
@@ -249,6 +289,39 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
       setBiography(data.biography); setBiographyEditing(false); onAction("Biografie gespeichert");
     } catch { setBiographyError("Biografie konnte nicht gespeichert werden."); }
     finally { setBiographySaving(false); }
+  }
+
+  function openContactEditor(contact?: ResidentContact) {
+    setContactsError("");
+    setContactEditor(contact ? { id: contact.id, draft: { fullName: contact.full_name, relationship: contact.relationship ?? "", phone: contact.phone ?? "", email: contact.email ?? "", isPrimary: contact.is_primary, isEmergencyContact: contact.is_emergency_contact } } : { id: null, draft: { ...emptyContact, isPrimary: contacts.length === 0 } });
+  }
+
+  async function saveContact(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!resident.id || !contactEditor) { setContactsError("Diese Demoakte hat keine gespeicherte Bewohner-ID."); return; }
+    setContactSaving(true); setContactsError("");
+    try {
+      const response = await fetch(`/api/residents/${resident.id}/contacts${contactEditor.id ? `/${contactEditor.id}` : ""}`, { method: contactEditor.id ? "PATCH" : "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(contactEditor.draft) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) { setContactsError(data?.error || "Kontaktperson konnte nicht gespeichert werden."); return; }
+      setContacts((current) => {
+        const updated = contactEditor.id ? current.map((contact) => contact.id === contactEditor.id ? data.contact : contact) : [...current, data.contact];
+        return [...updated].sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || Number(b.is_emergency_contact) - Number(a.is_emergency_contact) || a.full_name.localeCompare(b.full_name, "de-CH"));
+      });
+      setContactEditor(null); onAction(contactEditor.id ? "Kontaktperson aktualisiert" : "Kontaktperson hinzugefügt");
+    } catch { setContactsError("Kontaktperson konnte nicht gespeichert werden."); }
+    finally { setContactSaving(false); }
+  }
+
+  async function deleteContact(contact: ResidentContact) {
+    if (!resident.id || !window.confirm(`${contact.full_name} wirklich aus den Kontaktpersonen entfernen?`)) return;
+    setContactsError("");
+    try {
+      const response = await fetch(`/api/residents/${resident.id}/contacts/${contact.id}`, { method: "DELETE" });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) { setContactsError(data?.error || "Kontaktperson konnte nicht entfernt werden."); return; }
+      setContacts((current) => current.filter((item) => item.id !== contact.id)); onAction("Kontaktperson entfernt");
+    } catch { setContactsError("Kontaktperson konnte nicht entfernt werden."); }
   }
 
   function saveDocumentation(event: FormEvent<HTMLFormElement>) {
@@ -437,13 +510,16 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
                 </section>
 
                 <section className="record-card master-data-card">
-                  <div className="record-card-heading"><div><span className="record-section-label">Notfall</span><h3>Kontaktperson</h3></div></div>
-                  <div className="master-data-form-grid single-column">
-                    <label><span>Name</span><input defaultValue="Ursula Müller" readOnly={!masterDataEditing}/></label>
-                    <label><span>Beziehung</span><input defaultValue="Tochter" readOnly={!masterDataEditing}/></label>
-                    <label><span>Telefon</span><input type="tel" defaultValue="+41 79 555 28 14" readOnly={!masterDataEditing}/></label>
-                    <label><span>E-Mail</span><input type="email" defaultValue="ursula.mueller@beispiel.ch" readOnly={!masterDataEditing}/></label>
+                  <div className="record-card-heading contact-card-heading"><div><span className="record-section-label">Notfall</span><h3>Kontaktpersonen</h3></div><button type="button" onClick={() => openContactEditor()}><Plus aria-hidden="true"/> Kontakt hinzufügen</button></div>
+                  <div className="resident-contacts-list">
+                    {contactsLoading ? <p className="resident-contacts-loading">Kontaktpersonen werden geladen…</p> : contacts.map((contact) => <article key={contact.id} className="resident-contact-card">
+                      <div className="resident-contact-card-head"><span className="resident-contact-avatar">{contact.full_name.split(" ").filter(Boolean).slice(0, 2).map((name) => name[0]).join("").toUpperCase()}</span><div><strong>{contact.full_name}</strong><small>{contact.relationship || "Beziehung nicht angegeben"}</small></div><div className="resident-contact-badges">{contact.is_primary && <span>Hauptkontakt</span>}{contact.is_emergency_contact && <span className="emergency">Notfall</span>}</div></div>
+                      <div className="resident-contact-details"><a href={contact.phone ? `tel:${contact.phone}` : undefined}>{contact.phone || "Keine Telefonnummer"}</a><a href={contact.email ? `mailto:${contact.email}` : undefined}>{contact.email || "Keine E-Mail-Adresse"}</a></div>
+                      <div className="resident-contact-actions"><button type="button" onClick={() => openContactEditor(contact)} aria-label={`${contact.full_name} bearbeiten`}><PencilSimple aria-hidden="true"/><span>Bearbeiten</span></button><button type="button" className="danger" onClick={() => void deleteContact(contact)} aria-label={`${contact.full_name} entfernen`}><Trash aria-hidden="true"/><span>Entfernen</span></button></div>
+                    </article>)}
+                    {!contactsLoading && !contacts.length && <div className="resident-contacts-empty"><User aria-hidden="true"/><strong>Noch keine Kontaktperson</strong><p>Hinterlege Angehörige, Vertrauenspersonen oder weitere Notfallkontakte.</p><button className="secondary-button" type="button" onClick={() => openContactEditor()}><Plus/> Erste Kontaktperson hinzufügen</button></div>}
                   </div>
+                  {contactsError && <p className="resident-contacts-error" role="alert">{contactsError}</p>}
                 </section>
 
                 <section className="record-card master-data-card">
@@ -683,6 +759,21 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
           </main>
         )}
       </article>
+      {contactEditor && <div className="contact-editor-layer" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && setContactEditor(null)}>
+        <section className="contact-editor-panel" role="dialog" aria-modal="true" aria-labelledby="contact-editor-title">
+          <header><div><span className="record-section-label">Notfall · Kontaktpersonen</span><h3 id="contact-editor-title">{contactEditor.id ? "Kontaktperson bearbeiten" : "Kontaktperson hinzufügen"}</h3><p>Kontaktdaten und Erreichbarkeit für {resident.name} sicher hinterlegen.</p></div><button type="button" onClick={() => setContactEditor(null)} aria-label="Kontaktpersoneneditor schließen"><X/></button></header>
+          <form onSubmit={saveContact}>
+            <div className="contact-editor-form-grid">
+              <label className="wide"><span>Name</span><input value={contactEditor.draft.fullName} onChange={(event) => setContactEditor((current) => current ? { ...current, draft: { ...current.draft, fullName: event.target.value } } : current)} placeholder="Vor- und Nachname" autoFocus required/></label>
+              <label><span>Beziehung</span><input value={contactEditor.draft.relationship} onChange={(event) => setContactEditor((current) => current ? { ...current, draft: { ...current.draft, relationship: event.target.value } } : current)} placeholder="z. B. Tochter, Nachbar"/></label>
+              <label><span>Telefon</span><input type="tel" value={contactEditor.draft.phone} onChange={(event) => setContactEditor((current) => current ? { ...current, draft: { ...current.draft, phone: event.target.value } } : current)} placeholder="+41 79 555 12 34"/></label>
+              <label className="wide"><span>E-Mail</span><input type="email" value={contactEditor.draft.email} onChange={(event) => setContactEditor((current) => current ? { ...current, draft: { ...current.draft, email: event.target.value } } : current)} placeholder="name@beispiel.ch"/></label>
+            </div>
+            <fieldset className="contact-editor-options"><legend>Kennzeichnung</legend><label className={contactEditor.draft.isPrimary ? "active" : ""}><input type="checkbox" checked={contactEditor.draft.isPrimary} onChange={(event) => setContactEditor((current) => current ? { ...current, draft: { ...current.draft, isPrimary: event.target.checked } } : current)}/><span><strong>Hauptkontakt</strong><small>Diese Person wird in der Bewohnerakte vorrangig angezeigt.</small></span><i><Check/></i></label><label className={contactEditor.draft.isEmergencyContact ? "active emergency" : ""}><input type="checkbox" checked={contactEditor.draft.isEmergencyContact} onChange={(event) => setContactEditor((current) => current ? { ...current, draft: { ...current.draft, isEmergencyContact: event.target.checked } } : current)}/><span><strong>Notfallkontakt</strong><small>Bei dringenden Ereignissen direkt berücksichtigen.</small></span><i><Check/></i></label></fieldset>
+            <footer><button className="secondary-button" type="button" onClick={() => setContactEditor(null)}>Abbrechen</button><button className="primary-button" type="submit" disabled={contactSaving}><Check/> {contactSaving ? "Speichern…" : contactEditor.id ? "Änderungen speichern" : "Kontaktperson hinzufügen"}</button></footer>
+          </form>
+        </section>
+      </div>}
     </div>
   );
 }
