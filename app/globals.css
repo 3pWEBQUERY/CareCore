@@ -2531,3 +2531,11 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .login-support small { margin-top: 4px; color: var(--muted); font-size: 10px; }
 @media (max-width: 920px) { .login-page { grid-template-columns: minmax(300px,.72fr) minmax(430px,1fr); }.login-brand-panel { padding: 34px; }.login-brand-copy h1 { font-size: 42px; }.login-trust-list { grid-template-columns: 1fr; }.login-trust-list > span:last-child { display: none; }.login-form-panel { padding-inline: 42px; } }
 @media (max-width: 700px) { .login-page { display: block; min-height: 100dvh; }.login-brand-panel { display: none; }.login-form-panel { min-height: 100dvh; align-items: center; padding: 34px 20px; }.login-mobile-brand { display: flex; align-items: center; gap: 9px; margin-bottom: 48px; }.login-mobile-brand span { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 6px; color: white; background: var(--nav); }.login-mobile-brand svg { width: 23px; }.login-mobile-brand strong { font-size: 20px; letter-spacing: -.035em; }.login-heading h2 { font-size: 32px; }.login-form { margin-top: 30px; }.login-input input { font-size: 16px; } }
+
+/* Teamleitung: fixed data grid and compact full-screen editor */
+.teamlead-employee-table .teamlead-table-head,.teamlead-employee-table .teamlead-table-row { grid-template-columns: minmax(250px,1.35fr) minmax(150px,.8fr) minmax(190px,.95fr) 112px 132px; }
+.teamlead-employee-table .teamlead-table-head > span:last-child { display: block; }
+.teamlead-editor .area-editor-form { align-content: start; grid-auto-rows: min-content; max-width: 980px; margin: 0 auto; padding: 30px 42px 26px; }
+.teamlead-editor .area-editor-form label { align-self: start; }
+.teamlead-editor .area-editor-actions { width: min(980px,calc(100% - 84px)); margin: 0 auto 28px; }
+@media (max-width: 700px) { .teamlead-employee-table .teamlead-table-head,.teamlead-employee-table .teamlead-table-row { min-width: 820px; }.teamlead-editor .area-editor-form { padding: 20px 18px; }.teamlead-editor .area-editor-actions { width: calc(100% - 36px); margin-bottom: 18px; } }
