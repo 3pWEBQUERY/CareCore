@@ -138,7 +138,7 @@ function TeamleadForm({ view, form, setForm, units, employees, onClose, onSubmit
             <label>Name<input required placeholder="z. B. Fabienne Krempel" value={form.displayName ?? ""} onChange={(event) => update("displayName", event.target.value)}/></label>
             <label>Benutzername<input required placeholder="z. B. fkrempel" value={form.username ?? ""} onChange={(event) => update("username", event.target.value)}/></label>
             <label>Startpasswort<input required minLength={10} type="password" placeholder="Mindestens 10 Zeichen" value={form.password ?? ""} onChange={(event) => update("password", event.target.value)}/></label>
-            <label>Rolle<select value={form.role ?? "mitarbeitende:r"} onChange={(event) => update("role", event.target.value)}><option value="mitarbeitende:r">Mitarbeitende:r</option><option value="pflege">Pflege</option><option value="arzt">Ärztlicher Dienst</option><option value="leitung">Leitung</option></select></label>
+            <label>Rolle<CareSelect label="Rolle auswählen" value={labelRole(form.role)} options={["Mitarbeitende:r", "Pflege", "Ärztlicher Dienst", "Leitung"]} onChange={(role) => update("role", { "Mitarbeitende:r": "mitarbeitende:r", Pflege: "pflege", "Ärztlicher Dienst": "arzt", Leitung: "leitung" }[role] ?? "mitarbeitende:r")}/></label>
             <label className="area-editor-wide">Fester Wohnbereich<CareSelect label="Festen Wohnbereich auswählen" value={fixedCareUnit} options={["Nicht festgelegt", ...units.map((unit) => unit.name)]} onChange={(name) => update("primaryCareUnitId", units.find((unit) => unit.name === name)?.id ?? "")}/></label>
           </>}
           {view === "shifts" && <>
