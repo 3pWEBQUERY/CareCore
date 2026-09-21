@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ModuleIcon } from "./module-page-shell";
 
 export function formatCareDate(value: string) {
@@ -10,21 +11,32 @@ export function formatCareDate(value: string) {
 export function CareSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(false);
   const [openUp, setOpenUp] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const updatePosition = useCallback(() => {
+    const rect = rootRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const menuHeight = Math.min(options.length * 42 + 16, 360);
+    const shouldOpenUp = window.innerHeight - rect.bottom < menuHeight && rect.top > menuHeight;
+    setOpenUp(shouldOpenUp);
+    setPosition({ top: shouldOpenUp ? rect.top - 6 : rect.bottom + 6, left: rect.left, width: rect.width });
+  }, [options.length]);
   useEffect(() => {
-    const onPointerDown = (event: PointerEvent) => { if (!rootRef.current?.contains(event.target as Node)) setOpen(false); };
+    const onPointerDown = (event: PointerEvent) => { if (!rootRef.current?.contains(event.target as Node) && !menuRef.current?.contains(event.target as Node)) setOpen(false); };
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, []);
-  const toggle = () => setOpen((current) => {
-    if (!current) {
-      const rect = rootRef.current?.getBoundingClientRect();
-      const menuHeight = options.length * 42 + 16;
-      setOpenUp(Boolean(rect && window.innerHeight - rect.bottom < menuHeight && rect.top > menuHeight));
-    } else setOpenUp(false);
-    return !current;
-  });
-  return <div className="area-custom-select" ref={rootRef}><button className="area-select-trigger" type="button" aria-haspopup="listbox" aria-expanded={open} aria-label={label} onClick={toggle}><span>{value}</span><ModuleIcon name="caretDown" className={open ? "open" : ""}/></button>{open && <div className={`area-select-menu ${openUp ? "up" : ""}`} role="listbox" aria-label={label}>{options.map((option) => <button type="button" role="option" aria-selected={value === option} className={value === option ? "selected" : ""} key={option} onClick={() => { onChange(option); setOpen(false); setOpenUp(false); }}>{option}<ModuleIcon name="check"/></button>)}</div>}</div>;
+  useEffect(() => {
+    if (!open) return;
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => { window.removeEventListener("resize", updatePosition); window.removeEventListener("scroll", updatePosition, true); };
+  }, [open, updatePosition]);
+  const toggle = () => setOpen((current) => { if (!current) updatePosition(); else setOpenUp(false); return !current; });
+  const menu = open && typeof document !== "undefined" ? createPortal(<div ref={menuRef} className={`area-select-menu area-select-menu-portal ${openUp ? "up" : ""}`} role="listbox" aria-label={label} style={position}>{options.map((option) => <button type="button" role="option" aria-selected={value === option} className={value === option ? "selected" : ""} key={option} onClick={() => { onChange(option); setOpen(false); setOpenUp(false); }}>{option}<ModuleIcon name="check"/></button>)}</div>, document.body) : null;
+  return <><div className="area-custom-select" ref={rootRef}><button className="area-select-trigger" type="button" aria-haspopup="listbox" aria-expanded={open} aria-label={label} onClick={toggle}><span>{value}</span><ModuleIcon name="caretDown" className={open ? "open" : ""}/></button></div>{menu}</>;
 }
 
 export function CareDatePicker({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {

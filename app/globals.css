@@ -1665,6 +1665,8 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .area-select-menu button:hover,.area-select-menu button.selected { color: var(--brand-dark); background: var(--brand-soft); }
 .area-select-menu button svg { width: 14px; color: var(--brand); opacity: 0; }
 .area-select-menu button.selected svg { opacity: 1; }
+.area-select-menu-portal { position:fixed; inset:auto; z-index:110; max-height:min(360px,calc(100dvh - 24px)); overflow-y:auto; }
+.area-select-menu-portal.up { inset:auto; transform:translateY(-100%); }
 .area-editor-actions { max-width: 980px; display: flex; justify-content: flex-end; gap: 10px; margin: 28px auto 0; padding-top: 18px; border-top: 1px solid var(--line); }.area-editor-actions button { min-height: 40px; font-size: 12px; }
 .rai-workspace { max-width: 1420px; }
 .rai-summary { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px; margin-bottom: 20px; }
