@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Archive, ArrowClockwise, CalendarDots, CheckCircle, ClipboardText, Clock, DotsThree, Plus, UserPlus, UsersThree, WarningCircle } from "@phosphor-icons/react";
 import ModulePageShell from "@/app/components/module-page-shell";
+import { CareSelect } from "@/app/components/care-form-controls";
 
 type View = "employees" | "shifts" | "tasks";
 type Employee = { id: string; display_name: string; username?: string; role: string; active: boolean; archived_at?: string | null; care_unit_name?: string };
@@ -107,6 +108,7 @@ function TeamleadForm({ view, form, setForm, units, employees, onClose, onSubmit
   const update = (key: string, value: string) => setForm({ ...form, [key]: value });
   const label = config[view].action;
   const careUnitName = units.find((unit) => unit.id === (form.primaryCareUnitId || form.careUnitId))?.name;
+  const fixedCareUnit = careUnitName ?? "Nicht festgelegt";
   const assignedEmployee = employees.find((employee) => employee.id === (form.employeeId || form.assignedTo))?.display_name;
   const intro = view === "employees"
     ? { title: "Neues Mitarbeiterprofil", copy: "Lege Zugang, Rolle und festen Arbeitsbereich in einem Schritt fest.", status: "Bereit zum Erstellen" }
@@ -137,7 +139,7 @@ function TeamleadForm({ view, form, setForm, units, employees, onClose, onSubmit
             <label>Benutzername<input required placeholder="z. B. fkrempel" value={form.username ?? ""} onChange={(event) => update("username", event.target.value)}/></label>
             <label>Startpasswort<input required minLength={10} type="password" placeholder="Mindestens 10 Zeichen" value={form.password ?? ""} onChange={(event) => update("password", event.target.value)}/></label>
             <label>Rolle<select value={form.role ?? "mitarbeitende:r"} onChange={(event) => update("role", event.target.value)}><option value="mitarbeitende:r">Mitarbeitende:r</option><option value="pflege">Pflege</option><option value="arzt">Ärztlicher Dienst</option><option value="leitung">Leitung</option></select></label>
-            <label className="area-editor-wide">Fester Wohnbereich<select value={form.primaryCareUnitId ?? ""} onChange={(event) => update("primaryCareUnitId", event.target.value)}><option value="">Nicht festgelegt</option>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}</select></label>
+            <label className="area-editor-wide">Fester Wohnbereich<CareSelect label="Festen Wohnbereich auswählen" value={fixedCareUnit} options={["Nicht festgelegt", ...units.map((unit) => unit.name)]} onChange={(name) => update("primaryCareUnitId", units.find((unit) => unit.name === name)?.id ?? "")}/></label>
           </>}
           {view === "shifts" && <>
             <label>Bezeichnung<input required placeholder="z. B. Frühdienst" value={form.name ?? ""} onChange={(event) => update("name", event.target.value)}/></label>
