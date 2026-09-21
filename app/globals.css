@@ -2540,3 +2540,12 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .teamlead-editor .area-editor-intro,.teamlead-editor .area-editor-grid,.teamlead-editor .teamlead-editor-summary,.teamlead-editor .area-editor-actions { max-width:980px; }
 .teamlead-editor .area-editor-actions { width:auto; margin:28px auto 0; }
 @media (max-width: 700px) { .teamlead-employee-table .teamlead-table-head,.teamlead-employee-table .teamlead-table-row { min-width:820px; }.teamlead-editor .area-editor-form { padding:20px 18px 28px; } }
+
+/* Teamleitung: profile rows and icon actions use the shared CareCore tooltip surface. */
+.teamlead-employee-row { border-radius:6px; cursor:pointer; transition:background 140ms ease,box-shadow 140ms ease; }
+.teamlead-employee-row:hover { background:#f8fbff; box-shadow:inset 3px 0 0 var(--brand); }
+.teamlead-employee-row:focus-visible { outline:3px solid rgba(37,99,235,.2); outline-offset:-3px; }
+.teamlead-employee-table .teamlead-row-actions { display:flex; align-items:center; justify-self:end; gap:6px; width:auto; }
+.teamlead-employee-table .teamlead-row-icon { width:32px; height:32px; min-height:32px; display:grid; place-items:center; position:relative; padding:0; border:1px solid var(--line); border-radius:6px; color:#607890; background:white; cursor:pointer; }
+.teamlead-employee-table .teamlead-row-icon:hover,.teamlead-employee-table .teamlead-row-icon:focus-visible { color:var(--brand); border-color:#93c5fd; background:var(--brand-soft); }
+.teamlead-employee-table .teamlead-row-icon svg { width:16px; height:16px; }
