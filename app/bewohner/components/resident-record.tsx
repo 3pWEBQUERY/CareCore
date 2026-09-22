@@ -823,7 +823,46 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
           </form>
         </section>
       </div>}
-      {supplyEditor && <div className="contact-editor-layer" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && setSupplyEditor(null)}><section className="contact-editor-panel supply-editor-panel" role="dialog" aria-modal="true" aria-labelledby="supply-editor-title"><header><div><span className="record-section-label">Pflegebedarf</span><h3 id="supply-editor-title">{supplyEditor.id ? "Bedarf bearbeiten" : "Pflegebedarf hinzufügen"}</h3><p>Lege Material, Sollbestand und Status für {resident.name} fest.</p></div><button type="button" onClick={() => setSupplyEditor(null)} aria-label="Pflegebedarf schließen"><X/></button></header><form onSubmit={saveSupply}><div className="contact-editor-form-grid"><label className="wide"><span>Artikel</span><input value={supplyEditor.draft.itemName} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, itemName: event.target.value } } : current)} placeholder="z. B. Einlagen, Zahnpasta oder Rollator" autoFocus required/></label><label><span>Kategorie</span><CareSelect label="Bedarfskategorie" value={supplyEditor.draft.category} options={["Pflege & Hygiene", "Inkontinenz", "Mobilität", "Ernährung", "Mundpflege", "Sonstiges"]} onChange={(value) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, category: value } } : current)}/></label><label><span>Einheit</span><CareSelect label="Einheit" value={supplyEditor.draft.unit} options={["Stück", "Packung", "Flasche", "Tube", "Paar"]} onChange={(value) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, unit: value } } : current)}/></label><label><span>Aktueller Bestand</span><input type="number" min="0" value={supplyEditor.draft.currentQuantity} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, currentQuantity: Number(event.target.value) || 0 } } : current)}/></label><label><span>Sollbestand</span><input type="number" min="0" value={supplyEditor.draft.targetQuantity} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, targetQuantity: Number(event.target.value) || 0 } } : current)}/></label><label className="wide"><span>Status</span><CareSelect label="Status" value={supplyEditor.draft.status === "active" ? "Aktiv" : supplyEditor.draft.status === "blocked" ? "Gesperrt" : "Archiviert"} options={["Aktiv", "Gesperrt", "Archiviert"]} onChange={(value) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, status: value === "Gesperrt" ? "blocked" : value === "Archiviert" ? "archived" : "active" } } : current)}/></label><label className="wide"><span>Hinweis</span><textarea value={supplyEditor.draft.notes} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, notes: event.target.value } } : current)} placeholder="z. B. bevorzugte Marke, Größe oder Anwendungshinweis …" rows={4}/></label></div><footer><button className="secondary-button" type="button" onClick={() => setSupplyEditor(null)}>Abbrechen</button><button className="primary-button" disabled={supplySaving}><Check/> {supplySaving ? "Speichern…" : "Pflegebedarf speichern"}</button></footer></form></section></div>}
+      {supplyEditor && <div className="area-editor-overlay" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && setSupplyEditor(null)}>
+        <section className="area-editor-panel" role="dialog" aria-modal="true" aria-labelledby="supply-editor-title">
+          <header className="area-editor-header">
+            <div>
+              <p className="eyebrow">CareCore Bewohner · Pflegebedarf</p>
+              <h2 id="supply-editor-title">{supplyEditor.id ? "Bedarf bearbeiten" : "Pflegebedarf hinzufügen"}</h2>
+              <p>Lege Material, Sollbestand und Status für {resident.name} fest.</p>
+            </div>
+            <button className="area-editor-close" type="button" onClick={() => setSupplyEditor(null)} aria-label="Pflegebedarf schließen">×</button>
+          </header>
+
+          <form className="area-editor-form" onSubmit={saveSupply}>
+            <div className="area-editor-intro">
+              <span className="area-editor-icon"><ClipboardText aria-hidden="true"/></span>
+              <div>
+                <strong>Individueller Pflegebedarf</strong>
+                <p>Artikel und Bestände bleiben direkt in der Bewohnerakte nachvollziehbar.</p>
+              </div>
+              <span className="duty-assignment-status"><i/>{supplyEditor.draft.status === "blocked" ? "Gesperrt" : supplyEditor.draft.status === "archived" ? "Archiviert" : "Aktiv"}</span>
+            </div>
+
+            <div className="area-editor-grid">
+              <label className="area-editor-wide"><span>Artikel</span><input value={supplyEditor.draft.itemName} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, itemName: event.target.value } } : current)} placeholder="z. B. Einlagen, Zahnpasta oder Rollator" autoFocus required/></label>
+              <label><span>Kategorie</span><CareSelect label="Bedarfskategorie" value={supplyEditor.draft.category} options={["Pflege & Hygiene", "Inkontinenz", "Mobilität", "Ernährung", "Mundpflege", "Sonstiges"]} onChange={(value) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, category: value } } : current)}/></label>
+              <label><span>Einheit</span><CareSelect label="Einheit" value={supplyEditor.draft.unit} options={["Stück", "Packung", "Flasche", "Tube", "Paar"]} onChange={(value) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, unit: value } } : current)}/></label>
+              <label><span>Aktueller Bestand</span><input type="number" min="0" value={supplyEditor.draft.currentQuantity} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, currentQuantity: Number(event.target.value) || 0 } } : current)}/></label>
+              <label><span>Sollbestand</span><input type="number" min="0" value={supplyEditor.draft.targetQuantity} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, targetQuantity: Number(event.target.value) || 0 } } : current)}/></label>
+              <label className="area-editor-wide"><span>Status</span><CareSelect label="Status" value={supplyEditor.draft.status === "active" ? "Aktiv" : supplyEditor.draft.status === "blocked" ? "Gesperrt" : "Archiviert"} options={["Aktiv", "Gesperrt", "Archiviert"]} onChange={(value) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, status: value === "Gesperrt" ? "blocked" : value === "Archiviert" ? "archived" : "active" } } : current)}/></label>
+              <label className="area-editor-wide"><span>Hinweis</span><textarea value={supplyEditor.draft.notes} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, notes: event.target.value } } : current)} placeholder="z. B. bevorzugte Marke, Größe oder Anwendungshinweis …" rows={4}/></label>
+            </div>
+
+            <div className="duty-assignment-summary">
+              <span><strong>{supplyEditor.draft.itemName || "Neuer Pflegebedarf"}</strong><small>{supplyEditor.draft.category} · {supplyEditor.draft.unit}</small></span>
+              <span><strong>{supplyEditor.draft.currentQuantity} von {supplyEditor.draft.targetQuantity} {supplyEditor.draft.unit}</strong><small>Aktueller Bestand</small></span>
+            </div>
+
+            <footer className="area-editor-actions"><button className="secondary-button" type="button" onClick={() => setSupplyEditor(null)}>Abbrechen</button><button className="primary-button" disabled={supplySaving}><Check/> {supplySaving ? "Speichern…" : "Pflegebedarf speichern"}</button></footer>
+          </form>
+        </section>
+      </div>}
     </div>
   );
 }
