@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, Check, ClipboardText, MagnifyingGlass, PencilSimple, Plus, Prohibit, Sparkle } from "@phosphor-icons/react";
-import ModulePageShell from "@/app/components/module-page-shell";
+import { Archive, Check, ClipboardText, PencilSimple, Plus, Prohibit, Sparkle } from "@phosphor-icons/react";
+import ModulePageShell, { ModuleIcon } from "@/app/components/module-page-shell";
 import { CareSelect } from "@/app/components/care-form-controls";
 
 type Product = { id: string; item_name: string; category: string; unit: string; description: string | null; default_target_quantity: number; status: "active" | "blocked" | "archived"; created_at: string; updated_at: string };
@@ -80,17 +80,19 @@ export default function CareSupplyCatalog() {
   }
 
   const activeCount = products.filter((product) => product.status === "active").length;
-  const unavailableCount = products.filter((product) => product.status !== "active").length;
+  const blockedCount = products.filter((product) => product.status === "blocked").length;
+  const archivedCount = products.filter((product) => product.status === "archived").length;
 
-  return <ModulePageShell activeModule="admin" activeChild="Pflegebedarf" pageClass="admin-supply-catalog-page">{() => <main className="workspace-page care-supply-catalog">
-    <header className="page-heading care-supply-heading"><div className="heading-copy"><p className="eyebrow">CareCore Administration</p><h1>Pflegebedarf</h1><p>Pflegeprodukte zentral pflegen und für die Bewohnerakte bereitstellen.</p></div><button className="primary-button" type="button" onClick={() => openEditor()}><Plus className="button-icon"/> Produkt anlegen</button></header>
-    <section className="care-supply-summary" aria-label="Katalogübersicht">
-      <article><span className="care-supply-summary-icon"><ClipboardText/></span><div><strong>{products.length}</strong><small>Produkte im Katalog</small></div></article>
-      <article><span className="care-supply-summary-icon active"><Check/></span><div><strong>{activeCount}</strong><small>Für Mitarbeitende verfügbar</small></div></article>
-      <article><span className="care-supply-summary-icon muted"><Archive/></span><div><strong>{unavailableCount}</strong><small>Gesperrt oder archiviert</small></div></article>
+  return <ModulePageShell activeModule="admin" activeChild="Pflegebedarf" pageClass="leadership-page leadership-users admin-supply-catalog-page">{() => <main className="workspace leadership-workspace leadership-users care-supply-catalog">
+    <header className="leadership-heading page-heading"><div className="heading-copy"><p className="eyebrow">CareCore Admin</p><h1>Pflegebedarf</h1><p>Pflegeprodukte zentral pflegen und für die Bewohnerakte bereitstellen.</p></div><button className="primary-button" type="button" onClick={() => openEditor()}><ModuleIcon name="plus" className="button-icon"/>Produkt anlegen</button></header>
+    <section className="leadership-kpis" aria-label="Katalogübersicht">
+      <article className="leadership-kpi info"><span className="leadership-kpi-value">{products.length}</span><strong>Produkte im Katalog</strong><small>alle erfassten Pflegeprodukte</small></article>
+      <article className="leadership-kpi stable"><span className="leadership-kpi-value">{activeCount}</span><strong>Aktiv und buchbar</strong><small>für Bewohnerakten verfügbar</small></article>
+      <article className="leadership-kpi attention"><span className="leadership-kpi-value">{blockedCount}</span><strong>Gesperrt</strong><small>derzeit nicht auswählbar</small></article>
+      <article className="leadership-kpi"><span className="leadership-kpi-value">{archivedCount}</span><strong>Archiviert</strong><small>nicht mehr im aktiven Katalog</small></article>
     </section>
-    <section className="card care-supply-catalog-card">
-      <header className="care-supply-card-head"><div><p className="eyebrow">Produktkatalog</p><h2>Material und Hilfsmittel</h2><p>{visibleProducts.length} von {products.length} Produkten</p></div><label className="care-supply-search"><MagnifyingGlass/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Produkt suchen…" aria-label="Pflegeprodukt suchen"/></label></header>
+    <section className="card admin-users-card care-supply-catalog-card">
+      <header className="admin-table-header care-supply-card-head"><div><p className="eyebrow">Produktkatalog</p><h2 className="card-title">Material und Hilfsmittel</h2><p className="card-subtitle">{visibleProducts.length} von {products.length} Produkten</p></div><label className="resident-search"><ModuleIcon name="search"/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Produkt suchen…" aria-label="Pflegeprodukt suchen"/></label></header>
       <div className="care-supply-filters" role="group" aria-label="Produkte filtern">{["Alle", "Aktiv", "Gesperrt", "Archiviert"].map((label) => <button type="button" key={label} className={filter === label ? "active" : ""} aria-pressed={filter === label} onClick={() => setFilter(label)}>{label}</button>)}</div>
       {error && !editor && <p className="supplies-error" role="alert">{error}</p>}
       <div className="care-supply-table-wrap"><div className="care-supply-table-head"><span>Produkt</span><span>Kategorie</span><span>Einheit</span><span>Sollmenge</span><span>Status</span><span>Aktionen</span></div>
