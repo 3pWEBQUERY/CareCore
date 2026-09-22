@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
+import ResidentAppointmentEditor from "@/app/components/resident-appointment-editor";
+import { appointmentDateLabel, appointmentLocalParts, type AppointmentResident, type ResidentAppointment } from "@/lib/resident-appointments";
 import {
   ArrowRight,
   ArrowsLeftRight,
@@ -45,7 +47,7 @@ type ResidentRecordProps = {
   onAction: (message: string) => void;
 };
 
-type RecordView = "overview" | "master-data" | "documentation" | "care-record" | "supplies" | "history" | "documents" | "biography";
+type RecordView = "overview" | "master-data" | "documentation" | "care-record" | "supplies" | "appointments" | "history" | "documents" | "biography";
 type DocumentationFlag = "important" | "visit" | "observation" | "handover";
 type HistoryFilter = "Alle" | "Pflege" | "Vitalwerte" | "Medikation" | "Termine";
 
@@ -104,7 +106,7 @@ type ResidentDocument = {
   status: "Aktuell" | "Neu" | "Unterschrift offen";
 };
 
-const recordTabs = ["Übersicht", "Stammdaten", "Biografie", "Dokumentation", "Pflegeakte", "Pflegebedarf", "Verlauf", "Dokumente"];
+const recordTabs = ["Übersicht", "Stammdaten", "Biografie", "Termine", "Dokumentation", "Pflegeakte", "Pflegebedarf", "Verlauf", "Dokumente"];
 
 type ResidentBiography = {
   lifeStory: string;
@@ -211,9 +213,22 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
   const [suppliesError, setSuppliesError] = useState("");
   const [supplyEditor, setSupplyEditor] = useState<{ id: string | null; draft: SupplyDraft } | null>(null);
   const [supplySaving, setSupplySaving] = useState(false);
+  const [appointments, setAppointments] = useState<ResidentAppointment[]>([]);
+  const [appointmentResidents, setAppointmentResidents] = useState<AppointmentResident[]>([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(Boolean(resident.id));
+  const [appointmentsError, setAppointmentsError] = useState("");
+  const [appointmentEditor, setAppointmentEditor] = useState<ResidentAppointment | "new" | null>(null);
+  const [appointmentRevision, setAppointmentRevision] = useState(0);
+  const [clockNow, setClockNow] = useState(0);
   const selectedEntry = entries.find((entry) => entry.id === selectedEntryId) ?? null;
   const activeCareDomain = careDomains.find((domain) => domain.id === activeCareDomainId) ?? careDomains[0];
   const visibleHistoryEntries = historyEntries.filter((entry) => historyFilter === "Alle" || entry.category === historyFilter);
+  const upcomingAppointments = appointments.filter((item) => item.status === "scheduled" && Date.parse(item.starts_at) >= clockNow);
+  const pastAppointments = appointments.filter((item) => item.status !== "scheduled" || Date.parse(item.starts_at) < clockNow);
+  const nextAppointment = upcomingAppointments[0];
+  const appointmentEditorResidents = resident.id && !appointmentResidents.some((item) => item.id === resident.id)
+    ? [{ id: resident.id, name: resident.name, status: "active", care_unit_id: null, care_unit_name: resident.unit, room_name: resident.room }, ...appointmentResidents]
+    : appointmentResidents;
   const visibleDocuments = residentDocuments.filter((document) => {
     const query = documentSearch.trim().toLocaleLowerCase("de-CH");
     const queryStem = query.endsWith("e") ? query.slice(0, -1) : query;
@@ -229,6 +244,12 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
     document.body.style.overflow = "hidden";
     closeButtonRef.current?.focus();
     return () => { document.body.style.overflow = previousOverflow; };
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setClockNow(Date.now()), 0);
+    const interval = window.setInterval(() => setClockNow(Date.now()), 60_000);
+    return () => { window.clearTimeout(timer); window.clearInterval(interval); };
   }, []);
 
   useEffect(() => {
@@ -252,6 +273,26 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
     }, 0);
     return () => { active = false; window.clearTimeout(timer); };
   }, [resident.id]);
+
+  useEffect(() => {
+    if (!resident.id) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setAppointmentsLoading(true);
+      fetch(`/api/appointments?residentId=${encodeURIComponent(resident.id!)}`, { cache: "no-store" })
+        .then(async (response) => ({ response, data: await response.json().catch(() => null) }))
+        .then(({ response, data }) => {
+          if (!active) return;
+          if (!response.ok) throw new Error(data?.error || "Termine konnten nicht geladen werden.");
+          setAppointments(data.appointments ?? []);
+          setAppointmentResidents(data.residents ?? []);
+          setAppointmentsError("");
+        })
+        .catch((cause) => { if (active) setAppointmentsError(cause instanceof Error ? cause.message : "Termine konnten nicht geladen werden."); })
+        .finally(() => { if (active) setAppointmentsLoading(false); });
+    }, 0);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [resident.id, appointmentRevision]);
 
   useEffect(() => {
     if (!resident.id) return;
@@ -303,6 +344,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
     else if (tab === "Dokumentation") openDocumentation();
     else if (tab === "Pflegeakte") setActiveView("care-record");
     else if (tab === "Pflegebedarf") setActiveView("supplies");
+    else if (tab === "Termine") setActiveView("appointments");
     else if (tab === "Verlauf") setActiveView("history");
     else if (tab === "Dokumente") setActiveView("documents");
     else if (tab === "Biografie") setActiveView("biography");
@@ -394,7 +436,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
 
         <nav className="resident-record-tabs" aria-label="Bereiche der Bewohnerakte">
           {recordTabs.map((tab) => {
-            const active = (tab === "Übersicht" && activeView === "overview") || (tab === "Stammdaten" && activeView === "master-data") || (tab === "Dokumentation" && activeView === "documentation") || (tab === "Pflegeakte" && activeView === "care-record") || (tab === "Pflegebedarf" && activeView === "supplies") || (tab === "Verlauf" && activeView === "history") || (tab === "Dokumente" && activeView === "documents") || (tab === "Biografie" && activeView === "biography");
+            const active = (tab === "Übersicht" && activeView === "overview") || (tab === "Stammdaten" && activeView === "master-data") || (tab === "Termine" && activeView === "appointments") || (tab === "Dokumentation" && activeView === "documentation") || (tab === "Pflegeakte" && activeView === "care-record") || (tab === "Pflegebedarf" && activeView === "supplies") || (tab === "Verlauf" && activeView === "history") || (tab === "Dokumente" && activeView === "documents") || (tab === "Biografie" && activeView === "biography");
             return <button className={active ? "active" : ""} type="button" key={tab} aria-current={active ? "page" : undefined} onClick={() => selectTab(tab)}>{tab}</button>;
           })}
         </nav>
@@ -405,7 +447,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
               <div><span className="record-metric-icon"><User aria-hidden="true"/></span><span><small>Bezugspflege</small><strong>Anna Meier</strong></span></div>
               <div><span className="record-metric-icon"><Heartbeat aria-hidden="true"/></span><span><small>Letzte Vitalwerte</small><strong>Heute, 07:42</strong></span></div>
               <div><span className="record-metric-icon"><Pill aria-hidden="true"/></span><span><small>Medikationen heute</small><strong>4 von 6 erfolgt</strong></span></div>
-              <div><span className="record-metric-icon"><CalendarDots aria-hidden="true"/></span><span><small>Nächster Termin</small><strong>Arztvisite, 09:30</strong></span></div>
+              <div><span className="record-metric-icon"><CalendarDots aria-hidden="true"/></span><span><small>Nächster Termin</small><strong>{nextAppointment ? `${nextAppointment.title} · ${appointmentDateLabel(nextAppointment.starts_at, { day: "2-digit", month: "2-digit" })}, ${appointmentLocalParts(nextAppointment.starts_at).time}` : appointmentsLoading ? "Wird geladen…" : "Kein Termin geplant"}</strong></span></div>
             </section>
 
             <section className="record-card record-quick-access" aria-labelledby="quick-access-title">
@@ -671,6 +713,15 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
               </section>
             </div>}
           </main>
+        ) : activeView === "appointments" ? (
+          <main className="resident-record-content record-appointments-view" ref={contentRef} key="appointments">
+            <div className="record-subpage-heading"><div><span className="record-section-label">Bewohnerakte</span><h3>Termine</h3><p>Arztbesuche, Therapien und weitere Termine für {resident.name}.</p></div>{resident.id && <button className="primary-button" type="button" onClick={() => setAppointmentEditor("new")}><Plus/> Termin erstellen</button>}</div>
+            {appointmentsError && <div className="resident-appointment-error" role="alert">{appointmentsError}<button type="button" onClick={() => setAppointmentRevision((current) => current + 1)}>Erneut laden</button></div>}
+            {!resident.id ? <section className="record-card resident-appointment-empty"><CalendarDots/><strong>Termine sind nach dem Speichern des Bewohners verfügbar.</strong></section> : appointmentsLoading ? <div className="resident-appointment-loading" role="status">Termine werden geladen…</div> : <div className="resident-appointment-sections">
+              <section className="record-card resident-appointment-card"><div className="record-card-heading"><div><span className="record-section-label">Planung</span><h3>Bevorstehende Termine</h3></div><span>{upcomingAppointments.length} geplant</span></div>{upcomingAppointments.length ? <div className="resident-appointment-list">{upcomingAppointments.map((item) => <button type="button" className="resident-appointment-row" key={item.id} onClick={() => setAppointmentEditor(item)}><span className="resident-appointment-date"><strong>{appointmentDateLabel(item.starts_at, { day: "2-digit" })}</strong><small>{appointmentDateLabel(item.starts_at, { month: "short" })}</small></span><span className="resident-appointment-details"><strong>{item.title}</strong><small>{item.category} · {appointmentLocalParts(item.starts_at).time}–{appointmentLocalParts(item.ends_at).time}{item.location ? ` · ${item.location}` : ""}</small></span><span className="status-badge info">Geplant</span><ArrowRight/></button>)}</div> : <div className="resident-appointment-empty"><CalendarDots/><strong>Keine bevorstehenden Termine</strong><p>Erstelle hier einen Termin; er erscheint automatisch auch im Betriebskalender.</p><button className="secondary-button" type="button" onClick={() => setAppointmentEditor("new")}><Plus/> Termin erstellen</button></div>}</section>
+              {pastAppointments.length > 0 && <section className="record-card resident-appointment-card"><div className="record-card-heading"><div><span className="record-section-label">Chronik</span><h3>Frühere und abgesagte Termine</h3></div><span>{pastAppointments.length} Einträge</span></div><div className="resident-appointment-list">{[...pastAppointments].reverse().map((item) => <button type="button" className="resident-appointment-row" key={item.id} onClick={() => setAppointmentEditor(item)}><span className="resident-appointment-date"><strong>{appointmentDateLabel(item.starts_at, { day: "2-digit" })}</strong><small>{appointmentDateLabel(item.starts_at, { month: "short" })}</small></span><span className="resident-appointment-details"><strong>{item.title}</strong><small>{item.category} · {appointmentLocalParts(item.starts_at).time}–{appointmentLocalParts(item.ends_at).time}</small></span><span className={`status-badge ${item.status === "completed" ? "stable" : item.status === "cancelled" ? "attention" : "info"}`}>{item.status === "completed" ? "Abgeschlossen" : item.status === "cancelled" ? "Abgesagt" : "Vergangen"}</span><ArrowRight/></button>)}</div></section>}
+            </div>}
+          </main>
         ) : activeView === "supplies" ? (
           <main className="resident-record-content supplies-view" ref={contentRef} key="supplies">
             <div className="record-subpage-heading"><div><span className="record-section-label">Bewohnerakte</span><h3>Pflegebedarf</h3><p>Persönliche Hilfs- und Verbrauchsmaterialien für {resident.name} sicher verwalten.</p></div><button className="primary-button" type="button" onClick={() => openSupplyEditor()}><Plus/> Bedarf hinzufügen</button></div>
@@ -826,6 +877,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
           </form>
         </section>
       </div>}
+      {appointmentEditor && resident.id && <ResidentAppointmentEditor key={appointmentEditor === "new" ? "new-appointment" : appointmentEditor.id} appointment={appointmentEditor === "new" ? null : appointmentEditor} residentId={resident.id} residents={appointmentEditorResidents} onClose={() => setAppointmentEditor(null)} onSaved={() => { setAppointmentEditor(null); setAppointmentRevision((current) => current + 1); onAction("Terminbestand aktualisiert"); }}/>}
       {supplyEditor && <div className="area-editor-overlay" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && setSupplyEditor(null)}>
         <section className="area-editor-panel" role="dialog" aria-modal="true" aria-labelledby="supply-editor-title">
           <header className="area-editor-header">

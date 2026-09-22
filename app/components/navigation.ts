@@ -15,7 +15,7 @@ export const navigation: NavGroup[] = [
     { id: "assess", label: "Einschätzungen", icon: "assess", children: ["Einschätzungen", "Fälligkeiten"] },
   ] },
   { id: "operations", label: "Betrieb", modules: [
-    { id: "shift", label: "Schicht", icon: "shift", href: "/betrieb/schicht", children: ["Mein Dienst", "Schichtverlauf"] },
+    { id: "shift", label: "Schicht", icon: "shift", href: "/betrieb/schicht", children: ["Mein Dienst", "Schichtverlauf", "Kalender"] },
     { id: "tasks", label: "Aufgaben", icon: "tasks", children: ["Meine Aufgaben", "Teamaufgaben"], badge: 3 },
     { id: "handover", label: "Übergabe", icon: "handover", children: ["Meine Übergabe", "Seit letztem Dienst"] },
     { id: "schedule", label: "Dienste", icon: "calendar", children: ["Mein Dienstplan", "Teamplanung"] },
@@ -41,7 +41,7 @@ const routes: Record<string, Record<string, string>> = {
   chart: { "Schnelldokumentation": "/pflegedokumentation", "Verlaufsdokumentation": "/pflegedokumentation/verlauf" },
   vitals: { "Übersicht": "/vitalwerte", "Entwicklung": "/vitalwerte/entwicklung", "Grenzwerte": "/vitalwerte/grenzwerte" },
   med: { "Medikamentenplan": "/medikation", "Medikamentenrunde": "/medikation/runde", "Bestände": "/medikation/bestaende", "Reserven": "/medikation/reserven" },
-  shift: { "Mein Dienst": "/betrieb/schicht", "Schichtverlauf": "/betrieb/schicht/verlauf" },
+  shift: { "Mein Dienst": "/betrieb/schicht", "Schichtverlauf": "/betrieb/schicht/verlauf", "Kalender": "/betrieb/schicht/kalender" },
   tasks: { "Meine Aufgaben": "/betrieb/aufgaben", "Teamaufgaben": "/betrieb/aufgaben/team" },
   handover: { "Meine Übergabe": "/betrieb/uebergabe", "Seit letztem Dienst": "/betrieb/uebergabe/letzter-dienst" },
   schedule: { "Mein Dienstplan": "/betrieb/dienstplanung", "Teamplanung": "/betrieb/dienstplanung/team" },

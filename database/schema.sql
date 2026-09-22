@@ -173,6 +173,29 @@ CREATE TABLE IF NOT EXISTS carecore_resident_stays (
   CHECK (ended_at IS NULL OR ended_at >= started_at)
 );
 
+CREATE TABLE IF NOT EXISTS carecore_resident_appointments (
+  id UUID PRIMARY KEY,
+  organization_id UUID NOT NULL REFERENCES carecore_organizations(id) ON DELETE CASCADE,
+  resident_id UUID NOT NULL REFERENCES carecore_residents(id) ON DELETE CASCADE,
+  title VARCHAR(180) NOT NULL,
+  category VARCHAR(40) NOT NULL DEFAULT 'Sonstiges',
+  starts_at TIMESTAMPTZ NOT NULL,
+  ends_at TIMESTAMPTZ NOT NULL,
+  location VARCHAR(180),
+  notes TEXT,
+  status VARCHAR(24) NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'completed', 'cancelled')),
+  created_by UUID REFERENCES carecore_users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES carecore_users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (ends_at > starts_at)
+);
+
+CREATE INDEX IF NOT EXISTS carecore_appointments_organization_time_idx
+  ON carecore_resident_appointments (organization_id, starts_at);
+CREATE INDEX IF NOT EXISTS carecore_appointments_resident_time_idx
+  ON carecore_resident_appointments (resident_id, starts_at);
+
 CREATE TABLE IF NOT EXISTS carecore_resident_contacts (
   id UUID PRIMARY KEY,
   resident_id UUID NOT NULL REFERENCES carecore_residents(id) ON DELETE CASCADE,
