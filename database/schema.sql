@@ -186,6 +186,21 @@ CREATE TABLE IF NOT EXISTS carecore_resident_contacts (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS carecore_resident_supplies (
+  id UUID PRIMARY KEY,
+  resident_id UUID NOT NULL REFERENCES carecore_residents(id) ON DELETE CASCADE,
+  item_name VARCHAR(180) NOT NULL,
+  category VARCHAR(80) NOT NULL DEFAULT 'Pflege & Hygiene',
+  unit VARCHAR(40) NOT NULL DEFAULT 'Stück',
+  current_quantity INTEGER NOT NULL DEFAULT 0 CHECK (current_quantity >= 0),
+  target_quantity INTEGER NOT NULL DEFAULT 0 CHECK (target_quantity >= 0),
+  status VARCHAR(24) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'blocked', 'archived')),
+  notes TEXT,
+  updated_by UUID REFERENCES carecore_users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS carecore_resident_clinical_flags (
   id UUID PRIMARY KEY,
   resident_id UUID NOT NULL REFERENCES carecore_residents(id) ON DELETE CASCADE,

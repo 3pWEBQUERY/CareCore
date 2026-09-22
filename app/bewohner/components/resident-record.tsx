@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import {
   ArrowRight,
   ArrowsLeftRight,
@@ -44,7 +45,7 @@ type ResidentRecordProps = {
   onAction: (message: string) => void;
 };
 
-type RecordView = "overview" | "master-data" | "documentation" | "care-record" | "history" | "documents" | "biography";
+type RecordView = "overview" | "master-data" | "documentation" | "care-record" | "supplies" | "history" | "documents" | "biography";
 type DocumentationFlag = "important" | "visit" | "observation" | "handover";
 type HistoryFilter = "Alle" | "Pflege" | "Vitalwerte" | "Medikation" | "Termine";
 
@@ -103,7 +104,7 @@ type ResidentDocument = {
   status: "Aktuell" | "Neu" | "Unterschrift offen";
 };
 
-const recordTabs = ["Übersicht", "Stammdaten", "Dokumentation", "Pflegeakte", "Verlauf", "Dokumente", "Biografie"];
+const recordTabs = ["Übersicht", "Stammdaten", "Biografie", "Dokumentation", "Pflegeakte", "Pflegebedarf", "Verlauf", "Dokumente"];
 
 type ResidentBiography = {
   lifeStory: string;
@@ -131,6 +132,9 @@ type ContactDraft = { fullName: string; relationship: string; phone: string; ema
 
 const emptyBiography: ResidentBiography = { lifeStory: "", importantPeople: "", dailyRoutines: "", preferences: "", strengths: "", sensitiveTopics: "", updatedAt: null, updatedBy: null };
 const emptyContact: ContactDraft = { fullName: "", relationship: "", phone: "", email: "", isPrimary: false, isEmergencyContact: true };
+type ResidentSupply = { id: string; item_name: string; category: string; unit: string; current_quantity: number; target_quantity: number; status: "active" | "blocked" | "archived"; notes: string | null; updated_at: string };
+type SupplyDraft = { itemName: string; category: string; unit: string; currentQuantity: number; targetQuantity: number; status: "active" | "blocked" | "archived"; notes: string };
+const emptySupply: SupplyDraft = { itemName: "", category: "Pflege & Hygiene", unit: "Stück", currentQuantity: 0, targetQuantity: 0, status: "active", notes: "" };
 
 const careDomains: CareDomain[] = [
   { id: "mobility", label: "Mobilität & Bewegung", status: "attention", statusLabel: "Beobachten", summary: "Mobilisation mit Rollator und Begleitung. Erhöhtes Sturzrisiko bei Lagewechseln und in der Nacht.", goal: "Sichere Mobilität im Wohnbereich erhalten und weitere Sturzereignisse vermeiden.", measures: ["Transfers mit verbaler Anleitung begleiten", "Rollator vor jedem Aufstehen bereitstellen", "Sturzprophylaxe und neurologische Kontrollen fortführen"] },
@@ -181,6 +185,8 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
   const [activeView, setActiveView] = useState<RecordView>("overview");
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [documentationText, setDocumentationText] = useState("");
+  const [documentationDate, setDocumentationDate] = useState("2026-09-09");
+  const [documentationCategory, setDocumentationCategory] = useState("Pflegebeobachtung");
   const [documentationFlags, setDocumentationFlags] = useState<DocumentationFlag[]>([]);
   const [masterDataEditing, setMasterDataEditing] = useState(false);
   const [activeCareDomainId, setActiveCareDomainId] = useState("mobility");
@@ -198,6 +204,11 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
   const [contactsError, setContactsError] = useState("");
   const [contactEditor, setContactEditor] = useState<{ id: string | null; draft: ContactDraft } | null>(null);
   const [contactSaving, setContactSaving] = useState(false);
+  const [supplies, setSupplies] = useState<ResidentSupply[]>([]);
+  const [suppliesLoading, setSuppliesLoading] = useState(Boolean(resident.id));
+  const [suppliesError, setSuppliesError] = useState("");
+  const [supplyEditor, setSupplyEditor] = useState<{ id: string | null; draft: SupplyDraft } | null>(null);
+  const [supplySaving, setSupplySaving] = useState(false);
   const selectedEntry = entries.find((entry) => entry.id === selectedEntryId) ?? null;
   const activeCareDomain = careDomains.find((domain) => domain.id === activeCareDomainId) ?? careDomains[0];
   const visibleHistoryEntries = historyEntries.filter((entry) => historyFilter === "Alle" || entry.category === historyFilter);
@@ -244,6 +255,19 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
     if (!resident.id) return;
     let active = true;
     const timer = window.setTimeout(() => {
+      setSuppliesLoading(true);
+      fetch(`/api/residents/${resident.id}/supplies`, { cache: "no-store" }).then(async (response) => ({ response, data: await response.json().catch(() => null) })).then(({ response, data }) => {
+        if (!active) return;
+        if (response.ok) { setSupplies(data.supplies ?? []); setSuppliesError(""); } else setSuppliesError(data?.error || "Pflegebedarf konnte nicht geladen werden.");
+      }).catch(() => active && setSuppliesError("Pflegebedarf konnte nicht geladen werden.")).finally(() => active && setSuppliesLoading(false));
+    }, 0);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [resident.id]);
+
+  useEffect(() => {
+    if (!resident.id) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
       setContactsLoading(true);
       fetch(`/api/residents/${resident.id}/contacts`, { cache: "no-store" })
         .then(async (response) => ({ response, data: await response.json().catch(() => null) }))
@@ -261,6 +285,8 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
   function openDocumentation(entry?: DocumentationEntry) {
     setSelectedEntryId(entry?.id ?? null);
     setDocumentationText(entry?.text ?? "");
+    setDocumentationDate("2026-09-09");
+    setDocumentationCategory(entry?.category ?? "Pflegebeobachtung");
     setDocumentationFlags(entry?.id === "observation" ? ["important", "observation"] : entry?.id === "vitals" ? ["visit"] : entry?.id === "handover" ? ["handover"] : []);
     setActiveView("documentation");
   }
@@ -274,9 +300,25 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
     else if (tab === "Stammdaten") setActiveView("master-data");
     else if (tab === "Dokumentation") openDocumentation();
     else if (tab === "Pflegeakte") setActiveView("care-record");
+    else if (tab === "Pflegebedarf") setActiveView("supplies");
     else if (tab === "Verlauf") setActiveView("history");
     else if (tab === "Dokumente") setActiveView("documents");
     else if (tab === "Biografie") setActiveView("biography");
+  }
+
+  function openSupplyEditor(supply?: ResidentSupply) {
+    setSuppliesError("");
+    setSupplyEditor(supply ? { id: supply.id, draft: { itemName: supply.item_name, category: supply.category, unit: supply.unit, currentQuantity: supply.current_quantity, targetQuantity: supply.target_quantity, status: supply.status, notes: supply.notes ?? "" } } : { id: null, draft: { ...emptySupply } });
+  }
+  async function saveSupply(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (!resident.id || !supplyEditor) { setSuppliesError("Diese Demoakte hat keine gespeicherte Bewohner-ID."); return; }
+    setSupplySaving(true); setSuppliesError("");
+    try { const response = await fetch(`/api/residents/${resident.id}/supplies${supplyEditor.id ? `/${supplyEditor.id}` : ""}`, { method: supplyEditor.id ? "PATCH" : "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(supplyEditor.draft) }); const data = await response.json().catch(() => null); if (!response.ok) { setSuppliesError(data?.error || "Pflegebedarf konnte nicht gespeichert werden."); return; } setSupplies((current) => supplyEditor.id ? current.map((item) => item.id === supplyEditor.id ? data.supply : item) : [...current, data.supply]); setSupplyEditor(null); onAction(supplyEditor.id ? "Pflegebedarf aktualisiert" : "Pflegebedarf hinzugefügt"); } catch { setSuppliesError("Pflegebedarf konnte nicht gespeichert werden."); } finally { setSupplySaving(false); }
+  }
+  async function deleteSupply(supply: ResidentSupply) {
+    if (!resident.id || !window.confirm(`${supply.item_name} wirklich entfernen?`)) return;
+    const response = await fetch(`/api/residents/${resident.id}/supplies/${supply.id}`, { method: "DELETE" });
+    if (response.ok) { setSupplies((current) => current.filter((item) => item.id !== supply.id)); onAction("Pflegebedarf entfernt"); } else setSuppliesError("Pflegebedarf konnte nicht entfernt werden.");
   }
 
   async function saveBiography() {
@@ -349,7 +391,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
 
         <nav className="resident-record-tabs" aria-label="Bereiche der Bewohnerakte">
           {recordTabs.map((tab) => {
-            const active = (tab === "Übersicht" && activeView === "overview") || (tab === "Stammdaten" && activeView === "master-data") || (tab === "Dokumentation" && activeView === "documentation") || (tab === "Pflegeakte" && activeView === "care-record") || (tab === "Verlauf" && activeView === "history") || (tab === "Dokumente" && activeView === "documents") || (tab === "Biografie" && activeView === "biography");
+            const active = (tab === "Übersicht" && activeView === "overview") || (tab === "Stammdaten" && activeView === "master-data") || (tab === "Dokumentation" && activeView === "documentation") || (tab === "Pflegeakte" && activeView === "care-record") || (tab === "Pflegebedarf" && activeView === "supplies") || (tab === "Verlauf" && activeView === "history") || (tab === "Dokumente" && activeView === "documents") || (tab === "Biografie" && activeView === "biography");
             return <button className={active ? "active" : ""} type="button" key={tab} aria-current={active ? "page" : undefined} onClick={() => selectTab(tab)}>{tab}</button>;
           })}
         </nav>
@@ -626,6 +668,13 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
               </section>
             </div>}
           </main>
+        ) : activeView === "supplies" ? (
+          <main className="resident-record-content supplies-view" ref={contentRef} key="supplies">
+            <div className="record-subpage-heading"><div><span className="record-section-label">Bewohnerakte</span><h3>Pflegebedarf</h3><p>Persönliche Hilfs- und Verbrauchsmaterialien für {resident.name} sicher verwalten.</p></div><button className="primary-button" type="button" onClick={() => openSupplyEditor()}><Plus/> Bedarf hinzufügen</button></div>
+            <section className="supplies-summary"><div><span><ClipboardText/></span><p><small>Aktiv</small><strong>{supplies.filter((item) => item.status === "active").length} Positionen</strong></p></div><div><span><Warning/></span><p><small>Nachbestellen</small><strong>{supplies.filter((item) => item.status === "active" && item.current_quantity < item.target_quantity).length} Positionen</strong></p></div><div><span><Check/></span><p><small>Gesperrt</small><strong>{supplies.filter((item) => item.status === "blocked").length} Positionen</strong></p></div></section>
+            {suppliesError && <p className="supplies-error" role="alert">{suppliesError}</p>}
+            <section className="record-card supplies-card"><div className="record-card-heading"><div><span className="record-section-label">Individueller Bedarf</span><h3>Materialien und Hilfsmittel</h3></div><span>{supplies.length} Einträge</span></div><div className="supplies-table-head"><span>Artikel</span><span>Bestand</span><span>Status</span><span>Aktionen</span></div><div className="supplies-list">{suppliesLoading ? <p>Pflegebedarf wird geladen…</p> : supplies.map((supply) => <article key={supply.id} className={`supply-row ${supply.status}`}><span className="supply-icon"><ClipboardText/></span><div><strong>{supply.item_name}</strong><small>{supply.category} · {supply.notes || "Kein zusätzlicher Hinweis"}</small></div><span className="supply-quantity"><strong>{supply.current_quantity} <small>/ {supply.target_quantity} {supply.unit}</small></strong><i style={{ width: `${Math.min(100, supply.target_quantity ? supply.current_quantity / supply.target_quantity * 100 : 100)}%` }}/></span><span className={`supply-status ${supply.status}`}>{supply.status === "active" ? "Aktiv" : supply.status === "blocked" ? "Gesperrt" : "Archiviert"}</span><span className="supply-actions"><button type="button" onClick={() => openSupplyEditor(supply)} aria-label={`${supply.item_name} bearbeiten`}><PencilSimple/></button><button type="button" className="danger" onClick={() => void deleteSupply(supply)} aria-label={`${supply.item_name} entfernen`}><Trash/></button></span></article>)}{!suppliesLoading && !supplies.length && <div className="supplies-empty"><ClipboardText/><strong>Noch kein Pflegebedarf hinterlegt</strong><p>Lege persönliche Artikel wie Einlagen, Windeln, Zahnpasta oder Hilfsmittel an.</p><button className="secondary-button" onClick={() => openSupplyEditor()}><Plus/> Pflegebedarf hinzufügen</button></div>}</div></section>
+          </main>
         ) : activeView === "history" ? (
           <main className="resident-record-content record-history-view" ref={contentRef} key="history">
             <div className="record-subpage-heading">
@@ -722,9 +771,9 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
             <div className="documentation-layout">
               <form className="record-card documentation-editor" onSubmit={saveDocumentation}>
                 <div className="documentation-form-grid">
-                  <label><span>Datum</span><input type="date" defaultValue="2026-09-09"/></label>
+                  <label><span>Datum</span><CareDatePicker label="Datum" value={documentationDate} onChange={setDocumentationDate}/></label>
                   <label><span>Uhrzeit</span><input type="time" defaultValue={selectedEntry?.time ?? "08:15"}/></label>
-                  <label><span>Kategorie</span><select defaultValue={selectedEntry?.category ?? "Pflegebeobachtung"}><option>Pflegebeobachtung</option><option>Vitalwerte</option><option>Medikation</option><option>Mobilität</option><option>Ernährung</option><option>Übergabe</option></select></label>
+                  <label><span>Kategorie</span><CareSelect label="Kategorie" value={documentationCategory} options={["Pflegebeobachtung", "Vitalwerte", "Medikation", "Mobilität", "Ernährung", "Übergabe"]} onChange={setDocumentationCategory}/></label>
                   <label><span>Dokumentiert von</span><input type="text" value="Anna Meier · Pflegefachfrau HF" readOnly/></label>
                 </div>
 
@@ -774,6 +823,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
           </form>
         </section>
       </div>}
+      {supplyEditor && <div className="contact-editor-layer" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && setSupplyEditor(null)}><section className="contact-editor-panel supply-editor-panel" role="dialog" aria-modal="true" aria-labelledby="supply-editor-title"><header><div><span className="record-section-label">Pflegebedarf</span><h3 id="supply-editor-title">{supplyEditor.id ? "Bedarf bearbeiten" : "Pflegebedarf hinzufügen"}</h3><p>Lege Material, Sollbestand und Status für {resident.name} fest.</p></div><button type="button" onClick={() => setSupplyEditor(null)} aria-label="Pflegebedarf schließen"><X/></button></header><form onSubmit={saveSupply}><div className="contact-editor-form-grid"><label className="wide"><span>Artikel</span><input value={supplyEditor.draft.itemName} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, itemName: event.target.value } } : current)} placeholder="z. B. Einlagen, Zahnpasta oder Rollator" autoFocus required/></label><label><span>Kategorie</span><CareSelect label="Bedarfskategorie" value={supplyEditor.draft.category} options={["Pflege & Hygiene", "Inkontinenz", "Mobilität", "Ernährung", "Mundpflege", "Sonstiges"]} onChange={(value) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, category: value } } : current)}/></label><label><span>Einheit</span><CareSelect label="Einheit" value={supplyEditor.draft.unit} options={["Stück", "Packung", "Flasche", "Tube", "Paar"]} onChange={(value) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, unit: value } } : current)}/></label><label><span>Aktueller Bestand</span><input type="number" min="0" value={supplyEditor.draft.currentQuantity} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, currentQuantity: Number(event.target.value) || 0 } } : current)}/></label><label><span>Sollbestand</span><input type="number" min="0" value={supplyEditor.draft.targetQuantity} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, targetQuantity: Number(event.target.value) || 0 } } : current)}/></label><label className="wide"><span>Status</span><CareSelect label="Status" value={supplyEditor.draft.status === "active" ? "Aktiv" : supplyEditor.draft.status === "blocked" ? "Gesperrt" : "Archiviert"} options={["Aktiv", "Gesperrt", "Archiviert"]} onChange={(value) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, status: value === "Gesperrt" ? "blocked" : value === "Archiviert" ? "archived" : "active" } } : current)}/></label><label className="wide"><span>Hinweis</span><textarea value={supplyEditor.draft.notes} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, notes: event.target.value } } : current)} placeholder="z. B. bevorzugte Marke, Größe oder Anwendungshinweis …" rows={4}/></label></div><footer><button className="secondary-button" type="button" onClick={() => setSupplyEditor(null)}>Abbrechen</button><button className="primary-button" disabled={supplySaving}><Check/> {supplySaving ? "Speichern…" : "Pflegebedarf speichern"}</button></footer></form></section></div>}
     </div>
   );
 }
