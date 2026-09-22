@@ -209,6 +209,7 @@ CREATE TABLE IF NOT EXISTS carecore_care_supply_products (
   unit VARCHAR(40) NOT NULL DEFAULT 'Stück',
   description TEXT,
   default_target_quantity INTEGER NOT NULL DEFAULT 0 CHECK (default_target_quantity >= 0),
+  current_stock_quantity INTEGER NOT NULL DEFAULT 0 CHECK (current_stock_quantity >= 0),
   status VARCHAR(24) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'blocked', 'archived')),
   created_by UUID REFERENCES carecore_users(id) ON DELETE SET NULL,
   updated_by UUID REFERENCES carecore_users(id) ON DELETE SET NULL,
@@ -216,6 +217,9 @@ CREATE TABLE IF NOT EXISTS carecore_care_supply_products (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (organization_id, item_name)
 );
+
+ALTER TABLE carecore_care_supply_products
+  ADD COLUMN IF NOT EXISTS current_stock_quantity INTEGER NOT NULL DEFAULT 0 CHECK (current_stock_quantity >= 0);
 
 ALTER TABLE carecore_resident_supplies
   ADD COLUMN IF NOT EXISTS product_id UUID REFERENCES carecore_care_supply_products(id) ON DELETE SET NULL;
