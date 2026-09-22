@@ -33,7 +33,7 @@ type AppSidebarProps = {
   onToast?: (message: string) => void;
 };
 
-export function SidebarTooltip({ label }: { label: string }) {
+export function SidebarTooltip({ label, placement = "right" }: { label: string; placement?: "right" | "top" }) {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
@@ -44,7 +44,9 @@ export function SidebarTooltip({ label }: { label: string }) {
     if (!trigger) return;
     const updatePosition = () => {
       const rect = trigger.getBoundingClientRect();
-      setPosition({ top: rect.top + rect.height / 2, left: rect.right + 12 });
+      setPosition(placement === "top"
+        ? { top: rect.top - 8, left: rect.left + rect.width / 2 }
+        : { top: rect.top + rect.height / 2, left: rect.right + 12 });
     };
     const show = () => { updatePosition(); setOpen(true); };
     const hide = () => setOpen(false);
@@ -62,11 +64,11 @@ export function SidebarTooltip({ label }: { label: string }) {
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, []);
+  }, [placement]);
 
   return <>
     <span ref={anchorRef} className="sidebar-tooltip-anchor" aria-hidden="true" />
-    {open && typeof document !== "undefined" && createPortal(<span className="sidebar-tooltip sidebar-tooltip-portal" role="tooltip" style={{ top: position.top, left: position.left }}>{label}</span>, document.body)}
+    {open && typeof document !== "undefined" && createPortal(<span className={`sidebar-tooltip sidebar-tooltip-portal ${placement === "top" ? "sidebar-tooltip-top" : ""}`} role="tooltip" style={{ top: position.top, left: position.left }}>{label}</span>, document.body)}
   </>;
 }
 
