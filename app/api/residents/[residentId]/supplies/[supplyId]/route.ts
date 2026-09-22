@@ -27,7 +27,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ resid
     if (!active) return NextResponse.json({ error: "Pflegebedarf nicht verfügbar." }, { status: 404 });
     const input = supplyValues(await request.json() as SupplyInput);
     if (!input.itemName) return NextResponse.json({ error: "Bitte gib eine Bezeichnung an." }, { status: 400 });
-    const rows = await active.sql`UPDATE carecore_resident_supplies SET item_name = ${input.itemName}, category = ${input.category}, unit = ${input.unit}, current_quantity = ${input.currentQuantity}, target_quantity = ${input.targetQuantity}, status = ${input.status}, notes = ${input.notes || null}, updated_by = ${active.actor.id}, updated_at = NOW() WHERE id = ${supplyId} RETURNING id, item_name, category, unit, current_quantity, target_quantity, status, notes, updated_at`;
+    const rows = await active.sql`UPDATE carecore_resident_supplies SET item_name = ${input.itemName}, category = ${input.category}, unit = ${input.unit}, current_quantity = ${input.currentQuantity}, target_quantity = ${input.targetQuantity}, status = ${input.status}, notes = ${input.notes || null}, updated_by = ${active.actor.id}, updated_at = NOW() WHERE id = ${supplyId} RETURNING id, product_id, item_name, category, unit, current_quantity, target_quantity, status, notes, updated_at`;
     return NextResponse.json({ supply: rows[0] });
   } catch (error) { console.error("Supplies PATCH failed", error); return NextResponse.json({ error: "Pflegebedarf konnte nicht aktualisiert werden." }, { status: 500 }); }
 }

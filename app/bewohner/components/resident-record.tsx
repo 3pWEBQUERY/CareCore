@@ -132,9 +132,10 @@ type ContactDraft = { fullName: string; relationship: string; phone: string; ema
 
 const emptyBiography: ResidentBiography = { lifeStory: "", importantPeople: "", dailyRoutines: "", preferences: "", strengths: "", sensitiveTopics: "", updatedAt: null, updatedBy: null };
 const emptyContact: ContactDraft = { fullName: "", relationship: "", phone: "", email: "", isPrimary: false, isEmergencyContact: true };
-type ResidentSupply = { id: string; item_name: string; category: string; unit: string; current_quantity: number; target_quantity: number; status: "active" | "blocked" | "archived"; notes: string | null; updated_at: string };
-type SupplyDraft = { itemName: string; category: string; unit: string; currentQuantity: number; targetQuantity: number; status: "active" | "blocked" | "archived"; notes: string };
-const emptySupply: SupplyDraft = { itemName: "", category: "Pflege & Hygiene", unit: "Stück", currentQuantity: 0, targetQuantity: 0, status: "active", notes: "" };
+type CareSupplyProduct = { id: string; item_name: string; category: string; unit: string; default_target_quantity: number };
+type ResidentSupply = { id: string; product_id: string | null; item_name: string; category: string; unit: string; current_quantity: number; target_quantity: number; status: "active" | "blocked" | "archived"; notes: string | null; updated_at: string };
+type SupplyDraft = { productId: string; quantity: number; itemName: string; category: string; unit: string; currentQuantity: number; targetQuantity: number; status: "active" | "blocked" | "archived"; notes: string };
+const emptySupply: SupplyDraft = { productId: "", quantity: 1, itemName: "", category: "Pflege & Hygiene", unit: "Stück", currentQuantity: 0, targetQuantity: 0, status: "active", notes: "" };
 
 const careDomains: CareDomain[] = [
   { id: "mobility", label: "Mobilität & Bewegung", status: "attention", statusLabel: "Beobachten", summary: "Mobilisation mit Rollator und Begleitung. Erhöhtes Sturzrisiko bei Lagewechseln und in der Nacht.", goal: "Sichere Mobilität im Wohnbereich erhalten und weitere Sturzereignisse vermeiden.", measures: ["Transfers mit verbaler Anleitung begleiten", "Rollator vor jedem Aufstehen bereitstellen", "Sturzprophylaxe und neurologische Kontrollen fortführen"] },
@@ -205,6 +206,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
   const [contactEditor, setContactEditor] = useState<{ id: string | null; draft: ContactDraft } | null>(null);
   const [contactSaving, setContactSaving] = useState(false);
   const [supplies, setSupplies] = useState<ResidentSupply[]>([]);
+  const [careSupplyProducts, setCareSupplyProducts] = useState<CareSupplyProduct[]>([]);
   const [suppliesLoading, setSuppliesLoading] = useState(Boolean(resident.id));
   const [suppliesError, setSuppliesError] = useState("");
   const [supplyEditor, setSupplyEditor] = useState<{ id: string | null; draft: SupplyDraft } | null>(null);
@@ -258,7 +260,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
       setSuppliesLoading(true);
       fetch(`/api/residents/${resident.id}/supplies`, { cache: "no-store" }).then(async (response) => ({ response, data: await response.json().catch(() => null) })).then(({ response, data }) => {
         if (!active) return;
-        if (response.ok) { setSupplies(data.supplies ?? []); setSuppliesError(""); } else setSuppliesError(data?.error || "Pflegebedarf konnte nicht geladen werden.");
+        if (response.ok) { setSupplies(data.supplies ?? []); setCareSupplyProducts(data.products ?? []); setSuppliesError(""); } else setSuppliesError(data?.error || "Pflegebedarf konnte nicht geladen werden.");
       }).catch(() => active && setSuppliesError("Pflegebedarf konnte nicht geladen werden.")).finally(() => active && setSuppliesLoading(false));
     }, 0);
     return () => { active = false; window.clearTimeout(timer); };
@@ -308,12 +310,13 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
 
   function openSupplyEditor(supply?: ResidentSupply) {
     setSuppliesError("");
-    setSupplyEditor(supply ? { id: supply.id, draft: { itemName: supply.item_name, category: supply.category, unit: supply.unit, currentQuantity: supply.current_quantity, targetQuantity: supply.target_quantity, status: supply.status, notes: supply.notes ?? "" } } : { id: null, draft: { ...emptySupply } });
+    setSupplyEditor(supply ? { id: supply.id, draft: { productId: supply.product_id ?? "", quantity: 1, itemName: supply.item_name, category: supply.category, unit: supply.unit, currentQuantity: supply.current_quantity, targetQuantity: supply.target_quantity, status: supply.status, notes: supply.notes ?? "" } } : { id: null, draft: { ...emptySupply } });
   }
   async function saveSupply(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!resident.id || !supplyEditor) { setSuppliesError("Diese Demoakte hat keine gespeicherte Bewohner-ID."); return; }
+    if (!supplyEditor.id && !supplyEditor.draft.productId) { setSuppliesError("Bitte wähle ein Pflegeprodukt aus dem Katalog."); return; }
     setSupplySaving(true); setSuppliesError("");
-    try { const response = await fetch(`/api/residents/${resident.id}/supplies${supplyEditor.id ? `/${supplyEditor.id}` : ""}`, { method: supplyEditor.id ? "PATCH" : "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(supplyEditor.draft) }); const data = await response.json().catch(() => null); if (!response.ok) { setSuppliesError(data?.error || "Pflegebedarf konnte nicht gespeichert werden."); return; } setSupplies((current) => supplyEditor.id ? current.map((item) => item.id === supplyEditor.id ? data.supply : item) : [...current, data.supply]); setSupplyEditor(null); onAction(supplyEditor.id ? "Pflegebedarf aktualisiert" : "Pflegebedarf hinzugefügt"); } catch { setSuppliesError("Pflegebedarf konnte nicht gespeichert werden."); } finally { setSupplySaving(false); }
+    try { const response = await fetch(`/api/residents/${resident.id}/supplies${supplyEditor.id ? `/${supplyEditor.id}` : ""}`, { method: supplyEditor.id ? "PATCH" : "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(supplyEditor.id ? supplyEditor.draft : { productId: supplyEditor.draft.productId, quantity: supplyEditor.draft.quantity, notes: supplyEditor.draft.notes }) }); const data = await response.json().catch(() => null); if (!response.ok) { setSuppliesError(data?.error || "Pflegebedarf konnte nicht gespeichert werden."); return; } setSupplies((current) => supplyEditor.id ? current.map((item) => item.id === supplyEditor.id ? data.supply : item) : [...current.filter((item) => item.product_id !== data.supply.product_id), data.supply]); setSupplyEditor(null); onAction(supplyEditor.id ? "Pflegebedarf aktualisiert" : "Pflegeprodukt dem Bewohner zugewiesen"); } catch { setSuppliesError("Pflegebedarf konnte nicht gespeichert werden."); } finally { setSupplySaving(false); }
   }
   async function deleteSupply(supply: ResidentSupply) {
     if (!resident.id || !window.confirm(`${supply.item_name} wirklich entfernen?`)) return;
@@ -829,7 +832,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
             <div>
               <p className="eyebrow">CareCore Bewohner · Pflegebedarf</p>
               <h2 id="supply-editor-title">{supplyEditor.id ? "Bedarf bearbeiten" : "Pflegebedarf hinzufügen"}</h2>
-              <p>Lege Material, Sollbestand und Status für {resident.name} fest.</p>
+              <p>{supplyEditor.id ? `Pflegebedarf für ${resident.name} verwalten.` : `Ein Produkt aus dem zentralen Katalog für ${resident.name} buchen.`}</p>
             </div>
             <button className="area-editor-close" type="button" onClick={() => setSupplyEditor(null)} aria-label="Pflegebedarf schließen">×</button>
           </header>
@@ -838,28 +841,35 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
             <div className="area-editor-intro">
               <span className="area-editor-icon"><ClipboardText aria-hidden="true"/></span>
               <div>
-                <strong>Individueller Pflegebedarf</strong>
-                <p>Artikel und Bestände bleiben direkt in der Bewohnerakte nachvollziehbar.</p>
+                <strong>{supplyEditor.id ? "Bestand und Status" : "Produkt aus dem Pflegekatalog"}</strong>
+                <p>{supplyEditor.id ? "Der bestehende Bewohnerbestand wird aktualisiert." : "Die gebuchte Menge wird dem aktuellen Bewohnerbestand hinzugefügt und protokolliert."}</p>
               </div>
               <span className="duty-assignment-status"><i/>{supplyEditor.draft.status === "blocked" ? "Gesperrt" : supplyEditor.draft.status === "archived" ? "Archiviert" : "Aktiv"}</span>
             </div>
 
             <div className="area-editor-grid">
-              <label className="area-editor-wide"><span>Artikel</span><input value={supplyEditor.draft.itemName} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, itemName: event.target.value } } : current)} placeholder="z. B. Einlagen, Zahnpasta oder Rollator" autoFocus required/></label>
-              <label><span>Kategorie</span><CareSelect label="Bedarfskategorie" value={supplyEditor.draft.category} options={["Pflege & Hygiene", "Inkontinenz", "Mobilität", "Ernährung", "Mundpflege", "Sonstiges"]} onChange={(value) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, category: value } } : current)}/></label>
-              <label><span>Einheit</span><CareSelect label="Einheit" value={supplyEditor.draft.unit} options={["Stück", "Packung", "Flasche", "Tube", "Paar"]} onChange={(value) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, unit: value } } : current)}/></label>
-              <label><span>Aktueller Bestand</span><input type="number" min="0" value={supplyEditor.draft.currentQuantity} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, currentQuantity: Number(event.target.value) || 0 } } : current)}/></label>
-              <label><span>Sollbestand</span><input type="number" min="0" value={supplyEditor.draft.targetQuantity} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, targetQuantity: Number(event.target.value) || 0 } } : current)}/></label>
-              <label className="area-editor-wide"><span>Status</span><CareSelect label="Status" value={supplyEditor.draft.status === "active" ? "Aktiv" : supplyEditor.draft.status === "blocked" ? "Gesperrt" : "Archiviert"} options={["Aktiv", "Gesperrt", "Archiviert"]} onChange={(value) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, status: value === "Gesperrt" ? "blocked" : value === "Archiviert" ? "archived" : "active" } } : current)}/></label>
-              <label className="area-editor-wide"><span>Hinweis</span><textarea value={supplyEditor.draft.notes} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, notes: event.target.value } } : current)} placeholder="z. B. bevorzugte Marke, Größe oder Anwendungshinweis …" rows={4}/></label>
+              {supplyEditor.id ? <>
+                <label className="area-editor-wide"><span>Artikel</span><input value={supplyEditor.draft.itemName} readOnly/></label>
+                <label><span>Aktueller Bestand</span><input type="number" min="0" value={supplyEditor.draft.currentQuantity} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, currentQuantity: Number(event.target.value) || 0 } } : current)}/></label>
+                <label><span>Sollbestand</span><input type="number" min="0" value={supplyEditor.draft.targetQuantity} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, targetQuantity: Number(event.target.value) || 0 } } : current)}/></label>
+                <label><span>Status</span><CareSelect label="Status" value={supplyEditor.draft.status === "active" ? "Aktiv" : supplyEditor.draft.status === "blocked" ? "Gesperrt" : "Archiviert"} options={["Aktiv", "Gesperrt", "Archiviert"]} onChange={(value) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, status: value === "Gesperrt" ? "blocked" : value === "Archiviert" ? "archived" : "active" } } : current)}/></label>
+                <label><span>Kategorie</span><input value={supplyEditor.draft.category} readOnly/></label>
+                <label className="area-editor-wide"><span>Hinweis</span><textarea value={supplyEditor.draft.notes} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, notes: event.target.value } } : current)} placeholder="Zusätzliche Hinweise für das Team …" rows={4}/></label>
+              </> : <>
+                <label className="area-editor-wide"><span>Pflegeprodukt</span><CareSelect label="Pflegeprodukt" value={careSupplyProducts.find((product) => product.id === supplyEditor.draft.productId)?.item_name ?? "Produkt wählen"} options={careSupplyProducts.map((product) => product.item_name)} onChange={(value) => { const product = careSupplyProducts.find((item) => item.item_name === value); setSupplyEditor((current) => current && product ? { ...current, draft: { ...current.draft, productId: product.id, itemName: product.item_name, category: product.category, unit: product.unit, targetQuantity: product.default_target_quantity } } : current); }}/></label>
+                <label><span>Menge ({supplyEditor.draft.unit})</span><input type="number" min="1" max="100000" step="1" value={supplyEditor.draft.quantity} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, quantity: Math.max(1, Number(event.target.value) || 1) } } : current)} autoFocus/></label>
+                <label><span>Vorgeschlagener Sollbestand</span><input value={`${supplyEditor.draft.targetQuantity} ${supplyEditor.draft.unit}`} readOnly/></label>
+                <label className="area-editor-wide"><span>Buchungshinweis</span><textarea value={supplyEditor.draft.notes} onChange={(event) => setSupplyEditor((current) => current ? { ...current, draft: { ...current.draft, notes: event.target.value } } : current)} placeholder="Optional: Grösse, Marke oder weiterer Hinweis …" rows={3}/></label>
+                {!careSupplyProducts.length && <p className="supplies-error area-editor-wide" role="status">Im Pflegekatalog sind aktuell keine aktiven Produkte verfügbar. Bitte wende dich an die Administration.</p>}
+              </>}
             </div>
 
             <div className="duty-assignment-summary">
-              <span><strong>{supplyEditor.draft.itemName || "Neuer Pflegebedarf"}</strong><small>{supplyEditor.draft.category} · {supplyEditor.draft.unit}</small></span>
-              <span><strong>{supplyEditor.draft.currentQuantity} von {supplyEditor.draft.targetQuantity} {supplyEditor.draft.unit}</strong><small>Aktueller Bestand</small></span>
+              <span><strong>{supplyEditor.draft.itemName || "Kein Produkt ausgewählt"}</strong><small>{supplyEditor.draft.category} · {supplyEditor.draft.unit}</small></span>
+              <span><strong>{supplyEditor.id ? `${supplyEditor.draft.currentQuantity} von ${supplyEditor.draft.targetQuantity} ${supplyEditor.draft.unit}` : `${supplyEditor.draft.quantity} ${supplyEditor.draft.unit}`}</strong><small>{supplyEditor.id ? "Bestand nach Sollmenge" : "Wird dem Bewohner gutgeschrieben"}</small></span>
             </div>
 
-            <footer className="area-editor-actions"><button className="secondary-button" type="button" onClick={() => setSupplyEditor(null)}>Abbrechen</button><button className="primary-button" disabled={supplySaving}><Check/> {supplySaving ? "Speichern…" : "Pflegebedarf speichern"}</button></footer>
+            <footer className="area-editor-actions"><button className="secondary-button" type="button" onClick={() => setSupplyEditor(null)}>Abbrechen</button><button className="primary-button" disabled={supplySaving || (!supplyEditor.id && !careSupplyProducts.length)}><Check/> {supplySaving ? "Speichern…" : supplyEditor.id ? "Bestand aktualisieren" : "Menge buchen"}</button></footer>
           </form>
         </section>
       </div>}

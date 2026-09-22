@@ -201,6 +201,43 @@ CREATE TABLE IF NOT EXISTS carecore_resident_supplies (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS carecore_care_supply_products (
+  id UUID PRIMARY KEY,
+  organization_id UUID NOT NULL REFERENCES carecore_organizations(id) ON DELETE CASCADE,
+  item_name VARCHAR(180) NOT NULL,
+  category VARCHAR(80) NOT NULL DEFAULT 'Pflege & Hygiene',
+  unit VARCHAR(40) NOT NULL DEFAULT 'Stück',
+  description TEXT,
+  default_target_quantity INTEGER NOT NULL DEFAULT 0 CHECK (default_target_quantity >= 0),
+  status VARCHAR(24) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'blocked', 'archived')),
+  created_by UUID REFERENCES carecore_users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES carecore_users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (organization_id, item_name)
+);
+
+ALTER TABLE carecore_resident_supplies
+  ADD COLUMN IF NOT EXISTS product_id UUID REFERENCES carecore_care_supply_products(id) ON DELETE SET NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS carecore_resident_supplies_product_unique_idx
+  ON carecore_resident_supplies (resident_id, product_id) WHERE product_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS carecore_resident_supply_transactions (
+  id UUID PRIMARY KEY,
+  resident_id UUID NOT NULL REFERENCES carecore_residents(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES carecore_care_supply_products(id) ON DELETE SET NULL,
+  resident_supply_id UUID REFERENCES carecore_resident_supplies(id) ON DELETE SET NULL,
+  quantity INTEGER NOT NULL CHECK (quantity > 0),
+  action VARCHAR(24) NOT NULL DEFAULT 'issued' CHECK (action IN ('issued', 'returned', 'adjusted')),
+  notes TEXT,
+  created_by UUID REFERENCES carecore_users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS carecore_resident_supply_transactions_resident_idx
+  ON carecore_resident_supply_transactions (resident_id, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS carecore_resident_clinical_flags (
   id UUID PRIMARY KEY,
   resident_id UUID NOT NULL REFERENCES carecore_residents(id) ON DELETE CASCADE,

@@ -28,7 +28,7 @@ export const navigation: NavGroup[] = [
   { id: "management", label: "Leitung", modules: [
     { id: "quality", label: "Qualität", icon: "quality", children: ["Ereignisse", "Massnahmen"] },
     { id: "insights", label: "Kennzahlen & Analysen", icon: "chart", children: ["Pflege", "Leitung", "Personal"] },
-    { id: "admin", label: "Administration", icon: "settings", children: ["Organisation", "Mitarbeiter", "Konfiguration"] },
+    { id: "admin", label: "Administration", icon: "settings", children: ["Organisation", "Mitarbeiter", "Pflegebedarf", "Konfiguration"] },
     { id: "teamlead", label: "Teamleitung", icon: "team", children: ["Mitarbeiter", "Dienste", "Aufgaben"] },
   ] },
   { id: "intelligence", label: "Intelligenz", modules: [{ id: "ai", label: "CareCore KI", icon: "ai", children: ["Assistenz", "KI-Entwürfe"] }] },
@@ -53,7 +53,7 @@ const routes: Record<string, Record<string, string>> = {
   docs: { "Dokumente": "/personal/dokumente", "Standards & Weisungen": "/personal/dokumente/standards" },
   quality: { "Ereignisse": "/leitung/qualitaet", "Massnahmen": "/leitung/qualitaet/massnahmen" },
   insights: { "Pflege": "/leitung/kennzahlen", "Leitung": "/leitung/kennzahlen/leitung", "Personal": "/leitung/kennzahlen/personal" },
-  admin: { "Organisation": "/leitung/administration", "Mitarbeiter": "/leitung/administration/mitarbeiter", "Konfiguration": "/leitung/administration/konfiguration" },
+  admin: { "Organisation": "/leitung/administration", "Mitarbeiter": "/leitung/administration/mitarbeiter", "Pflegebedarf": "/leitung/administration/pflegebedarf", "Konfiguration": "/leitung/administration/konfiguration" },
   teamlead: { "Mitarbeiter": "/leitung/teamleitung/mitarbeiter", "Dienste": "/leitung/teamleitung/dienste", "Aufgaben": "/leitung/teamleitung/aufgaben" },
   ai: { "Assistenz": "/intelligenz", "KI-Entwürfe": "/intelligenz/entwuerfe" },
   rai: { "Übersicht": "/rai", "interRAI-Erfassung": "/rai/erfassung", "Fälligkeiten": "/rai/faelligkeiten", "Berichte": "/rai/berichte" },
@@ -68,6 +68,6 @@ export function navigationForRole(role?: string | null): NavGroup[] {
   const canLead = role === "admin" || role === "leitung";
   return navigation.map((group) => group.id !== "management" ? group : {
     ...group,
-    modules: group.modules.filter((module) => module.id !== "teamlead" || canLead),
+    modules: group.modules.filter((module) => module.id !== "teamlead" || canLead).map((module) => module.id === "admin" && role !== "admin" ? { ...module, children: module.children.filter((child) => child !== "Pflegebedarf") } : module),
   });
 }
