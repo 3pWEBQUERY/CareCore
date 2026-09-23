@@ -476,8 +476,8 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .timeline-state.now { color: var(--brand); }
 
 .tasks-card { position: sticky; top: 90px; align-self: start; max-height: calc(100dvh - 110px); overflow-y: auto; }
-.progress-ring { --progress: 20%; width: 38px; height: 38px; position: relative; display: grid; place-items: center; border-radius: 6px; background: conic-gradient(var(--brand) var(--progress),#e8edef 0); }
-.progress-ring::before { content: ""; position: absolute; inset: 5px; border-radius: 6px; background: white; }
+.progress-ring { --progress: 20%; width: 38px; height: 38px; position: relative; display: grid; place-items: center; border-radius: 50%; background: conic-gradient(var(--brand) var(--progress),#e8edef 0); }
+.progress-ring::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: white; }
 .progress-ring span { position: relative; color: var(--brand-dark); font-size: 10px; font-weight: 780; }
 .dashboard-task-list { padding: 7px 16px 11px; }
 .dashboard-task-row { display: grid; grid-template-columns: 27px minmax(0,1fr) auto; align-items: start; gap: 11px; padding: 12px 2px; border-bottom: 1px solid #edf1f2; }
