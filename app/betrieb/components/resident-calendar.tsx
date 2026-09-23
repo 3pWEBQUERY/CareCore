@@ -96,7 +96,7 @@ function TimedCalendarGrid({
 export default function ResidentCalendar() {
   const today = appointmentLocalParts(new Date()).date;
   const [focusDate, setFocusDate] = useState(today);
-  const [view, setView] = useState<View>("week");
+  const [view, setView] = useState<View>("day");
   const [appointments, setAppointments] = useState<ResidentAppointment[]>([]);
   const [residents, setResidents] = useState<AppointmentResident[]>([]);
   const [careUnits, setCareUnits] = useState<AppointmentCareUnit[]>([]);
