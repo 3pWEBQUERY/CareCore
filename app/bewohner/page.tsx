@@ -209,12 +209,15 @@ export default function ResidentsPage() {
       const response = await fetch("/api/residents", { cache: "no-store" });
       if (!response.ok) throw new Error("Bewohner konnten nicht geladen werden.");
       const data = await response.json() as { residents: ResidentRow[]; units: { name: string }[] };
-      setResidents(data.residents.map(toResident));
+      const records = data.residents.map(toResident);
+      setResidents(records);
+      const residentId = new URLSearchParams(window.location.search).get("resident");
+      if (residentId) setSelectedResident(records.find((resident) => resident.id === residentId) ?? null);
       setUnits(data.units.map((item) => item.name));
       const start = Date.now() - 7 * 86400000;
       setAdmissionsThisWeek(data.residents.filter((item) => item.admitted_on && new Date(item.admitted_on).getTime() >= start).length);
     } catch (error) { setToast(error instanceof Error ? error.message : "Daten konnten nicht geladen werden."); }
-  }, [setToast]);
+  }, [setToast, setSelectedResident]);
   useEffect(() => { const timer = window.setTimeout(() => { void loadResidents(); }, 0); return () => window.clearTimeout(timer); }, [loadResidents]);
 
   function chooseMobileGroup(groupId: string) {

@@ -112,6 +112,20 @@ CREATE TABLE IF NOT EXISTS carecore_user_dashboard_layouts (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS carecore_staff_notes (
+  id UUID PRIMARY KEY,
+  organization_id UUID NOT NULL REFERENCES carecore_organizations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES carecore_users(id) ON DELETE CASCADE,
+  title VARCHAR(160) NOT NULL,
+  body TEXT NOT NULL,
+  pinned BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS carecore_staff_notes_owner_updated_idx
+  ON carecore_staff_notes (user_id, pinned DESC, updated_at DESC);
+
 CREATE TABLE IF NOT EXISTS carecore_user_unit_assignments (
   user_id UUID NOT NULL REFERENCES carecore_users(id) ON DELETE CASCADE,
   care_unit_id UUID NOT NULL REFERENCES carecore_care_units(id) ON DELETE CASCADE,
