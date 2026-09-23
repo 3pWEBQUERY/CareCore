@@ -73,7 +73,7 @@ export default function MessagesWorkspace() {
     setText(""); await load(selectedId);
   }
 
-  return <ModulePageShell activeModule="team" activeChild="Nachrichten" pageClass="messages-page">{() => <main className="workspace messages-workspace">
+  return <ModulePageShell activeModule="messenger" activeChild="Nachrichten" pageClass="messages-page">{() => <main className="workspace messages-workspace">
     <header className="messages-heading">
       <div><p className="eyebrow">CareCore Team</p><h1>Nachrichten</h1><p>Direkt im Team abstimmen, Gruppen organisieren und den Pflegealltag nachvollziehbar begleiten.</p></div>
       <div className="messages-heading-actions"><button className="secondary-button" onClick={() => openEditor("direct")}><ChatsCircle weight="bold"/> Neue Nachricht</button><button className="primary-button" onClick={() => openEditor("group")}><Plus weight="bold"/> Gruppe erstellen</button></div>

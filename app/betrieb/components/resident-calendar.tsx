@@ -149,7 +149,7 @@ export default function ResidentCalendar() {
   function create(date = focusDate, time = "09:00") { setEditor({ draft: { ...initialAppointmentDraft("", date, time), careUnitId: careUnits.find((item) => item.name === unit)?.id ?? "" } }); }
   function saved() { setEditor(null); setRevision((current) => current + 1); }
 
-  return <ModulePageShell activeModule="shift" activeChild="Kalender" pageClass="resident-calendar-page" locationSecondary="Gesamtes Haus · alle Wohnbereiche">{() => <main className="workspace resident-calendar-workspace">
+  return <ModulePageShell activeModule="care-calendar" activeChild="Kalender" pageClass="resident-calendar-page" locationSecondary="Gesamtes Haus · alle Wohnbereiche">{() => <main className="workspace resident-calendar-workspace">
     <header className="page-heading resident-calendar-heading"><div className="heading-copy"><p className="eyebrow">CareCore Betrieb · Schicht</p><h1>Kalender</h1><p>Bewohnertermine und geplante Aufgaben im Wohnbereich an einem Ort.</p></div><button className="primary-button" type="button" onClick={() => create()}><Plus className="button-icon"/> Termin erstellen</button></header>
     <section className="resident-calendar-summary" aria-label="Kalenderübersicht"><span><CalendarDots/><strong>{appointments.length}</strong><small>Einträge im Zeitraum</small></span><span><Clock/><strong>{scheduledCount}</strong><small>geplant</small></span><span><UsersThree/><strong>{appointments.filter((item) => item.kind === "care_unit_task").length}</strong><small>Wohnbereichsaufgaben</small></span></section>
     <div className="resident-calendar-layout">

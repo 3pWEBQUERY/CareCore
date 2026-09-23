@@ -15,13 +15,13 @@ export const navigation: NavGroup[] = [
     { id: "assess", label: "Einschätzungen", icon: "assess", children: ["Einschätzungen", "Fälligkeiten"] },
   ] },
   { id: "operations", label: "Betrieb", modules: [
-    { id: "shift", label: "Schicht", icon: "shift", href: "/betrieb/schicht", children: ["Mein Dienst", "Schichtverlauf", "Kalender"] },
+    { id: "shift", label: "Schicht", icon: "shift", href: "/betrieb/schicht", children: ["Mein Dienst", "Schichtverlauf"] },
     { id: "tasks", label: "Aufgaben", icon: "tasks", children: ["Meine Aufgaben", "Teamaufgaben"], badge: 3 },
     { id: "handover", label: "Übergabe", icon: "handover", children: ["Meine Übergabe", "Seit letztem Dienst"] },
     { id: "schedule", label: "Dienste", icon: "calendar", children: ["Mein Dienstplan", "Teamplanung"] },
   ] },
   { id: "workforce", label: "Personal", modules: [
-    { id: "team", label: "Team", icon: "team", children: ["Neuigkeiten & Kanäle", "Nachrichten"] },
+    { id: "team", label: "Team", icon: "team", children: ["Neuigkeiten & Kanäle"] },
     { id: "learn", label: "Schulungen", icon: "learn", children: ["Meine Schulungen", "Pflichtnachweise"] },
     { id: "docs", label: "Dokumente", icon: "docs", children: ["Dokumente", "Standards & Weisungen"] },
   ] },
@@ -33,6 +33,11 @@ export const navigation: NavGroup[] = [
   ] },
   { id: "intelligence", label: "Intelligenz", modules: [{ id: "ai", label: "CareCore KI", icon: "ai", children: ["Assistenz", "KI-Entwürfe"] }] },
   { id: "rai", label: "CareCore RAI", modules: [{ id: "rai", label: "RAI Arbeitsplatz", icon: "assess", children: ["Übersicht", "interRAI-Erfassung", "Fälligkeiten", "Berichte"] }] },
+  { id: "carecore-one", label: "CareCore One", modules: [
+    { id: "care-calendar", label: "Kalender", icon: "calendar", children: ["Kalender"] },
+    { id: "messenger", label: "Messenger", icon: "team", children: ["Nachrichten"] },
+    { id: "cloud", label: "Cloud", icon: "docs", children: ["Dateien"] },
+  ] },
 ];
 
 const routes: Record<string, Record<string, string>> = {
@@ -41,14 +46,17 @@ const routes: Record<string, Record<string, string>> = {
   chart: { "Schnelldokumentation": "/pflegedokumentation", "Verlaufsdokumentation": "/pflegedokumentation/verlauf" },
   vitals: { "Übersicht": "/vitalwerte", "Entwicklung": "/vitalwerte/entwicklung", "Grenzwerte": "/vitalwerte/grenzwerte" },
   med: { "Medikamentenplan": "/medikation", "Medikamentenrunde": "/medikation/runde", "Bestände": "/medikation/bestaende", "Reserven": "/medikation/reserven" },
-  shift: { "Mein Dienst": "/betrieb/schicht", "Schichtverlauf": "/betrieb/schicht/verlauf", "Kalender": "/betrieb/schicht/kalender" },
+  shift: { "Mein Dienst": "/betrieb/schicht", "Schichtverlauf": "/betrieb/schicht/verlauf" },
+  "care-calendar": { "Kalender": "/betrieb/schicht/kalender" },
+  messenger: { "Nachrichten": "/personal/team/nachrichten" },
+  cloud: { "Dateien": "/carecore-one/cloud" },
   tasks: { "Meine Aufgaben": "/betrieb/aufgaben", "Teamaufgaben": "/betrieb/aufgaben/team" },
   handover: { "Meine Übergabe": "/betrieb/uebergabe", "Seit letztem Dienst": "/betrieb/uebergabe/letzter-dienst" },
   schedule: { "Mein Dienstplan": "/betrieb/dienstplanung", "Teamplanung": "/betrieb/dienstplanung/team" },
   assess: { "Einschätzungen": "/einschaetzungen", "Fälligkeiten": "/einschaetzungen/faelligkeiten" },
   wounds: { "Wundübersicht": "/wundmanagement", "Dokumentation": "/wundmanagement/dokumentation" },
   nutrition: { "Ernährungsplan": "/ernaehrung", "Trinkprotokoll": "/ernaehrung/trinkprotokoll" },
-  team: { "Neuigkeiten & Kanäle": "/personal/team", "Nachrichten": "/personal/team/nachrichten" },
+  team: { "Neuigkeiten & Kanäle": "/personal/team" },
   learn: { "Meine Schulungen": "/personal/schulungen", "Pflichtnachweise": "/personal/schulungen/pflichtnachweise" },
   docs: { "Dokumente": "/personal/dokumente", "Standards & Weisungen": "/personal/dokumente/standards" },
   quality: { "Ereignisse": "/leitung/qualitaet", "Massnahmen": "/leitung/qualitaet/massnahmen" },

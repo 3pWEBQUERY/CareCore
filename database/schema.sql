@@ -635,6 +635,22 @@ CREATE TABLE IF NOT EXISTS carecore_documents (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Shared CareCore One file storage. Contents are base64-encoded to keep the
+-- Neon HTTP driver path portable; API enforces a per-file upload limit.
+CREATE TABLE IF NOT EXISTS carecore_cloud_files (
+  id UUID PRIMARY KEY,
+  organization_id UUID NOT NULL REFERENCES carecore_organizations(id) ON DELETE CASCADE,
+  name VARCHAR(220) NOT NULL,
+  mime_type VARCHAR(160) NOT NULL DEFAULT 'application/octet-stream',
+  size_bytes BIGINT NOT NULL CHECK (size_bytes >= 0),
+  content_base64 TEXT NOT NULL,
+  uploaded_by UUID REFERENCES carecore_users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS carecore_cloud_files_org_created_idx
+  ON carecore_cloud_files (organization_id, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS carecore_trainings (
   id UUID PRIMARY KEY,
   organization_id UUID NOT NULL REFERENCES carecore_organizations(id) ON DELETE CASCADE,
