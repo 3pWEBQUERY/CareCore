@@ -1,13 +1,16 @@
 export const appointmentCategories = ["Arzttermin", "Therapie", "Untersuchung", "Besuch", "Transport", "Sonstiges"] as const;
+export const careUnitTaskCategories = ["Organisation", "Pflege", "Material", "Reinigung", "Besprechung", "Sonstiges"] as const;
 export const appointmentStatuses = ["scheduled", "completed", "cancelled"] as const;
 
 export type AppointmentStatus = typeof appointmentStatuses[number];
+export type AppointmentKind = "resident" | "care_unit_task";
 
 export type ResidentAppointment = {
   id: string;
-  resident_id: string;
-  resident_name: string;
-  resident_status: string;
+  resident_id: string | null;
+  resident_name: string | null;
+  resident_status: string | null;
+  kind: AppointmentKind;
   care_unit_id: string | null;
   care_unit_name: string | null;
   room_name: string | null;
@@ -31,8 +34,12 @@ export type AppointmentResident = {
   room_name: string | null;
 };
 
+export type AppointmentCareUnit = { id: string; name: string; floor: string | null };
+
 export type AppointmentDraft = {
+  kind: AppointmentKind;
   residentId: string;
+  careUnitId: string;
   title: string;
   category: string;
   date: string;
@@ -81,11 +88,13 @@ export function appointmentDateLabel(value: string, options: Intl.DateTimeFormat
 export function initialAppointmentDraft(residentId = "", date = appointmentLocalParts(new Date()).date, startTime = "09:00"): AppointmentDraft {
   const [hour, minute] = startTime.split(":").map(Number);
   const endMinutes = Math.min(23 * 60 + 45, hour * 60 + minute + 60);
-  return { residentId, title: "", category: "Arzttermin", date, startTime, endTime: `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:${String(endMinutes % 60).padStart(2, "0")}`, location: "", notes: "", status: "scheduled" };
+  return { kind: "resident", residentId, careUnitId: "", title: "", category: "Arzttermin", date, startTime, endTime: `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:${String(endMinutes % 60).padStart(2, "0")}`, location: "", notes: "", status: "scheduled" };
 }
 
 export function draftFromAppointment(appointment: ResidentAppointment): AppointmentDraft {
   const start = appointmentLocalParts(appointment.starts_at);
   const end = appointmentLocalParts(appointment.ends_at);
-  return { residentId: appointment.resident_id, title: appointment.title, category: appointment.category, date: start.date, startTime: start.time, endTime: end.time, location: appointment.location ?? "", notes: appointment.notes ?? "", status: appointment.status };
+  return { kind: appointment.kind, residentId: appointment.resident_id ?? "", careUnitId: appointment.kind === "care_unit_task" ? appointment.care_unit_id ?? "" : "", title: appointment.title, category: appointment.category, date: start.date, startTime: start.time, endTime: end.time, location: appointment.location ?? "", notes: appointment.notes ?? "", status: appointment.status };
 }
+
+export const appointmentTargetLabel = (appointment: ResidentAppointment) => appointment.kind === "care_unit_task" ? appointment.care_unit_name ?? "Wohnbereich" : appointment.resident_name ?? "Bewohner";

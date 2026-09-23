@@ -176,7 +176,9 @@ CREATE TABLE IF NOT EXISTS carecore_resident_stays (
 CREATE TABLE IF NOT EXISTS carecore_resident_appointments (
   id UUID PRIMARY KEY,
   organization_id UUID NOT NULL REFERENCES carecore_organizations(id) ON DELETE CASCADE,
-  resident_id UUID NOT NULL REFERENCES carecore_residents(id) ON DELETE CASCADE,
+  resident_id UUID REFERENCES carecore_residents(id) ON DELETE CASCADE,
+  care_unit_id UUID REFERENCES carecore_care_units(id) ON DELETE CASCADE,
+  kind VARCHAR(24) NOT NULL DEFAULT 'resident',
   title VARCHAR(180) NOT NULL,
   category VARCHAR(40) NOT NULL DEFAULT 'Sonstiges',
   starts_at TIMESTAMPTZ NOT NULL,
@@ -191,10 +193,21 @@ CREATE TABLE IF NOT EXISTS carecore_resident_appointments (
   CHECK (ends_at > starts_at)
 );
 
+ALTER TABLE carecore_resident_appointments ALTER COLUMN resident_id DROP NOT NULL;
+ALTER TABLE carecore_resident_appointments ADD COLUMN IF NOT EXISTS care_unit_id UUID REFERENCES carecore_care_units(id) ON DELETE CASCADE;
+ALTER TABLE carecore_resident_appointments ADD COLUMN IF NOT EXISTS kind VARCHAR(24) NOT NULL DEFAULT 'resident';
+ALTER TABLE carecore_resident_appointments DROP CONSTRAINT IF EXISTS carecore_appointment_target_check;
+ALTER TABLE carecore_resident_appointments ADD CONSTRAINT carecore_appointment_target_check CHECK (
+  (kind = 'resident' AND resident_id IS NOT NULL AND care_unit_id IS NULL) OR
+  (kind = 'care_unit_task' AND resident_id IS NULL AND care_unit_id IS NOT NULL)
+);
+
 CREATE INDEX IF NOT EXISTS carecore_appointments_organization_time_idx
   ON carecore_resident_appointments (organization_id, starts_at);
 CREATE INDEX IF NOT EXISTS carecore_appointments_resident_time_idx
   ON carecore_resident_appointments (resident_id, starts_at);
+CREATE INDEX IF NOT EXISTS carecore_appointments_care_unit_time_idx
+  ON carecore_resident_appointments (care_unit_id, starts_at);
 
 CREATE TABLE IF NOT EXISTS carecore_resident_contacts (
   id UUID PRIMARY KEY,

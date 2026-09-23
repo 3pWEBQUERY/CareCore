@@ -6,8 +6,8 @@ import ModulePageShell from "@/app/components/module-page-shell";
 import { CareSelect } from "@/app/components/care-form-controls";
 import ResidentAppointmentEditor from "@/app/components/resident-appointment-editor";
 import {
-  appointmentLocalParts, initialAppointmentDraft, zurichTimeToIso,
-  type AppointmentDraft, type AppointmentResident, type ResidentAppointment,
+  appointmentLocalParts, appointmentTargetLabel, initialAppointmentDraft, zurichTimeToIso,
+  type AppointmentCareUnit, type AppointmentDraft, type AppointmentResident, type ResidentAppointment,
 } from "@/lib/resident-appointments";
 
 type View = "day" | "week" | "month";
@@ -77,15 +77,15 @@ function TimedCalendarGrid({
           const durationMinutes = endMinutes - minutes;
           return <button
             type="button"
-            className={`resident-calendar-week-event ${view === "day" ? "resident-calendar-day-event" : ""} ${item.category === "Arzttermin" ? "medical" : ""} ${item.status}`}
+            className={`resident-calendar-week-event ${view === "day" ? "resident-calendar-day-event" : ""} ${item.kind === "care_unit_task" ? "care-unit-task" : ""} ${item.category === "Arzttermin" ? "medical" : ""} ${item.status}`}
             key={item.id}
             style={{ top: minutes / 60 * 48 + 2, height: Math.max(25, durationMinutes / 60 * 48 - 3), left: `calc(${lane * 100 / lanes}% + 3px)`, width: `calc(${100 / lanes}% - 6px)` }}
-            aria-label={`${item.title}, ${item.resident_name}, ${eventTime(item)}`}
+            aria-label={`${item.title}, ${appointmentTargetLabel(item)}, ${eventTime(item)}`}
             onClick={() => onOpen(item)}
           >
-            <strong>{item.title}{view === "day" ? ` · ${item.resident_name}` : ""}</strong>
+            <strong>{item.title}{view === "day" ? ` · ${appointmentTargetLabel(item)}` : ""}</strong>
             {durationMinutes >= 60 && <span>{eventTime(item)}</span>}
-            {durationMinutes >= 105 && <small>{view === "day" ? item.location || item.category : item.resident_name}</small>}
+            {durationMinutes >= 105 && <small>{view === "day" ? item.location || item.category : appointmentTargetLabel(item)}</small>}
           </button>;
         })}
       </div>)}
@@ -99,6 +99,7 @@ export default function ResidentCalendar() {
   const [view, setView] = useState<View>("week");
   const [appointments, setAppointments] = useState<ResidentAppointment[]>([]);
   const [residents, setResidents] = useState<AppointmentResident[]>([]);
+  const [careUnits, setCareUnits] = useState<AppointmentCareUnit[]>([]);
   const [unit, setUnit] = useState("Alle Wohnbereiche");
   const [status, setStatus] = useState("Alle Termine");
   const [query, setQuery] = useState("");
@@ -116,7 +117,7 @@ export default function ResidentCalendar() {
       setLoading(true);
       fetch(`/api/appointments?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`, { cache: "no-store" })
         .then(async (response) => ({ response, data: await response.json().catch(() => null) }))
-        .then(({ response, data }) => { if (!active) return; if (!response.ok) throw new Error(data?.error || "Kalender konnte nicht geladen werden."); setAppointments(data.appointments ?? []); setResidents(data.residents ?? []); setError(""); })
+        .then(({ response, data }) => { if (!active) return; if (!response.ok) throw new Error(data?.error || "Kalender konnte nicht geladen werden."); setAppointments(data.appointments ?? []); setResidents(data.residents ?? []); setCareUnits(data.careUnits ?? []); setError(""); })
         .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : "Kalender konnte nicht geladen werden."); })
         .finally(() => { if (active) setLoading(false); });
     }, 0);
@@ -124,11 +125,11 @@ export default function ResidentCalendar() {
   }, [range.from, range.to, revision]);
   useEffect(() => { if (view !== "month") weekScrollRef.current?.scrollTo({ top: 7 * 48, behavior: "instant" }); }, [view, range.from]);
 
-  const units = useMemo(() => ["Alle Wohnbereiche", ...new Set(residents.map((resident) => resident.care_unit_name).filter((name): name is string => Boolean(name)))], [residents]);
+  const units = useMemo(() => ["Alle Wohnbereiche", ...careUnits.map((item) => item.name)], [careUnits]);
   const visible = useMemo(() => appointments.filter((item) => {
     const matchesUnit = unit === "Alle Wohnbereiche" || item.care_unit_name === unit;
     const matchesStatus = status === "Alle Termine" || statusName(item.status) === status;
-    const haystack = `${item.title} ${item.resident_name} ${item.category} ${item.location ?? ""}`.toLocaleLowerCase("de-CH");
+    const haystack = `${item.title} ${appointmentTargetLabel(item)} ${item.category} ${item.location ?? ""}`.toLocaleLowerCase("de-CH");
     return matchesUnit && matchesStatus && haystack.includes(query.trim().toLocaleLowerCase("de-CH"));
   }), [appointments, unit, status, query]);
   const selectedDay = visible.filter((item) => {
@@ -145,26 +146,26 @@ export default function ResidentCalendar() {
     else if (view === "week") setFocusDate((current) => addDays(current, direction * 7));
     else setFocusDate((current) => { const next = dateFromKey(monthStart(current)); next.setUTCMonth(next.getUTCMonth() + direction); return dateKey(next); });
   }
-  function create(date = focusDate, time = "09:00") { setEditor({ draft: initialAppointmentDraft("", date, time) }); }
+  function create(date = focusDate, time = "09:00") { setEditor({ draft: { ...initialAppointmentDraft("", date, time), careUnitId: careUnits.find((item) => item.name === unit)?.id ?? "" } }); }
   function saved() { setEditor(null); setRevision((current) => current + 1); }
 
   return <ModulePageShell activeModule="shift" activeChild="Kalender" pageClass="resident-calendar-page" locationSecondary="Gesamtes Haus · alle Wohnbereiche">{() => <main className="workspace resident-calendar-workspace">
-    <header className="page-heading resident-calendar-heading"><div className="heading-copy"><p className="eyebrow">CareCore Betrieb · Schicht</p><h1>Kalender</h1><p>Alle Bewohnertermine im Haus an einem Ort planen und im Blick behalten.</p></div><button className="primary-button" type="button" onClick={() => create()}><Plus className="button-icon"/> Termin erstellen</button></header>
-    <section className="resident-calendar-summary" aria-label="Kalenderübersicht"><span><CalendarDots/><strong>{appointments.length}</strong><small>Termine im Zeitraum</small></span><span><Clock/><strong>{scheduledCount}</strong><small>geplant</small></span><span><UsersThree/><strong>{new Set(appointments.map((item) => item.resident_id)).size}</strong><small>Bewohner mit Terminen</small></span></section>
+    <header className="page-heading resident-calendar-heading"><div className="heading-copy"><p className="eyebrow">CareCore Betrieb · Schicht</p><h1>Kalender</h1><p>Bewohnertermine und geplante Aufgaben im Wohnbereich an einem Ort.</p></div><button className="primary-button" type="button" onClick={() => create()}><Plus className="button-icon"/> Termin erstellen</button></header>
+    <section className="resident-calendar-summary" aria-label="Kalenderübersicht"><span><CalendarDots/><strong>{appointments.length}</strong><small>Einträge im Zeitraum</small></span><span><Clock/><strong>{scheduledCount}</strong><small>geplant</small></span><span><UsersThree/><strong>{appointments.filter((item) => item.kind === "care_unit_task").length}</strong><small>Wohnbereichsaufgaben</small></span></section>
     <div className="resident-calendar-layout">
       <aside className="card resident-calendar-sidebar"><div className="resident-calendar-mini-head"><strong>{monthTitle}</strong><div><button type="button" aria-label="Vorheriger Monat" onClick={() => setFocusDate((current) => { const date = dateFromKey(monthStart(current)); date.setUTCMonth(date.getUTCMonth() - 1); return dateKey(date); })}><CaretLeft/></button><button type="button" aria-label="Nächster Monat" onClick={() => setFocusDate((current) => { const date = dateFromKey(monthStart(current)); date.setUTCMonth(date.getUTCMonth() + 1); return dateKey(date); })}><CaretRight/></button></div></div>
         <div className="resident-calendar-mini-grid">{weekDayNames.map((name) => <span key={name}>{name}</span>)}{monthDays(focusDate).map((date) => <button key={date} type="button" className={`${date === focusDate ? "selected" : ""} ${date.slice(0, 7) !== focusDate.slice(0, 7) ? "outside" : ""} ${date === today ? "today" : ""}`} onClick={() => setFocusDate(date)} aria-label={dateHeading(date, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}>{Number(date.slice(-2))}</button>)}</div>
-        <div className="resident-calendar-sidebar-section"><p className="eyebrow">Ansicht filtern</p><label><span>Wohnbereich</span><CareSelect label="Wohnbereich" value={unit} options={units} onChange={setUnit}/></label><label><span>Status</span><CareSelect label="Terminstatus" value={status} options={["Alle Termine", "Geplant", "Abgeschlossen", "Abgesagt"]} onChange={setStatus}/></label><label className="resident-calendar-search"><MagnifyingGlass/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Termin oder Bewohner suchen" aria-label="Termine suchen"/></label></div>
-        <div className="resident-calendar-sidebar-section resident-calendar-agenda"><p className="eyebrow">{dateHeading(focusDate, { weekday: "long", day: "numeric", month: "long" })}</p><strong>{selectedDay.length ? `${selectedDay.length} Termine` : "Keine Termine"}</strong>{selectedDay.map((item) => <button key={item.id} type="button" className={`resident-calendar-agenda-item ${item.status}`} onClick={() => setEditor({ appointment: item })}><span>{appointmentLocalParts(item.starts_at).time}</span><div><strong>{item.title}</strong><small>{item.resident_name}</small></div></button>)}{!selectedDay.length && <p className="resident-calendar-agenda-empty">Wähle einen anderen Tag oder plane einen neuen Termin.</p>}</div>
+        <div className="resident-calendar-sidebar-section"><p className="eyebrow">Ansicht filtern</p><label><span>Wohnbereich</span><CareSelect label="Wohnbereich" value={unit} options={units} onChange={setUnit}/></label><label><span>Status</span><CareSelect label="Terminstatus" value={status} options={["Alle Termine", "Geplant", "Abgeschlossen", "Abgesagt"]} onChange={setStatus}/></label><label className="resident-calendar-search"><MagnifyingGlass/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Termin, Aufgabe oder Bewohner suchen" aria-label="Termine suchen"/></label></div>
+        <div className="resident-calendar-sidebar-section resident-calendar-agenda"><p className="eyebrow">{dateHeading(focusDate, { weekday: "long", day: "numeric", month: "long" })}</p><strong>{selectedDay.length ? `${selectedDay.length} Einträge` : "Keine Einträge"}</strong>{selectedDay.map((item) => <button key={item.id} type="button" className={`resident-calendar-agenda-item ${item.status} ${item.kind === "care_unit_task" ? "care-unit-task" : ""}`} onClick={() => setEditor({ appointment: item })}><span>{appointmentLocalParts(item.starts_at).time}</span><div><strong>{item.title}</strong><small>{appointmentTargetLabel(item)}</small></div></button>)}{!selectedDay.length && <p className="resident-calendar-agenda-empty">Wähle einen anderen Tag oder plane einen neuen Termin.</p>}</div>
       </aside>
       <section className="card resident-calendar-board" aria-label="Bewohnerkalender"><div className="resident-calendar-toolbar"><div className="resident-calendar-navigation"><button className="secondary-button" type="button" onClick={() => setFocusDate(today)}>Heute</button><button type="button" aria-label="Vorheriger Zeitraum" onClick={() => move(-1)}><CaretLeft/></button><button type="button" aria-label="Nächster Zeitraum" onClick={() => move(1)}><CaretRight/></button><strong>{toolbarTitle}</strong></div><div className="resident-calendar-view-switch" role="group" aria-label="Kalenderansicht"><button type="button" className={view === "day" ? "active" : ""} aria-pressed={view === "day"} onClick={() => setView("day")}>Tag</button><button type="button" className={view === "week" ? "active" : ""} aria-pressed={view === "week"} onClick={() => setView("week")}>Woche</button><button type="button" className={view === "month" ? "active" : ""} aria-pressed={view === "month"} onClick={() => setView("month")}>Monat</button></div></div>
         {error && <div className="resident-calendar-error" role="alert">{error}<button type="button" onClick={() => setRevision((current) => current + 1)}>Erneut laden</button></div>}
         {loading && <div className="resident-calendar-loading" role="status">Termine werden geladen…</div>}
-        {view === "month" ? <div className="resident-calendar-month-scroll"><div className="resident-calendar-month-grid">{weekDayNames.map((name) => <span className="resident-calendar-weekday" key={name}>{name}</span>)}{days.map((date) => { const entries = visible.filter((item) => appointmentLocalParts(item.starts_at).date === date); return <div className={`resident-calendar-month-day ${date.slice(0, 7) !== focusDate.slice(0, 7) ? "outside" : ""} ${date === focusDate ? "selected" : ""}`} key={date}><div className="resident-calendar-month-day-head"><button type="button" className={date === today ? "today" : ""} onClick={() => setFocusDate(date)} aria-label={dateHeading(date, { day: "numeric", month: "long" })}>{Number(date.slice(-2))}</button><button type="button" aria-label={`Termin am ${dateHeading(date, { day: "numeric", month: "long" })} erstellen`} onClick={() => create(date)}><Plus/></button></div><div className="resident-calendar-month-events">{entries.slice(0, 3).map((item) => <button className={`resident-calendar-event ${item.category === "Arzttermin" ? "medical" : ""} ${item.status}`} type="button" key={item.id} onClick={() => setEditor({ appointment: item })}><small>{appointmentLocalParts(item.starts_at).time}</small><span>{item.title} · {item.resident_name}</span></button>)}{entries.length > 3 && <button type="button" className="resident-calendar-more" onClick={() => setFocusDate(date)}>+ {entries.length - 3} weitere</button>}</div></div>; })}</div></div> : <TimedCalendarGrid days={days} today={today} view={view} appointments={visible} scrollRef={weekScrollRef} onCreate={create} onSelectDate={setFocusDate} onOpen={(item) => setEditor({ appointment: item })}/> }
-        {!loading && !error && visible.length === 0 && <div className="resident-calendar-empty"><CalendarDots/><strong>Keine Termine in dieser Ansicht</strong><p>Wähle einen anderen Zeitraum oder erfasse den ersten Bewohnertermin.</p><button className="secondary-button" type="button" onClick={() => create()}><Plus/> Termin erstellen</button></div>}
-        <div className="resident-calendar-board-foot"><span><i className="medical"/> Arzttermin</span><span><i/> Weitere Termine</span><span><i className="completed"/> Abgeschlossen</span><span><i className="cancelled"/> Abgesagt</span><span className="resident-calendar-board-help"><MapPin/> Alle Wohnbereiche</span></div>
+        {view === "month" ? <div className="resident-calendar-month-scroll"><div className="resident-calendar-month-grid">{weekDayNames.map((name) => <span className="resident-calendar-weekday" key={name}>{name}</span>)}{days.map((date) => { const entries = visible.filter((item) => appointmentLocalParts(item.starts_at).date === date); return <div className={`resident-calendar-month-day ${date.slice(0, 7) !== focusDate.slice(0, 7) ? "outside" : ""} ${date === focusDate ? "selected" : ""}`} key={date}><div className="resident-calendar-month-day-head"><button type="button" className={date === today ? "today" : ""} onClick={() => setFocusDate(date)} aria-label={dateHeading(date, { day: "numeric", month: "long" })}>{Number(date.slice(-2))}</button><button type="button" aria-label={`Termin am ${dateHeading(date, { day: "numeric", month: "long" })} erstellen`} onClick={() => create(date)}><Plus/></button></div><div className="resident-calendar-month-events">{entries.slice(0, 3).map((item) => <button className={`resident-calendar-event ${item.kind === "care_unit_task" ? "care-unit-task" : ""} ${item.category === "Arzttermin" ? "medical" : ""} ${item.status}`} type="button" key={item.id} onClick={() => setEditor({ appointment: item })}><small>{appointmentLocalParts(item.starts_at).time}</small><span>{item.title} · {appointmentTargetLabel(item)}</span></button>)}{entries.length > 3 && <button type="button" className="resident-calendar-more" onClick={() => setFocusDate(date)}>+ {entries.length - 3} weitere</button>}</div></div>; })}</div></div> : <TimedCalendarGrid days={days} today={today} view={view} appointments={visible} scrollRef={weekScrollRef} onCreate={create} onSelectDate={setFocusDate} onOpen={(item) => setEditor({ appointment: item })}/> }
+        {!loading && !error && visible.length === 0 && <div className="resident-calendar-empty"><CalendarDots/><strong>Keine Einträge in dieser Ansicht</strong><p>Wähle einen anderen Zeitraum oder erfasse einen Bewohnertermin oder eine Wohnbereichsaufgabe.</p><button className="secondary-button" type="button" onClick={() => create()}><Plus/> Termin erstellen</button></div>}
+        <div className="resident-calendar-board-foot"><span><i className="medical"/> Arzttermin</span><span><i/> Weitere Termine</span><span><i className="care-unit-task"/> Wohnbereichsaufgabe</span><span><i className="completed"/> Abgeschlossen</span><span><i className="cancelled"/> Abgesagt</span><span className="resident-calendar-board-help"><MapPin/> Alle Wohnbereiche</span></div>
       </section>
     </div>
-    {editor && <ResidentAppointmentEditor key={editor.appointment?.id ?? `new-${editor.draft?.date}-${editor.draft?.startTime}`} appointment={editor.appointment} initialDraft={editor.draft} residents={residents} onClose={() => setEditor(null)} onSaved={saved}/>}
+    {editor && <ResidentAppointmentEditor key={editor.appointment?.id ?? `new-${editor.draft?.date}-${editor.draft?.startTime}`} appointment={editor.appointment} initialDraft={editor.draft} residents={residents} careUnits={careUnits} onClose={() => setEditor(null)} onSaved={saved}/>}
   </main>}</ModulePageShell>;
 }
