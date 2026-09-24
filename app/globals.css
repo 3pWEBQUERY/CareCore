@@ -853,16 +853,6 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .body-map-legend .redness { color: var(--attention); }
 .body-map-legend .wound { color: var(--critical); }
 .body-map-legend .fracture { color: var(--brand); }
-.body-map-stage { width: min(320px,100%); position: relative; margin: 0 auto; aspect-ratio: 2/3; }
-.body-map-stage > img { width: 100%; height: 100%; display: block; object-fit: contain; filter: saturate(.7) contrast(.96); }
-.body-marker { position: absolute; z-index: 2; display: flex; align-items: center; gap: 6px; padding: 0; border: 0; color: var(--brand); background: transparent; transform: translate(-50%,-50%); cursor: pointer; }
-.body-marker > span { width: 28px; height: 28px; display: block; border: 7px solid rgba(255,255,255,.82); border-radius: 50%; background: currentColor; box-shadow: 0 0 0 2px currentColor,0 4px 14px rgba(11,31,58,.2); transition: transform 140ms ease,box-shadow 140ms ease; }
-.body-marker small { max-width: 80px; padding: 5px 7px; border-radius: 6px; color: white; background: #18395f; font-size: 9px; font-weight: 800; white-space: nowrap; box-shadow: 0 4px 12px rgba(11,31,58,.16); }
-.body-marker.redness { color: var(--attention); }
-.body-marker.wound { color: var(--critical); }
-.body-marker.fracture { color: var(--brand); }
-.body-marker:hover > span,.body-marker.active > span { transform: scale(1.14); box-shadow: 0 0 0 4px color-mix(in srgb,currentColor 22%,transparent),0 5px 16px rgba(11,31,58,.22); }
-.body-marker.active small { background: var(--brand); }
 .body-observation-list { min-width: 0; padding: 10px 16px 16px; }
 .body-observation { border-bottom: 1px solid #e9eef4; }
 .body-observation:last-child { border-bottom: 0; }
@@ -886,6 +876,36 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .body-observation-links button { min-height: 31px; display: inline-flex; align-items: center; gap: 5px; padding: 0 9px; border: 1px solid #bfdbfe; border-radius: 6px; color: var(--brand-dark); background: white; font-size: 9px; font-weight: 750; cursor: pointer; }
 .body-observation-links button:hover { background: var(--brand-soft); }
 .body-observation-links svg { width: 12px; height: 12px; }
+.clinical-body-viewer { max-width: 410px; margin: 0 auto; }
+.clinical-body-canvas { height: 450px; position: relative; overflow: hidden; border: 1px solid #dce7f6; border-radius: 8px; background: radial-gradient(ellipse at 50% 35%,#fff 0%,#f4f8ff 64%,#eaf1fb 100%); cursor: grab; touch-action: pan-y; }
+.clinical-body-canvas:active { cursor: grabbing; }
+.clinical-body-canvas.placing { cursor: crosshair; box-shadow: inset 0 0 0 2px #5a8ef2; }
+.clinical-body-canvas canvas { display: block; width: 100%; height: 100%; }
+.clinical-body-canvas p { padding: 24px; color: var(--muted); text-align: center; }
+.clinical-body-toolbar { display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 9px; }
+.clinical-body-toolbar button { width: 30px; height: 30px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid #d6e3f6; border-radius: 6px; color: var(--brand-dark); background: white; font-size: 16px; cursor: pointer; }
+.clinical-body-toolbar button:hover { background: var(--brand-soft); }
+.clinical-body-toolbar button svg { width: 15px; height: 15px; }
+.clinical-body-toolbar input { width: min(110px,24%); accent-color: var(--brand); }
+.clinical-body-toolbar span { min-width: 36px; color: var(--muted); font-size: 10px; text-align: center; }
+.clinical-body-hint,.body-model-caption { display: block; margin: 8px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; text-align: center; }
+.body-model-caption { margin-top: 10px; font-weight: 700; }
+.body-observation-empty { padding: 26px 18px; color: var(--muted); font-size: 11px; line-height: 1.55; text-align: center; }
+.body-observation-empty strong { display: block; color: var(--ink); font-size: 13px; }
+.body-observation-empty p { margin: 8px 0 15px; }
+.body-observation-error { margin: 12px; padding: 10px; border: 1px solid #f0c2ba; border-radius: 6px; color: #9e352c; background: #fff5f3; font-size: 11px; }
+.body-observation-editor { padding: 19px; border-top: 1px solid var(--line); background: #fbfdff; }
+.body-observation-editor-heading { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.body-observation-editor-heading h4 { margin: 5px 0 0; font-size: 17px; }
+.body-observation-editor-heading p { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
+.body-observation-editor-heading > button { width: 31px; height: 31px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 6px; background: white; cursor: pointer; }
+.body-observation-editor-heading svg { width: 16px; height: 16px; }
+.body-observation-editor-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; margin-top: 18px; }
+.body-observation-editor-fields label { display: grid; gap: 7px; color: #455b70; font-size: 11px; font-weight: 700; }
+.body-observation-editor-fields input,.body-observation-editor-fields textarea { width: 100%; min-height: 40px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: white; font: inherit; font-weight: 500; }
+.body-observation-editor-wide { grid-column: 1/-1; }
+.body-observation-editor-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 17px; }
+@media (max-width: 620px) { .body-observation-editor-fields { grid-template-columns: 1fr; } .clinical-body-canvas { height: 390px; } }
 .record-document-button strong { display: block; font-size: 12px; }
 .record-document-button small { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.35; }
 .record-details { margin: 0; padding: 5px 18px 11px; }
@@ -2200,7 +2220,6 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .resident-overview-side,.record-overview-history { grid-column: auto; }
   .body-map-content { grid-template-columns: 1fr; }
   .body-map-visual { border-right: 0; border-bottom: 1px solid var(--line); }
-  .body-map-stage { width: min(300px,100%); }
   .record-horizontal-actions { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .record-horizontal-actions button { border-bottom: 1px solid var(--line); }
   .record-horizontal-actions button:nth-child(2n) { border-right: 0; }

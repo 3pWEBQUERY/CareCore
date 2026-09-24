@@ -496,6 +496,26 @@ CREATE TABLE IF NOT EXISTS carecore_wounds (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS carecore_body_observations (
+  id UUID PRIMARY KEY,
+  resident_id UUID NOT NULL REFERENCES carecore_residents(id) ON DELETE CASCADE,
+  kind VARCHAR(24) NOT NULL CHECK (kind IN ('wound', 'redness', 'fracture', 'other')),
+  label VARCHAR(120) NOT NULL,
+  location VARCHAR(160) NOT NULL,
+  status VARCHAR(120) NOT NULL DEFAULT 'Beobachten',
+  notes TEXT NOT NULL DEFAULT '',
+  body_x NUMERIC(6,3) NOT NULL,
+  body_y NUMERIC(6,3) NOT NULL,
+  body_z NUMERIC(6,3) NOT NULL,
+  created_by UUID REFERENCES carecore_users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES carecore_users(id) ON DELETE SET NULL,
+  archived_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS carecore_body_observations_resident_idx
+  ON carecore_body_observations (resident_id, created_at DESC) WHERE archived_at IS NULL;
+
 CREATE TABLE IF NOT EXISTS carecore_wound_entries (
   id UUID PRIMARY KEY,
   wound_id UUID NOT NULL REFERENCES carecore_wounds(id) ON DELETE CASCADE,

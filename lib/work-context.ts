@@ -53,15 +53,15 @@ async function seedDemoContext(userId: string) {
   await sql`INSERT INTO carecore_user_profiles (user_id, organization_id, job_title, phone, primary_care_unit_id) VALUES (${userId}, ${organizationId}, 'Pflegefachfrau HF', '+41 79 555 12 34', ${unitRows[1][0]}) ON CONFLICT (user_id) DO UPDATE SET organization_id = COALESCE(carecore_user_profiles.organization_id, EXCLUDED.organization_id), job_title = COALESCE(NULLIF(carecore_user_profiles.job_title, ''), EXCLUDED.job_title), phone = COALESCE(NULLIF(carecore_user_profiles.phone, ''), EXCLUDED.phone), updated_at = NOW()`;
   await sql`INSERT INTO carecore_user_unit_assignments (user_id, care_unit_id, assignment_role, is_primary) VALUES (${userId}, ${unitRows[1][0]}, 'Pflegefachperson', TRUE) ON CONFLICT (user_id, care_unit_id) DO UPDATE SET is_primary = TRUE`;
   const residentRows = [
-    ["00000000-0000-4000-8000-000000000401", "00000000-0000-4000-8000-000000000501", "Hans", "Müller", unitRows[1][0], rooms[1][0], "Sturzrisiko", "critical"],
-    ["00000000-0000-4000-8000-000000000402", "00000000-0000-4000-8000-000000000502", "Maria", "Keller", unitRows[1][0], rooms[2][0], "Diabetes", "attention"],
-    ["00000000-0000-4000-8000-000000000403", "00000000-0000-4000-8000-000000000503", "Erika", "Meier", unitRows[1][0], rooms[1][0], "Stabil", "stable"],
-    ["00000000-0000-4000-8000-000000000404", "00000000-0000-4000-8000-000000000504", "Peter", "Aebischer", unitRows[0][0], rooms[0][0], "Beobachtung", "info"],
-    ["00000000-0000-4000-8000-000000000405", "00000000-0000-4000-8000-000000000505", "Walter", "Brunner", unitRows[2][0], rooms[3][0], "Stabil", "stable"],
-    ["00000000-0000-4000-8000-000000000406", "00000000-0000-4000-8000-000000000506", "Anna", "Berger", unitRows[3][0], rooms[4][0], "Stabil", "stable"],
+    ["00000000-0000-4000-8000-000000000401", "00000000-0000-4000-8000-000000000501", "Hans", "Müller", "male", unitRows[1][0], rooms[1][0], "Sturzrisiko", "critical"],
+    ["00000000-0000-4000-8000-000000000402", "00000000-0000-4000-8000-000000000502", "Maria", "Keller", "female", unitRows[1][0], rooms[2][0], "Diabetes", "attention"],
+    ["00000000-0000-4000-8000-000000000403", "00000000-0000-4000-8000-000000000503", "Erika", "Meier", "female", unitRows[1][0], rooms[1][0], "Stabil", "stable"],
+    ["00000000-0000-4000-8000-000000000404", "00000000-0000-4000-8000-000000000504", "Peter", "Aebischer", "male", unitRows[0][0], rooms[0][0], "Beobachtung", "info"],
+    ["00000000-0000-4000-8000-000000000405", "00000000-0000-4000-8000-000000000505", "Walter", "Brunner", "male", unitRows[2][0], rooms[3][0], "Stabil", "stable"],
+    ["00000000-0000-4000-8000-000000000406", "00000000-0000-4000-8000-000000000506", "Anna", "Berger", "female", unitRows[3][0], rooms[4][0], "Stabil", "stable"],
   ] as const;
-  for (const [id, stayId, firstName, lastName, careUnitId, roomId, flag, tone] of residentRows) {
-    await sql`INSERT INTO carecore_residents (id, organization_id, first_name, last_name, status, risk_flags) VALUES (${id}, ${organizationId}, ${firstName}, ${lastName}, 'active', ${JSON.stringify([{ label: flag, tone }])}::jsonb) ON CONFLICT (id) DO NOTHING`;
+  for (const [id, stayId, firstName, lastName, gender, careUnitId, roomId, flag, tone] of residentRows) {
+    await sql`INSERT INTO carecore_residents (id, organization_id, first_name, last_name, gender, status, risk_flags) VALUES (${id}, ${organizationId}, ${firstName}, ${lastName}, ${gender}, 'active', ${JSON.stringify([{ label: flag, tone }])}::jsonb) ON CONFLICT (id) DO UPDATE SET gender = COALESCE(carecore_residents.gender, EXCLUDED.gender)`;
     await sql`INSERT INTO carecore_resident_stays (id, resident_id, care_unit_id, room_id) VALUES (${stayId}, ${id}, ${careUnitId}, ${roomId}) ON CONFLICT (id) DO NOTHING`;
   }
 }

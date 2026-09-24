@@ -145,10 +145,10 @@ function routeFor(moduleId: string, child: string) {
   return routes[moduleId]?.[child] ?? null;
 }
 
-type ResidentRow = { id: string; first_name: string; last_name: string; room: string; care_unit: string; care_level: string; note: string; last_update: string; severity: string; admitted_on: string | null; status: string };
+type ResidentRow = { id: string; first_name: string; last_name: string; gender: string | null; room: string; care_unit: string; care_level: string; note: string; last_update: string; severity: string; admitted_on: string | null; status: string };
 function toResident(row: ResidentRow): ResidentRecordData {
   const status = (["critical", "attention", "info", "stable"].includes(row.severity) ? row.severity : "stable") as ResidentRecordData["status"];
-  return { id: row.id, initials: `${row.first_name[0] ?? ""}${row.last_name[0] ?? ""}`, name: `${row.first_name} ${row.last_name}`, room: row.room || "Zimmer offen", unit: row.care_unit || "Nicht zugewiesen", careLevel: row.care_level || "Noch offen", note: row.note, lastUpdate: new Date(row.last_update).toLocaleDateString("de-CH"), status, statusLabel: { critical: "Kritisch", attention: "Beobachten", info: "Aktualisiert", stable: "Stabil" }[status] };
+  return { id: row.id, initials: `${row.first_name[0] ?? ""}${row.last_name[0] ?? ""}`, name: `${row.first_name} ${row.last_name}`, gender: row.gender, room: row.room || "Zimmer offen", unit: row.care_unit || "Nicht zugewiesen", careLevel: row.care_level || "Noch offen", note: row.note, lastUpdate: new Date(row.last_update).toLocaleDateString("de-CH"), status, statusLabel: { critical: "Kritisch", attention: "Beobachten", info: "Aktualisiert", stable: "Stabil" }[status] };
 }
 
 function ResidentIntakeEditor({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess: (message: string) => void }) {
@@ -217,7 +217,7 @@ export default function ResidentsPage() {
       const start = Date.now() - 7 * 86400000;
       setAdmissionsThisWeek(data.residents.filter((item) => item.admitted_on && new Date(item.admitted_on).getTime() >= start).length);
     } catch (error) { setToast(error instanceof Error ? error.message : "Daten konnten nicht geladen werden."); }
-  }, [setToast, setSelectedResident]);
+  }, [setToast, setSelectedResident, setResidents]);
   useEffect(() => { const timer = window.setTimeout(() => { void loadResidents(); }, 0); return () => window.clearTimeout(timer); }, [loadResidents]);
 
   function chooseMobileGroup(groupId: string) {
@@ -312,7 +312,7 @@ export default function ResidentsPage() {
 
     {searchOpen && <div className="overlay" role="presentation" onClick={(event) => event.currentTarget === event.target && setSearchOpen(false)}><section id="resident-global-search" className="search-dialog" role="dialog" aria-modal="true" aria-label="Globale Suche"><div className="search-input-wrap"><Icon name="search"/><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Bewohner, Dokumente oder Funktionen suchen…" aria-label="Suchbegriff"/><button type="button" onClick={() => setSearchOpen(false)} aria-label="Suche schliessen">ESC</button></div><div className="search-results"><span className="search-group-label">Bewohner</span>{filteredResidents.map((resident) => <button className="search-result" type="button" key={resident.name} onClick={() => { setSearchOpen(false); setSelectedResident(resident); }}><span className="result-icon"><Icon name="residents"/></span><span><strong>{resident.name}</strong><small>{resident.room} · {resident.unit}</small></span></button>)}</div></section></div>}
 
-    {selectedResident && <ResidentRecord resident={selectedResident} onClose={() => setSelectedResident(null)} onAction={setToast}/>}
+    {selectedResident && <ResidentRecord resident={selectedResident} onClose={() => setSelectedResident(null)} onAction={setToast} onGenderChanged={(residentId, gender) => { setResidents((current) => current.map((item) => item.id === residentId ? { ...item, gender } : item)); setSelectedResident((current) => current?.id === residentId ? { ...current, gender } : current); }}/>}
 
     <ResidentIntakeEditor open={intakeEditorOpen} onClose={() => setIntakeEditorOpen(false)} onSuccess={(message) => { setToast(message); void loadResidents(); }}/>
 

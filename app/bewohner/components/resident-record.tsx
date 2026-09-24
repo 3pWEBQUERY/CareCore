@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { BodyMap3D, type BodyPoint } from "./body-map-3d";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import ResidentAppointmentEditor from "@/app/components/resident-appointment-editor";
 import { appointmentDateLabel, appointmentLocalParts, type AppointmentResident, type ResidentAppointment } from "@/lib/resident-appointments";
@@ -30,6 +30,7 @@ import {
 
 export type ResidentRecordData = {
   id?: string;
+  gender?: string | null;
   initials: string;
   name: string;
   room: string;
@@ -45,6 +46,7 @@ type ResidentRecordProps = {
   resident: ResidentRecordData;
   onClose: () => void;
   onAction: (message: string) => void;
+  onGenderChanged?: (residentId: string, gender: string) => void;
 };
 
 type RecordView = "overview" | "master-data" | "documentation" | "care-record" | "supplies" | "appointments" | "history" | "documents" | "biography";
@@ -72,16 +74,18 @@ type CareDomain = {
 
 type BodyObservation = {
   id: string;
-  type: "redness" | "wound" | "fracture";
+  kind: "redness" | "wound" | "fracture" | "other";
   label: string;
   location: string;
   status: string;
-  summary: string;
-  recorded: string;
+  notes: string;
+  created_at: string;
   author: string;
-  x: string;
-  y: string;
+  body_x: number;
+  body_y: number;
+  body_z: number;
 };
+type ObservationDraft = { kind: BodyObservation["kind"]; label: string; location: string; status: string; notes: string; x: number; y: number; z: number };
 
 type HistoryEntry = {
   id: string;
@@ -148,12 +152,6 @@ const careDomains: CareDomain[] = [
   { id: "sleep", label: "Ruhe & Schlaf", status: "attention", statusLabel: "Beobachten", summary: "Unterbrochener Nachtschlaf mit zwei bis drei Wachphasen und nächtlichem Bewegungsdrang.", goal: "Erholsame Ruhephasen fördern und nächtliche Sturzgefährdung reduzieren.", measures: ["Abendritual und Ruhezeiten einhalten", "Nachtlicht und Rufanlage kontrollieren", "Schlafverhalten im Nachtbericht festhalten"] },
 ];
 
-const bodyObservations: BodyObservation[] = [
-  { id: "right-shoulder", type: "redness", label: "Rötung", location: "Rechte Schulter", status: "Beobachten", summary: "Umschriebene Rötung ohne offene Hautstelle. Druckentlastung fortführen und bei der Abendpflege erneut kontrollieren.", recorded: "Heute, 08:10", author: "Anna Meier", x: "37%", y: "24%" },
-  { id: "left-forearm", type: "wound", label: "Wunde", location: "Linker Unterarm", status: "Versorgung aktiv", summary: "Oberflächliche Hautläsion, 2,1 × 0,8 cm. Wundauflage trocken und reizlos; nächster Verbandwechsel morgen früh.", recorded: "Heute, 07:55", author: "Lea Frei", x: "70%", y: "43%" },
-  { id: "right-knee", type: "fracture", label: "Fraktur", location: "Rechtes Knie", status: "Heilungsverlauf", summary: "Kontrollierter Heilungsverlauf nach proximaler Tibiafraktur. Teilbelastung gemäss ärztlicher Verordnung, Schmerzangabe aktuell 2 von 10.", recorded: "Gestern, 16:20", author: "Dr. Martin Weber", x: "43%", y: "69%" },
-];
-
 const historyEntries: HistoryEntry[] = [
   { id: "h1", date: "Heute · 10. September 2026", time: "08:10", category: "Pflege", title: "Hautbeobachtung ergänzt", description: "Rötung an der rechten Schulter dokumentiert und Druckentlastung für die laufende Schicht geplant.", author: "Anna Meier · Pflegefachfrau HF", tone: "attention", documentationId: "observation" },
   { id: "h2", date: "Heute · 10. September 2026", time: "07:55", category: "Pflege", title: "Wundversorgung durchgeführt", description: "Hautläsion am linken Unterarm gereinigt und mit trockener Wundauflage versorgt.", author: "Lea Frei · Fachfrau Gesundheit", tone: "critical" },
@@ -181,7 +179,7 @@ function getDocumentationEntries(resident: ResidentRecordData): DocumentationEnt
   ];
 }
 
-export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordProps) {
+export function ResidentRecord({ resident, onClose, onAction, onGenderChanged }: ResidentRecordProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLElement>(null);
   const entries = getDocumentationEntries(resident);
@@ -193,7 +191,16 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
   const [documentationFlags, setDocumentationFlags] = useState<DocumentationFlag[]>([]);
   const [masterDataEditing, setMasterDataEditing] = useState(false);
   const [activeCareDomainId, setActiveCareDomainId] = useState("mobility");
-  const [activeBodyObservationId, setActiveBodyObservationId] = useState<string | null>("right-shoulder");
+  const [activeBodyObservationId, setActiveBodyObservationId] = useState<string | null>(null);
+  const [bodyObservations, setBodyObservations] = useState<BodyObservation[]>([]);
+  const [bodyLoading, setBodyLoading] = useState(Boolean(resident.id));
+  const [bodyError, setBodyError] = useState("");
+  const [placingBodyPoint, setPlacingBodyPoint] = useState(false);
+  const [bodyEditor, setBodyEditor] = useState<{ id: string | null; draft: ObservationDraft } | null>(null);
+  const [bodySaving, setBodySaving] = useState(false);
+  const [residentGender, setResidentGender] = useState(resident.gender ?? "unspecified");
+  const [genderDraft, setGenderDraft] = useState(resident.gender ?? "unspecified");
+  const [masterDataSaving, setMasterDataSaving] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("Alle");
   const [documentSearch, setDocumentSearch] = useState("");
   const [documentCategory, setDocumentCategory] = useState("Alle");
@@ -237,7 +244,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
   });
   const [firstName, ...lastNameParts] = resident.name.split(" ");
   const lastName = lastNameParts.join(" ");
-  const gender = ["Hans", "Peter"].includes(firstName) ? "Männlich" : "Weiblich";
+  const genderLabel = { female: "Weiblich", male: "Männlich", diverse: "Divers", unspecified: "Keine Angabe" }[residentGender] ?? "Keine Angabe";
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -255,6 +262,67 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
   useEffect(() => {
     contentRef.current?.scrollTo({ top: 0, behavior: "auto" });
   }, [activeView, selectedEntryId]);
+
+  useEffect(() => {
+    if (!resident.id) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      fetch(`/api/residents/${resident.id}/body-observations`, { cache: "no-store" })
+        .then(async (response) => ({ response, data: await response.json().catch(() => null) }))
+        .then(({ response, data }) => {
+          if (!active) return;
+          if (!response.ok) throw new Error(data?.error || "Körperstatus konnte nicht geladen werden.");
+          setBodyObservations(data.observations ?? []); setBodyError("");
+        })
+        .catch((error) => { if (active) setBodyError(error instanceof Error ? error.message : "Körperstatus konnte nicht geladen werden."); })
+        .finally(() => { if (active) setBodyLoading(false); });
+    }, 0);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [resident.id]);
+
+  async function saveGender() {
+    if (!resident.id) { setBodyError("Diese Akte hat keine gespeicherte Bewohner-ID."); return; }
+    setMasterDataSaving(true);
+    try {
+      const response = await fetch(`/api/residents/${resident.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ gender: genderDraft }) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || "Geschlecht konnte nicht gespeichert werden.");
+      setResidentGender(data.gender); setMasterDataEditing(false); onGenderChanged?.(resident.id, data.gender); onAction("Geschlecht in den Stammdaten gespeichert");
+    } catch (error) { onAction(error instanceof Error ? error.message : "Geschlecht konnte nicht gespeichert werden."); }
+    finally { setMasterDataSaving(false); }
+  }
+
+  function newBodyObservation(point: BodyPoint) {
+    setPlacingBodyPoint(false); setBodyError("");
+    setBodyEditor({ id: null, draft: { kind: "wound", label: "", location: "", status: "Beobachten", notes: "", ...point } });
+  }
+
+  function editBodyObservation(observation: BodyObservation) {
+    setBodyEditor({ id: observation.id, draft: { kind: observation.kind, label: observation.label, location: observation.location, status: observation.status, notes: observation.notes, x: Number(observation.body_x), y: Number(observation.body_y), z: Number(observation.body_z) } });
+  }
+
+  async function saveBodyObservation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!resident.id || !bodyEditor) return;
+    setBodySaving(true); setBodyError("");
+    try {
+      const url = `/api/residents/${resident.id}/body-observations${bodyEditor.id ? `/${bodyEditor.id}` : ""}`;
+      const response = await fetch(url, { method: bodyEditor.id ? "PATCH" : "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(bodyEditor.draft) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || "Befund konnte nicht gespeichert werden.");
+      setBodyObservations((current) => bodyEditor.id ? current.map((item) => item.id === bodyEditor.id ? data.observation : item) : [data.observation, ...current]);
+      setActiveBodyObservationId(data.observation.id); setBodyEditor(null); onAction(bodyEditor.id ? "Körperbefund aktualisiert" : "Körperbefund gespeichert");
+    } catch (error) { setBodyError(error instanceof Error ? error.message : "Befund konnte nicht gespeichert werden."); }
+    finally { setBodySaving(false); }
+  }
+
+  async function archiveBodyObservation(observation: BodyObservation) {
+    if (!resident.id || !window.confirm(`${observation.label} an ${observation.location} archivieren?`)) return;
+    const response = await fetch(`/api/residents/${resident.id}/body-observations/${observation.id}`, { method: "DELETE" });
+    if (!response.ok) { setBodyError("Befund konnte nicht archiviert werden."); return; }
+    setBodyObservations((current) => current.filter((item) => item.id !== observation.id));
+    setActiveBodyObservationId(null); onAction("Körperbefund archiviert");
+  }
 
   useEffect(() => {
     if (!resident.id) return;
@@ -466,44 +534,34 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
 
             <div className="resident-overview-layout">
               <section className="record-card body-map-card" aria-labelledby="body-map-title">
-                <div className="record-card-heading"><div><span className="record-section-label">Körperstatus</span><h3 id="body-map-title">Körperübersicht</h3></div><span>{bodyObservations.length} Einträge</span></div>
+                <div className="record-card-heading"><div><span className="record-section-label">Körperstatus</span><h3 id="body-map-title">Körperübersicht</h3></div><button type="button" onClick={() => { setPlacingBodyPoint(true); setActiveBodyObservationId(null); }}><Plus aria-hidden="true"/> Befund hinzufügen</button></div>
                 <div className="body-map-content">
                   <div className="body-map-visual">
                     <div className="body-map-legend" aria-label="Legende"><span className="redness">Rötung</span><span className="wound">Wunde</span><span className="fracture">Fraktur</span></div>
-                    <div className="body-map-stage">
-                      <Image src="/resident-body-map.png" alt="Vorderansicht des Körpers von Hans Müller" width={1024} height={1536} priority unoptimized/>
-                      {bodyObservations.map((observation) => (
-                        <button
-                          className={`body-marker ${observation.type} ${activeBodyObservationId === observation.id ? "active" : ""}`}
-                          style={{ left: observation.x, top: observation.y }}
-                          type="button"
-                          key={observation.id}
-                          aria-label={`${observation.label} – ${observation.location}`}
-                          aria-expanded={activeBodyObservationId === observation.id}
-                          aria-controls={`body-observation-${observation.id}`}
-                          onClick={() => setActiveBodyObservationId((current) => current === observation.id ? null : observation.id)}
-                        ><span aria-hidden="true"/><small>{observation.label}</small></button>
-                      ))}
-                    </div>
+                    <BodyMap3D gender={residentGender} observations={bodyObservations.map((item) => ({ id: item.id, kind: item.kind, label: item.label, x: Number(item.body_x), y: Number(item.body_y), z: Number(item.body_z) }))} selectedId={activeBodyObservationId} placing={placingBodyPoint} onSelect={(id) => { setPlacingBodyPoint(false); setActiveBodyObservationId(id); }} onPlace={newBodyObservation}/>
+                    <span className="body-model-caption">{genderLabel === "Keine Angabe" ? "Neutrales Körpermodell" : `${genderLabel}es Körpermodell`} · 360° Ansicht</span>
                   </div>
 
                   <div className="body-observation-list" aria-label="Erfasste Körperstellen">
+                    {bodyLoading && <p className="body-observation-empty">Körperstatus wird geladen…</p>}
+                    {!bodyLoading && bodyObservations.length === 0 && <div className="body-observation-empty"><strong>Noch keine Körperbefunde</strong><p>Wunden, Rötungen und weitere Auffälligkeiten können direkt am Körpermodell markiert werden.</p><button className="secondary-button" type="button" onClick={() => setPlacingBodyPoint(true)}>Körperstelle auswählen</button></div>}
+                    {bodyError && <p className="body-observation-error" role="alert">{bodyError}</p>}
                     {bodyObservations.map((observation) => {
                       const expanded = activeBodyObservationId === observation.id;
                       return (
                         <section className={`body-observation ${expanded ? "expanded" : ""}`} key={observation.id}>
                           <button className="body-observation-toggle" type="button" aria-expanded={expanded} aria-controls={`body-observation-${observation.id}`} onClick={() => setActiveBodyObservationId((current) => current === observation.id ? null : observation.id)}>
-                            <span className={`body-observation-icon ${observation.type}`}><Pulse aria-hidden="true"/></span>
+                            <span className={`body-observation-icon ${observation.kind}`}><Pulse aria-hidden="true"/></span>
                             <span><strong>{observation.label}</strong><small>{observation.location} · {observation.status}</small></span>
                             <CaretDown aria-hidden="true"/>
                           </button>
                           {expanded && (
                             <div className="body-observation-detail" id={`body-observation-${observation.id}`}>
-                              <p>{observation.summary}</p>
-                              <dl><div><dt>Erfasst</dt><dd>{observation.recorded}</dd></div><div><dt>Verantwortlich</dt><dd>{observation.author}</dd></div></dl>
+                              <p>{observation.notes || "Keine ergänzenden Hinweise erfasst."}</p>
+                              <dl><div><dt>Erfasst</dt><dd>{new Date(observation.created_at).toLocaleString("de-CH")}</dd></div><div><dt>Verantwortlich</dt><dd>{observation.author}</dd></div></dl>
                               <div className="body-observation-links">
-                                <button type="button" onClick={() => openDocumentation(entries[0])}>Dokumentation <ArrowRight aria-hidden="true"/></button>
-                                <button type="button" onClick={() => observation.type === "wound" ? onAction("Wundmanagement geöffnet") : setActiveView("care-record")}>{observation.type === "wound" ? "Wundmanagement" : "Pflegeakte"} <ArrowRight aria-hidden="true"/></button>
+                                <button type="button" onClick={() => editBodyObservation(observation)}><PencilSimple aria-hidden="true"/> Bearbeiten</button>
+                                <button type="button" onClick={() => archiveBodyObservation(observation)}><Trash aria-hidden="true"/> Archivieren</button>
                               </div>
                             </div>
                           )}
@@ -512,6 +570,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
                     })}
                   </div>
                 </div>
+                {bodyEditor && <form className="body-observation-editor" onSubmit={saveBodyObservation}><div className="body-observation-editor-heading"><div><span className="record-section-label">Körperstatus · {bodyEditor.id ? "Bearbeiten" : "Neuer Befund"}</span><h4>{bodyEditor.id ? "Befund bearbeiten" : "Befund erfassen"}</h4><p>Die gewählte Körperstelle ist präzise am Modell markiert.</p></div><button type="button" aria-label="Befundeditor schliessen" onClick={() => setBodyEditor(null)}><X aria-hidden="true"/></button></div><div className="body-observation-editor-fields"><label>Art<CareSelect label="Art" value={{ wound: "Wunde", redness: "Rötung", fracture: "Fraktur", other: "Sonstiges" }[bodyEditor.draft.kind]} options={["Wunde", "Rötung", "Fraktur", "Sonstiges"]} onChange={(value) => setBodyEditor((current) => current && ({ ...current, draft: { ...current.draft, kind: ({ Wunde: "wound", Rötung: "redness", Fraktur: "fracture", Sonstiges: "other" } as Record<string, BodyObservation["kind"]>)[value] } }))}/></label><label>Bezeichnung<input required maxLength={120} value={bodyEditor.draft.label} onChange={(event) => setBodyEditor((current) => current && ({ ...current, draft: { ...current.draft, label: event.target.value } }))} placeholder="z. B. Druckstelle"/></label><label>Körperstelle<input required maxLength={160} value={bodyEditor.draft.location} onChange={(event) => setBodyEditor((current) => current && ({ ...current, draft: { ...current.draft, location: event.target.value } }))} placeholder="z. B. rechter Unterarm"/></label><label>Status<input maxLength={120} value={bodyEditor.draft.status} onChange={(event) => setBodyEditor((current) => current && ({ ...current, draft: { ...current.draft, status: event.target.value } }))} placeholder="Beobachten"/></label><label className="body-observation-editor-wide">Beobachtung<textarea rows={3} maxLength={4000} value={bodyEditor.draft.notes} onChange={(event) => setBodyEditor((current) => current && ({ ...current, draft: { ...current.draft, notes: event.target.value } }))} placeholder="Befund, Versorgung und nächste Kontrolle…"/></label></div><div className="body-observation-editor-actions"><button className="secondary-button" type="button" onClick={() => setBodyEditor(null)}>Abbrechen</button><button className="primary-button" type="submit" disabled={bodySaving}>{bodySaving ? "Speichern…" : "Befund speichern"}</button></div></form>}
               </section>
 
               <aside className="resident-overview-side">
@@ -547,7 +606,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
           <main className="resident-record-content record-master-data-view" ref={contentRef} key="master-data">
             <div className="master-data-page-heading">
               <div><span className="record-section-label">Bewohnerakte</span><h3>Stammdaten</h3><p>Persönliche, organisatorische und administrative Angaben zu {resident.name}.</p></div>
-              <div className="master-data-heading-actions">{masterDataEditing && <button className="secondary-button" type="button" onClick={() => setMasterDataEditing(false)}>Abbrechen</button>}<button className="primary-button" type="button" onClick={() => { if (masterDataEditing) onAction("Stammdaten gespeichert"); setMasterDataEditing((current) => !current); }}>{masterDataEditing ? <><Check aria-hidden="true"/> Änderungen speichern</> : "Stammdaten bearbeiten"}</button></div>
+              <div className="master-data-heading-actions">{masterDataEditing && <button className="secondary-button" type="button" onClick={() => { setGenderDraft(residentGender); setMasterDataEditing(false); }}>Abbrechen</button>}<button className="primary-button" type="button" disabled={masterDataSaving} onClick={() => { if (masterDataEditing) void saveGender(); else setMasterDataEditing(true); }}>{masterDataEditing ? <><Check aria-hidden="true"/> {masterDataSaving ? "Speichern…" : "Geschlecht speichern"}</> : "Stammdaten bearbeiten"}</button></div>
             </div>
 
             <section className="master-data-status" aria-label="Status der Stammdaten">
@@ -565,7 +624,7 @@ export function ResidentRecord({ resident, onClose, onAction }: ResidentRecordPr
                     <label><span>Vorname</span><input defaultValue={firstName} readOnly={!masterDataEditing}/></label>
                     <label><span>Nachname</span><input defaultValue={lastName} readOnly={!masterDataEditing}/></label>
                     <label><span>Geburtsdatum</span><input type="date" defaultValue="1940-06-14" readOnly={!masterDataEditing}/></label>
-                    <label><span>Geschlecht</span><select defaultValue={gender} disabled={!masterDataEditing}><option>Weiblich</option><option>Männlich</option><option>Divers</option></select></label>
+                    <label><span>Geschlecht</span><select value={genderDraft} onChange={(event) => setGenderDraft(event.target.value)} disabled={!masterDataEditing}><option value="female">Weiblich</option><option value="male">Männlich</option><option value="diverse">Divers</option><option value="unspecified">Keine Angabe</option></select></label>
                     <label><span>Zivilstand</span><select defaultValue="Verwitwet" disabled={!masterDataEditing}><option>Ledig</option><option>Verheiratet</option><option>Verwitwet</option><option>Geschieden</option></select></label>
                     <label><span>Bevorzugte Sprache</span><select defaultValue="Deutsch" disabled={!masterDataEditing}><option>Deutsch</option><option>Französisch</option><option>Italienisch</option><option>Englisch</option></select></label>
                     <label><span>AHV-Nummer</span><input defaultValue="756.1234.5678.97" readOnly={!masterDataEditing}/></label>

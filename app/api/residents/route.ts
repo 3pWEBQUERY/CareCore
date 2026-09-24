@@ -11,7 +11,7 @@ export async function GET() {
     if (!actor.organizationId) return NextResponse.json({ residents: [], units: [] });
     const sql = carecoreDb();
     const [rows, units] = await Promise.all([
-      sql`SELECT r.id, r.first_name, r.last_name, r.status, r.admitted_on, r.notes,
+      sql`SELECT r.id, r.first_name, r.last_name, r.gender, r.status, r.admitted_on, r.notes,
           COALESCE(su.name, '') AS care_unit, COALESCE(ro.name, '') AS room,
           COALESCE(cp.care_level, '') AS care_level,
           COALESCE(flag.severity, 'stable') AS severity,
