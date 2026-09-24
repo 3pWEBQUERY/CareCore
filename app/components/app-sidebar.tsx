@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   ArrowsLeftRight, Bell, Buildings, CalendarDots, CaretRight, ChartBar, ChatsCircle,
   Check, ClipboardText, Files, FirstAidKit, ForkKnife, GearSix, GraduationCap,
@@ -22,7 +23,8 @@ const icons = {
   logout: SignOut, close: X,
 } satisfies Record<Exclude<ModuleIconName, "caretDown" | "sidebar">, typeof House>;
 
-function RailIcon({ name }: { name: ModuleIconName }) {
+function RailIcon({ name }: { name: ModuleIconName | "carecoreOne" }) {
+  if (name === "carecoreOne") return <Image className="sidebar-carecore-one-icon" src="/carecore-one-icon.png" width={28} height={28} alt="" aria-hidden="true" unoptimized/>;
   const Component = icons[name as keyof typeof icons] ?? Pulse;
   return <Component aria-hidden="true" weight="regular"/>;
 }
@@ -103,7 +105,7 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
   }
 
   const activeGroup = visibleNavigation.find((group) => group.modules.some((module) => module.id === activeModule));
-  const groupIcons: Record<string, ModuleIconName> = { clinical: "residents", operations: "calendar", workforce: "team", management: "chart", intelligence: "ai", rai: "assess" };
+  const groupIcons: Record<string, ModuleIconName | "carecoreOne"> = { clinical: "residents", operations: "calendar", workforce: "team", management: "chart", intelligence: "ai", rai: "assess", "carecore-one": "carecoreOne" };
   const flyout = visibleNavigation.find((group) => group.id === flyoutGroup);
 
   return <>
