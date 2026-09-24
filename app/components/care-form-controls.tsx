@@ -8,7 +8,7 @@ export function formatCareDate(value: string) {
   return new Date(`${value}T12:00:00`).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-export function CareSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
+export function CareSelect({ label, value, options, onChange, menuZIndex }: { label: string; value: string; options: string[]; onChange: (value: string) => void; menuZIndex?: number }) {
   const [open, setOpen] = useState(false);
   const [openUp, setOpenUp] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
@@ -35,7 +35,7 @@ export function CareSelect({ label, value, options, onChange }: { label: string;
     return () => { window.removeEventListener("resize", updatePosition); window.removeEventListener("scroll", updatePosition, true); };
   }, [open, updatePosition]);
   const toggle = () => setOpen((current) => { if (!current) updatePosition(); else setOpenUp(false); return !current; });
-  const menu = open && typeof document !== "undefined" ? createPortal(<div ref={menuRef} className={`area-select-menu area-select-menu-portal ${openUp ? "up" : ""}`} role="listbox" aria-label={label} style={position}>{options.map((option) => <button type="button" role="option" aria-selected={value === option} className={value === option ? "selected" : ""} key={option} onClick={() => { onChange(option); setOpen(false); setOpenUp(false); }}>{option}<ModuleIcon name="check"/></button>)}</div>, document.body) : null;
+  const menu = open && typeof document !== "undefined" ? createPortal(<div ref={menuRef} className={`area-select-menu area-select-menu-portal ${openUp ? "up" : ""}`} role="listbox" aria-label={label} style={{ ...position, zIndex: menuZIndex }}>{options.map((option) => <button type="button" role="option" aria-selected={value === option} className={value === option ? "selected" : ""} key={option} onClick={() => { onChange(option); setOpen(false); setOpenUp(false); }}>{option}<ModuleIcon name="check"/></button>)}</div>, document.body) : null;
   return <><div className="area-custom-select" ref={rootRef}><button className="area-select-trigger" type="button" aria-haspopup="listbox" aria-expanded={open} aria-label={label} onClick={toggle}><span>{value}</span><ModuleIcon name="caretDown" className={open ? "open" : ""}/></button></div>{menu}</>;
 }
 
