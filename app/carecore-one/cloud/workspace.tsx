@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Archive, DownloadSimple, CloudArrowUp, File, FileImage, FilePdf, FileText, MagnifyingGlass, PencilSimple, Trash, UploadSimple } from "@phosphor-icons/react";
+import Image from "next/image";
+import { Archive, DownloadSimple, CloudArrowUp, File, FileImage, FilePdf, FileText, MagnifyingGlass, PencilSimple, Trash, UploadSimple, X } from "@phosphor-icons/react";
 import ModulePageShell from "@/app/components/module-page-shell";
 
 type CloudFile = { id: string; name: string; mime_type: string; size_bytes: number; uploaded_by: string | null; created_at: string; updated_at: string };
 const prettySize = (bytes: number) => bytes < 1024 ? `${bytes} B` : bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(0)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 const prettyDate = (value: string) => new Intl.DateTimeFormat("de-CH", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+const canPreview = (file: CloudFile) => (file.mime_type.startsWith("image/") && file.mime_type !== "image/svg+xml") || file.mime_type.startsWith("video/") || file.mime_type.startsWith("audio/") || file.mime_type === "application/pdf";
 
 function FileGlyph({ file }: { file: CloudFile }) {
   const Icon = file.mime_type.startsWith("image/") ? FileImage : file.mime_type === "application/pdf" ? FilePdf : file.mime_type.startsWith("text/") ? FileText : File;
@@ -20,6 +22,7 @@ export default function CloudWorkspace() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [preview, setPreview] = useState<CloudFile | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -42,6 +45,12 @@ export default function CloudWorkspace() {
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
+  useEffect(() => {
+    if (!preview) return;
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setPreview(null); };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [preview]);
   const visibleFiles = useMemo(() => files.filter((file) => file.name.toLocaleLowerCase("de-CH").includes(query.trim().toLocaleLowerCase("de-CH"))), [files, query]);
   const totalBytes = files.reduce((total, file) => total + Number(file.size_bytes), 0);
 
@@ -84,7 +93,8 @@ export default function CloudWorkspace() {
 
     <section className="cloud-panel"><header className="cloud-panel-head"><div><p className="eyebrow">DATEIABLAGE</p><h2>Alle Dateien</h2><span>{files.length} {files.length === 1 ? "Datei" : "Dateien"} in der gemeinsamen Cloud</span></div><label className="cloud-search"><MagnifyingGlass aria-hidden="true"/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Datei suchen…" aria-label="Dateien suchen"/></label></header>
       {error && <p className="cloud-error" role="alert">{error}</p>}
-      {loading ? <div className="cloud-empty">Dateien werden geladen …</div> : visibleFiles.length ? <div className="cloud-file-list">{visibleFiles.map((file) => <article className="cloud-file-row" key={file.id}><FileGlyph file={file}/><div className="cloud-file-name"><strong title={file.name}>{file.name}</strong><span>{file.mime_type} · {prettySize(Number(file.size_bytes))}</span></div><time dateTime={file.created_at}>{prettyDate(file.created_at)}</time><div className="cloud-actions"><a className="icon-button" href={`/api/cloud/files/${file.id}`} aria-label={`${file.name} herunterladen`} title="Herunterladen"><DownloadSimple aria-hidden="true"/></a><button className="icon-button" type="button" onClick={() => void rename(file)} aria-label={`${file.name} umbenennen`} title="Umbenennen"><PencilSimple aria-hidden="true"/></button><button className="icon-button danger" type="button" onClick={() => void remove(file)} aria-label={`${file.name} löschen`} title="Löschen"><Trash aria-hidden="true"/></button></div></article>)}</div> : <div className="cloud-empty"><span className="cloud-empty-icon"><CloudArrowUp aria-hidden="true"/></span><strong>{query ? "Keine passenden Dateien" : "Noch keine Dateien gespeichert"}</strong><p>{query ? "Passe den Suchbegriff an." : "Lade eine Datei hoch, damit dein Team sie hier findet."}</p>{!query && <button className="secondary-button" type="button" onClick={() => inputRef.current?.click()}><UploadSimple aria-hidden="true"/>Datei auswählen</button>}</div>}
+      {loading ? <div className="cloud-empty">Dateien werden geladen …</div> : visibleFiles.length ? <div className="cloud-file-list">{visibleFiles.map((file) => <article className="cloud-file-row" key={file.id}>{canPreview(file) ? <button className="cloud-file-main" type="button" onClick={() => setPreview(file)} aria-label={`${file.name} anzeigen`}><FileGlyph file={file}/><span className="cloud-file-name"><strong title={file.name}>{file.name}</strong><small>{file.mime_type} · {prettySize(Number(file.size_bytes))}</small></span></button> : <div className="cloud-file-main"><FileGlyph file={file}/><span className="cloud-file-name"><strong title={file.name}>{file.name}</strong><small>{file.mime_type} · {prettySize(Number(file.size_bytes))}</small></span></div>}<time dateTime={file.created_at}>{prettyDate(file.created_at)}</time><div className="cloud-actions"><a className="icon-button" href={`/api/cloud/files/${file.id}`} aria-label={`${file.name} herunterladen`} title="Herunterladen"><DownloadSimple aria-hidden="true"/></a><button className="icon-button" type="button" onClick={() => void rename(file)} aria-label={`${file.name} umbenennen`} title="Umbenennen"><PencilSimple aria-hidden="true"/></button><button className="icon-button danger" type="button" onClick={() => void remove(file)} aria-label={`${file.name} löschen`} title="Löschen"><Trash aria-hidden="true"/></button></div></article>)}</div> : <div className="cloud-empty"><span className="cloud-empty-icon"><CloudArrowUp aria-hidden="true"/></span><strong>{query ? "Keine passenden Dateien" : "Noch keine Dateien gespeichert"}</strong><p>{query ? "Passe den Suchbegriff an." : "Lade eine Datei hoch, damit dein Team sie hier findet."}</p>{!query && <button className="secondary-button" type="button" onClick={() => inputRef.current?.click()}><UploadSimple aria-hidden="true"/>Datei auswählen</button>}</div>}
     </section>
+    {preview && <div className="cloud-preview-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setPreview(null); }}><section className="cloud-preview-dialog" role="dialog" aria-modal="true" aria-label={`Vorschau: ${preview.name}`}><header><div><p className="eyebrow">DATEIVORSCHAU</p><h2>{preview.name}</h2></div><button className="icon-button" type="button" onClick={() => setPreview(null)} aria-label="Vorschau schliessen"><X aria-hidden="true"/></button></header><div className="cloud-preview-content">{preview.mime_type.startsWith("image/") ? <Image src={`/api/cloud/files/${preview.id}?preview=1`} alt={preview.name} width={1400} height={1000} unoptimized/> : preview.mime_type.startsWith("video/") ? <video src={`/api/cloud/files/${preview.id}?preview=1`} controls playsInline/> : preview.mime_type.startsWith("audio/") ? <audio src={`/api/cloud/files/${preview.id}?preview=1`} controls/> : <iframe src={`/api/cloud/files/${preview.id}?preview=1`} title={preview.name}/>}</div><footer><span>{preview.mime_type} · {prettySize(Number(preview.size_bytes))}</span><a className="secondary-button" href={`/api/cloud/files/${preview.id}`}><DownloadSimple aria-hidden="true"/>Herunterladen</a></footer></section></div>}
   </main>}</ModulePageShell>;
 }

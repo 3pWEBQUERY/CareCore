@@ -4,7 +4,7 @@ import { carecoreActor, carecoreDb } from "@/lib/server-data";
 export const runtime = "nodejs";
 type Context = { params: Promise<{ fileId: string }> };
 
-export async function GET(_request: Request, { params }: Context) {
+export async function GET(request: Request, { params }: Context) {
   try {
     const actor = await carecoreActor();
     if (!actor?.organizationId) return NextResponse.json({ error: "Bitte erneut anmelden." }, { status: 401 });
@@ -18,10 +18,11 @@ export async function GET(_request: Request, { params }: Context) {
     ` as unknown as Array<{ name: string; mime_type: string; content_base64: string }>;
     if (!rows[0]) return NextResponse.json({ error: "Datei nicht gefunden." }, { status: 404 });
     const safeName = rows[0].name.replace(/["\r\n]/g, "_");
+    const preview = new URL(request.url).searchParams.get("preview") === "1";
     return new Response(Buffer.from(rows[0].content_base64, "base64"), {
       headers: {
         "Content-Type": rows[0].mime_type || "application/octet-stream",
-        "Content-Disposition": `attachment; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(rows[0].name)}`,
+        "Content-Disposition": `${preview ? "inline" : "attachment"}; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(rows[0].name)}`,
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, no-store",
       },
