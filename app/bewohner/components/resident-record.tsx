@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { BodyMap3D, type BodyPoint } from "./body-map-3d";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import ResidentAppointmentEditor from "@/app/components/resident-appointment-editor";
@@ -262,6 +263,15 @@ export function ResidentRecord({ resident, onClose, onAction, onGenderChanged }:
   useEffect(() => {
     contentRef.current?.scrollTo({ top: 0, behavior: "auto" });
   }, [activeView, selectedEntryId]);
+
+  useEffect(() => {
+    if (!bodyEditor) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setBodyEditor(null);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [bodyEditor]);
 
   useEffect(() => {
     if (!resident.id) return;
@@ -571,7 +581,6 @@ export function ResidentRecord({ resident, onClose, onAction, onGenderChanged }:
                     })}
                   </div>
                 </div>
-                {bodyEditor && <form className="body-observation-editor" onSubmit={saveBodyObservation}><div className="body-observation-editor-heading"><div><span className="record-section-label">Körperstatus · {bodyEditor.id ? "Bearbeiten" : "Neuer Befund"}</span><h4>{bodyEditor.id ? "Befund bearbeiten" : "Befund erfassen"}</h4><p>Die gewählte Körperstelle ist präzise am Modell markiert.</p></div><button type="button" aria-label="Befundeditor schliessen" onClick={() => setBodyEditor(null)}><X aria-hidden="true"/></button></div><div className="body-observation-editor-fields"><label>Art<CareSelect label="Art" value={{ wound: "Wunde", redness: "Rötung", fracture: "Fraktur", other: "Sonstiges" }[bodyEditor.draft.kind]} options={["Wunde", "Rötung", "Fraktur", "Sonstiges"]} onChange={(value) => setBodyEditor((current) => current && ({ ...current, draft: { ...current.draft, kind: ({ Wunde: "wound", Rötung: "redness", Fraktur: "fracture", Sonstiges: "other" } as Record<string, BodyObservation["kind"]>)[value] } }))}/></label><label>Bezeichnung<input required maxLength={120} value={bodyEditor.draft.label} onChange={(event) => setBodyEditor((current) => current && ({ ...current, draft: { ...current.draft, label: event.target.value } }))} placeholder="z. B. Druckstelle"/></label><label>Körperstelle<input required maxLength={160} value={bodyEditor.draft.location} onChange={(event) => setBodyEditor((current) => current && ({ ...current, draft: { ...current.draft, location: event.target.value } }))} placeholder="z. B. rechter Unterarm"/></label><label>Status<input maxLength={120} value={bodyEditor.draft.status} onChange={(event) => setBodyEditor((current) => current && ({ ...current, draft: { ...current.draft, status: event.target.value } }))} placeholder="Beobachten"/></label><label className="body-observation-editor-wide">Beobachtung<textarea rows={3} maxLength={4000} value={bodyEditor.draft.notes} onChange={(event) => setBodyEditor((current) => current && ({ ...current, draft: { ...current.draft, notes: event.target.value } }))} placeholder="Befund, Versorgung und nächste Kontrolle…"/></label></div><div className="body-observation-editor-actions"><button className="secondary-button" type="button" onClick={() => setBodyEditor(null)}>Abbrechen</button><button className="primary-button" type="submit" disabled={bodySaving}>{bodySaving ? "Speichern…" : "Befund speichern"}</button></div></form>}
               </section>
 
               <aside className="resident-overview-side">
@@ -922,6 +931,13 @@ export function ResidentRecord({ resident, onClose, onAction, onGenderChanged }:
           </main>
         )}
       </article>
+      {bodyEditor && typeof document !== "undefined" && createPortal(<div className="body-observation-editor-overlay" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && setBodyEditor(null)}>
+        <form className="body-observation-editor" onSubmit={saveBodyObservation} role="dialog" aria-modal="true" aria-labelledby="body-observation-editor-title">
+          <div className="body-observation-editor-heading"><div><span className="record-section-label">Körperstatus · {bodyEditor.id ? "Bearbeiten" : "Neuer Befund"}</span><h2 id="body-observation-editor-title">{bodyEditor.id ? "Befund bearbeiten" : "Befund erfassen"}</h2><p>Die gewählte Körperstelle ist präzise am Modell markiert.</p></div><button type="button" aria-label="Befundeditor schliessen" onClick={() => setBodyEditor(null)}><X aria-hidden="true"/></button></div>
+          <div className="body-observation-editor-fields"><label>Art<CareSelect label="Art" value={{ wound: "Wunde", redness: "Rötung", fracture: "Fraktur", other: "Sonstiges" }[bodyEditor.draft.kind]} options={["Wunde", "Rötung", "Fraktur", "Sonstiges"]} onChange={(value) => setBodyEditor((current) => current && ({ ...current, draft: { ...current.draft, kind: ({ Wunde: "wound", Rötung: "redness", Fraktur: "fracture", Sonstiges: "other" } as Record<string, BodyObservation["kind"]>)[value] } }))}/></label><label>Bezeichnung<input required maxLength={120} value={bodyEditor.draft.label} onChange={(event) => setBodyEditor((current) => current && ({ ...current, draft: { ...current.draft, label: event.target.value } }))} placeholder="z. B. Druckstelle"/></label><label>Körperstelle<input required maxLength={160} value={bodyEditor.draft.location} onChange={(event) => setBodyEditor((current) => current && ({ ...current, draft: { ...current.draft, location: event.target.value } }))} placeholder="z. B. rechter Unterarm"/></label><label>Status<input maxLength={120} value={bodyEditor.draft.status} onChange={(event) => setBodyEditor((current) => current && ({ ...current, draft: { ...current.draft, status: event.target.value } }))} placeholder="Beobachten"/></label><label className="body-observation-editor-wide">Beobachtung<textarea rows={3} maxLength={4000} value={bodyEditor.draft.notes} onChange={(event) => setBodyEditor((current) => current && ({ ...current, draft: { ...current.draft, notes: event.target.value } }))} placeholder="Befund, Versorgung und nächste Kontrolle…"/></label></div>
+          <div className="body-observation-editor-actions"><button className="secondary-button" type="button" onClick={() => setBodyEditor(null)}>Abbrechen</button><button className="primary-button" type="submit" disabled={bodySaving}>{bodySaving ? "Speichern…" : "Befund speichern"}</button></div>
+        </form>
+      </div>, document.body)}
       {contactEditor && <div className="contact-editor-layer" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && setContactEditor(null)}>
         <section className="contact-editor-panel" role="dialog" aria-modal="true" aria-labelledby="contact-editor-title">
           <header><div><span className="record-section-label">Notfall · Kontaktpersonen</span><h3 id="contact-editor-title">{contactEditor.id ? "Kontaktperson bearbeiten" : "Kontaktperson hinzufügen"}</h3><p>Kontaktdaten und Erreichbarkeit für {resident.name} sicher hinterlegen.</p></div><button type="button" onClick={() => setContactEditor(null)} aria-label="Kontaktpersoneneditor schließen"><X/></button></header>
