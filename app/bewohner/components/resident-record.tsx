@@ -539,7 +539,8 @@ export function ResidentRecord({ resident, onClose, onAction, onGenderChanged }:
                   <div className="body-map-visual">
                     <div className="body-map-legend" aria-label="Legende"><span className="redness">Rötung</span><span className="wound">Wunde</span><span className="fracture">Fraktur</span></div>
                     <BodyMap3D gender={residentGender} observations={bodyObservations.map((item) => ({ id: item.id, kind: item.kind, label: item.label, x: Number(item.body_x), y: Number(item.body_y), z: Number(item.body_z) }))} selectedId={activeBodyObservationId} placing={placingBodyPoint} onSelect={(id) => { setPlacingBodyPoint(false); setActiveBodyObservationId(id); }} onPlace={newBodyObservation}/>
-                    <span className="body-model-caption">{genderLabel === "Keine Angabe" ? "Neutrales Körpermodell" : `${genderLabel}es Körpermodell`} · 360° Ansicht</span>
+                    <span className="body-model-caption">{genderLabel === "Keine Angabe" || genderLabel === "Divers" ? "Anatomisches Referenzmodell" : `${genderLabel}es Körpermodell`} · 360° Ansicht</span>
+                    <a className="body-model-source" href="https://github.com/slorksmo/Human-Atlas" target="_blank" rel="noreferrer">3D-Referenz: Human Atlas · CC BY 4.0</a>
                   </div>
 
                   <div className="body-observation-list" aria-label="Erfasste Körperstellen">

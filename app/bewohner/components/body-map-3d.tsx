@@ -23,6 +23,7 @@ export function BodyMap3D({ gender, observations, selectedId, placing, onSelect,
   const [angle, setAngle] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [supported, setSupported] = useState(true);
+  const [modelError, setModelError] = useState("");
 
   useEffect(() => { callbacks.current = { onSelect, onPlace, placing }; }, [onSelect, onPlace, placing]);
 
@@ -45,34 +46,39 @@ export function BodyMap3D({ gender, observations, selectedId, placing, onSelect,
     const key = new THREE.DirectionalLight(0xffffff, 2.15); key.position.set(-3, 5, 6); scene.add(key);
     const fill = new THREE.DirectionalLight(0xd7e8ff, 1.25); fill.position.set(3, 2, -5); scene.add(fill);
     const model = new THREE.Group(); scene.add(model); modelRef.current = model;
-    const skin = new THREE.MeshStandardMaterial({ color: 0xc6d6e7, roughness: 0.76, metalness: 0.02 });
-    const skinDark = new THREE.MeshStandardMaterial({ color: 0xafc3d8, roughness: 0.82 });
-    const makePart = (name: string, x: number, y: number, z: number, sx: number, sy: number, sz: number, material = skin, rotation = 0) => {
-      const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), material);
-      mesh.name = name; mesh.position.set(x, y, z); mesh.scale.set(sx, sy, sz); mesh.rotation.z = rotation;
-      mesh.userData.body = true; model.add(mesh); return mesh;
-    };
-    const female = gender === "female";
-    const shoulder = female ? 0.48 : gender === "male" ? 0.57 : 0.52;
-    const hip = female ? 0.49 : gender === "male" ? 0.39 : 0.44;
-    makePart("Kopf", 0, 3.23, 0, female ? 0.25 : 0.26, 0.33, 0.24);
-    makePart("Hals", 0, 2.89, 0, 0.15, 0.16, 0.15, skinDark);
-    makePart("Brustkorb", 0, 2.43, 0, shoulder, 0.52, 0.31);
-    makePart("Bauch", 0, 1.95, 0, female ? 0.36 : 0.40, 0.32, 0.28);
-    makePart("Becken", 0, 1.66, 0, hip, 0.30, 0.31);
-    if (female) {
-      makePart("Brust links", -0.22, 2.49, 0.24, 0.23, 0.18, 0.17);
-      makePart("Brust rechts", 0.22, 2.49, 0.24, 0.23, 0.18, 0.17);
-    }
-    for (const side of [-1, 1]) {
-      const s = side;
-      makePart("Oberarm", s * (shoulder + 0.12), 2.38, 0, 0.19, 0.43, 0.20, skin, s * 0.11);
-      makePart("Unterarm", s * (shoulder + 0.21), 1.72, 0, 0.145, 0.37, 0.16, skin, s * 0.06);
-      makePart("Hand", s * (shoulder + 0.24), 1.31, 0.02, 0.12, 0.17, 0.10);
-      makePart("Oberschenkel", s * 0.23, 1.16, 0, female ? 0.235 : 0.22, 0.48, 0.25, skin, -s * 0.035);
-      makePart("Unterschenkel", s * 0.24, 0.48, 0, 0.16, 0.42, 0.17);
-      makePart("Fuss", s * 0.24, 0.095, 0.13, 0.18, 0.10, 0.32);
-    }
+    const modelSex = gender === "female" ? "female" : "male";
+    const modelController = new AbortController();
+    fetch(`/body-surfaces/${modelSex}.bin`, { signal: modelController.signal }).then(async (response) => {
+      if (!response.ok) throw new Error("Körpermodell konnte nicht geladen werden.");
+      const buffer = await response.arrayBuffer();
+      const header = new DataView(buffer);
+      const vertexCount = header.getUint32(0, true);
+      const indexCount = header.getUint32(4, true);
+      const expectedBytes = 8 + vertexCount * 18 + indexCount * 4;
+      if (buffer.byteLength !== expectedBytes) throw new Error("Körpermodell ist unvollständig.");
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(buffer, 8, vertexCount * 3);
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute("normal", new THREE.BufferAttribute(new Int16Array(buffer, 8 + vertexCount * 12, vertexCount * 3), 3, true));
+      geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(buffer, 8 + vertexCount * 18, indexCount), 1));
+      const suit = new THREE.Color("#d9e3ee");
+      const skin = new THREE.Color("#d8bbaa");
+      const colors = new Float32Array(vertexCount * 3);
+      const height = modelSex === "female" ? 1.65778 : 1.71948;
+      for (let i = 0; i < vertexCount; i++) {
+        const x = Math.abs(positions[i * 3]);
+        const y = positions[i * 3 + 1];
+        const exposed = y > height - 0.23 || y < 0.105 || (x > (modelSex === "female" ? 0.34 : 0.27) && y > 0.43 && y < 0.90);
+        const color = exposed ? skin : suit;
+        colors[i * 3] = color.r; colors[i * 3 + 1] = color.g; colors[i * 3 + 2] = color.b;
+      }
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      const surface = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.87, metalness: 0, side: THREE.DoubleSide }));
+      surface.scale.setScalar(modelSex === "female" ? 3.55 / 1.65778 : 3.55 / 1.71948);
+      surface.userData.body = true;
+      if (modelController.signal.aborted) { geometry.dispose(); (surface.material as THREE.Material).dispose(); return; }
+      model.add(surface); setModelError("");
+    }).catch((error) => { if (!modelController.signal.aborted) setModelError(error instanceof Error ? error.message : "Körpermodell konnte nicht geladen werden."); });
     const markerGroup = new THREE.Group(); model.add(markerGroup); markerRef.current = markerGroup;
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
@@ -111,7 +117,7 @@ export function BodyMap3D({ gender, observations, selectedId, placing, onSelect,
     const render = () => { model.rotation.y += (targetYaw.current - model.rotation.y) * 0.15; camera.zoom += (targetZoom.current - camera.zoom) * 0.16; camera.position.y += (targetFocus.current - camera.position.y) * 0.15; camera.lookAt(0, camera.position.y, 0); camera.updateProjectionMatrix(); renderer.render(scene, camera); frame = requestAnimationFrame(render); };
     render();
     return () => {
-      cancelAnimationFrame(frame); observer.disconnect();
+      modelController.abort(); cancelAnimationFrame(frame); observer.disconnect();
       renderer.domElement.removeEventListener("pointerdown", pointerDown); renderer.domElement.removeEventListener("pointermove", pointerMove); renderer.domElement.removeEventListener("pointerup", pointerUp); renderer.domElement.removeEventListener("wheel", wheel);
       host.removeChild(renderer.domElement); scene.traverse((object) => { if (object instanceof THREE.Mesh) { object.geometry.dispose(); const materials = Array.isArray(object.material) ? object.material : [object.material]; materials.forEach((material) => material.dispose()); } }); renderer.dispose(); modelRef.current = null; markerRef.current = null; cameraRef.current = null;
     };
@@ -149,7 +155,7 @@ export function BodyMap3D({ gender, observations, selectedId, placing, onSelect,
   const changeZoom = (delta: number) => { targetZoom.current = THREE.MathUtils.clamp(targetZoom.current + delta, 1, 3); setZoom(targetZoom.current); };
   const reset = () => { targetYaw.current = 0; targetZoom.current = 1; targetFocus.current = 1.78; setAngle(0); setZoom(1); };
   return <div className="clinical-body-viewer">
-    <div className={`clinical-body-canvas ${placing ? "placing" : ""}`} ref={containerRef}>{!supported && <p>Die 3D-Ansicht ist auf diesem Gerät nicht verfügbar.</p>}</div>
+    <div className={`clinical-body-canvas ${placing ? "placing" : ""}`} ref={containerRef}>{!supported && <p>Die 3D-Ansicht ist auf diesem Gerät nicht verfügbar.</p>}{modelError && <p className="clinical-body-model-error" role="alert">{modelError}</p>}</div>
     <div className="clinical-body-toolbar" aria-label="Körperansicht steuern">
       <button type="button" onClick={() => rotate(-45)} aria-label="Nach links drehen">↶</button>
       <input type="range" min="0" max="360" step="5" value={angle} onChange={(event) => { const value = Number(event.target.value); targetYaw.current = THREE.MathUtils.degToRad(value); setAngle(value); }} aria-label="Körper um 360 Grad drehen"/>

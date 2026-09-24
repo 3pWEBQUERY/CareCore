@@ -890,6 +890,8 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .clinical-body-toolbar span { min-width: 36px; color: var(--muted); font-size: 10px; text-align: center; }
 .clinical-body-hint,.body-model-caption { display: block; margin: 8px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; text-align: center; }
 .body-model-caption { margin-top: 10px; font-weight: 700; }
+.body-model-source { display: block; margin-top: 4px; color: #73869b; font-size: 9px; text-align: center; text-decoration: none; }
+.body-model-source:hover { color: var(--brand-dark); text-decoration: underline; }
 .body-observation-empty { padding: 26px 18px; color: var(--muted); font-size: 11px; line-height: 1.55; text-align: center; }
 .body-observation-empty strong { display: block; color: var(--ink); font-size: 13px; }
 .body-observation-empty p { margin: 8px 0 15px; }
