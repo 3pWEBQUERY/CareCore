@@ -40,6 +40,7 @@ export type ResidentRecordData = {
   note: string;
   lastUpdate: string;
   status: "critical" | "attention" | "info" | "stable";
+  lifecycleStatus: string;
   statusLabel: string;
 };
 

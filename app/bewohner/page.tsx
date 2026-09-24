@@ -146,9 +146,12 @@ function routeFor(moduleId: string, child: string) {
 }
 
 type ResidentRow = { id: string; first_name: string; last_name: string; gender: string | null; room: string; care_unit: string; care_level: string; note: string; last_update: string; severity: string; admitted_on: string | null; status: string };
+const residentStatusFilters = ["Alle", "Aktiv", "Eintritt geplant", "Verlegt", "Ausgetreten", "Verstorben", "Archiviert"] as const;
+type ResidentStatusFilter = (typeof residentStatusFilters)[number];
+const residentStatusValues: Record<Exclude<ResidentStatusFilter, "Alle">, string> = { "Aktiv": "active", "Eintritt geplant": "planned", "Verlegt": "transferred", "Ausgetreten": "discharged", "Verstorben": "deceased", "Archiviert": "archived" };
 function toResident(row: ResidentRow): ResidentRecordData {
   const status = (["critical", "attention", "info", "stable"].includes(row.severity) ? row.severity : "stable") as ResidentRecordData["status"];
-  return { id: row.id, initials: `${row.first_name[0] ?? ""}${row.last_name[0] ?? ""}`, name: `${row.first_name} ${row.last_name}`, gender: row.gender, room: row.room || "Zimmer offen", unit: row.care_unit || "Nicht zugewiesen", careLevel: row.care_level || "Noch offen", note: row.note, lastUpdate: new Date(row.last_update).toLocaleDateString("de-CH"), status, statusLabel: { critical: "Kritisch", attention: "Beobachten", info: "Aktualisiert", stable: "Stabil" }[status] };
+  return { id: row.id, initials: `${row.first_name[0] ?? ""}${row.last_name[0] ?? ""}`, name: `${row.first_name} ${row.last_name}`, gender: row.gender, room: row.room || "Zimmer offen", unit: row.care_unit || "Nicht zugewiesen", careLevel: row.care_level || "Noch offen", note: row.note, lastUpdate: new Date(row.last_update).toLocaleDateString("de-CH"), status, lifecycleStatus: row.status, statusLabel: { critical: "Kritisch", attention: "Beobachten", info: "Aktualisiert", stable: "Stabil" }[status] };
 }
 
 function ResidentIntakeEditor({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess: (message: string) => void }) {
@@ -195,6 +198,8 @@ export default function ResidentsPage() {
   const [units, setUnits] = useState<string[]>([]);
   const [admissionsThisWeek, setAdmissionsThisWeek] = useState(0);
   const [unit, setUnit] = useState("Alle");
+  const [statusFilter, setStatusFilter] = useState<ResidentStatusFilter>("Alle");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedResident, setSelectedResident] = useState<ResidentRecordData | null>(null);
   const [intakeEditorOpen, setIntakeEditorOpen] = useState(false);
@@ -208,12 +213,13 @@ export default function ResidentsPage() {
     try {
       const response = await fetch("/api/residents", { cache: "no-store" });
       if (!response.ok) throw new Error("Bewohner konnten nicht geladen werden.");
-      const data = await response.json() as { residents: ResidentRow[]; units: { name: string }[] };
+      const data = await response.json() as { residents: ResidentRow[]; units: { name: string }[]; primaryCareUnitName: string | null };
       const records = data.residents.map(toResident);
       setResidents(records);
       const residentId = new URLSearchParams(window.location.search).get("resident");
       if (residentId) setSelectedResident(records.find((resident) => resident.id === residentId) ?? null);
       setUnits(data.units.map((item) => item.name));
+      setUnit(data.primaryCareUnitName && data.units.some((item) => item.name === data.primaryCareUnitName) ? data.primaryCareUnitName : "Alle");
       const start = Date.now() - 7 * 86400000;
       setAdmissionsThisWeek(data.residents.filter((item) => item.admitted_on && new Date(item.admitted_on).getTime() >= start).length);
     } catch (error) { setToast(error instanceof Error ? error.message : "Daten konnten nicht geladen werden."); }
@@ -258,8 +264,9 @@ export default function ResidentsPage() {
   const filteredResidents = useMemo(() => residents.filter((resident) => {
     const matchesQuery = `${resident.name} ${resident.room} ${resident.note}`.toLowerCase().includes(query.toLowerCase());
     const matchesUnit = unit === "Alle" || resident.unit === unit;
-    return matchesQuery && matchesUnit;
-  }), [query, unit, residents]);
+    const matchesStatus = statusFilter === "Alle" || resident.lifecycleStatus === residentStatusValues[statusFilter];
+    return matchesQuery && matchesUnit && matchesStatus;
+  }), [query, unit, statusFilter, residents]);
 
   function selectSubmenu(moduleId: string, child: string) {
     const route = routeFor(moduleId, child);
@@ -284,11 +291,17 @@ export default function ResidentsPage() {
         </section>
 
         <section className="card resident-directory" aria-labelledby="directory-title">
-          <div className="directory-toolbar">
+            <div className="directory-toolbar">
             <div><h2 className="card-title" id="directory-title">Bewohnerverzeichnis</h2><p className="card-subtitle">{filteredResidents.length} Einträge aus der Datenbank</p></div>
             <label className="resident-search"><Icon name="search"/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name oder Zimmer suchen" aria-label="Bewohner suchen"/></label>
-            <div className="unit-filter" aria-label="Wohnbereich filtern">{["Alle", ...units].map((label) => <button className={unit === label ? "active" : ""} type="button" key={label} onClick={() => setUnit(label)}>{label}</button>)}</div>
-            <button className="secondary-button directory-filter" type="button" onClick={() => setToast("Weitere Filter geöffnet")}><Icon name="filter"/>Filter</button>
+            <button className={`secondary-button directory-filter ${filtersOpen ? "active" : ""}`} type="button" aria-expanded={filtersOpen} aria-controls="resident-filter-panel" onClick={() => setFiltersOpen((open) => !open)}><Icon name="filter"/>{filtersOpen ? "Filter schliessen" : "Filter"}<Icon name="caretDown" className="directory-filter-caret"/></button>
+          </div>
+          <div id="resident-filter-panel" className={`resident-filter-panel ${filtersOpen ? "open" : ""}`} aria-hidden={!filtersOpen}>
+            <div className="resident-filter-panel-inner" inert={!filtersOpen}>
+              <div className="resident-filter-group"><span>Wohnbereich</span><div className="unit-filter" aria-label="Wohnbereich filtern">{["Alle", ...units].map((label) => <button className={unit === label ? "active" : ""} type="button" aria-pressed={unit === label} key={label} onClick={() => setUnit(label)}>{label}</button>)}</div></div>
+              <div className="resident-filter-group"><span>Bewohnerstatus</span><div className="resident-status-filter" aria-label="Bewohnerstatus filtern">{residentStatusFilters.map((label) => <button className={statusFilter === label ? "active" : ""} type="button" aria-pressed={statusFilter === label} key={label} onClick={() => setStatusFilter(label)}>{label}</button>)}</div></div>
+              {(unit !== "Alle" || statusFilter !== "Alle" || query) && <button className="resident-filter-reset" type="button" onClick={() => { setUnit("Alle"); setStatusFilter("Alle"); setQuery(""); }}>Filter zurücksetzen</button>}
+            </div>
           </div>
 
           <div className="resident-table" role="table" aria-label="Bewohnerliste">

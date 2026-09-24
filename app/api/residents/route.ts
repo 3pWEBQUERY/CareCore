@@ -10,7 +10,7 @@ export async function GET() {
     if (!actor) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
     if (!actor.organizationId) return NextResponse.json({ residents: [], units: [] });
     const sql = carecoreDb();
-    const [rows, units] = await Promise.all([
+    const [rows, units, profile] = await Promise.all([
       sql`SELECT r.id, r.first_name, r.last_name, r.gender, r.status, r.admitted_on, r.notes,
           COALESCE(su.name, '') AS care_unit, COALESCE(ro.name, '') AS room,
           COALESCE(cp.care_level, '') AS care_level,
@@ -26,8 +26,9 @@ export async function GET() {
         WHERE r.organization_id = ${actor.organizationId}
         ORDER BY r.last_name, r.first_name`,
       sql`SELECT cu.id, cu.name FROM carecore_care_units cu JOIN carecore_sites s ON s.id = cu.site_id WHERE s.organization_id = ${actor.organizationId} AND cu.active = TRUE ORDER BY cu.name`,
+      sql`SELECT cu.name FROM carecore_user_profiles p LEFT JOIN carecore_care_units cu ON cu.id = p.primary_care_unit_id WHERE p.user_id = ${actor.id} LIMIT 1`,
     ]);
-    return NextResponse.json({ residents: rows, units });
+    return NextResponse.json({ residents: rows, units, primaryCareUnitName: profile[0]?.name ?? null });
   } catch (error) {
     console.error("Residents GET failed", error);
     return NextResponse.json({ error: "Bewohner konnten nicht geladen werden." }, { status: 500 });
