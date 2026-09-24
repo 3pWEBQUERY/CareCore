@@ -110,7 +110,7 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
 
   return <>
     <aside className="sidebar sidebar-rail" aria-label="Hauptnavigation">
-      <div className="sidebar-rail-head"><span className="brand-mark" aria-label="CareCore"><RailIcon name="pulse"/></span></div>
+      <div className="sidebar-rail-head"><span className="brand-mark" aria-label="CareCore"><Image className="sidebar-brand-logo" src="/carecore-sidebar-logo.png" width={32} height={32} alt="" aria-hidden="true" unoptimized/></span></div>
       <nav className="sidebar-rail-scroll">
         <button className={`sidebar-rail-button ${activeModule === "home" ? "active" : ""}`} type="button" aria-label="Startseite" onClick={() => { setFlyoutGroup(null); router.push("/c"); }}><RailIcon name="home"/><SidebarTooltip label="Startseite"/></button>
         {visibleNavigation.map((group) => <button className={`sidebar-rail-button ${activeGroup?.id === group.id ? "active" : ""}`} type="button" key={group.id} aria-label={group.label} aria-expanded={flyoutGroup === group.id} onClick={() => openGroup(group.id)}><RailIcon name={groupIcons[group.id] ?? "pulse"}/><SidebarTooltip label={group.label}/></button>)}
