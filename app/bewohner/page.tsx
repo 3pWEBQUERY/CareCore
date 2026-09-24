@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import AppHeader from "../components/app-header";
 import AppSidebar from "../components/app-sidebar";
 import { CareDatePicker, CareSelect, formatCareDate } from "../components/care-form-controls";
@@ -145,13 +146,22 @@ function routeFor(moduleId: string, child: string) {
   return routes[moduleId]?.[child] ?? null;
 }
 
-type ResidentRow = { id: string; first_name: string; last_name: string; gender: string | null; room: string; care_unit: string; care_level: string; note: string; last_update: string; severity: string; admitted_on: string | null; status: string };
+type ResidentRow = { id: string; first_name: string; last_name: string; gender: string | null; room: string; care_unit: string; care_level: string; note: string; last_update: string; severity: string; admitted_on: string | null; status: string; has_photo: boolean; photo_updated_at: string | null };
 const residentStatusFilters = ["Alle", "Aktiv", "Eintritt geplant", "Verlegt", "Ausgetreten", "Verstorben", "Archiviert"] as const;
 type ResidentStatusFilter = (typeof residentStatusFilters)[number];
 const residentStatusValues: Record<Exclude<ResidentStatusFilter, "Alle">, string> = { "Aktiv": "active", "Eintritt geplant": "planned", "Verlegt": "transferred", "Ausgetreten": "discharged", "Verstorben": "deceased", "Archiviert": "archived" };
 function toResident(row: ResidentRow): ResidentRecordData {
   const status = (["critical", "attention", "info", "stable"].includes(row.severity) ? row.severity : "stable") as ResidentRecordData["status"];
-  return { id: row.id, initials: `${row.first_name[0] ?? ""}${row.last_name[0] ?? ""}`, name: `${row.first_name} ${row.last_name}`, gender: row.gender, room: row.room || "Zimmer offen", unit: row.care_unit || "Nicht zugewiesen", careLevel: row.care_level || "Noch offen", note: row.note, lastUpdate: new Date(row.last_update).toLocaleDateString("de-CH"), status, lifecycleStatus: row.status, statusLabel: { critical: "Kritisch", attention: "Beobachten", info: "Aktualisiert", stable: "Stabil" }[status] };
+  return { id: row.id, photoUrl: row.has_photo ? `/api/residents/${row.id}/photo?format=raw&v=${encodeURIComponent(row.photo_updated_at ?? "")}` : undefined, initials: `${row.first_name[0] ?? ""}${row.last_name[0] ?? ""}`, name: `${row.first_name} ${row.last_name}`, gender: row.gender, room: row.room || "Zimmer offen", unit: row.care_unit || "Nicht zugewiesen", careLevel: row.care_level || "Noch offen", note: row.note, lastUpdate: new Date(row.last_update).toLocaleDateString("de-CH"), status, lifecycleStatus: row.status, statusLabel: { critical: "Kritisch", attention: "Beobachten", info: "Aktualisiert", stable: "Stabil" }[status] };
+}
+
+function ResidentAvatar({ resident }: { resident: ResidentRecordData }) {
+  const [photoFailed, setPhotoFailed] = useState(false);
+  return <span className={`resident-avatar ${resident.status === "critical" ? "critical" : ""}`}>
+    {resident.photoUrl && !photoFailed
+      ? <Image className="resident-avatar-image" src={resident.photoUrl} alt="" fill sizes="40px" unoptimized onError={() => setPhotoFailed(true)} />
+      : resident.initials}
+  </span>;
 }
 
 function ResidentIntakeEditor({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess: (message: string) => void }) {
@@ -307,7 +317,7 @@ export default function ResidentsPage() {
           <div className="resident-table" role="table" aria-label="Bewohnerliste">
             <div className="resident-table-head" role="row"><span role="columnheader">Bewohner</span><span role="columnheader">Wohnbereich</span><span role="columnheader">Pflegebedarf</span><span role="columnheader">Letzte Aktualisierung</span><span role="columnheader">Status</span><span aria-hidden="true"/></div>
             {filteredResidents.map((resident) => <button className="resident-list-row" type="button" role="row" key={resident.name} onClick={() => setSelectedResident(resident)}>
-              <span className="resident-person" role="cell"><span className={`resident-avatar ${resident.status === "critical" ? "critical" : ""}`}>{resident.initials}</span><span><strong>{resident.name}</strong><small>{resident.room}</small></span></span>
+              <span className="resident-person" role="cell"><ResidentAvatar resident={resident}/><span><strong>{resident.name}</strong><small>{resident.room}</small></span></span>
               <span role="cell">{resident.unit}</span>
               <span role="cell"><strong>{resident.careLevel}</strong><small>{resident.note}</small></span>
               <span role="cell">{resident.lastUpdate}</span>
@@ -325,7 +335,7 @@ export default function ResidentsPage() {
 
     {searchOpen && <div className="overlay" role="presentation" onClick={(event) => event.currentTarget === event.target && setSearchOpen(false)}><section id="resident-global-search" className="search-dialog" role="dialog" aria-modal="true" aria-label="Globale Suche"><div className="search-input-wrap"><Icon name="search"/><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Bewohner, Dokumente oder Funktionen suchen…" aria-label="Suchbegriff"/><button type="button" onClick={() => setSearchOpen(false)} aria-label="Suche schliessen">ESC</button></div><div className="search-results"><span className="search-group-label">Bewohner</span>{filteredResidents.map((resident) => <button className="search-result" type="button" key={resident.name} onClick={() => { setSearchOpen(false); setSelectedResident(resident); }}><span className="result-icon"><Icon name="residents"/></span><span><strong>{resident.name}</strong><small>{resident.room} · {resident.unit}</small></span></button>)}</div></section></div>}
 
-    {selectedResident && <ResidentRecord resident={selectedResident} onClose={() => setSelectedResident(null)} onAction={setToast} onGenderChanged={(residentId, gender) => { setResidents((current) => current.map((item) => item.id === residentId ? { ...item, gender } : item)); setSelectedResident((current) => current?.id === residentId ? { ...current, gender } : current); }}/>}
+    {selectedResident && <ResidentRecord resident={selectedResident} onClose={() => setSelectedResident(null)} onAction={setToast} onPhotoChanged={() => { void loadResidents(); }} onGenderChanged={(residentId, gender) => { setResidents((current) => current.map((item) => item.id === residentId ? { ...item, gender } : item)); setSelectedResident((current) => current?.id === residentId ? { ...current, gender } : current); }}/>}
 
     <ResidentIntakeEditor open={intakeEditorOpen} onClose={() => setIntakeEditorOpen(false)} onSuccess={(message) => { setToast(message); void loadResidents(); }}/>
 

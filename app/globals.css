@@ -448,6 +448,7 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .change-row { width: 100%; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 14px; padding: 15px 0; border: 0; border-bottom: 1px solid #edf1f2; background: transparent; text-align: left; cursor: pointer; }
 .change-row:last-child { border-bottom: 0; }
 .resident-avatar { width: 42px; height: 42px; position: relative; display: grid; place-items: center; border-radius: 50%; color: #1d4ed8; background: #dbeafe; font-size: 13px; font-weight: 780; }
+.resident-avatar-image { border-radius: inherit; object-fit: cover; }
 .resident-avatar.critical { color: #8a3428; background: #fae0db; }
 .avatar-status { width: 10px; height: 10px; position: absolute; right: -1px; bottom: 0; border: 2px solid white; border-radius: 6px; background: var(--attention); }
 .resident-avatar.critical .avatar-status { background: var(--critical); }
@@ -800,7 +801,7 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .resident-record-panel { width: 100vw; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; contain: layout paint; border-radius: 0; background: var(--bg); box-shadow: none; backface-visibility: hidden; transform: translate3d(0,0,0); animation: record-slide-in 180ms cubic-bezier(.16,1,.3,1); will-change: transform,opacity; }
 .resident-record-header { min-height: 116px; flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: 23px 34px; color: white; background: linear-gradient(115deg,#0b1f3a 0%,#123b72 100%); }
 .record-heading { min-width: 0; display: flex; align-items: center; gap: 17px; }
-.record-heading .resident-avatar { width: 58px; height: 58px; flex: 0 0 auto; border: 2px solid rgba(255,255,255,.34); color: white; background: rgba(96,165,250,.28); font-size: 16px; }
+.record-heading .resident-avatar { width: 76px; height: 76px; flex: 0 0 auto; border: 2px solid rgba(255,255,255,.34); color: white; background: rgba(96,165,250,.28); font-size: 20px; }
 .record-heading .resident-avatar.critical { color: white; background: rgba(239,104,88,.35); }
 .record-heading .record-photo-trigger { position: relative; overflow: visible; padding: 0; cursor: pointer; }
 .record-heading .record-photo-trigger:focus-visible { outline: 3px solid #bfdbfe; outline-offset: 3px; }
@@ -2241,7 +2242,7 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
   .resident-list-row > :nth-child(6) { grid-column: 2; grid-row: 1; justify-self: end; }
   .resident-record-header { min-height: 103px; padding: 18px 16px; }
   .record-heading { gap: 12px; }
-  .record-heading .resident-avatar { width: 48px; height: 48px; }
+  .record-heading .resident-avatar { width: 64px; height: 64px; }
   .record-heading p { font-size: 11px; }
   .record-header-actions .status-badge { display: none; }
   .resident-record-tabs { min-height: 50px; gap: 0; padding: 0 8px; overflow-x: auto; }

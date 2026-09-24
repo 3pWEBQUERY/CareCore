@@ -33,6 +33,7 @@ import {
 
 export type ResidentRecordData = {
   id?: string;
+  photoUrl?: string;
   gender?: string | null;
   initials: string;
   name: string;
@@ -51,6 +52,7 @@ type ResidentRecordProps = {
   onClose: () => void;
   onAction: (message: string) => void;
   onGenderChanged?: (residentId: string, gender: string) => void;
+  onPhotoChanged?: () => void;
 };
 
 type RecordView = "overview" | "master-data" | "documentation" | "care-record" | "supplies" | "appointments" | "history" | "documents" | "biography";
@@ -183,7 +185,7 @@ function getDocumentationEntries(resident: ResidentRecordData): DocumentationEnt
   ];
 }
 
-export function ResidentRecord({ resident, onClose, onAction, onGenderChanged }: ResidentRecordProps) {
+export function ResidentRecord({ resident, onClose, onAction, onGenderChanged, onPhotoChanged }: ResidentRecordProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const residentPhotoInputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLElement>(null);
@@ -366,6 +368,7 @@ export function ResidentRecord({ resident, onClose, onAction, onGenderChanged }:
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(data?.error || "Bewohnerbild konnte nicht gespeichert werden.");
       setResidentPhoto(data.photoDataUrl);
+      onPhotoChanged?.();
       onAction(`Bewohnerbild für ${resident.name} gespeichert`);
     } catch (error) {
       onAction(error instanceof Error ? error.message : "Bewohnerbild konnte nicht gespeichert werden.");
@@ -580,7 +583,7 @@ export function ResidentRecord({ resident, onClose, onAction, onGenderChanged }:
               disabled={residentPhotoSaving}
               onClick={() => residentPhotoInputRef.current?.click()}
             >
-              {residentPhoto ? <Image src={residentPhoto} alt={`Profilbild von ${resident.name}`} width={58} height={58} unoptimized /> : <span>{resident.initials}</span>}
+              {residentPhoto ? <Image src={residentPhoto} alt={`Profilbild von ${resident.name}`} width={76} height={76} unoptimized /> : <span>{resident.initials}</span>}
               <span className="record-photo-camera" aria-hidden="true"><Camera /></span>
             </button>
             <input ref={residentPhotoInputRef} className="record-photo-input" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={uploadResidentPhoto} tabIndex={-1} aria-hidden="true" />

@@ -38,13 +38,28 @@ function hasValidImageSignature(bytes: Buffer, mimeType: string) {
   return false;
 }
 
-export async function GET(_request: Request, context: { params: Promise<{ residentId: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ residentId: string }> }) {
   try {
     const { residentId } = await context.params;
     const sql = await access(residentId);
     if (!sql) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
     const rows = await sql`SELECT photo_base64, photo_mime_type, photo_updated_at FROM carecore_residents WHERE id = ${residentId} LIMIT 1`;
     const resident = rows[0];
+    if (new URL(request.url).searchParams.get("format") === "raw") {
+      if (!resident?.photo_base64 || !allowedTypes.has(String(resident.photo_mime_type))) {
+        return new NextResponse(null, { status: 404, headers: { "Cache-Control": "private, no-store" } });
+      }
+      const image = Buffer.from(String(resident.photo_base64), "base64");
+      return new NextResponse(new Uint8Array(image), {
+        headers: {
+          "Content-Type": String(resident.photo_mime_type),
+          "Content-Length": String(image.byteLength),
+          "Cache-Control": "private, max-age=60",
+          "X-Content-Type-Options": "nosniff",
+          "Content-Disposition": "inline",
+        },
+      });
+    }
     const photoDataUrl = resident?.photo_base64 && allowedTypes.has(String(resident.photo_mime_type))
       ? `data:${resident.photo_mime_type};base64,${resident.photo_base64}`
       : null;
