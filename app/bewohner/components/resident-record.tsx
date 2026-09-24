@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import { BodyMap3D, type BodyPoint } from "./body-map-3d";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import ResidentAppointmentEditor from "@/app/components/resident-appointment-editor";
@@ -9,6 +10,7 @@ import { appointmentDateLabel, appointmentLocalParts, type AppointmentResident, 
 import {
   ArrowRight,
   ArrowsLeftRight,
+  Camera,
   CalendarDots,
   CaretDown,
   Check,
@@ -183,6 +185,7 @@ function getDocumentationEntries(resident: ResidentRecordData): DocumentationEnt
 
 export function ResidentRecord({ resident, onClose, onAction, onGenderChanged }: ResidentRecordProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const residentPhotoInputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLElement>(null);
   const entries = getDocumentationEntries(resident);
   const [activeView, setActiveView] = useState<RecordView>("overview");
@@ -229,6 +232,8 @@ export function ResidentRecord({ resident, onClose, onAction, onGenderChanged }:
   const [appointmentEditor, setAppointmentEditor] = useState<ResidentAppointment | "new" | null>(null);
   const [appointmentRevision, setAppointmentRevision] = useState(0);
   const [clockNow, setClockNow] = useState(0);
+  const [residentPhoto, setResidentPhoto] = useState<string | null>(null);
+  const [residentPhotoSaving, setResidentPhotoSaving] = useState(false);
   const selectedEntry = entries.find((entry) => entry.id === selectedEntryId) ?? null;
   const activeCareDomain = careDomains.find((domain) => domain.id === activeCareDomainId) ?? careDomains[0];
   const visibleHistoryEntries = historyEntries.filter((entry) => historyFilter === "Alle" || entry.category === historyFilter);
@@ -266,6 +271,18 @@ export function ResidentRecord({ resident, onClose, onAction, onGenderChanged }:
   }, [activeView, selectedEntryId]);
 
   useEffect(() => {
+    if (!resident.id) return;
+    let active = true;
+    fetch(`/api/residents/${resident.id}/photo`, { cache: "no-store" })
+      .then(async (response) => ({ response, data: await response.json().catch(() => null) }))
+      .then(({ response, data }) => {
+        if (active && response.ok) setResidentPhoto(typeof data?.photoDataUrl === "string" ? data.photoDataUrl : null);
+      })
+      .catch(() => { if (active) setResidentPhoto(null); });
+    return () => { active = false; };
+  }, [resident.id]);
+
+  useEffect(() => {
     if (!bodyEditor) return;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setBodyEditor(null);
@@ -301,6 +318,61 @@ export function ResidentRecord({ resident, onClose, onAction, onGenderChanged }:
       setResidentGender(data.gender); setMasterDataEditing(false); onGenderChanged?.(resident.id, data.gender); onAction("Geschlecht in den Stammdaten gespeichert");
     } catch (error) { onAction(error instanceof Error ? error.message : "Geschlecht konnte nicht gespeichert werden."); }
     finally { setMasterDataSaving(false); }
+  }
+
+  async function uploadResidentPhoto(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    if (!resident.id) { onAction("Dieses Bewohnerprofil kann nicht gespeichert werden."); return; }
+    if (!file.type.startsWith("image/") || !["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"].includes(file.type)) {
+      onAction("Bitte ein JPEG-, PNG-, WebP- oder HEIC-Bild auswählen.");
+      event.currentTarget.value = "";
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      onAction("Das ausgewählte Bild darf höchstens 15 MB gross sein.");
+      event.currentTarget.value = "";
+      return;
+    }
+    setResidentPhotoSaving(true);
+    try {
+      const bitmap = await createImageBitmap(file);
+      const maxSide = 640;
+      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Bild konnte nicht verarbeitet werden.");
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      let blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.86));
+      if (!blob) throw new Error("Bild konnte nicht verarbeitet werden.");
+      if (blob.size > 1024 * 1024) {
+        blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.68));
+      }
+      if (!blob || blob.size > 1024 * 1024) throw new Error("Das Bild konnte nicht auf höchstens 1 MB verkleinert werden.");
+      const photoDataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Bild konnte nicht gelesen werden."));
+        reader.onerror = () => reject(new Error("Bild konnte nicht gelesen werden."));
+        reader.readAsDataURL(blob);
+      });
+      const response = await fetch(`/api/residents/${resident.id}/photo`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ photoDataUrl }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || "Bewohnerbild konnte nicht gespeichert werden.");
+      setResidentPhoto(data.photoDataUrl);
+      onAction(`Bewohnerbild für ${resident.name} gespeichert`);
+    } catch (error) {
+      onAction(error instanceof Error ? error.message : "Bewohnerbild konnte nicht gespeichert werden.");
+    } finally {
+      setResidentPhotoSaving(false);
+      if (residentPhotoInputRef.current) residentPhotoInputRef.current.value = "";
+    }
   }
 
   function newBodyObservation(point: BodyPoint) {
@@ -500,7 +572,18 @@ export function ResidentRecord({ resident, onClose, onAction, onGenderChanged }:
       <article className="resident-record-panel" role="dialog" aria-modal="true" aria-labelledby="resident-record-title">
         <header className="resident-record-header">
           <div className="record-heading">
-            <span className={`resident-avatar ${resident.status === "critical" ? "critical" : ""}`}>{resident.initials}</span>
+            <button
+              className={`resident-avatar record-photo-trigger ${resident.status === "critical" ? "critical" : ""}`}
+              type="button"
+              aria-label={residentPhoto ? "Bewohnerbild ändern" : "Bewohnerbild hochladen"}
+              title={residentPhoto ? "Bewohnerbild ändern" : "Bewohnerbild hochladen"}
+              disabled={residentPhotoSaving}
+              onClick={() => residentPhotoInputRef.current?.click()}
+            >
+              {residentPhoto ? <Image src={residentPhoto} alt={`Profilbild von ${resident.name}`} width={58} height={58} unoptimized /> : <span>{resident.initials}</span>}
+              <span className="record-photo-camera" aria-hidden="true"><Camera /></span>
+            </button>
+            <input ref={residentPhotoInputRef} className="record-photo-input" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={uploadResidentPhoto} tabIndex={-1} aria-hidden="true" />
             <div>
               <span className="record-kicker">Bewohnerakte</span>
               <h2 id="resident-record-title">{resident.name}</h2>

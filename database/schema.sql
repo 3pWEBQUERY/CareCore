@@ -154,10 +154,17 @@ CREATE TABLE IF NOT EXISTS carecore_residents (
   primary_care_user_id UUID REFERENCES carecore_users(id) ON DELETE SET NULL,
   risk_flags JSONB NOT NULL DEFAULT '[]'::jsonb,
   notes TEXT,
+  photo_base64 TEXT,
+  photo_mime_type VARCHAR(40),
+  photo_updated_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (organization_id, external_number)
 );
+
+ALTER TABLE carecore_residents ADD COLUMN IF NOT EXISTS photo_base64 TEXT;
+ALTER TABLE carecore_residents ADD COLUMN IF NOT EXISTS photo_mime_type VARCHAR(40);
+ALTER TABLE carecore_residents ADD COLUMN IF NOT EXISTS photo_updated_at TIMESTAMPTZ;
 
 -- Biography is deliberately separate from clinical notes: it is a resident-owned
 -- narrative that supports person-centred care and is updated independently.
