@@ -802,11 +802,11 @@ h1 { margin: 0; font-size: clamp(28px,3vw,38px); font-weight: 760; line-height: 
 .record-heading { min-width: 0; display: flex; align-items: center; gap: 17px; }
 .record-heading .resident-avatar { width: 58px; height: 58px; flex: 0 0 auto; border: 2px solid rgba(255,255,255,.34); color: white; background: rgba(96,165,250,.28); font-size: 16px; }
 .record-heading .resident-avatar.critical { color: white; background: rgba(239,104,88,.35); }
-.record-heading .record-photo-trigger { position: relative; overflow: hidden; padding: 0; cursor: pointer; }
+.record-heading .record-photo-trigger { position: relative; overflow: visible; padding: 0; cursor: pointer; }
 .record-heading .record-photo-trigger:focus-visible { outline: 3px solid #bfdbfe; outline-offset: 3px; }
 .record-heading .record-photo-trigger:disabled { cursor: wait; }
-.record-photo-trigger > img { width: 100%; height: 100%; display: block; object-fit: cover; }
-.record-photo-camera { position: absolute; right: -1px; bottom: -1px; width: 21px; height: 21px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.85); border-radius: 50%; color: white; background: var(--brand); }
+.record-photo-trigger > img { width: 100%; height: 100%; display: block; border-radius: 50%; object-fit: cover; }
+.record-photo-camera { position: absolute; z-index: 1; right: -4px; bottom: -3px; width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.9); border-radius: 50%; color: white; background: var(--brand); }
 .record-photo-camera svg { width: 12px; height: 12px; }
 .record-photo-input { position: fixed; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; clip-path: inset(50%); }
 .record-kicker { display: block; margin-bottom: 5px; color: #9fc5f7; font-size: 10px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
