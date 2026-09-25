@@ -37,7 +37,9 @@ await sql`
     applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )
 `;
-const applied = new Map((await sql`SELECT version, checksum FROM carecore_schema_migrations`).map((row) => [row.version, row.checksum]));
+const applied = new Map(
+  (await sql`SELECT version, checksum FROM carecore_schema_migrations`).map((row) => [row.version, row.checksum]),
+);
 
 const files = (await readdir(MIGRATIONS_DIR)).filter((name) => /^\d{4}_[\w-]+\.sql$/.test(name)).sort();
 let pending = 0;
@@ -46,7 +48,8 @@ for (const file of files) {
   const source = await readFile(new URL(file, MIGRATIONS_DIR), "utf8");
   const checksum = createHash("sha256").update(source).digest("hex");
   if (applied.has(file)) {
-    if (applied.get(file) !== checksum) throw new Error(`Migration ${file} was changed after it was applied. Add a new migration instead.`);
+    if (applied.get(file) !== checksum)
+      throw new Error(`Migration ${file} was changed after it was applied. Add a new migration instead.`);
     continue;
   }
   pending += 1;

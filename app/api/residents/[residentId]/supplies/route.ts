@@ -4,21 +4,44 @@ import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/serve
 
 export const runtime = "nodejs";
 
-type SupplyInput = { itemName?: unknown; productId?: unknown; quantity?: unknown; category?: unknown; unit?: unknown; currentQuantity?: unknown; targetQuantity?: unknown; status?: unknown; notes?: unknown };
+type SupplyInput = {
+  itemName?: unknown;
+  productId?: unknown;
+  quantity?: unknown;
+  category?: unknown;
+  unit?: unknown;
+  currentQuantity?: unknown;
+  targetQuantity?: unknown;
+  status?: unknown;
+  notes?: unknown;
+};
 
 async function residentContext(residentId: string) {
   const actor = await carecoreActor();
   if (!actor?.organizationId) return null;
   const sql = carecoreDb();
-  const resident = await sql`SELECT id FROM carecore_residents WHERE id = ${residentId} AND organization_id = ${actor.organizationId} LIMIT 1`;
+  const resident =
+    await sql`SELECT id FROM carecore_residents WHERE id = ${residentId} AND organization_id = ${actor.organizationId} LIMIT 1`;
   return resident[0] ? { actor, sql } : null;
 }
 
 function supplyValues(input: SupplyInput) {
-  const text = (key: keyof SupplyInput, limit: number) => typeof input[key] === "string" ? input[key].trim().slice(0, limit) : "";
-  const quantity = (key: "currentQuantity" | "targetQuantity") => typeof input[key] === "number" && Number.isInteger(input[key]) ? Math.max(0, Math.min(100000, input[key] as number)) : 0;
+  const text = (key: keyof SupplyInput, limit: number) =>
+    typeof input[key] === "string" ? input[key].trim().slice(0, limit) : "";
+  const quantity = (key: "currentQuantity" | "targetQuantity") =>
+    typeof input[key] === "number" && Number.isInteger(input[key])
+      ? Math.max(0, Math.min(100000, input[key] as number))
+      : 0;
   const status = input.status === "blocked" || input.status === "archived" ? input.status : "active";
-  return { itemName: text("itemName", 180), category: text("category", 80) || "Pflege & Hygiene", unit: text("unit", 40) || "Stück", currentQuantity: quantity("currentQuantity"), targetQuantity: quantity("targetQuantity"), status, notes: text("notes", 2000) };
+  return {
+    itemName: text("itemName", 180),
+    category: text("category", 80) || "Pflege & Hygiene",
+    unit: text("unit", 40) || "Stück",
+    currentQuantity: quantity("currentQuantity"),
+    targetQuantity: quantity("targetQuantity"),
+    status,
+    notes: text("notes", 2000),
+  };
 }
 
 export async function GET(_request: Request, context: { params: Promise<{ residentId: string }> }) {
@@ -32,7 +55,10 @@ export async function GET(_request: Request, context: { params: Promise<{ reside
       active.sql`SELECT id, item_name, category, unit, default_target_quantity FROM carecore_care_supply_products WHERE organization_id = ${active.actor.organizationId} AND status = 'active' ORDER BY category, item_name`,
     ]);
     return NextResponse.json({ supplies, products });
-  } catch (error) { console.error("Supplies GET failed", error); return NextResponse.json({ error: "Pflegebedarf konnte nicht geladen werden." }, { status: 500 }); }
+  } catch (error) {
+    console.error("Supplies GET failed", error);
+    return NextResponse.json({ error: "Pflegebedarf konnte nicht geladen werden." }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request, context: { params: Promise<{ residentId: string }> }) {
@@ -41,11 +67,18 @@ export async function POST(request: Request, context: { params: Promise<{ reside
     const active = await residentContext(residentId);
     if (!active) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
     if (!hasPermission(active.actor, "residents.write")) return forbidden();
-    const body = await request.json() as SupplyInput;
+    const body = (await request.json()) as SupplyInput;
     if (typeof body.productId === "string" && body.productId) {
-      const quantity = typeof body.quantity === "number" && Number.isInteger(body.quantity) ? Math.max(1, Math.min(100000, body.quantity)) : 0;
+      const quantity =
+        typeof body.quantity === "number" && Number.isInteger(body.quantity)
+          ? Math.max(1, Math.min(100000, body.quantity))
+          : 0;
       const notes = typeof body.notes === "string" ? body.notes.trim().slice(0, 2000) : "";
-      if (!quantity) return NextResponse.json({ error: "Bitte gib eine Stückzahl oder Menge grösser als null an." }, { status: 400 });
+      if (!quantity)
+        return NextResponse.json(
+          { error: "Bitte gib eine Stückzahl oder Menge grösser als null an." },
+          { status: 400 },
+        );
       const sql = active.sql;
       const supplyId = randomUUID();
       const transactionId = randomUUID();
@@ -78,7 +111,11 @@ export async function POST(request: Request, context: { params: Promise<{ reside
     }
     const input = supplyValues(body);
     if (!input.itemName) return NextResponse.json({ error: "Bitte gib eine Bezeichnung an." }, { status: 400 });
-    const rows = await active.sql`INSERT INTO carecore_resident_supplies (id, resident_id, item_name, category, unit, current_quantity, target_quantity, status, notes, updated_by) VALUES (${randomUUID()}, ${residentId}, ${input.itemName}, ${input.category}, ${input.unit}, ${input.currentQuantity}, ${input.targetQuantity}, ${input.status}, ${input.notes || null}, ${active.actor.id}) RETURNING id, item_name, category, unit, current_quantity, target_quantity, status, notes, updated_at`;
+    const rows =
+      await active.sql`INSERT INTO carecore_resident_supplies (id, resident_id, item_name, category, unit, current_quantity, target_quantity, status, notes, updated_by) VALUES (${randomUUID()}, ${residentId}, ${input.itemName}, ${input.category}, ${input.unit}, ${input.currentQuantity}, ${input.targetQuantity}, ${input.status}, ${input.notes || null}, ${active.actor.id}) RETURNING id, item_name, category, unit, current_quantity, target_quantity, status, notes, updated_at`;
     return NextResponse.json({ supply: rows[0] }, { status: 201 });
-  } catch (error) { console.error("Supplies POST failed", error); return NextResponse.json({ error: "Pflegebedarf konnte nicht gespeichert werden." }, { status: 500 }); }
+  } catch (error) {
+    console.error("Supplies POST failed", error);
+    return NextResponse.json({ error: "Pflegebedarf konnte nicht gespeichert werden." }, { status: 500 });
+  }
 }

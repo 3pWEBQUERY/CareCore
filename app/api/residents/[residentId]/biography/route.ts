@@ -12,13 +12,23 @@ type BiographyInput = {
   sensitiveTopics?: unknown;
 };
 
-const emptyBiography = { lifeStory: "", importantPeople: "", dailyRoutines: "", preferences: "", strengths: "", sensitiveTopics: "", updatedAt: null as string | null, updatedBy: null as string | null };
+const emptyBiography = {
+  lifeStory: "",
+  importantPeople: "",
+  dailyRoutines: "",
+  preferences: "",
+  strengths: "",
+  sensitiveTopics: "",
+  updatedAt: null as string | null,
+  updatedBy: null as string | null,
+};
 
 async function permittedResident(residentId: string) {
   const actor = await carecoreActor();
   if (!actor?.organizationId) return null;
   const sql = carecoreDb();
-  const rows = await sql`SELECT id FROM carecore_residents WHERE id = ${residentId} AND organization_id = ${actor.organizationId} LIMIT 1`;
+  const rows =
+    await sql`SELECT id FROM carecore_residents WHERE id = ${residentId} AND organization_id = ${actor.organizationId} LIMIT 1`;
   return rows[0] ? { actor, sql } : null;
 }
 
@@ -36,7 +46,20 @@ export async function GET(_request: Request, context: { params: Promise<{ reside
       LIMIT 1
     `;
     const biography = rows[0] as Record<string, string | null> | undefined;
-    return NextResponse.json({ biography: biography ? { lifeStory: biography.life_story ?? "", importantPeople: biography.important_people ?? "", dailyRoutines: biography.daily_routines ?? "", preferences: biography.preferences ?? "", strengths: biography.strengths ?? "", sensitiveTopics: biography.sensitive_topics ?? "", updatedAt: biography.updated_at, updatedBy: biography.updated_by } : emptyBiography });
+    return NextResponse.json({
+      biography: biography
+        ? {
+            lifeStory: biography.life_story ?? "",
+            importantPeople: biography.important_people ?? "",
+            dailyRoutines: biography.daily_routines ?? "",
+            preferences: biography.preferences ?? "",
+            strengths: biography.strengths ?? "",
+            sensitiveTopics: biography.sensitive_topics ?? "",
+            updatedAt: biography.updated_at,
+            updatedBy: biography.updated_by,
+          }
+        : emptyBiography,
+    });
   } catch (error) {
     console.error("Biography GET failed", error);
     return NextResponse.json({ error: "Biografie konnte nicht geladen werden." }, { status: 500 });
@@ -49,8 +72,9 @@ export async function PUT(request: Request, context: { params: Promise<{ residen
     const active = await permittedResident(residentId);
     if (!active) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
     if (!hasPermission(active.actor, "residents.write")) return forbidden();
-    const input = await request.json() as BiographyInput;
-    const value = (key: keyof BiographyInput) => typeof input[key] === "string" ? input[key].trim().slice(0, 8000) : "";
+    const input = (await request.json()) as BiographyInput;
+    const value = (key: keyof BiographyInput) =>
+      typeof input[key] === "string" ? input[key].trim().slice(0, 8000) : "";
     const lifeStory = value("lifeStory");
     const importantPeople = value("importantPeople");
     const dailyRoutines = value("dailyRoutines");
@@ -63,7 +87,18 @@ export async function PUT(request: Request, context: { params: Promise<{ residen
       ON CONFLICT (resident_id) DO UPDATE SET life_story = EXCLUDED.life_story, important_people = EXCLUDED.important_people, daily_routines = EXCLUDED.daily_routines, preferences = EXCLUDED.preferences, strengths = EXCLUDED.strengths, sensitive_topics = EXCLUDED.sensitive_topics, updated_by = EXCLUDED.updated_by, updated_at = NOW()
       RETURNING updated_at
     `;
-    return NextResponse.json({ biography: { lifeStory, importantPeople, dailyRoutines, preferences, strengths, sensitiveTopics, updatedAt: rows[0]?.updated_at ?? new Date().toISOString(), updatedBy: active.actor.display_name } });
+    return NextResponse.json({
+      biography: {
+        lifeStory,
+        importantPeople,
+        dailyRoutines,
+        preferences,
+        strengths,
+        sensitiveTopics,
+        updatedAt: rows[0]?.updated_at ?? new Date().toISOString(),
+        updatedBy: active.actor.display_name,
+      },
+    });
   } catch (error) {
     console.error("Biography PUT failed", error);
     return NextResponse.json({ error: "Biografie konnte nicht gespeichert werden." }, { status: 500 });

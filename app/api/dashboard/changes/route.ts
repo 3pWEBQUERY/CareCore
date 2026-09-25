@@ -36,5 +36,8 @@ export async function GET() {
         ORDER BY latest.occurred_at DESC NULLS LAST, r.last_name, r.first_name LIMIT 200`,
     ]);
     return NextResponse.json({ changes, residents, scope: profile[0]?.care_unit_name ?? "Alle Wohnbereiche" });
-  } catch (error) { console.error("Dashboard changes GET failed", error); return NextResponse.json({ error: "Bewohner-Neuigkeiten konnten nicht geladen werden." }, { status: 500 }); }
+  } catch (error) {
+    console.error("Dashboard changes GET failed", error);
+    return NextResponse.json({ error: "Bewohner-Neuigkeiten konnten nicht geladen werden." }, { status: 500 });
+  }
 }

@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
-import { deleteDashboardLayout, getDashboardLayout, normalizeDashboardLayout, saveDashboardLayout } from "@/lib/dashboard-layout";
+import {
+  deleteDashboardLayout,
+  getDashboardLayout,
+  normalizeDashboardLayout,
+  saveDashboardLayout,
+} from "@/lib/dashboard-layout";
 
 export const runtime = "nodejs";
 
@@ -11,7 +16,8 @@ async function sessionUser() {
 }
 
 function databaseError(error: unknown) {
-  if (error instanceof Error && error.message === "DATABASE_URL_NOT_CONFIGURED") return NextResponse.json({ error: "Datenbank ist nicht konfiguriert." }, { status: 503 });
+  if (error instanceof Error && error.message === "DATABASE_URL_NOT_CONFIGURED")
+    return NextResponse.json({ error: "Datenbank ist nicht konfiguriert." }, { status: 503 });
   console.error("Dashboard layout request failed", error);
   return NextResponse.json({ error: "Arbeitsplatz konnte nicht gespeichert werden." }, { status: 500 });
 }

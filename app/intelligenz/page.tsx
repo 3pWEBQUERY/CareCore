@@ -1,3 +1,5 @@
 import IntelligenceWorkspace from "./components/intelligence-workspace";
 
-export default function IntelligencePage() { return <IntelligenceWorkspace view="assistant"/>; }
+export default function IntelligencePage() {
+  return <IntelligenceWorkspace view="assistant" />;
+}

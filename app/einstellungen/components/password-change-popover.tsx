@@ -47,31 +47,122 @@ export default function PasswordChangePopover({ open, onClose, onSuccess }: Pass
     onClose();
   };
 
-  return <div className="settings-password-overlay" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && onClose()}>
-    <section className="settings-password-dialog" role="dialog" aria-modal="true" aria-labelledby="password-dialog-title">
-      <header className="settings-password-header">
-        <div className="settings-password-heading">
-          <span className="settings-password-icon"><ModuleIcon name="quality"/></span>
-          <div><p className="eyebrow">Sicherheit &amp; Zugriff</p><h2 id="password-dialog-title">Passwort ändern</h2><p>Schütze deinen Zugang mit einem neuen, sicheren Passwort.</p></div>
-        </div>
-        <button className="settings-password-close" type="button" onClick={onClose} aria-label="Passwortdialog schliessen">×</button>
-      </header>
-      <form className="settings-password-form" onSubmit={submit}>
-        <p className="settings-password-note"><ModuleIcon name="alert"/> Verwende ein Passwort, das du nur für CareCore nutzt.</p>
-        <PasswordField id="current-password" label="Aktuelles Passwort" value={currentPassword} onChange={setCurrentPassword} visible={showCurrent} onToggle={() => setShowCurrent((value) => !value)}/>
-        <div className="settings-password-divider" aria-hidden="true"/>
-        <PasswordField id="new-password" label="Neues Passwort" value={newPassword} onChange={setNewPassword} visible={showNew} onToggle={() => setShowNew((value) => !value)} hint="Mindestens 8 Zeichen"/>
-        <PasswordField id="confirm-password" label="Neues Passwort bestätigen" value={confirmation} onChange={setConfirmation} visible={showConfirmation} onToggle={() => setShowConfirmation((value) => !value)}/>
-        {error && <p className="settings-password-error" role="alert"><ModuleIcon name="alert"/>{error}</p>}
-        <footer className="settings-password-actions">
-          <button className="secondary-button" type="button" onClick={onClose}>Abbrechen</button>
-          <button className="primary-button" type="submit"><ModuleIcon name="check"/>Passwort speichern</button>
-        </footer>
-      </form>
-    </section>
-  </div>;
+  return (
+    <div
+      className="settings-password-overlay"
+      role="presentation"
+      onMouseDown={(event) => event.currentTarget === event.target && onClose()}
+    >
+      <section
+        className="settings-password-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="password-dialog-title"
+      >
+        <header className="settings-password-header">
+          <div className="settings-password-heading">
+            <span className="settings-password-icon">
+              <ModuleIcon name="quality" />
+            </span>
+            <div>
+              <p className="eyebrow">Sicherheit &amp; Zugriff</p>
+              <h2 id="password-dialog-title">Passwort ändern</h2>
+              <p>Schütze deinen Zugang mit einem neuen, sicheren Passwort.</p>
+            </div>
+          </div>
+          <button
+            className="settings-password-close"
+            type="button"
+            onClick={onClose}
+            aria-label="Passwortdialog schliessen"
+          >
+            ×
+          </button>
+        </header>
+        <form className="settings-password-form" onSubmit={submit}>
+          <p className="settings-password-note">
+            <ModuleIcon name="alert" /> Verwende ein Passwort, das du nur für CareCore nutzt.
+          </p>
+          <PasswordField
+            id="current-password"
+            label="Aktuelles Passwort"
+            value={currentPassword}
+            onChange={setCurrentPassword}
+            visible={showCurrent}
+            onToggle={() => setShowCurrent((value) => !value)}
+          />
+          <div className="settings-password-divider" aria-hidden="true" />
+          <PasswordField
+            id="new-password"
+            label="Neues Passwort"
+            value={newPassword}
+            onChange={setNewPassword}
+            visible={showNew}
+            onToggle={() => setShowNew((value) => !value)}
+            hint="Mindestens 8 Zeichen"
+          />
+          <PasswordField
+            id="confirm-password"
+            label="Neues Passwort bestätigen"
+            value={confirmation}
+            onChange={setConfirmation}
+            visible={showConfirmation}
+            onToggle={() => setShowConfirmation((value) => !value)}
+          />
+          {error && (
+            <p className="settings-password-error" role="alert">
+              <ModuleIcon name="alert" />
+              {error}
+            </p>
+          )}
+          <footer className="settings-password-actions">
+            <button className="secondary-button" type="button" onClick={onClose}>
+              Abbrechen
+            </button>
+            <button className="primary-button" type="submit">
+              <ModuleIcon name="check" />
+              Passwort speichern
+            </button>
+          </footer>
+        </form>
+      </section>
+    </div>
+  );
 }
 
-function PasswordField({ id, label, value, onChange, visible, onToggle, hint }: { id: string; label: string; value: string; onChange: (value: string) => void; visible: boolean; onToggle: () => void; hint?: string }) {
-  return <label className="settings-password-field" htmlFor={id}><span>{label}</span><div><input id={id} type={visible ? "text" : "password"} value={value} onChange={(event) => onChange(event.target.value)} autoComplete={id === "current-password" ? "current-password" : "new-password"}/><button type="button" onClick={onToggle} aria-label={visible ? `${label} ausblenden` : `${label} anzeigen`}>{visible ? "Ausblenden" : "Anzeigen"}</button></div>{hint && <small>{hint}</small>}</label>;
+function PasswordField({
+  id,
+  label,
+  value,
+  onChange,
+  visible,
+  onToggle,
+  hint,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  visible: boolean;
+  onToggle: () => void;
+  hint?: string;
+}) {
+  return (
+    <label className="settings-password-field" htmlFor={id}>
+      <span>{label}</span>
+      <div>
+        <input
+          id={id}
+          type={visible ? "text" : "password"}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          autoComplete={id === "current-password" ? "current-password" : "new-password"}
+        />
+        <button type="button" onClick={onToggle} aria-label={visible ? `${label} ausblenden` : `${label} anzeigen`}>
+          {visible ? "Ausblenden" : "Anzeigen"}
+        </button>
+      </div>
+      {hint && <small>{hint}</small>}
+    </label>
+  );
 }

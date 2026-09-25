@@ -1,3 +1,5 @@
 import SettingsWorkspace from "../../einstellungen/components/settings-workspace-detail";
 
-export default function ProfileSettingsPage() { return <SettingsWorkspace view="profile"/>; }
+export default function ProfileSettingsPage() {
+  return <SettingsWorkspace view="profile" />;
+}

@@ -12,14 +12,18 @@ export function normalizeDashboardLayout(input: unknown): DashboardLayout | null
   if (!input || typeof input !== "object") return null;
   const value = input as { order?: unknown; hidden?: unknown };
   if (!Array.isArray(value.order) || !Array.isArray(value.hidden)) return null;
-  const isValidList = (items: unknown[]) => items.every((item) => typeof item === "string" && item.length > 0 && item.length <= 80);
+  const isValidList = (items: unknown[]) =>
+    items.every((item) => typeof item === "string" && item.length > 0 && item.length <= 80);
   if (!isValidList(value.order) || !isValidList(value.hidden)) return null;
   return { order: [...new Set(value.order as string[])], hidden: [...new Set(value.hidden as string[])] };
 }
 
 export async function getDashboardLayout(userId: string): Promise<DashboardLayout | null> {
   const sql = database();
-  const rows = await sql`SELECT layout FROM carecore_user_dashboard_layouts WHERE user_id = ${userId} LIMIT 1` as unknown as Array<{ layout: unknown }>;
+  const rows =
+    (await sql`SELECT layout FROM carecore_user_dashboard_layouts WHERE user_id = ${userId} LIMIT 1`) as unknown as Array<{
+      layout: unknown;
+    }>;
   return rows[0] ? normalizeDashboardLayout(rows[0].layout) : null;
 }
 

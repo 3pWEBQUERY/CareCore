@@ -2,7 +2,8 @@
 // The source files and license are documented in public/body-surfaces/ATTRIBUTION.md.
 import { writeFile, mkdir } from "node:fs/promises";
 
-const base = "https://raw.githubusercontent.com/slorksmo/Human-Atlas/5bb5713aab18d7fe9380c3339eb09f173491ea06/public/models";
+const base =
+  "https://raw.githubusercontent.com/slorksmo/Human-Atlas/5bb5713aab18d7fe9380c3339eb09f173491ea06/public/models";
 const outputDirectory = new URL("../public/body-surfaces/", import.meta.url);
 
 async function download(path) {
@@ -12,7 +13,10 @@ async function download(path) {
 }
 
 await mkdir(outputDirectory, { recursive: true });
-for (const [sex, manifestName] of [["male", "atlas.json"], ["female", "atlas-female.json"]]) {
+for (const [sex, manifestName] of [
+  ["male", "atlas.json"],
+  ["female", "atlas-female.json"],
+]) {
   const manifest = JSON.parse(new TextDecoder().decode(await download(manifestName)));
   const skin = manifest.parts.find((part) => part.name === "Skin" && part.system === "integumentary");
   if (!skin) throw new Error(`No skin surface for ${sex}`);

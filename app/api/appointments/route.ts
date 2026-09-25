@@ -8,14 +8,21 @@ export const runtime = "nodejs";
 export async function GET(request: Request) {
   try {
     const actor = await carecoreActor();
-    if (!actor?.organizationId) return NextResponse.json({ error: "Nicht angemeldet oder keiner Organisation zugeordnet." }, { status: 401 });
+    if (!actor?.organizationId)
+      return NextResponse.json({ error: "Nicht angemeldet oder keiner Organisation zugeordnet." }, { status: 401 });
     if (!hasPermission(actor, "residents.read")) return forbidden();
     const params = new URL(request.url).searchParams;
     const residentId = params.get("residentId");
     const from = params.get("from");
     const to = params.get("to");
-    if (residentId && !/^[0-9a-f-]{36}$/i.test(residentId)) return NextResponse.json({ error: "Ungültiger Bewohner." }, { status: 400 });
-    if ((from && !Number.isFinite(Date.parse(from))) || (to && !Number.isFinite(Date.parse(to))) || (from && to && Date.parse(to) <= Date.parse(from))) return NextResponse.json({ error: "Ungültiger Zeitraum." }, { status: 400 });
+    if (residentId && !/^[0-9a-f-]{36}$/i.test(residentId))
+      return NextResponse.json({ error: "Ungültiger Bewohner." }, { status: 400 });
+    if (
+      (from && !Number.isFinite(Date.parse(from))) ||
+      (to && !Number.isFinite(Date.parse(to))) ||
+      (from && to && Date.parse(to) <= Date.parse(from))
+    )
+      return NextResponse.json({ error: "Ungültiger Zeitraum." }, { status: 400 });
     const sql = carecoreDb();
     const [appointments, residents, careUnits] = await Promise.all([
       sql`SELECT a.id, a.kind, a.resident_id, CONCAT(r.first_name, ' ', r.last_name) AS resident_name, r.status AS resident_status,
@@ -54,17 +61,22 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const actor = await carecoreActor();
-    if (!actor?.organizationId) return NextResponse.json({ error: "Nicht angemeldet oder keiner Organisation zugeordnet." }, { status: 401 });
+    if (!actor?.organizationId)
+      return NextResponse.json({ error: "Nicht angemeldet oder keiner Organisation zugeordnet." }, { status: 401 });
     if (!hasPermission(actor, "residents.write")) return forbidden();
-    const parsed = parseAppointmentInput(await request.json() as Record<string, unknown>);
+    const parsed = parseAppointmentInput((await request.json()) as Record<string, unknown>);
     if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
     const sql = carecoreDb();
     if (parsed.kind === "resident") {
-      const resident = await sql`SELECT id FROM carecore_residents WHERE id = ${parsed.residentId} AND organization_id = ${actor.organizationId} AND status IN ('active', 'planned') LIMIT 1`;
-      if (!resident[0]) return NextResponse.json({ error: "Bewohner nicht gefunden oder nicht mehr aktiv." }, { status: 404 });
+      const resident =
+        await sql`SELECT id FROM carecore_residents WHERE id = ${parsed.residentId} AND organization_id = ${actor.organizationId} AND status IN ('active', 'planned') LIMIT 1`;
+      if (!resident[0])
+        return NextResponse.json({ error: "Bewohner nicht gefunden oder nicht mehr aktiv." }, { status: 404 });
     } else {
-      const careUnit = await sql`SELECT cu.id FROM carecore_care_units cu JOIN carecore_sites s ON s.id = cu.site_id WHERE cu.id = ${parsed.careUnitId} AND s.organization_id = ${actor.organizationId} AND cu.active = TRUE LIMIT 1`;
-      if (!careUnit[0]) return NextResponse.json({ error: "Wohnbereich nicht gefunden oder nicht mehr aktiv." }, { status: 404 });
+      const careUnit =
+        await sql`SELECT cu.id FROM carecore_care_units cu JOIN carecore_sites s ON s.id = cu.site_id WHERE cu.id = ${parsed.careUnitId} AND s.organization_id = ${actor.organizationId} AND cu.active = TRUE LIMIT 1`;
+      if (!careUnit[0])
+        return NextResponse.json({ error: "Wohnbereich nicht gefunden oder nicht mehr aktiv." }, { status: 404 });
     }
     const id = randomUUID();
     await sql`INSERT INTO carecore_resident_appointments (id, organization_id, kind, resident_id, care_unit_id, title, category, starts_at, ends_at, location, notes, status, created_by, updated_by)

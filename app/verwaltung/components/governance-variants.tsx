@@ -22,30 +22,523 @@ type VariantProps = {
   showToast: (message: string) => void;
 };
 
-function SearchField({ title, query, setQuery, placeholder }: Pick<VariantProps, "title" | "query" | "setQuery"> & { placeholder: string }) {
-  return <label className="resident-search"><ModuleIcon name="search"/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={placeholder} aria-label={`${title} durchsuchen`}/></label>;
+function SearchField({
+  title,
+  query,
+  setQuery,
+  placeholder,
+}: Pick<VariantProps, "title" | "query" | "setQuery"> & { placeholder: string }) {
+  return (
+    <label className="resident-search">
+      <ModuleIcon name="search" />
+      <input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={placeholder}
+        aria-label={`${title} durchsuchen`}
+      />
+    </label>
+  );
 }
 
-function TeamVariant({ view, title, items, filtered, selected, query, setQuery, filter, filters, setFilter, setSelectedId, completed, setCompleted, showToast }: VariantProps) {
+function TeamVariant({
+  view,
+  title,
+  items,
+  filtered,
+  selected,
+  query,
+  setQuery,
+  filter,
+  filters,
+  setFilter,
+  setSelectedId,
+  completed,
+  setCompleted,
+  showToast,
+}: VariantProps) {
   const messages = view === "teamMessages";
-  return <div className={`team-layout ${messages ? "team-messages-layout" : "team-news-layout"}`}>
-    <section className="card team-feed-card"><div className="team-feed-header"><div><p className="eyebrow">{messages ? "Direktnachrichten" : "Hausweiter Austausch"}</p><h2 className="card-title">{messages ? "Deine Nachrichten" : "Neuigkeiten im Team"}</h2><p className="card-subtitle">{filtered.length} von {items.length} Einträgen</p></div><SearchField title={title} query={query} setQuery={setQuery} placeholder="Suchen…"/></div><div className="team-channel-tabs" role="group" aria-label="Teamkanäle">{(messages ? ["Alle Nachrichten", "Ungelesen", "Übergaben"] : ["Alle Beiträge", "Pflegequalität", "Haus"] ).map((channel, index) => <button className={index === 0 ? "active" : ""} type="button" key={channel} onClick={() => showToast(`${channel} geöffnet`)}>{channel}</button>)}</div><div className="team-composer"><span className="team-composer-icon"><ModuleIcon name={messages ? "team" : "note"}/></span><div><strong>{messages ? "Neue Nachricht an Kollegium" : "Was gibt es Neues?"}</strong><small>{messages ? "Direkt oder an einen Dienst senden" : "Teile eine Information mit deinem Arbeitsbereich"}</small></div><button className="primary-button" type="button" onClick={() => showToast(messages ? "Neue Nachricht vorbereitet" : "Neuer Beitrag vorbereitet")}><ModuleIcon name="plus"/> {messages ? "Nachricht" : "Beitrag"}</button></div><div className="team-filter-row operations-filter-buttons" aria-label="Einträge filtern">{filters.map((item) => <button className={filter === item ? "active" : ""} type="button" key={item} aria-pressed={filter === item} onClick={() => setFilter(item)}>{item}</button>)}</div><div className="team-post-list">{filtered.map((item) => { const isDone = completed.includes(item.id); return <article className={`team-post ${selected.id === item.id ? "selected" : ""}`} key={item.id}><button className="team-post-main" type="button" onClick={() => setSelectedId(item.id)}><span className={`governance-icon ${item.tone}`}><ModuleIcon name={item.icon}/></span><span><strong>{item.title}</strong><small>{item.description}</small><em>{item.meta}</em></span></button><div className="team-post-side"><span className={`status-badge ${isDone ? "stable" : item.tone}`}>{isDone ? "Erledigt" : item.status}</span><small>{item.owner}</small><button className="quiet-button" type="button" onClick={() => { setCompleted((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id]); showToast(`${item.title} aktualisiert`); }}>{isDone ? "Öffnen" : "Erledigt"}</button></div></article>; })}{filtered.length === 0 && <div className="resident-empty"><ModuleIcon name="search"/><strong>Keine Beiträge gefunden</strong><p>Suchbegriff oder Filter anpassen.</p></div>}</div></section>
-    <aside className="team-side-stack"><section className="card team-channels-card"><div className="card-header"><div><p className="eyebrow">Arbeitsbereich</p><h2 className="card-title">Aktive Kanäle</h2></div></div><ul><li><span className="team-channel-dot blue"/><span><strong>Pflegequalität</strong><small>8 Mitglieder · 2 neu</small></span><ModuleIcon name="chevron"/></li><li><span className="team-channel-dot green"/><span><strong>Wohnbereich 2</strong><small>12 Mitglieder · aktuell</small></span><ModuleIcon name="chevron"/></li><li><span className="team-channel-dot orange"/><span><strong>Haus</strong><small>62 Mitglieder · 1 neu</small></span><ModuleIcon name="chevron"/></li></ul></section><section className="card team-duty-card"><div className="card-header"><div><p className="eyebrow">Heute</p><h2 className="card-title">Im Dienst</h2></div><span className="status-badge stable">12 aktiv</span></div><div className="team-duty-list"><span className="avatar">LF</span><span><strong>Lea Frei</strong><small>Wohnbereich 1 · Frühdienst</small></span><span className="team-duty-state">Online</span><span className="avatar">NB</span><span><strong>Nora Baumann</strong><small>Wohnbereich 2 · Frühdienst</small></span><span className="team-duty-state">Online</span></div></section></aside>
-  </div>;
+  return (
+    <div className={`team-layout ${messages ? "team-messages-layout" : "team-news-layout"}`}>
+      <section className="card team-feed-card">
+        <div className="team-feed-header">
+          <div>
+            <p className="eyebrow">{messages ? "Direktnachrichten" : "Hausweiter Austausch"}</p>
+            <h2 className="card-title">{messages ? "Deine Nachrichten" : "Neuigkeiten im Team"}</h2>
+            <p className="card-subtitle">
+              {filtered.length} von {items.length} Einträgen
+            </p>
+          </div>
+          <SearchField title={title} query={query} setQuery={setQuery} placeholder="Suchen…" />
+        </div>
+        <div className="team-channel-tabs" role="group" aria-label="Teamkanäle">
+          {(messages
+            ? ["Alle Nachrichten", "Ungelesen", "Übergaben"]
+            : ["Alle Beiträge", "Pflegequalität", "Haus"]
+          ).map((channel, index) => (
+            <button
+              className={index === 0 ? "active" : ""}
+              type="button"
+              key={channel}
+              onClick={() => showToast(`${channel} geöffnet`)}
+            >
+              {channel}
+            </button>
+          ))}
+        </div>
+        <div className="team-composer">
+          <span className="team-composer-icon">
+            <ModuleIcon name={messages ? "team" : "note"} />
+          </span>
+          <div>
+            <strong>{messages ? "Neue Nachricht an Kollegium" : "Was gibt es Neues?"}</strong>
+            <small>
+              {messages ? "Direkt oder an einen Dienst senden" : "Teile eine Information mit deinem Arbeitsbereich"}
+            </small>
+          </div>
+          <button
+            className="primary-button"
+            type="button"
+            onClick={() => showToast(messages ? "Neue Nachricht vorbereitet" : "Neuer Beitrag vorbereitet")}
+          >
+            <ModuleIcon name="plus" /> {messages ? "Nachricht" : "Beitrag"}
+          </button>
+        </div>
+        <div className="team-filter-row operations-filter-buttons" aria-label="Einträge filtern">
+          {filters.map((item) => (
+            <button
+              className={filter === item ? "active" : ""}
+              type="button"
+              key={item}
+              aria-pressed={filter === item}
+              onClick={() => setFilter(item)}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+        <div className="team-post-list">
+          {filtered.map((item) => {
+            const isDone = completed.includes(item.id);
+            return (
+              <article className={`team-post ${selected.id === item.id ? "selected" : ""}`} key={item.id}>
+                <button className="team-post-main" type="button" onClick={() => setSelectedId(item.id)}>
+                  <span className={`governance-icon ${item.tone}`}>
+                    <ModuleIcon name={item.icon} />
+                  </span>
+                  <span>
+                    <strong>{item.title}</strong>
+                    <small>{item.description}</small>
+                    <em>{item.meta}</em>
+                  </span>
+                </button>
+                <div className="team-post-side">
+                  <span className={`status-badge ${isDone ? "stable" : item.tone}`}>
+                    {isDone ? "Erledigt" : item.status}
+                  </span>
+                  <small>{item.owner}</small>
+                  <button
+                    className="quiet-button"
+                    type="button"
+                    onClick={() => {
+                      setCompleted((current) =>
+                        current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id],
+                      );
+                      showToast(`${item.title} aktualisiert`);
+                    }}
+                  >
+                    {isDone ? "Öffnen" : "Erledigt"}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+          {filtered.length === 0 && (
+            <div className="resident-empty">
+              <ModuleIcon name="search" />
+              <strong>Keine Beiträge gefunden</strong>
+              <p>Suchbegriff oder Filter anpassen.</p>
+            </div>
+          )}
+        </div>
+      </section>
+      <aside className="team-side-stack">
+        <section className="card team-channels-card">
+          <div className="card-header">
+            <div>
+              <p className="eyebrow">Arbeitsbereich</p>
+              <h2 className="card-title">Aktive Kanäle</h2>
+            </div>
+          </div>
+          <ul>
+            <li>
+              <span className="team-channel-dot blue" />
+              <span>
+                <strong>Pflegequalität</strong>
+                <small>8 Mitglieder · 2 neu</small>
+              </span>
+              <ModuleIcon name="chevron" />
+            </li>
+            <li>
+              <span className="team-channel-dot green" />
+              <span>
+                <strong>Wohnbereich 2</strong>
+                <small>12 Mitglieder · aktuell</small>
+              </span>
+              <ModuleIcon name="chevron" />
+            </li>
+            <li>
+              <span className="team-channel-dot orange" />
+              <span>
+                <strong>Haus</strong>
+                <small>62 Mitglieder · 1 neu</small>
+              </span>
+              <ModuleIcon name="chevron" />
+            </li>
+          </ul>
+        </section>
+        <section className="card team-duty-card">
+          <div className="card-header">
+            <div>
+              <p className="eyebrow">Heute</p>
+              <h2 className="card-title">Im Dienst</h2>
+            </div>
+            <span className="status-badge stable">12 aktiv</span>
+          </div>
+          <div className="team-duty-list">
+            <span className="avatar">LF</span>
+            <span>
+              <strong>Lea Frei</strong>
+              <small>Wohnbereich 1 · Frühdienst</small>
+            </span>
+            <span className="team-duty-state">Online</span>
+            <span className="avatar">NB</span>
+            <span>
+              <strong>Nora Baumann</strong>
+              <small>Wohnbereich 2 · Frühdienst</small>
+            </span>
+            <span className="team-duty-state">Online</span>
+          </div>
+        </section>
+      </aside>
+    </div>
+  );
 }
 
-function LearningVariant({ view, title, filtered, selected, query, setQuery, filter, filters, setFilter, setSelectedId, showToast }: VariantProps) {
+function LearningVariant({
+  view,
+  title,
+  filtered,
+  selected,
+  query,
+  setQuery,
+  filter,
+  filters,
+  setFilter,
+  setSelectedId,
+  showToast,
+}: VariantProps) {
   const compliance = view === "compliance";
-  return <div className={`learning-layout ${compliance ? "learning-compliance-layout" : "learning-personal-layout"}`}><section className="card learning-progress-card"><div className="card-header"><div><p className="eyebrow">{compliance ? "Kompetenzprofil" : "Persönlicher Lernpfad"}</p><h2 className="card-title">{compliance ? "Pflichtnachweise" : "Dein Fortschritt"}</h2><p className="card-subtitle">{compliance ? "18 von 21 Nachweisen gültig" : "3 von 5 Lernzielen abgeschlossen"}</p></div><span className="learning-progress-value">{compliance ? "94 %" : "68 %"}</span></div><div className="learning-progress-bar"><span style={{ width: compliance ? "94%" : "68%" }}/></div><div className="learning-progress-meta"><span>{compliance ? "Sicherheitsstandard Pflege" : "Jahresziel 2026"}</span><strong>{compliance ? "3 bald fällig" : "noch 2 Nachweise"}</strong></div><div className="learning-focus"><span className={`governance-focus-icon ${selected.tone}`}><ModuleIcon name={selected.icon}/></span><div><p className="eyebrow">{compliance ? "Nächster Nachweis" : "Als Nächstes"}</p><h3>{selected.title}</h3><p>{selected.description}</p></div><button className="secondary-button" type="button" onClick={() => showToast(`${selected.title} geöffnet`)}>{compliance ? "Nachweis prüfen" : "Fortsetzen"}</button></div></section><section className="card learning-catalog-card"><div className="learning-catalog-header"><div><p className="eyebrow">{compliance ? "Nachweisregister" : "Kurskatalog"}</p><h2 className="card-title">{title}</h2><p className="card-subtitle">{filtered.length} passende {compliance ? "Nachweise" : "Schulungen"}</p></div><SearchField title={title} query={query} setQuery={setQuery} placeholder={compliance ? "Nachweise suchen…" : "Kurse suchen…"}/></div><div className="learning-filter-row operations-filter-buttons">{filters.map((item) => <button className={filter === item ? "active" : ""} type="button" key={item} aria-pressed={filter === item} onClick={() => setFilter(item)}>{item}</button>)}</div><div className="learning-course-grid">{filtered.map((item) => <button className={`learning-course ${selected.id === item.id ? "selected" : ""}`} type="button" key={item.id} onClick={() => setSelectedId(item.id)}><span className={`learning-course-icon ${item.tone}`}><ModuleIcon name={item.icon}/></span><span><strong>{item.title}</strong><small>{item.description}</small></span><span className={`status-badge ${item.tone}`}>{item.status}</span><em>{item.meta}</em></button>)}</div></section><aside className="card learning-calendar-card"><div className="card-header"><div><p className="eyebrow">{compliance ? "Fristen" : "Termine"}</p><h2 className="card-title">{compliance ? "Fällige Nachweise" : "Deine nächsten Kurse"}</h2></div><ModuleIcon name={compliance ? "alert" : "calendar"} className="learning-calendar-icon"/></div><div className="learning-session"><strong>{compliance ? "01" : "24"}</strong><span><b>{compliance ? "BLS-AED Nachweis" : "Medikationssicherheit"}</b><small>{compliance ? "Oktober · läuft ab" : "September · 13:30 Uhr"}</small></span></div><div className="learning-session"><strong>{compliance ? "15" : "30"}</strong><span><b>{compliance ? "Wundversorgung Aufbaukurs" : "Wundmanagement Aufbau"}</b><small>{compliance ? "September · offen" : "September · E-Learning"}</small></span></div><button className="quiet-button" type="button" onClick={() => showToast(compliance ? "Alle Fristen geöffnet" : "Alle Schulungstermine geöffnet")}>{compliance ? "Alle Fristen" : "Alle Termine"} <ModuleIcon name="chevron"/></button></aside></div>;
+  return (
+    <div className={`learning-layout ${compliance ? "learning-compliance-layout" : "learning-personal-layout"}`}>
+      <section className="card learning-progress-card">
+        <div className="card-header">
+          <div>
+            <p className="eyebrow">{compliance ? "Kompetenzprofil" : "Persönlicher Lernpfad"}</p>
+            <h2 className="card-title">{compliance ? "Pflichtnachweise" : "Dein Fortschritt"}</h2>
+            <p className="card-subtitle">
+              {compliance ? "18 von 21 Nachweisen gültig" : "3 von 5 Lernzielen abgeschlossen"}
+            </p>
+          </div>
+          <span className="learning-progress-value">{compliance ? "94 %" : "68 %"}</span>
+        </div>
+        <div className="learning-progress-bar">
+          <span style={{ width: compliance ? "94%" : "68%" }} />
+        </div>
+        <div className="learning-progress-meta">
+          <span>{compliance ? "Sicherheitsstandard Pflege" : "Jahresziel 2026"}</span>
+          <strong>{compliance ? "3 bald fällig" : "noch 2 Nachweise"}</strong>
+        </div>
+        <div className="learning-focus">
+          <span className={`governance-focus-icon ${selected.tone}`}>
+            <ModuleIcon name={selected.icon} />
+          </span>
+          <div>
+            <p className="eyebrow">{compliance ? "Nächster Nachweis" : "Als Nächstes"}</p>
+            <h3>{selected.title}</h3>
+            <p>{selected.description}</p>
+          </div>
+          <button className="secondary-button" type="button" onClick={() => showToast(`${selected.title} geöffnet`)}>
+            {compliance ? "Nachweis prüfen" : "Fortsetzen"}
+          </button>
+        </div>
+      </section>
+      <section className="card learning-catalog-card">
+        <div className="learning-catalog-header">
+          <div>
+            <p className="eyebrow">{compliance ? "Nachweisregister" : "Kurskatalog"}</p>
+            <h2 className="card-title">{title}</h2>
+            <p className="card-subtitle">
+              {filtered.length} passende {compliance ? "Nachweise" : "Schulungen"}
+            </p>
+          </div>
+          <SearchField
+            title={title}
+            query={query}
+            setQuery={setQuery}
+            placeholder={compliance ? "Nachweise suchen…" : "Kurse suchen…"}
+          />
+        </div>
+        <div className="learning-filter-row operations-filter-buttons">
+          {filters.map((item) => (
+            <button
+              className={filter === item ? "active" : ""}
+              type="button"
+              key={item}
+              aria-pressed={filter === item}
+              onClick={() => setFilter(item)}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+        <div className="learning-course-grid">
+          {filtered.map((item) => (
+            <button
+              className={`learning-course ${selected.id === item.id ? "selected" : ""}`}
+              type="button"
+              key={item.id}
+              onClick={() => setSelectedId(item.id)}
+            >
+              <span className={`learning-course-icon ${item.tone}`}>
+                <ModuleIcon name={item.icon} />
+              </span>
+              <span>
+                <strong>{item.title}</strong>
+                <small>{item.description}</small>
+              </span>
+              <span className={`status-badge ${item.tone}`}>{item.status}</span>
+              <em>{item.meta}</em>
+            </button>
+          ))}
+        </div>
+      </section>
+      <aside className="card learning-calendar-card">
+        <div className="card-header">
+          <div>
+            <p className="eyebrow">{compliance ? "Fristen" : "Termine"}</p>
+            <h2 className="card-title">{compliance ? "Fällige Nachweise" : "Deine nächsten Kurse"}</h2>
+          </div>
+          <ModuleIcon name={compliance ? "alert" : "calendar"} className="learning-calendar-icon" />
+        </div>
+        <div className="learning-session">
+          <strong>{compliance ? "01" : "24"}</strong>
+          <span>
+            <b>{compliance ? "BLS-AED Nachweis" : "Medikationssicherheit"}</b>
+            <small>{compliance ? "Oktober · läuft ab" : "September · 13:30 Uhr"}</small>
+          </span>
+        </div>
+        <div className="learning-session">
+          <strong>{compliance ? "15" : "30"}</strong>
+          <span>
+            <b>{compliance ? "Wundversorgung Aufbaukurs" : "Wundmanagement Aufbau"}</b>
+            <small>{compliance ? "September · offen" : "September · E-Learning"}</small>
+          </span>
+        </div>
+        <button
+          className="quiet-button"
+          type="button"
+          onClick={() => showToast(compliance ? "Alle Fristen geöffnet" : "Alle Schulungstermine geöffnet")}
+        >
+          {compliance ? "Alle Fristen" : "Alle Termine"} <ModuleIcon name="chevron" />
+        </button>
+      </aside>
+    </div>
+  );
 }
 
-function DocumentsVariant({ view, title, items, filtered, selected, query, setQuery, filter, filters, setFilter, setSelectedId, completed, setCompleted, showToast }: VariantProps) {
+function DocumentsVariant({
+  view,
+  title,
+  items,
+  filtered,
+  selected,
+  query,
+  setQuery,
+  filter,
+  filters,
+  setFilter,
+  setSelectedId,
+  completed,
+  setCompleted,
+  showToast,
+}: VariantProps) {
   const standards = view === "standards";
-  return <div className={`documents-layout ${standards ? "documents-standards-layout" : "documents-library-layout"}`}><aside className="card documents-folders"><div className="card-header"><div><p className="eyebrow">{standards ? "Standardsammlung" : "Ablage"}</p><h2 className="card-title">{standards ? "Weisungen" : "Dokumente"}</h2></div></div><button className="documents-folder active" type="button"><ModuleIcon name={standards ? "quality" : "docs"}/><span><strong>{standards ? "Alle Standards" : "Alle Dokumente"}</strong><small>{standards ? "36 freigegebene Versionen" : "248 Dateien"}</small></span><b>{standards ? "36" : "248"}</b></button><button className="documents-folder" type="button" onClick={() => showToast(standards ? "Zur Prüfung geöffnet" : "Meine Dokumente geöffnet")}><ModuleIcon name={standards ? "alert" : "note"}/><span><strong>{standards ? "Zur Prüfung" : "Meine Dokumente"}</strong><small>{standards ? "3 Entwürfe" : "Zuletzt bearbeitet"}</small></span><b>{standards ? "3" : "18"}</b></button><button className="documents-folder" type="button" onClick={() => showToast(standards ? "Pflegestandards geöffnet" : "Geteilte Dokumente geöffnet")}><ModuleIcon name={standards ? "wounds" : "team"}/><span><strong>{standards ? "Pflegestandards" : "Geteilt"}</strong><small>{standards ? "12 aktuelle Vorgaben" : "Für dich freigegeben"}</small></span><b>{standards ? "12" : "42"}</b></button><button className="documents-folder" type="button" onClick={() => showToast("Archiv geöffnet")}><ModuleIcon name="building"/><span><strong>Archiv</strong><small>Frühere Versionen</small></span><b>{standards ? "8" : "76"}</b></button></aside><section className="card documents-library"><div className="documents-library-header"><div><p className="eyebrow">{standards ? "Versionen und Freigaben" : "Dateibibliothek"}</p><h2 className="card-title">{title}</h2><p className="card-subtitle">{filtered.length} von {items.length} Dateien sichtbar</p></div><div className="documents-library-actions"><SearchField title={title} query={query} setQuery={setQuery} placeholder={standards ? "Standards suchen…" : "Dokumente suchen…"}/><button className="secondary-button" type="button" onClick={() => showToast(standards ? "Weisung veröffentlichen vorbereitet" : "Dokument hochladen vorbereitet")}><ModuleIcon name="plus"/> {standards ? "Veröffentlichen" : "Hochladen"}</button></div></div><div className="documents-filter-row operations-filter-buttons">{filters.map((item) => <button className={filter === item ? "active" : ""} type="button" key={item} aria-pressed={filter === item} onClick={() => setFilter(item)}>{item}</button>)}</div><div className="documents-table-head"><span>{standards ? "Standard" : "Name"}</span><span>{standards ? "Freigabe" : "Zuletzt geändert"}</span><span>Status</span><span/></div><div className="documents-table">{filtered.map((item) => { const isDone = completed.includes(item.id); return <article className={selected.id === item.id ? "selected" : ""} key={item.id}><button className="documents-row-main" type="button" onClick={() => setSelectedId(item.id)}><span className={`documents-file-icon ${item.tone}`}><ModuleIcon name={item.icon}/></span><span><strong>{item.title}</strong><small>{item.description}</small></span></button><span className="documents-row-meta">{item.meta}</span><span className={`status-badge ${isDone ? "stable" : item.tone}`}>{isDone ? "Gelesen" : item.status}</span><button className="quiet-button" type="button" onClick={() => { setCompleted((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id]); showToast(`${item.title} geöffnet`); }}>Öffnen</button></article>; })}{filtered.length === 0 && <div className="resident-empty"><ModuleIcon name="search"/><strong>Keine Dokumente gefunden</strong><p>Suchbegriff oder Filter anpassen.</p></div>}</div></section><aside className="card documents-preview"><div className="card-header"><div><p className="eyebrow">{standards ? "Freigabedetail" : "Vorschau"}</p><h2 className="card-title">{selected.title}</h2><p className="card-subtitle">{selected.meta}</p></div><span className={`documents-preview-badge ${selected.tone}`}><ModuleIcon name={selected.icon}/></span></div><div className="documents-preview-page"><ModuleIcon name={standards ? "quality" : "docs"}/><strong>{selected.title}</strong><small>{selected.description}</small><span>{standards ? "Freigabe durch Qualitätsmanagement" : `Letzte Version · ${selected.owner}`}</span></div><button className="primary-button" type="button" onClick={() => showToast(`${selected.title} wird geöffnet`)}>{standards ? "Versionen ansehen" : "Dokument öffnen"}</button></aside></div>;
+  return (
+    <div className={`documents-layout ${standards ? "documents-standards-layout" : "documents-library-layout"}`}>
+      <aside className="card documents-folders">
+        <div className="card-header">
+          <div>
+            <p className="eyebrow">{standards ? "Standardsammlung" : "Ablage"}</p>
+            <h2 className="card-title">{standards ? "Weisungen" : "Dokumente"}</h2>
+          </div>
+        </div>
+        <button className="documents-folder active" type="button">
+          <ModuleIcon name={standards ? "quality" : "docs"} />
+          <span>
+            <strong>{standards ? "Alle Standards" : "Alle Dokumente"}</strong>
+            <small>{standards ? "36 freigegebene Versionen" : "248 Dateien"}</small>
+          </span>
+          <b>{standards ? "36" : "248"}</b>
+        </button>
+        <button
+          className="documents-folder"
+          type="button"
+          onClick={() => showToast(standards ? "Zur Prüfung geöffnet" : "Meine Dokumente geöffnet")}
+        >
+          <ModuleIcon name={standards ? "alert" : "note"} />
+          <span>
+            <strong>{standards ? "Zur Prüfung" : "Meine Dokumente"}</strong>
+            <small>{standards ? "3 Entwürfe" : "Zuletzt bearbeitet"}</small>
+          </span>
+          <b>{standards ? "3" : "18"}</b>
+        </button>
+        <button
+          className="documents-folder"
+          type="button"
+          onClick={() => showToast(standards ? "Pflegestandards geöffnet" : "Geteilte Dokumente geöffnet")}
+        >
+          <ModuleIcon name={standards ? "wounds" : "team"} />
+          <span>
+            <strong>{standards ? "Pflegestandards" : "Geteilt"}</strong>
+            <small>{standards ? "12 aktuelle Vorgaben" : "Für dich freigegeben"}</small>
+          </span>
+          <b>{standards ? "12" : "42"}</b>
+        </button>
+        <button className="documents-folder" type="button" onClick={() => showToast("Archiv geöffnet")}>
+          <ModuleIcon name="building" />
+          <span>
+            <strong>Archiv</strong>
+            <small>Frühere Versionen</small>
+          </span>
+          <b>{standards ? "8" : "76"}</b>
+        </button>
+      </aside>
+      <section className="card documents-library">
+        <div className="documents-library-header">
+          <div>
+            <p className="eyebrow">{standards ? "Versionen und Freigaben" : "Dateibibliothek"}</p>
+            <h2 className="card-title">{title}</h2>
+            <p className="card-subtitle">
+              {filtered.length} von {items.length} Dateien sichtbar
+            </p>
+          </div>
+          <div className="documents-library-actions">
+            <SearchField
+              title={title}
+              query={query}
+              setQuery={setQuery}
+              placeholder={standards ? "Standards suchen…" : "Dokumente suchen…"}
+            />
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() =>
+                showToast(standards ? "Weisung veröffentlichen vorbereitet" : "Dokument hochladen vorbereitet")
+              }
+            >
+              <ModuleIcon name="plus" /> {standards ? "Veröffentlichen" : "Hochladen"}
+            </button>
+          </div>
+        </div>
+        <div className="documents-filter-row operations-filter-buttons">
+          {filters.map((item) => (
+            <button
+              className={filter === item ? "active" : ""}
+              type="button"
+              key={item}
+              aria-pressed={filter === item}
+              onClick={() => setFilter(item)}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+        <div className="documents-table-head">
+          <span>{standards ? "Standard" : "Name"}</span>
+          <span>{standards ? "Freigabe" : "Zuletzt geändert"}</span>
+          <span>Status</span>
+          <span />
+        </div>
+        <div className="documents-table">
+          {filtered.map((item) => {
+            const isDone = completed.includes(item.id);
+            return (
+              <article className={selected.id === item.id ? "selected" : ""} key={item.id}>
+                <button className="documents-row-main" type="button" onClick={() => setSelectedId(item.id)}>
+                  <span className={`documents-file-icon ${item.tone}`}>
+                    <ModuleIcon name={item.icon} />
+                  </span>
+                  <span>
+                    <strong>{item.title}</strong>
+                    <small>{item.description}</small>
+                  </span>
+                </button>
+                <span className="documents-row-meta">{item.meta}</span>
+                <span className={`status-badge ${isDone ? "stable" : item.tone}`}>
+                  {isDone ? "Gelesen" : item.status}
+                </span>
+                <button
+                  className="quiet-button"
+                  type="button"
+                  onClick={() => {
+                    setCompleted((current) =>
+                      current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id],
+                    );
+                    showToast(`${item.title} geöffnet`);
+                  }}
+                >
+                  Öffnen
+                </button>
+              </article>
+            );
+          })}
+          {filtered.length === 0 && (
+            <div className="resident-empty">
+              <ModuleIcon name="search" />
+              <strong>Keine Dokumente gefunden</strong>
+              <p>Suchbegriff oder Filter anpassen.</p>
+            </div>
+          )}
+        </div>
+      </section>
+      <aside className="card documents-preview">
+        <div className="card-header">
+          <div>
+            <p className="eyebrow">{standards ? "Freigabedetail" : "Vorschau"}</p>
+            <h2 className="card-title">{selected.title}</h2>
+            <p className="card-subtitle">{selected.meta}</p>
+          </div>
+          <span className={`documents-preview-badge ${selected.tone}`}>
+            <ModuleIcon name={selected.icon} />
+          </span>
+        </div>
+        <div className="documents-preview-page">
+          <ModuleIcon name={standards ? "quality" : "docs"} />
+          <strong>{selected.title}</strong>
+          <small>{selected.description}</small>
+          <span>{standards ? "Freigabe durch Qualitätsmanagement" : `Letzte Version · ${selected.owner}`}</span>
+        </div>
+        <button className="primary-button" type="button" onClick={() => showToast(`${selected.title} wird geöffnet`)}>
+          {standards ? "Versionen ansehen" : "Dokument öffnen"}
+        </button>
+      </aside>
+    </div>
+  );
 }
 
 export function GovernanceVariant(props: VariantProps) {
-  if (props.view === "teamNews" || props.view === "teamMessages") return <TeamVariant {...props}/>;
-  if (props.view === "learning" || props.view === "compliance") return <LearningVariant {...props}/>;
-  return <DocumentsVariant {...props}/>;
+  if (props.view === "teamNews" || props.view === "teamMessages") return <TeamVariant {...props} />;
+  if (props.view === "learning" || props.view === "compliance") return <LearningVariant {...props} />;
+  return <DocumentsVariant {...props} />;
 }

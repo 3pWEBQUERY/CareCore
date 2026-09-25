@@ -7,44 +7,617 @@ import { CareDatePicker, CareSelect, formatCareDate } from "@/app/components/car
 export type PlanningView = "overview" | "goals" | "evaluation";
 
 const goals = [
-  { id: "mobility", title: "Mobilität erhalten", resident: "Hans Müller", focus: "Transfer Bett · Rollstuhl", progress: 72, due: "30.09.2026", owner: "Anna Meier", tone: "stable" },
-  { id: "hydration", title: "Trinkmenge sichern", resident: "Maria Keller", focus: "1.500 ml pro Tag", progress: 54, due: "22.09.2026", owner: "Lea Frei", tone: "attention" },
-  { id: "orientation", title: "Orientierung stärken", resident: "Erika Meier", focus: "Tagesstruktur und Biografiearbeit", progress: 86, due: "15.10.2026", owner: "Nora Baumann", tone: "stable" },
+  {
+    id: "mobility",
+    title: "Mobilität erhalten",
+    resident: "Hans Müller",
+    focus: "Transfer Bett · Rollstuhl",
+    progress: 72,
+    due: "30.09.2026",
+    owner: "Anna Meier",
+    tone: "stable",
+  },
+  {
+    id: "hydration",
+    title: "Trinkmenge sichern",
+    resident: "Maria Keller",
+    focus: "1.500 ml pro Tag",
+    progress: 54,
+    due: "22.09.2026",
+    owner: "Lea Frei",
+    tone: "attention",
+  },
+  {
+    id: "orientation",
+    title: "Orientierung stärken",
+    resident: "Erika Meier",
+    focus: "Tagesstruktur und Biografiearbeit",
+    progress: 86,
+    due: "15.10.2026",
+    owner: "Nora Baumann",
+    tone: "stable",
+  },
 ];
 
-function PlanningPopover({ open, onClose, onSave, mode }: { open: boolean; onClose: () => void; onSave: (message: string) => void; mode: "goal" | "measure" | "evaluation" }) {
+function PlanningPopover({
+  open,
+  onClose,
+  onSave,
+  mode,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSave: (message: string) => void;
+  mode: "goal" | "measure" | "evaluation";
+}) {
   const [resident, setResident] = useState("Hans Müller · Zimmer 207");
   const [category, setCategory] = useState(mode === "evaluation" ? "Evaluation Pflegeplanung" : "Mobilität");
   const [date, setDate] = useState("2026-09-30");
   const [owner, setOwner] = useState("Anna Meier");
-  const heading = mode === "goal" ? "Pflegeziel hinzufügen" : mode === "measure" ? "Massnahme planen" : "Pflegeplanung auswerten";
-  const intro = mode === "goal" ? "Definiere ein überprüfbares Ziel direkt im Bewohnerkontext." : mode === "measure" ? "Plane eine konkrete Intervention und hinterlege die Zuständigkeit." : "Erstelle eine strukturierte Auswertung für Team und Bezugspflege.";
+  const heading =
+    mode === "goal" ? "Pflegeziel hinzufügen" : mode === "measure" ? "Massnahme planen" : "Pflegeplanung auswerten";
+  const intro =
+    mode === "goal"
+      ? "Definiere ein überprüfbares Ziel direkt im Bewohnerkontext."
+      : mode === "measure"
+        ? "Plane eine konkrete Intervention und hinterlege die Zuständigkeit."
+        : "Erstelle eine strukturierte Auswertung für Team und Bezugspflege.";
   useEffect(() => {
     if (!open) return;
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
   if (!open) return null;
-  return <div className="area-editor-overlay planning-editor-overlay" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && onClose()}><section className="area-editor-panel planning-editor-panel" role="dialog" aria-modal="true" aria-labelledby="planning-editor-title"><header className="area-editor-header"><div><p className="eyebrow">CareCore Plan · Pflegeplanung</p><h2 id="planning-editor-title">{heading}</h2><p>{intro}</p></div><button className="area-editor-close" type="button" onClick={onClose} aria-label="Pflegeplanung schliessen">×</button></header><form className="area-editor-form" onSubmit={(event) => { event.preventDefault(); onClose(); onSave(`${heading} wurde vorbereitet`); }}><div className="area-editor-intro"><span className="area-editor-icon"><ModuleIcon name="plan"/></span><div><strong>Pflegeplanung im Kontext</strong><p>Alle Änderungen werden in der Bewohnerakte und im Team-Arbeitskorb sichtbar.</p></div><span className="duty-assignment-status"><i/>Entwurf</span></div><div className="area-editor-grid"><label className="area-editor-wide">Bewohner<CareSelect label="Bewohner" value={resident} options={["Hans Müller · Zimmer 207", "Maria Keller · Zimmer 204", "Erika Meier · Zimmer 211", "Ruth Baumann · Zimmer 214"]} onChange={setResident}/></label><label>{mode === "evaluation" ? "Auswertungstyp" : "Pflegebereich"}<CareSelect label={mode === "evaluation" ? "Auswertungstyp" : "Pflegebereich"} value={category} options={mode === "evaluation" ? ["Evaluation Pflegeplanung", "Zielerreichung", "Interventionsqualität", "Quartalsbericht"] : ["Mobilität", "Kognition", "Ernährung", "Schmerz", "Körperpflege"]} onChange={setCategory}/></label><label>{mode === "evaluation" ? "Stichtag" : "Überprüfung am"}<CareDatePicker label={mode === "evaluation" ? "Stichtag" : "Überprüfung am"} value={date} onChange={setDate}/></label><label className="area-editor-wide">Verantwortliche Person<CareSelect label="Verantwortliche Person" value={owner} options={["Anna Meier", "Lea Frei", "Nora Baumann", "Sven Keller"]} onChange={setOwner}/></label><label className="area-editor-wide">{mode === "goal" ? "Zielformulierung" : mode === "measure" ? "Intervention und Vorgehen" : "Fragestellung oder Notiz"}<textarea placeholder={mode === "goal" ? "z. B. Herr Müller führt den Transfer mit verbaler Anleitung sicher durch …" : mode === "measure" ? "Beschreibe die nächsten Schritte, Hilfsmittel und Beobachtungskriterien …" : "z. B. Welche Ziele wurden erreicht und welche Anpassungen sind nötig?"} rows={5} required/></label><fieldset className="area-editor-wide"><legend>Planungsoptionen</legend><div className="area-service-options"><label><input type="checkbox" defaultChecked/><span>Im Team hervorheben</span></label><label><input type="checkbox" defaultChecked/><span>Erinnerung vormerken</span></label><label><input type="checkbox"/><span>In Übergabe aufnehmen</span></label></div></fieldset></div><div className="duty-assignment-summary"><span><strong>{resident.split(" · ")[0]}</strong><small>{category} · {owner}</small></span><span><strong>{formatCareDate(date)}</strong><small>CareCore Plan · Entwurf</small></span></div><footer className="area-editor-actions"><button className="secondary-button" type="button" onClick={onClose}>Abbrechen</button><button className="primary-button" type="submit"><ModuleIcon name="check"/> {heading}</button></footer></form></section></div>;
+  return (
+    <div
+      className="area-editor-overlay planning-editor-overlay"
+      role="presentation"
+      onMouseDown={(event) => event.currentTarget === event.target && onClose()}
+    >
+      <section
+        className="area-editor-panel planning-editor-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="planning-editor-title"
+      >
+        <header className="area-editor-header">
+          <div>
+            <p className="eyebrow">CareCore Plan · Pflegeplanung</p>
+            <h2 id="planning-editor-title">{heading}</h2>
+            <p>{intro}</p>
+          </div>
+          <button className="area-editor-close" type="button" onClick={onClose} aria-label="Pflegeplanung schliessen">
+            ×
+          </button>
+        </header>
+        <form
+          className="area-editor-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onClose();
+            onSave(`${heading} wurde vorbereitet`);
+          }}
+        >
+          <div className="area-editor-intro">
+            <span className="area-editor-icon">
+              <ModuleIcon name="plan" />
+            </span>
+            <div>
+              <strong>Pflegeplanung im Kontext</strong>
+              <p>Alle Änderungen werden in der Bewohnerakte und im Team-Arbeitskorb sichtbar.</p>
+            </div>
+            <span className="duty-assignment-status">
+              <i />
+              Entwurf
+            </span>
+          </div>
+          <div className="area-editor-grid">
+            <label className="area-editor-wide">
+              Bewohner
+              <CareSelect
+                label="Bewohner"
+                value={resident}
+                options={[
+                  "Hans Müller · Zimmer 207",
+                  "Maria Keller · Zimmer 204",
+                  "Erika Meier · Zimmer 211",
+                  "Ruth Baumann · Zimmer 214",
+                ]}
+                onChange={setResident}
+              />
+            </label>
+            <label>
+              {mode === "evaluation" ? "Auswertungstyp" : "Pflegebereich"}
+              <CareSelect
+                label={mode === "evaluation" ? "Auswertungstyp" : "Pflegebereich"}
+                value={category}
+                options={
+                  mode === "evaluation"
+                    ? ["Evaluation Pflegeplanung", "Zielerreichung", "Interventionsqualität", "Quartalsbericht"]
+                    : ["Mobilität", "Kognition", "Ernährung", "Schmerz", "Körperpflege"]
+                }
+                onChange={setCategory}
+              />
+            </label>
+            <label>
+              {mode === "evaluation" ? "Stichtag" : "Überprüfung am"}
+              <CareDatePicker
+                label={mode === "evaluation" ? "Stichtag" : "Überprüfung am"}
+                value={date}
+                onChange={setDate}
+              />
+            </label>
+            <label className="area-editor-wide">
+              Verantwortliche Person
+              <CareSelect
+                label="Verantwortliche Person"
+                value={owner}
+                options={["Anna Meier", "Lea Frei", "Nora Baumann", "Sven Keller"]}
+                onChange={setOwner}
+              />
+            </label>
+            <label className="area-editor-wide">
+              {mode === "goal"
+                ? "Zielformulierung"
+                : mode === "measure"
+                  ? "Intervention und Vorgehen"
+                  : "Fragestellung oder Notiz"}
+              <textarea
+                placeholder={
+                  mode === "goal"
+                    ? "z. B. Herr Müller führt den Transfer mit verbaler Anleitung sicher durch …"
+                    : mode === "measure"
+                      ? "Beschreibe die nächsten Schritte, Hilfsmittel und Beobachtungskriterien …"
+                      : "z. B. Welche Ziele wurden erreicht und welche Anpassungen sind nötig?"
+                }
+                rows={5}
+                required
+              />
+            </label>
+            <fieldset className="area-editor-wide">
+              <legend>Planungsoptionen</legend>
+              <div className="area-service-options">
+                <label>
+                  <input type="checkbox" defaultChecked />
+                  <span>Im Team hervorheben</span>
+                </label>
+                <label>
+                  <input type="checkbox" defaultChecked />
+                  <span>Erinnerung vormerken</span>
+                </label>
+                <label>
+                  <input type="checkbox" />
+                  <span>In Übergabe aufnehmen</span>
+                </label>
+              </div>
+            </fieldset>
+          </div>
+          <div className="duty-assignment-summary">
+            <span>
+              <strong>{resident.split(" · ")[0]}</strong>
+              <small>
+                {category} · {owner}
+              </small>
+            </span>
+            <span>
+              <strong>{formatCareDate(date)}</strong>
+              <small>CareCore Plan · Entwurf</small>
+            </span>
+          </div>
+          <footer className="area-editor-actions">
+            <button className="secondary-button" type="button" onClick={onClose}>
+              Abbrechen
+            </button>
+            <button className="primary-button" type="submit">
+              <ModuleIcon name="check" /> {heading}
+            </button>
+          </footer>
+        </form>
+      </section>
+    </div>
+  );
 }
 
 function PlanOverview({ onOpen }: { onOpen: (mode: "goal" | "measure") => void }) {
-  return <><section className="planning-metrics"><div><span className="planning-metric-icon"><ModuleIcon name="plan"/></span><span><strong>24</strong><small>aktive Pflegeziele</small></span></div><div><span className="planning-metric-icon attention"><ModuleIcon name="tasks"/></span><span><strong>18</strong><small>Massnahmen geplant</small></span></div><div><span className="planning-metric-icon stable"><ModuleIcon name="check"/></span><span><strong>82%</strong><small>Ziele im Soll</small></span></div><div><span className="planning-metric-icon info"><ModuleIcon name="calendar"/></span><span><strong>6</strong><small>Evaluationen fällig</small></span></div></section><div className="planning-overview-layout"><section className="card planning-map"><div className="card-header"><div><p className="eyebrow">Pflegeprozess</p><h2 className="card-title">Aktive Pflegeplanung</h2><p className="card-subtitle">Ziele, Ressourcen und Interventionen im aktuellen Pflegezyklus</p></div><button className="secondary-button" type="button" onClick={() => onOpen("goal")}><ModuleIcon name="plus"/> Pflegeziel</button></div><div className="planning-process"><div className="planning-process-step complete"><span><ModuleIcon name="check"/></span><div><strong>Assessment geprüft</strong><small>Letzte Aktualisierung · heute, 06:40</small></div><em>Abgeschlossen</em></div><div className="planning-process-step active"><span><ModuleIcon name="plan"/></span><div><strong>Ziele und Ressourcen</strong><small>3 Ziele benötigen eine Verlaufskontrolle</small></div><em>In Arbeit</em></div><div className="planning-process-step"><span><ModuleIcon name="tasks"/></span><div><strong>Massnahmen umsetzen</strong><small>18 Interventionen im Team verteilt</small></div><em>Als Nächstes</em></div><div className="planning-process-step"><span><ModuleIcon name="calendar"/></span><div><strong>Evaluation</strong><small>Nächste Gesamtauswertung am 30.09.2026</small></div><em>Geplant</em></div></div><div className="planning-focus-row"><span className="planning-focus-icon"><ModuleIcon name="pulse"/></span><span><strong>Aktueller Pflegefokus</strong><small>Sturzprävention und sichere Mobilisation im Frühdienst</small></span><button className="quiet-button" type="button" onClick={() => onOpen("measure")}>Massnahme planen <ModuleIcon name="chevron"/></button></div></section><aside className="planning-side-stack"><section className="card planning-resident-card"><div className="card-header"><div><p className="eyebrow">Bewohnerkontext</p><h2 className="card-title">Hans Müller</h2><p className="card-subtitle">Zimmer 207 · Pflegestufe 4</p></div><span className="status-badge attention">Beobachten</span></div><div className="planning-context-list"><div><span>Ressourcen</span><strong>Motiviert, gute Mitarbeit</strong></div><div><span>Risiken</span><strong>Sturzrisiko · Gangunsicherheit</strong></div><div><span>Bezugspflege</span><strong>Anna Meier</strong></div></div><button className="secondary-button" type="button" onClick={() => onOpen("goal")}>Bewohnerakte öffnen <ModuleIcon name="chevron"/></button></section><section className="card planning-team-card"><div className="card-header"><div><p className="eyebrow">Team heute</p><h2 className="card-title">Interventionen</h2></div><span className="status-badge stable">7 geplant</span></div><div className="planning-team-list"><div><time>07:30</time><span><strong>Transfertraining</strong><small>Anna Meier · Zimmer 207</small></span></div><div><time>09:00</time><span><strong>Gehstrecke dokumentieren</strong><small>Lea Frei · Korridor 2. OG</small></span></div><div><time>14:00</time><span><strong>Hilfsmittel prüfen</strong><small>Nora Baumann · Teamraum</small></span></div></div></section></aside></div></>;
+  return (
+    <>
+      <section className="planning-metrics">
+        <div>
+          <span className="planning-metric-icon">
+            <ModuleIcon name="plan" />
+          </span>
+          <span>
+            <strong>24</strong>
+            <small>aktive Pflegeziele</small>
+          </span>
+        </div>
+        <div>
+          <span className="planning-metric-icon attention">
+            <ModuleIcon name="tasks" />
+          </span>
+          <span>
+            <strong>18</strong>
+            <small>Massnahmen geplant</small>
+          </span>
+        </div>
+        <div>
+          <span className="planning-metric-icon stable">
+            <ModuleIcon name="check" />
+          </span>
+          <span>
+            <strong>82%</strong>
+            <small>Ziele im Soll</small>
+          </span>
+        </div>
+        <div>
+          <span className="planning-metric-icon info">
+            <ModuleIcon name="calendar" />
+          </span>
+          <span>
+            <strong>6</strong>
+            <small>Evaluationen fällig</small>
+          </span>
+        </div>
+      </section>
+      <div className="planning-overview-layout">
+        <section className="card planning-map">
+          <div className="card-header">
+            <div>
+              <p className="eyebrow">Pflegeprozess</p>
+              <h2 className="card-title">Aktive Pflegeplanung</h2>
+              <p className="card-subtitle">Ziele, Ressourcen und Interventionen im aktuellen Pflegezyklus</p>
+            </div>
+            <button className="secondary-button" type="button" onClick={() => onOpen("goal")}>
+              <ModuleIcon name="plus" /> Pflegeziel
+            </button>
+          </div>
+          <div className="planning-process">
+            <div className="planning-process-step complete">
+              <span>
+                <ModuleIcon name="check" />
+              </span>
+              <div>
+                <strong>Assessment geprüft</strong>
+                <small>Letzte Aktualisierung · heute, 06:40</small>
+              </div>
+              <em>Abgeschlossen</em>
+            </div>
+            <div className="planning-process-step active">
+              <span>
+                <ModuleIcon name="plan" />
+              </span>
+              <div>
+                <strong>Ziele und Ressourcen</strong>
+                <small>3 Ziele benötigen eine Verlaufskontrolle</small>
+              </div>
+              <em>In Arbeit</em>
+            </div>
+            <div className="planning-process-step">
+              <span>
+                <ModuleIcon name="tasks" />
+              </span>
+              <div>
+                <strong>Massnahmen umsetzen</strong>
+                <small>18 Interventionen im Team verteilt</small>
+              </div>
+              <em>Als Nächstes</em>
+            </div>
+            <div className="planning-process-step">
+              <span>
+                <ModuleIcon name="calendar" />
+              </span>
+              <div>
+                <strong>Evaluation</strong>
+                <small>Nächste Gesamtauswertung am 30.09.2026</small>
+              </div>
+              <em>Geplant</em>
+            </div>
+          </div>
+          <div className="planning-focus-row">
+            <span className="planning-focus-icon">
+              <ModuleIcon name="pulse" />
+            </span>
+            <span>
+              <strong>Aktueller Pflegefokus</strong>
+              <small>Sturzprävention und sichere Mobilisation im Frühdienst</small>
+            </span>
+            <button className="quiet-button" type="button" onClick={() => onOpen("measure")}>
+              Massnahme planen <ModuleIcon name="chevron" />
+            </button>
+          </div>
+        </section>
+        <aside className="planning-side-stack">
+          <section className="card planning-resident-card">
+            <div className="card-header">
+              <div>
+                <p className="eyebrow">Bewohnerkontext</p>
+                <h2 className="card-title">Hans Müller</h2>
+                <p className="card-subtitle">Zimmer 207 · Pflegestufe 4</p>
+              </div>
+              <span className="status-badge attention">Beobachten</span>
+            </div>
+            <div className="planning-context-list">
+              <div>
+                <span>Ressourcen</span>
+                <strong>Motiviert, gute Mitarbeit</strong>
+              </div>
+              <div>
+                <span>Risiken</span>
+                <strong>Sturzrisiko · Gangunsicherheit</strong>
+              </div>
+              <div>
+                <span>Bezugspflege</span>
+                <strong>Anna Meier</strong>
+              </div>
+            </div>
+            <button className="secondary-button" type="button" onClick={() => onOpen("goal")}>
+              Bewohnerakte öffnen <ModuleIcon name="chevron" />
+            </button>
+          </section>
+          <section className="card planning-team-card">
+            <div className="card-header">
+              <div>
+                <p className="eyebrow">Team heute</p>
+                <h2 className="card-title">Interventionen</h2>
+              </div>
+              <span className="status-badge stable">7 geplant</span>
+            </div>
+            <div className="planning-team-list">
+              <div>
+                <time>07:30</time>
+                <span>
+                  <strong>Transfertraining</strong>
+                  <small>Anna Meier · Zimmer 207</small>
+                </span>
+              </div>
+              <div>
+                <time>09:00</time>
+                <span>
+                  <strong>Gehstrecke dokumentieren</strong>
+                  <small>Lea Frei · Korridor 2. OG</small>
+                </span>
+              </div>
+              <div>
+                <time>14:00</time>
+                <span>
+                  <strong>Hilfsmittel prüfen</strong>
+                  <small>Nora Baumann · Teamraum</small>
+                </span>
+              </div>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </>
+  );
 }
 
 function GoalsView({ onOpen }: { onOpen: (mode: "goal" | "measure") => void }) {
-  return <div className="planning-goals-layout"><section className="card planning-goals-board"><div className="planning-board-header"><div><p className="eyebrow">Zielkatalog</p><h2 className="card-title">Ziele &amp; Massnahmen</h2><p className="card-subtitle">Alle aktiven Pflegeziele nach Fortschritt und Zuständigkeit.</p></div><div className="planning-board-filters"><button className="active" type="button">Aktive Ziele</button><button type="button">Meine Zuständigkeit</button></div></div><div className="planning-goal-list">{goals.map((goal) => <article key={goal.id} className="planning-goal-card"><div className="planning-goal-head"><span className={`planning-goal-icon ${goal.tone}`}><ModuleIcon name="plan"/></span><span><strong>{goal.title}</strong><small>{goal.resident} · {goal.focus}</small></span><span className={`status-badge ${goal.tone}`}>{goal.progress}%</span></div><div className="planning-goal-progress"><span><i style={{ width: `${goal.progress}%` }}/></span><small>Überprüfung {goal.due}</small></div><div className="planning-goal-footer"><span><ModuleIcon name="team"/> {goal.owner}</span><button className="quiet-button" type="button" onClick={() => onOpen("measure")}>Massnahme ergänzen <ModuleIcon name="chevron"/></button></div></article>)}</div></section><aside className="card planning-goal-aside"><div className="card-header"><div><p className="eyebrow">Schnellzugriff</p><h2 className="card-title">Planung strukturieren</h2></div></div><button className="planning-action-tile" type="button" onClick={() => onOpen("goal")}><span><ModuleIcon name="plus"/></span><strong>Neues Pflegeziel</strong><small>Ressourcen und Zielkriterien festhalten</small><ModuleIcon name="chevron"/></button><button className="planning-action-tile" type="button" onClick={() => onOpen("measure")}><span><ModuleIcon name="tasks"/></span><strong>Massnahme planen</strong><small>Intervention einer Person zuweisen</small><ModuleIcon name="chevron"/></button><div className="planning-goal-note"><ModuleIcon name="check"/><span><strong>Planung aktuell</strong><small>Alle Ziele wurden im letzten Teamgespräch bestätigt.</small></span></div></aside></div>;
+  return (
+    <div className="planning-goals-layout">
+      <section className="card planning-goals-board">
+        <div className="planning-board-header">
+          <div>
+            <p className="eyebrow">Zielkatalog</p>
+            <h2 className="card-title">Ziele &amp; Massnahmen</h2>
+            <p className="card-subtitle">Alle aktiven Pflegeziele nach Fortschritt und Zuständigkeit.</p>
+          </div>
+          <div className="planning-board-filters">
+            <button className="active" type="button">
+              Aktive Ziele
+            </button>
+            <button type="button">Meine Zuständigkeit</button>
+          </div>
+        </div>
+        <div className="planning-goal-list">
+          {goals.map((goal) => (
+            <article key={goal.id} className="planning-goal-card">
+              <div className="planning-goal-head">
+                <span className={`planning-goal-icon ${goal.tone}`}>
+                  <ModuleIcon name="plan" />
+                </span>
+                <span>
+                  <strong>{goal.title}</strong>
+                  <small>
+                    {goal.resident} · {goal.focus}
+                  </small>
+                </span>
+                <span className={`status-badge ${goal.tone}`}>{goal.progress}%</span>
+              </div>
+              <div className="planning-goal-progress">
+                <span>
+                  <i style={{ width: `${goal.progress}%` }} />
+                </span>
+                <small>Überprüfung {goal.due}</small>
+              </div>
+              <div className="planning-goal-footer">
+                <span>
+                  <ModuleIcon name="team" /> {goal.owner}
+                </span>
+                <button className="quiet-button" type="button" onClick={() => onOpen("measure")}>
+                  Massnahme ergänzen <ModuleIcon name="chevron" />
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+      <aside className="card planning-goal-aside">
+        <div className="card-header">
+          <div>
+            <p className="eyebrow">Schnellzugriff</p>
+            <h2 className="card-title">Planung strukturieren</h2>
+          </div>
+        </div>
+        <button className="planning-action-tile" type="button" onClick={() => onOpen("goal")}>
+          <span>
+            <ModuleIcon name="plus" />
+          </span>
+          <strong>Neues Pflegeziel</strong>
+          <small>Ressourcen und Zielkriterien festhalten</small>
+          <ModuleIcon name="chevron" />
+        </button>
+        <button className="planning-action-tile" type="button" onClick={() => onOpen("measure")}>
+          <span>
+            <ModuleIcon name="tasks" />
+          </span>
+          <strong>Massnahme planen</strong>
+          <small>Intervention einer Person zuweisen</small>
+          <ModuleIcon name="chevron" />
+        </button>
+        <div className="planning-goal-note">
+          <ModuleIcon name="check" />
+          <span>
+            <strong>Planung aktuell</strong>
+            <small>Alle Ziele wurden im letzten Teamgespräch bestätigt.</small>
+          </span>
+        </div>
+      </aside>
+    </div>
+  );
 }
 
 function EvaluationView({ onOpen }: { onOpen: () => void }) {
-  return <div className="planning-evaluation-layout"><section className="card planning-evaluation-matrix"><div className="planning-board-header"><div><p className="eyebrow">Qualitätssicht</p><h2 className="card-title">Auswertung der Pflegeplanung</h2><p className="card-subtitle">Zielerreichung und Interventionsqualität · aktueller Pflegezyklus</p></div><button className="primary-button" type="button" onClick={onOpen}><ModuleIcon name="chart"/> Auswertung starten</button></div><div className="planning-evaluation-table"><div className="planning-evaluation-table-head"><span>Pflegebereich</span><span>Ziele</span><span>Erreicht</span><span>Trend</span></div>{[{ name: "Mobilität", count: "8", achieved: "75%", trend: "+12%", tone: "stable" }, { name: "Ernährung", count: "5", achieved: "60%", trend: "+4%", tone: "attention" }, { name: "Kognition", count: "6", achieved: "83%", trend: "+9%", tone: "stable" }, { name: "Schmerz", count: "5", achieved: "80%", trend: "±0%", tone: "info" }].map((row) => <div className="planning-evaluation-row" key={row.name}><span><strong>{row.name}</strong><small>{row.count} aktive Ziele</small></span><span>{row.count}</span><span><strong>{row.achieved}</strong><i><em style={{ width: row.achieved }}/></i></span><span className={`status-badge ${row.tone}`}>{row.trend}</span></div>)}</div></section><aside className="planning-evaluation-side"><section className="card planning-score-card"><p className="eyebrow">Gesamtbild</p><strong>78%</strong><span>Zielerreichung</span><div><i style={{ width: "78%" }}/></div><small>+8% im Vergleich zum letzten Zyklus</small></section><section className="card planning-review-card"><div className="card-header"><div><p className="eyebrow">Nächste Prüfung</p><h2 className="card-title">Teamreview</h2></div></div><div><time>30.09.2026</time><strong>Pflegeplanung Wohnbereich 2</strong><small>Anna Meier · 6 Teilnehmende</small></div><button className="secondary-button" type="button" onClick={onOpen}>Review konfigurieren <ModuleIcon name="chevron"/></button></section></aside></div>;
+  return (
+    <div className="planning-evaluation-layout">
+      <section className="card planning-evaluation-matrix">
+        <div className="planning-board-header">
+          <div>
+            <p className="eyebrow">Qualitätssicht</p>
+            <h2 className="card-title">Auswertung der Pflegeplanung</h2>
+            <p className="card-subtitle">Zielerreichung und Interventionsqualität · aktueller Pflegezyklus</p>
+          </div>
+          <button className="primary-button" type="button" onClick={onOpen}>
+            <ModuleIcon name="chart" /> Auswertung starten
+          </button>
+        </div>
+        <div className="planning-evaluation-table">
+          <div className="planning-evaluation-table-head">
+            <span>Pflegebereich</span>
+            <span>Ziele</span>
+            <span>Erreicht</span>
+            <span>Trend</span>
+          </div>
+          {[
+            { name: "Mobilität", count: "8", achieved: "75%", trend: "+12%", tone: "stable" },
+            { name: "Ernährung", count: "5", achieved: "60%", trend: "+4%", tone: "attention" },
+            { name: "Kognition", count: "6", achieved: "83%", trend: "+9%", tone: "stable" },
+            { name: "Schmerz", count: "5", achieved: "80%", trend: "±0%", tone: "info" },
+          ].map((row) => (
+            <div className="planning-evaluation-row" key={row.name}>
+              <span>
+                <strong>{row.name}</strong>
+                <small>{row.count} aktive Ziele</small>
+              </span>
+              <span>{row.count}</span>
+              <span>
+                <strong>{row.achieved}</strong>
+                <i>
+                  <em style={{ width: row.achieved }} />
+                </i>
+              </span>
+              <span className={`status-badge ${row.tone}`}>{row.trend}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+      <aside className="planning-evaluation-side">
+        <section className="card planning-score-card">
+          <p className="eyebrow">Gesamtbild</p>
+          <strong>78%</strong>
+          <span>Zielerreichung</span>
+          <div>
+            <i style={{ width: "78%" }} />
+          </div>
+          <small>+8% im Vergleich zum letzten Zyklus</small>
+        </section>
+        <section className="card planning-review-card">
+          <div className="card-header">
+            <div>
+              <p className="eyebrow">Nächste Prüfung</p>
+              <h2 className="card-title">Teamreview</h2>
+            </div>
+          </div>
+          <div>
+            <time>30.09.2026</time>
+            <strong>Pflegeplanung Wohnbereich 2</strong>
+            <small>Anna Meier · 6 Teilnehmende</small>
+          </div>
+          <button className="secondary-button" type="button" onClick={onOpen}>
+            Review konfigurieren <ModuleIcon name="chevron" />
+          </button>
+        </section>
+      </aside>
+    </div>
+  );
 }
 
-const meta: Record<PlanningView, { child: string; title: string; description: string; action: string }> = { overview: { child: "Pflegeplanung", title: "Pflegeplanung", description: "Ziele, Ressourcen und Interventionen nachvollziehbar im Pflegeprozess steuern.", action: "Pflegeziel hinzufügen" }, goals: { child: "Ziele & Massnahmen", title: "Ziele & Massnahmen", description: "Pflegeziele konkretisieren und Massnahmen im Team koordinieren.", action: "Neues Pflegeziel" }, evaluation: { child: "Auswertung", title: "Auswertung", description: "Zielerreichung, Interventionsqualität und Pflegezyklen übersichtlich bewerten.", action: "Auswertung starten" } };
+const meta: Record<PlanningView, { child: string; title: string; description: string; action: string }> = {
+  overview: {
+    child: "Pflegeplanung",
+    title: "Pflegeplanung",
+    description: "Ziele, Ressourcen und Interventionen nachvollziehbar im Pflegeprozess steuern.",
+    action: "Pflegeziel hinzufügen",
+  },
+  goals: {
+    child: "Ziele & Massnahmen",
+    title: "Ziele & Massnahmen",
+    description: "Pflegeziele konkretisieren und Massnahmen im Team koordinieren.",
+    action: "Neues Pflegeziel",
+  },
+  evaluation: {
+    child: "Auswertung",
+    title: "Auswertung",
+    description: "Zielerreichung, Interventionsqualität und Pflegezyklen übersichtlich bewerten.",
+    action: "Auswertung starten",
+  },
+};
 
 export default function PlanningWorkspace({ view }: { view: PlanningView }) {
   const current = meta[view];
   const [popover, setPopover] = useState<"goal" | "measure" | "evaluation" | null>(null);
-  return <ModulePageShell activeModule="plan" activeChild={current.child} pageClass={`planning-page planning-${view}`} locationSecondary="Wohnbereich 2 · 1. OG">{(showToast) => <><main className="workspace module-workspace planning-workspace"><section className="page-heading care-page-heading"><div className="heading-copy"><p className="eyebrow">CareCore Plan</p><h1>{current.title}</h1><p>{current.description}</p></div><button className="primary-button" type="button" onClick={() => view === "evaluation" ? setPopover("evaluation") : setPopover(view === "goals" ? "goal" : "goal")}><ModuleIcon name={view === "evaluation" ? "chart" : "plus"} className="button-icon"/>{current.action}</button></section>{view === "overview" && <PlanOverview onOpen={setPopover}/>} {view === "goals" && <GoalsView onOpen={setPopover}/>} {view === "evaluation" && <EvaluationView onOpen={() => setPopover("evaluation")}/>}</main><PlanningPopover open={popover !== null} mode={popover ?? "goal"} onClose={() => setPopover(null)} onSave={showToast}/></>}</ModulePageShell>;
+  return (
+    <ModulePageShell
+      activeModule="plan"
+      activeChild={current.child}
+      pageClass={`planning-page planning-${view}`}
+      locationSecondary="Wohnbereich 2 · 1. OG"
+    >
+      {(showToast) => (
+        <>
+          <main className="workspace module-workspace planning-workspace">
+            <section className="page-heading care-page-heading">
+              <div className="heading-copy">
+                <p className="eyebrow">CareCore Plan</p>
+                <h1>{current.title}</h1>
+                <p>{current.description}</p>
+              </div>
+              <button
+                className="primary-button"
+                type="button"
+                onClick={() =>
+                  view === "evaluation" ? setPopover("evaluation") : setPopover(view === "goals" ? "goal" : "goal")
+                }
+              >
+                <ModuleIcon name={view === "evaluation" ? "chart" : "plus"} className="button-icon" />
+                {current.action}
+              </button>
+            </section>
+            {view === "overview" && <PlanOverview onOpen={setPopover} />}{" "}
+            {view === "goals" && <GoalsView onOpen={setPopover} />}{" "}
+            {view === "evaluation" && <EvaluationView onOpen={() => setPopover("evaluation")} />}
+          </main>
+          <PlanningPopover
+            open={popover !== null}
+            mode={popover ?? "goal"}
+            onClose={() => setPopover(null)}
+            onSave={showToast}
+          />
+        </>
+      )}
+    </ModulePageShell>
+  );
 }

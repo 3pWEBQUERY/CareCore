@@ -49,12 +49,14 @@ export async function PATCH(request: Request) {
   try {
     const actor = await carecoreActor();
     if (!actor?.organizationId) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
-    const input = await request.json() as Record<string, unknown>;
-    if (typeof input.id !== "string" || !/^[0-9a-f-]{36}$/i.test(input.id)) return NextResponse.json({ error: "Ungültige Notiz." }, { status: 400 });
+    const input = (await request.json()) as Record<string, unknown>;
+    if (typeof input.id !== "string" || !/^[0-9a-f-]{36}$/i.test(input.id))
+      return NextResponse.json({ error: "Ungültige Notiz." }, { status: 400 });
     const note = parseNote(input);
     if (!note) return NextResponse.json({ error: "Titel und Notiztext sind erforderlich." }, { status: 400 });
     const sql = carecoreDb();
-    const rows = await sql`UPDATE carecore_staff_notes SET title = ${note.title}, body = ${note.body}, pinned = ${note.pinned}, updated_at = NOW()
+    const rows =
+      await sql`UPDATE carecore_staff_notes SET title = ${note.title}, body = ${note.body}, pinned = ${note.pinned}, updated_at = NOW()
       WHERE id = ${input.id} AND organization_id = ${actor.organizationId} AND user_id = ${actor.id}
       RETURNING id, title, body, pinned, created_at, updated_at`;
     if (!rows[0]) return NextResponse.json({ error: "Notiz nicht gefunden." }, { status: 404 });
@@ -69,10 +71,12 @@ export async function DELETE(request: Request) {
   try {
     const actor = await carecoreActor();
     if (!actor?.organizationId) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
-    const input = await request.json() as { id?: unknown };
-    if (typeof input.id !== "string" || !/^[0-9a-f-]{36}$/i.test(input.id)) return NextResponse.json({ error: "Ungültige Notiz." }, { status: 400 });
+    const input = (await request.json()) as { id?: unknown };
+    if (typeof input.id !== "string" || !/^[0-9a-f-]{36}$/i.test(input.id))
+      return NextResponse.json({ error: "Ungültige Notiz." }, { status: 400 });
     const sql = carecoreDb();
-    const rows = await sql`DELETE FROM carecore_staff_notes WHERE id = ${input.id} AND organization_id = ${actor.organizationId} AND user_id = ${actor.id} RETURNING id`;
+    const rows =
+      await sql`DELETE FROM carecore_staff_notes WHERE id = ${input.id} AND organization_id = ${actor.organizationId} AND user_id = ${actor.id} RETURNING id`;
     if (!rows[0]) return NextResponse.json({ error: "Notiz nicht gefunden." }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch (error) {

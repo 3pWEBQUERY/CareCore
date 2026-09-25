@@ -8,16 +8,20 @@ export async function GET() {
     const actor = await carecoreActor();
     if (!actor) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
     const sql = carecoreDb();
-    const notifications = await sql`SELECT id, title, body, type, priority, link_url, read_at, created_at FROM carecore_notifications WHERE user_id = ${actor.id} ORDER BY created_at DESC LIMIT 100`;
+    const notifications =
+      await sql`SELECT id, title, body, type, priority, link_url, read_at, created_at FROM carecore_notifications WHERE user_id = ${actor.id} ORDER BY created_at DESC LIMIT 100`;
     return NextResponse.json({ notifications });
-  } catch (error) { console.error("Notifications GET failed", error); return NextResponse.json({ error: "Benachrichtigungen konnten nicht geladen werden." }, { status: 500 }); }
+  } catch (error) {
+    console.error("Notifications GET failed", error);
+    return NextResponse.json({ error: "Benachrichtigungen konnten nicht geladen werden." }, { status: 500 });
+  }
 }
 
 export async function PATCH(request: Request) {
   try {
     const actor = await carecoreActor();
     if (!actor) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
-    const body = await request.json() as { id?: unknown; all?: unknown };
+    const body = (await request.json()) as { id?: unknown; all?: unknown };
     const sql = carecoreDb();
     if (body.all === true) {
       await sql`UPDATE carecore_notifications SET read_at = COALESCE(read_at, NOW()) WHERE user_id = ${actor.id}`;
@@ -25,5 +29,8 @@ export async function PATCH(request: Request) {
       await sql`UPDATE carecore_notifications SET read_at = COALESCE(read_at, NOW()) WHERE id = ${body.id} AND user_id = ${actor.id}`;
     } else return NextResponse.json({ error: "Ungültige Benachrichtigung." }, { status: 400 });
     return NextResponse.json({ ok: true });
-  } catch (error) { console.error("Notifications PATCH failed", error); return NextResponse.json({ error: "Änderung konnte nicht gespeichert werden." }, { status: 500 }); }
+  } catch (error) {
+    console.error("Notifications PATCH failed", error);
+    return NextResponse.json({ error: "Änderung konnte nicht gespeichert werden." }, { status: 500 });
+  }
 }
