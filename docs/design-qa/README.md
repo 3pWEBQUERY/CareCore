@@ -5,50 +5,50 @@
 - Source of visual truth (Aufbau): `/Users/alexander/Downloads/ChatGPT Image 7. Sept. 2026, 23_17_02.png`
 - Source of visual truth (Farbsemantik): `/Users/alexander/Downloads/CareCore – Product Requirements Document (PRD).md`, Kapitel 50–52
 - Source of visual truth (Körperkarte): `/Users/alexander/Desktop/Bildschirmfoto 2026-09-09 um 21.26.37.png`
-- Implementierung, ausgeklappt: `/Users/alexander/CareCore/qa-sidebar-blue-final.png`
-- Implementierung, eingeklappt: `/Users/alexander/CareCore/qa-sidebar-blue-collapsed-final.png`
-- Implementierung mit finalem 6-Pixel-Radius: `/Users/alexander/CareCore/qa-radius-6px-final.png`
-- Vergrößerter Such-Popover: `/Users/alexander/CareCore/qa-search-popover-large-final.png`
-- Vollständig deutsche Webnavigation: `/Users/alexander/CareCore/qa-navigation-german-final.png`
-- Bewohnerverzeichnis, Desktop: `/Users/alexander/CareCore/qa-residents-page-final.png`
-- Bewohnerverzeichnis, Mobil: `/Users/alexander/CareCore/qa-residents-page-mobile.png`
-- Vollflächige Bewohnerakte, Desktop: `/Users/alexander/CareCore/qa-resident-record-fullscreen.png`
-- Vollflächige Bewohnerakte, Mobil: `/Users/alexander/CareCore/qa-resident-record-fullscreen-mobile.png`
-- Dokumentationsansicht in der Bewohnerakte, Desktop: `/Users/alexander/CareCore/qa-resident-documentation-view.png`
-- Dokumentationsansicht in der Bewohnerakte, Mobil: `/Users/alexander/CareCore/qa-resident-documentation-mobile.png`
-- Dokumentationskennzeichnungen, Desktop: `/Users/alexander/CareCore/qa-documentation-flags.png`
-- Dokumentationskennzeichnungen, Mobil: `/Users/alexander/CareCore/qa-documentation-flags-mobile.png`
-- Stammdatenansicht, Desktop: `/Users/alexander/CareCore/qa-resident-master-data.png`
-- Stammdatenansicht, Mobil: `/Users/alexander/CareCore/qa-resident-master-data-mobile.png`
-- Pflegeaktenansicht, Desktop: `/Users/alexander/CareCore/qa-resident-care-record.png`
-- Pflegeaktenansicht, Mobil: `/Users/alexander/CareCore/qa-resident-care-record-mobile.png`
-- Körperübersicht, Desktop: `/Users/alexander/CareCore/qa-resident-body-map-desktop.jpg`
-- Körperübersicht, Mobil mit geöffnetem Befund: `/Users/alexander/CareCore/qa-resident-body-map-mobile.jpg`
-- Körperübersicht im Referenzformat: `/Users/alexander/CareCore/qa-resident-body-map-reference-viewport.jpg`
-- Direkter Körperkartenvergleich: `/Users/alexander/CareCore/qa-resident-body-map-comparison.jpg`
-- Verlaufsansicht, Desktop: `/Users/alexander/CareCore/qa-resident-history-desktop.jpg`
-- Verlaufsansicht, Mobil: `/Users/alexander/CareCore/qa-resident-history-mobile.jpg`
-- Dokumentenansicht, Desktop: `/Users/alexander/CareCore/qa-resident-documents-desktop.jpg`
-- Dokumentenansicht, Mobil mit aktiver Suche: `/Users/alexander/CareCore/qa-resident-documents-mobile.jpg`
-- Wundübersicht, Desktop: `/Users/alexander/CareCore/qa-wound-overview-desktop.jpg`
-- Wundübersicht, Mobil: `/Users/alexander/CareCore/qa-wound-overview-mobile.jpg`
-- Bereichsweiter Bewohnerverlauf, Desktop: `/Users/alexander/CareCore/qa-resident-overall-history-desktop.jpg`
-- Bereichsweiter Bewohnerverlauf, Mobil: `/Users/alexander/CareCore/qa-resident-overall-history-mobile.jpg`
-- Wunddokumentation, Desktop: `/Users/alexander/CareCore/qa-wound-documentation-desktop.jpg`
-- Wunddokumentation, Mobil: `/Users/alexander/CareCore/qa-wound-documentation-mobile.jpg`
-- Hausweiter Bewohnerverlauf und Archiv, Desktop: `/Users/alexander/CareCore/qa-house-resident-history-desktop.jpg`
-- Hausweiter Bewohnerverlauf und Archiv, Mobil: `/Users/alexander/CareCore/qa-house-resident-history-mobile.jpg`
-- Hausweite Pflegeakten, Desktop: `/Users/alexander/CareCore/qa-care-records-page-desktop.jpg`
-- Hausweite Pflegeakten, Mobil: `/Users/alexander/CareCore/qa-care-records-page-mobile.jpg`
-- Hausweite Vitalwerte-Übersicht, Desktop: `/Users/alexander/CareCore/qa-vitals-overview-desktop.jpg`
-- Mein Dienst, Desktop: `/Users/alexander/CareCore/qa-operations-shift-desktop.jpg`
-- Einschätzungen, Desktop: `/Users/alexander/CareCore/qa-assessments-desktop.jpg`
-- Medikamentenplan, Desktop: `/Users/alexander/CareCore/qa-medication-plan-desktop.jpg`
-- Medikamentenplan, Mobil: `/Users/alexander/CareCore/qa-medication-plan-mobile.jpg`
-- Medikamentenrunde, Desktop: `/Users/alexander/CareCore/qa-medication-round-desktop.jpg`
-- Medikamentenbestände, Desktop: `/Users/alexander/CareCore/qa-medication-stocks-desktop.jpg`
-- Reserven und Bestandsjournal, Desktop: `/Users/alexander/CareCore/qa-medication-reserves-desktop.jpg`
-- Direkter Vergleich: `/Users/alexander/CareCore/qa-sidebar-blue-comparison-final.png`
+- Implementierung, ausgeklappt: `./qa-sidebar-blue-final.png`
+- Implementierung, eingeklappt: `./qa-sidebar-blue-collapsed-final.png`
+- Implementierung mit finalem 6-Pixel-Radius: `./qa-radius-6px-final.png`
+- Vergrößerter Such-Popover: `./qa-search-popover-large-final.png`
+- Vollständig deutsche Webnavigation: `./qa-navigation-german-final.png`
+- Bewohnerverzeichnis, Desktop: `./qa-residents-page-final.png`
+- Bewohnerverzeichnis, Mobil: `./qa-residents-page-mobile.png`
+- Vollflächige Bewohnerakte, Desktop: `./qa-resident-record-fullscreen.png`
+- Vollflächige Bewohnerakte, Mobil: `./qa-resident-record-fullscreen-mobile.png`
+- Dokumentationsansicht in der Bewohnerakte, Desktop: `./qa-resident-documentation-view.png`
+- Dokumentationsansicht in der Bewohnerakte, Mobil: `./qa-resident-documentation-mobile.png`
+- Dokumentationskennzeichnungen, Desktop: `./qa-documentation-flags.png`
+- Dokumentationskennzeichnungen, Mobil: `./qa-documentation-flags-mobile.png`
+- Stammdatenansicht, Desktop: `./qa-resident-master-data.png`
+- Stammdatenansicht, Mobil: `./qa-resident-master-data-mobile.png`
+- Pflegeaktenansicht, Desktop: `./qa-resident-care-record.png`
+- Pflegeaktenansicht, Mobil: `./qa-resident-care-record-mobile.png`
+- Körperübersicht, Desktop: `./qa-resident-body-map-desktop.jpg`
+- Körperübersicht, Mobil mit geöffnetem Befund: `./qa-resident-body-map-mobile.jpg`
+- Körperübersicht im Referenzformat: `./qa-resident-body-map-reference-viewport.jpg`
+- Direkter Körperkartenvergleich: `./qa-resident-body-map-comparison.jpg`
+- Verlaufsansicht, Desktop: `./qa-resident-history-desktop.jpg`
+- Verlaufsansicht, Mobil: `./qa-resident-history-mobile.jpg`
+- Dokumentenansicht, Desktop: `./qa-resident-documents-desktop.jpg`
+- Dokumentenansicht, Mobil mit aktiver Suche: `./qa-resident-documents-mobile.jpg`
+- Wundübersicht, Desktop: `./qa-wound-overview-desktop.jpg`
+- Wundübersicht, Mobil: `./qa-wound-overview-mobile.jpg`
+- Bereichsweiter Bewohnerverlauf, Desktop: `./qa-resident-overall-history-desktop.jpg`
+- Bereichsweiter Bewohnerverlauf, Mobil: `./qa-resident-overall-history-mobile.jpg`
+- Wunddokumentation, Desktop: `./qa-wound-documentation-desktop.jpg`
+- Wunddokumentation, Mobil: `./qa-wound-documentation-mobile.jpg`
+- Hausweiter Bewohnerverlauf und Archiv, Desktop: `./qa-house-resident-history-desktop.jpg`
+- Hausweiter Bewohnerverlauf und Archiv, Mobil: `./qa-house-resident-history-mobile.jpg`
+- Hausweite Pflegeakten, Desktop: `./qa-care-records-page-desktop.jpg`
+- Hausweite Pflegeakten, Mobil: `./qa-care-records-page-mobile.jpg`
+- Hausweite Vitalwerte-Übersicht, Desktop: `./qa-vitals-overview-desktop.jpg`
+- Mein Dienst, Desktop: `./qa-operations-shift-desktop.jpg`
+- Einschätzungen, Desktop: `./qa-assessments-desktop.jpg`
+- Medikamentenplan, Desktop: `./qa-medication-plan-desktop.jpg`
+- Medikamentenplan, Mobil: `./qa-medication-plan-mobile.jpg`
+- Medikamentenrunde, Desktop: `./qa-medication-round-desktop.jpg`
+- Medikamentenbestände, Desktop: `./qa-medication-stocks-desktop.jpg`
+- Reserven und Bestandsjournal, Desktop: `./qa-medication-reserves-desktop.jpg`
+- Direkter Vergleich: `./qa-sidebar-blue-comparison-final.png`
 - Viewport: 1536 × 1024 CSS-Pixel, Device Pixel Ratio 1
 - Source und Implementierung: jeweils 1536 × 1024 Pixel; Vergleich ohne Dichteskalierung
 - Zustand: Desktop, Operations geöffnet, Shift aktiv; zusätzlich eingeklappte Navigation

@@ -1,5 +1,5 @@
 {
-  "name": "carecore-demo",
+  "name": "carecore",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,8 +8,10 @@
     "vercel-build": "node database/migrate.mjs && next build",
     "start": "next start",
     "lint": "eslint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "db:migrate": "node --env-file=.env.local database/migrate.mjs",
-    "db:seed":"node --env-file=.env.local database/seed-demo.mjs"
+    "db:seed": "node --env-file=.env.local database/seed-demo.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
@@ -27,6 +29,7 @@
     "@types/three": "^0.186.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "prettier": "3.9.9",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
