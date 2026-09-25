@@ -8,31 +8,10 @@ export type WorkContext = {
   residents: ContextResident[];
 };
 
-let schemaPromise: Promise<void> | null = null;
-
 function database() {
   const connectionString = process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
   if (!connectionString) throw new Error("DATABASE_URL_NOT_CONFIGURED");
   return neon(connectionString);
-}
-
-async function ensureWorkContextSchema() {
-  if (!schemaPromise) {
-    schemaPromise = (async () => {
-      const sql = database();
-      await sql`CREATE TABLE IF NOT EXISTS carecore_organizations (id UUID PRIMARY KEY, name VARCHAR(180) NOT NULL, active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`;
-      await sql`CREATE TABLE IF NOT EXISTS carecore_sites (id UUID PRIMARY KEY, organization_id UUID NOT NULL REFERENCES carecore_organizations(id) ON DELETE CASCADE, name VARCHAR(180) NOT NULL, active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE (organization_id, name))`;
-      await sql`CREATE TABLE IF NOT EXISTS carecore_care_units (id UUID PRIMARY KEY, site_id UUID NOT NULL REFERENCES carecore_sites(id) ON DELETE CASCADE, name VARCHAR(160) NOT NULL, floor VARCHAR(80), capacity SMALLINT, active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE (site_id, name))`;
-      await sql`CREATE TABLE IF NOT EXISTS carecore_rooms (id UUID PRIMARY KEY, care_unit_id UUID NOT NULL REFERENCES carecore_care_units(id) ON DELETE CASCADE, name VARCHAR(80) NOT NULL, room_number VARCHAR(32), beds SMALLINT NOT NULL DEFAULT 1, active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE (care_unit_id, name))`;
-      await sql`CREATE TABLE IF NOT EXISTS carecore_user_profiles (user_id UUID PRIMARY KEY REFERENCES carecore_users(id) ON DELETE CASCADE, organization_id UUID REFERENCES carecore_organizations(id) ON DELETE SET NULL, job_title VARCHAR(140), phone VARCHAR(60), primary_care_unit_id UUID REFERENCES carecore_care_units(id) ON DELETE SET NULL, locale VARCHAR(16) NOT NULL DEFAULT 'de-CH', preferences JSONB NOT NULL DEFAULT '{}'::jsonb, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`;
-      await sql`ALTER TABLE carecore_user_profiles ADD COLUMN IF NOT EXISTS primary_care_unit_id UUID REFERENCES carecore_care_units(id) ON DELETE SET NULL`;
-      await sql`CREATE TABLE IF NOT EXISTS carecore_user_unit_assignments (user_id UUID NOT NULL REFERENCES carecore_users(id) ON DELETE CASCADE, care_unit_id UUID NOT NULL REFERENCES carecore_care_units(id) ON DELETE CASCADE, assignment_role VARCHAR(80) NOT NULL DEFAULT 'member', is_primary BOOLEAN NOT NULL DEFAULT FALSE, starts_on DATE, ends_on DATE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (user_id, care_unit_id))`;
-      await sql`CREATE TABLE IF NOT EXISTS carecore_residents (id UUID PRIMARY KEY, organization_id UUID NOT NULL REFERENCES carecore_organizations(id) ON DELETE RESTRICT, first_name VARCHAR(100) NOT NULL, last_name VARCHAR(100) NOT NULL, status VARCHAR(32) NOT NULL DEFAULT 'active', risk_flags JSONB NOT NULL DEFAULT '[]'::jsonb, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`;
-      await sql`CREATE TABLE IF NOT EXISTS carecore_resident_stays (id UUID PRIMARY KEY, resident_id UUID NOT NULL REFERENCES carecore_residents(id) ON DELETE CASCADE, care_unit_id UUID REFERENCES carecore_care_units(id) ON DELETE SET NULL, room_id UUID REFERENCES carecore_rooms(id) ON DELETE SET NULL, started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), ended_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`;
-      await sql`CREATE INDEX IF NOT EXISTS carecore_work_context_stays_idx ON carecore_resident_stays (care_unit_id, started_at DESC) WHERE ended_at IS NULL`;
-    })().catch((error) => { schemaPromise = null; throw error; });
-  }
-  await schemaPromise;
 }
 
 async function seedDemoContext(userId: string) {
@@ -67,7 +46,6 @@ async function seedDemoContext(userId: string) {
 }
 
 export async function getWorkContext(userId: string): Promise<WorkContext> {
-  await ensureWorkContextSchema();
   await seedDemoContext(userId);
   const sql = database();
   const profileRows = await sql`SELECT u.display_name, u.role, COALESCE(p.job_title, 'Mitarbeitende:r') AS job_title, COALESCE(p.phone, '') AS phone, p.primary_care_unit_id, cu.name AS primary_care_unit_name, COALESCE(o.name, 'CareCore') AS organization_name FROM carecore_users u LEFT JOIN carecore_user_profiles p ON p.user_id = u.id LEFT JOIN carecore_care_units cu ON cu.id = p.primary_care_unit_id LEFT JOIN carecore_organizations o ON o.id = p.organization_id WHERE u.id = ${userId} LIMIT 1` as unknown as Array<{ display_name: string; role: string; job_title: string; phone: string; primary_care_unit_id: string | null; primary_care_unit_name: string | null; organization_name: string }>;
@@ -83,7 +61,6 @@ export async function getWorkContext(userId: string): Promise<WorkContext> {
 }
 
 export async function updateWorkContext(userId: string, input: { primaryCareUnitId?: string; jobTitle?: string; phone?: string }) {
-  await ensureWorkContextSchema();
   await seedDemoContext(userId);
   const sql = database();
   if (input.primaryCareUnitId !== undefined) {

@@ -23,7 +23,7 @@ type UserRow = {
 
 export type AuthenticatedUser = Omit<UserRow, "password_hash">;
 
-let schemaPromise: Promise<void> | null = null;
+let bootstrapPromise: Promise<void> | null = null;
 
 function database() {
   const connectionString = process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
@@ -67,54 +67,19 @@ async function bootstrapAdmin(sql: ReturnType<typeof database>) {
   await sql`UPDATE carecore_users SET password_hash = ${passwordHash}, updated_at = NOW() WHERE password_hash = ${LEGACY_DEFAULT_ADMIN_HASH}`;
 }
 
-export async function ensureAuthSchema() {
-  if (!schemaPromise) {
-    schemaPromise = (async () => {
-      const sql = database();
-      await sql`
-        CREATE TABLE IF NOT EXISTS carecore_users (
-          id UUID PRIMARY KEY,
-          username VARCHAR(80) NOT NULL UNIQUE,
-          display_name VARCHAR(120) NOT NULL,
-          role VARCHAR(40) NOT NULL DEFAULT 'user',
-          password_hash TEXT NOT NULL,
-          active BOOLEAN NOT NULL DEFAULT TRUE,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-      `;
-      await sql`CREATE UNIQUE INDEX IF NOT EXISTS carecore_users_username_lower_idx ON carecore_users (LOWER(username))`;
-      await sql`
-        CREATE TABLE IF NOT EXISTS carecore_sessions (
-          id UUID PRIMARY KEY,
-          token_hash CHAR(64) NOT NULL UNIQUE,
-          user_id UUID NOT NULL REFERENCES carecore_users(id) ON DELETE CASCADE,
-          expires_at TIMESTAMPTZ NOT NULL,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-      `;
-      await sql`CREATE INDEX IF NOT EXISTS carecore_sessions_expiry_idx ON carecore_sessions (expires_at)`;
-      await sql`
-        CREATE TABLE IF NOT EXISTS carecore_login_attempts (
-          id UUID PRIMARY KEY,
-          username_key VARCHAR(80) NOT NULL,
-          ip_address VARCHAR(64) NOT NULL,
-          attempted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-      `;
-      await sql`CREATE INDEX IF NOT EXISTS carecore_login_attempts_username_idx ON carecore_login_attempts (username_key, attempted_at)`;
-      await sql`CREATE INDEX IF NOT EXISTS carecore_login_attempts_ip_idx ON carecore_login_attempts (ip_address, attempted_at)`;
-      await bootstrapAdmin(sql);
-    })().catch((error) => {
-      schemaPromise = null;
+// Tables are created by database/migrations; only the admin bootstrap runs here, once per process.
+async function ensureAdminBootstrap() {
+  if (!bootstrapPromise) {
+    bootstrapPromise = bootstrapAdmin(database()).catch((error) => {
+      bootstrapPromise = null;
       throw error;
     });
   }
-  await schemaPromise;
+  await bootstrapPromise;
 }
 
 export async function authenticate(username: string, password: string): Promise<AuthenticatedUser | null> {
-  await ensureAuthSchema();
+  await ensureAdminBootstrap();
   const sql = database();
   const rows = await sql`
     SELECT id, username, display_name, role, password_hash
@@ -134,7 +99,6 @@ export async function authenticate(username: string, password: string): Promise<
 }
 
 export async function createSession(userId: string) {
-  await ensureAuthSchema();
   const sql = database();
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
@@ -148,7 +112,6 @@ export async function createSession(userId: string) {
 
 export async function getSessionUser(token: string | undefined): Promise<AuthenticatedUser | null> {
   if (!token) return null;
-  await ensureAuthSchema();
   const sql = database();
   const rows = await sql`
     SELECT u.id, u.username, u.display_name, u.role
@@ -164,7 +127,6 @@ export async function getSessionUser(token: string | undefined): Promise<Authent
 
 export async function deleteSession(token: string | undefined) {
   if (!token) return;
-  await ensureAuthSchema();
   const sql = database();
   await sql`DELETE FROM carecore_sessions WHERE token_hash = ${hashSessionToken(token)}`;
 }
@@ -174,7 +136,6 @@ function usernameKey(username: string) {
 }
 
 export async function isLoginThrottled(username: string, ipAddress: string) {
-  await ensureAuthSchema();
   const sql = database();
   const rows = await sql`
     SELECT
@@ -188,7 +149,6 @@ export async function isLoginThrottled(username: string, ipAddress: string) {
 }
 
 export async function recordFailedLogin(username: string, ipAddress: string) {
-  await ensureAuthSchema();
   const sql = database();
   await sql`DELETE FROM carecore_login_attempts WHERE attempted_at <= NOW() - make_interval(mins => ${LOGIN_WINDOW_MINUTES})`;
   await sql`
@@ -198,7 +158,6 @@ export async function recordFailedLogin(username: string, ipAddress: string) {
 }
 
 export async function clearFailedLogins(username: string) {
-  await ensureAuthSchema();
   const sql = database();
   await sql`DELETE FROM carecore_login_attempts WHERE username_key = ${usernameKey(username)}`;
 }

@@ -5,9 +5,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "vercel-build": "node database/migrate.mjs && next build",
     "start": "next start",
     "lint": "eslint",
-    "db:seed": "node --env-file=.env.local database/seed-demo.mjs"
+    "db:migrate": "node --env-file=.env.local database/migrate.mjs",
+    "db:seed":"node --env-file=.env.local database/seed-demo.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

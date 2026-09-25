@@ -3,20 +3,23 @@ CareCore ist eine Next.js-Anwendung mit geschütztem Pflegearbeitsplatz unter `/
 ## Lokale Einrichtung
 
 1. `.env.example` als `.env.local` kopieren.
-2. `DATABASE_URL` mit der gepoolten Neon-Verbindungsadresse befüllen.
-3. `npm install` und anschließend `npm run dev` ausführen.
+2. `DATABASE_URL` mit der gepoolten Neon-Verbindungsadresse und `CARECORE_ADMIN_PASSWORD` (mindestens 12 Zeichen) befüllen.
+3. `npm install`, dann `npm run db:migrate` und anschließend `npm run dev` ausführen.
 
-Beim ersten Anmeldeversuch werden die Tabellen `carecore_users` und `carecore_sessions` angelegt und der initiale Administrator sicher mit einem Scrypt-Passworthash eingetragen. Alternativ kann `database/schema.sql` einmalig im Neon SQL Editor ausgeführt werden.
+Beim ersten Anmeldeversuch wird der Administrator `Admin` mit dem Passwort aus `CARECORE_ADMIN_PASSWORD` angelegt.
 
-## Gesamtes Datenbankschema migrieren
+## Datenbank-Migrationen
 
-Das vollständige CareCore-Schema liegt in `database/schema.sql`. Es deckt Organisationen, Wohnbereiche, Bewohner, Pflegeplanung, Dokumentation, Assessments, Vitalwerte, Medikation, Wunden, Ernährung, Dienste, Aufgaben, Übergaben, Kommunikation, Dokumente, Schulungen, Qualität, RAI, KI-Entwürfe, Benachrichtigungen und Auditierung ab.
-
-Mit einer gültigen Neon-Verbindungsadresse wird es idempotent eingespielt:
+Das Schema wird ausschließlich über nummerierte SQL-Dateien in `database/migrations` verwaltet; die Anwendung legt zur Laufzeit keine Tabellen an. Das Schema deckt Organisationen, Wohnbereiche, Bewohner, Pflegeplanung, Dokumentation, Assessments, Vitalwerte, Medikation, Wunden, Ernährung, Dienste, Aufgaben, Übergaben, Kommunikation, Dokumente, Schulungen, Qualität, RAI, KI-Entwürfe, Benachrichtigungen und Auditierung ab.
 
 ```bash
-node --env-file=.env.local database/apply-schema.mjs
+npm run db:migrate            # ausstehende Migrationen anwenden
+npm run db:migrate -- --dry-run   # nur anzeigen, was ausstehend ist
 ```
+
+Angewendete Migrationen werden mit Prüfsumme in `carecore_schema_migrations` festgehalten. Eine bereits angewendete Datei darf nicht mehr verändert werden – Schemaänderungen kommen immer als neue Datei hinzu, z. B. `0002_medication_orders.sql`. Jede Migration läuft in einer Transaktion.
+
+Auf Vercel führt das Skript `vercel-build` die Migrationen vor `next build` aus, allerdings nur für Production-Deployments: Preview-Deployments nutzen dieselbe Datenbank und dürfen das Schema nicht verändern.
 
 Danach können leere Fach-Tabellen mit wiederholbar ausführbaren Beispieldaten befüllt werden:
 
@@ -26,7 +29,7 @@ npm run db:seed
 
 Der Seed überspringt Tabellen, die bereits Daten enthalten. Vorhandene Bewohner-, Mitarbeiter- und Organisationsdaten werden nicht überschrieben. In der aktuellen Demo lesen und schreiben Bewohneraufnahme, Aufgaben, Pflegedokumentation und Benachrichtigungen über Neon. Die Startseite zeigt Bewohner, Aufgaben und dokumentierte Änderungen aus Neon. Andere Fachansichten enthalten teilweise noch lokale Demonstrationsdaten und sind noch keine vollständig persistierten Arbeitsabläufe.
 
-Für Vercel muss `DATABASE_URL` in den Umgebungsvariablen des Projekts für Production, Preview und Development gesetzt werden. Die Anwendung benötigt den normalen Next.js-Serverbetrieb; ein statischer Export ist wegen Login, Sessions und Datenbankzugriff nicht möglich.
+Für Vercel müssen `DATABASE_URL` und `CARECORE_ADMIN_PASSWORD` in den Umgebungsvariablen des Projekts für Production, Preview und Development gesetzt sein. Die Anwendung benötigt den normalen Next.js-Serverbetrieb; ein statischer Export ist wegen Login, Sessions und Datenbankzugriff nicht möglich.
 
 ## Getting Started
 

@@ -14,23 +14,7 @@ function database() {
   return neon(connectionString);
 }
 
-let schemaPromise: Promise<void> | null = null;
-async function ensureAdminUsersSchema() {
-  if (!schemaPromise) schemaPromise = (async () => {
-    const sql = database();
-    await sql`ALTER TABLE carecore_users ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ`;
-    await sql`ALTER TABLE carecore_users ADD COLUMN IF NOT EXISTS archived_by UUID REFERENCES carecore_users(id) ON DELETE SET NULL`;
-    await sql`ALTER TABLE carecore_users ADD COLUMN IF NOT EXISTS archive_reason TEXT`;
-    await sql`CREATE INDEX IF NOT EXISTS carecore_users_archived_idx ON carecore_users (archived_at DESC) WHERE archived_at IS NOT NULL`;
-    await sql`CREATE TABLE IF NOT EXISTS carecore_roles (id UUID PRIMARY KEY, key VARCHAR(40) NOT NULL UNIQUE, name VARCHAR(100) NOT NULL, description TEXT NOT NULL DEFAULT '', permissions JSONB NOT NULL DEFAULT '[]'::jsonb, system_role BOOLEAN NOT NULL DEFAULT FALSE, created_by UUID REFERENCES carecore_users(id) ON DELETE SET NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`;
-    await sql`CREATE INDEX IF NOT EXISTS carecore_roles_key_idx ON carecore_roles (key)`;
-    await sql`INSERT INTO carecore_roles (id, key, name, description, permissions, system_role) VALUES ('00000000-0000-4000-8000-000000000701', 'admin', 'Administration', 'Vollzugriff auf Organisation und Verwaltung.', ${JSON.stringify(roleKeys)}::jsonb, TRUE), ('00000000-0000-4000-8000-000000000702', 'leitung', 'Leitung', 'Leitung, Auswertungen und Teamsteuerung.', ${JSON.stringify(["residents.read", "residents.write", "documentation.write", "schedule.manage", "team.manage", "quality.manage", "insights.read"])}::jsonb, TRUE), ('00000000-0000-4000-8000-000000000703', 'pflege', 'Pflege', 'Pflegearbeitsplatz mit Dokumentation.', ${JSON.stringify(["residents.read", "residents.write", "documentation.write", "medication.manage"])}::jsonb, TRUE), ('00000000-0000-4000-8000-000000000704', 'arzt', 'Ärztlicher Dienst', 'Medizinischer Fachzugriff.', ${JSON.stringify(["residents.read", "documentation.write", "medication.manage"])}::jsonb, TRUE), ('00000000-0000-4000-8000-000000000705', 'mitarbeitende:r', 'Mitarbeitende:r', 'Eingeschränkter Fachzugriff.', ${JSON.stringify(["residents.read"])}::jsonb, TRUE) ON CONFLICT (key) DO NOTHING`;
-  })().catch((error) => { schemaPromise = null; throw error; });
-  await schemaPromise;
-}
-
 export async function listManagedUsers(): Promise<{ users: ManagedUser[]; careUnits: AdminCareUnit[]; roles: ManagedRole[]; stats: AdminUserStats }> {
-  await ensureAdminUsersSchema();
   const sql = database();
   const users = await sql`SELECT u.id, u.username, u.display_name, u.role, u.active, u.archived_at, u.created_at, p.job_title, p.phone, p.primary_care_unit_id, p.last_seen_at, cu.name AS primary_care_unit_name FROM carecore_users u LEFT JOIN carecore_user_profiles p ON p.user_id = u.id LEFT JOIN carecore_care_units cu ON cu.id = p.primary_care_unit_id ORDER BY u.archived_at NULLS FIRST, u.active DESC, u.display_name ASC` as unknown as Array<{ id: string; username: string; display_name: string; role: string; active: boolean; archived_at: string | null; created_at: string; job_title: string | null; phone: string | null; primary_care_unit_id: string | null; last_seen_at: string | null; primary_care_unit_name: string | null }>;
   const careUnits = await sql`SELECT id, name, COALESCE(floor, '') AS floor FROM carecore_care_units WHERE active = TRUE ORDER BY name` as unknown as Array<{ id: string; name: string; floor: string }>;
@@ -43,7 +27,6 @@ export async function listManagedUsers(): Promise<{ users: ManagedUser[]; careUn
 }
 
 export async function listManagedRoles(): Promise<ManagedRole[]> {
-  await ensureAdminUsersSchema();
   const sql = database();
   const rows = await sql`SELECT r.id, r.key, r.name, r.description, r.permissions, r.system_role, r.created_at, COUNT(u.id)::int AS user_count FROM carecore_roles r LEFT JOIN carecore_users u ON u.role = r.key GROUP BY r.id ORDER BY r.system_role DESC, r.name` as unknown as Array<{ id: string; key: string; name: string; description: string; permissions: string[]; system_role: boolean; created_at: string; user_count: number }>;
   return rows.map((role) => ({ id: role.id, key: role.key, name: role.name, description: role.description, permissions: Array.isArray(role.permissions) ? role.permissions : [], systemRole: role.system_role, userCount: Number(role.user_count), createdAt: role.created_at }));
@@ -55,7 +38,6 @@ async function assertRole(sql: ReturnType<typeof database>, role: string) {
 }
 
 export async function updateManagedUser(actorId: string, userId: string, input: { displayName?: string; username?: string; role?: string; jobTitle?: string; phone?: string; primaryCareUnitId?: string | null; action?: "lock" | "restore" }) {
-  await ensureAdminUsersSchema();
   const sql = database();
   if (input.action === "lock") {
     if (userId === actorId) throw new Error("CANNOT_LOCK_SELF");
@@ -83,7 +65,6 @@ export async function updateManagedUser(actorId: string, userId: string, input: 
 }
 
 export async function createManagedUser(actorId: string, input: { displayName: string; username: string; password: string; role: string; jobTitle?: string; phone?: string; primaryCareUnitId?: string | null }) {
-  await ensureAdminUsersSchema();
   const displayName = input.displayName.trim().slice(0, 120); const username = input.username.trim().slice(0, 80); const role = input.role.trim().slice(0, 40);
   if (!displayName || !username || !role || input.password.length < 10) throw new Error("INVALID_EMPLOYEE_INPUT");
   const sql = database();
@@ -102,7 +83,6 @@ export async function createManagedUser(actorId: string, input: { displayName: s
 }
 
 export async function deleteManagedUser(actorId: string, userId: string) {
-  await ensureAdminUsersSchema();
   if (userId === actorId) throw new Error("CANNOT_DELETE_SELF");
   const sql = database();
   await audit(actorId, userId, "deleted", { permanentlyDeleted: true });
@@ -116,7 +96,7 @@ function normalizePermissions(value: unknown) {
 }
 
 export async function createManagedRole(actorId: string, input: { key: string; name: string; description?: string; permissions?: unknown }) {
-  await ensureAdminUsersSchema(); const sql = database();
+  const sql = database();
   const key = input.key.trim().toLowerCase().slice(0, 40); const name = input.name.trim().slice(0, 100);
   if (!name || !/^[a-z0-9:_-]+$/.test(key) || ["admin", "leitung", "pflege", "arzt", "mitarbeitende:r"].includes(key)) throw new Error("INVALID_ROLE_INPUT");
   const id = randomUUID(); const permissions = normalizePermissions(input.permissions);
@@ -125,7 +105,7 @@ export async function createManagedRole(actorId: string, input: { key: string; n
 }
 
 export async function updateManagedRole(actorId: string, roleId: string, input: { name: string; description?: string; permissions?: unknown }) {
-  await ensureAdminUsersSchema(); const sql = database(); const name = input.name.trim().slice(0, 100);
+  const sql = database(); const name = input.name.trim().slice(0, 100);
   if (!name) throw new Error("INVALID_ROLE_INPUT"); const permissions = normalizePermissions(input.permissions);
   // The admin role always keeps every permission so administrators cannot lock themselves out.
   const updated = await sql`UPDATE carecore_roles SET name = ${name}, description = ${input.description?.trim().slice(0, 500) ?? ""}, permissions = CASE WHEN key = 'admin' THEN ${JSON.stringify(roleKeys)}::jsonb ELSE ${JSON.stringify(permissions)}::jsonb END, updated_at = NOW() WHERE id = ${roleId} RETURNING id` as unknown as Array<{ id: string }>;
@@ -133,7 +113,7 @@ export async function updateManagedRole(actorId: string, roleId: string, input: 
 }
 
 export async function deleteManagedRole(actorId: string, roleId: string) {
-  await ensureAdminUsersSchema(); const sql = database();
+  const sql = database();
   const role = await sql`SELECT key, system_role FROM carecore_roles WHERE id = ${roleId} LIMIT 1` as unknown as Array<{ key: string; system_role: boolean }>;
   if (!role[0]) throw new Error("ROLE_NOT_FOUND"); if (role[0].system_role) throw new Error("SYSTEM_ROLE_PROTECTED");
   const users = await sql`SELECT COUNT(*)::int AS count FROM carecore_users WHERE role = ${role[0].key}` as unknown as Array<{ count: number }>;

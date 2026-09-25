@@ -1,3 +1,8 @@
+-- Baseline: the full CareCore schema as of the switch to migrations.
+-- Every statement is idempotent so it can run against databases that were
+-- previously set up by the app's runtime DDL. Never edit an applied
+-- migration; add a new numbered file instead.
+
 CREATE TABLE IF NOT EXISTS carecore_users (
   id UUID PRIMARY KEY,
   username VARCHAR(80) NOT NULL UNIQUE,
@@ -808,6 +813,7 @@ CREATE INDEX IF NOT EXISTS carecore_rooms_unit_idx ON carecore_rooms (care_unit_
 CREATE INDEX IF NOT EXISTS carecore_residents_organization_status_idx ON carecore_residents (organization_id, status);
 CREATE INDEX IF NOT EXISTS carecore_residents_name_idx ON carecore_residents (last_name, first_name);
 CREATE INDEX IF NOT EXISTS carecore_stays_resident_active_idx ON carecore_resident_stays (resident_id, started_at DESC) WHERE ended_at IS NULL;
+CREATE INDEX IF NOT EXISTS carecore_work_context_stays_idx ON carecore_resident_stays (care_unit_id, started_at DESC) WHERE ended_at IS NULL;
 CREATE INDEX IF NOT EXISTS carecore_documentation_resident_time_idx ON carecore_documentation_entries (resident_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS carecore_care_plans_resident_status_idx ON carecore_care_plans (resident_id, status);
 CREATE INDEX IF NOT EXISTS carecore_assessment_records_due_idx ON carecore_assessment_records (resident_id, due_on) WHERE status IN ('draft', 'in_progress');

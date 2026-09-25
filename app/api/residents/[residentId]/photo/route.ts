@@ -5,29 +5,11 @@ export const runtime = "nodejs";
 
 const MAX_PHOTO_BYTES = 1024 * 1024;
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-let schemaPromise: Promise<void> | null = null;
-
-async function ensurePhotoColumns() {
-  if (!schemaPromise) {
-    schemaPromise = (async () => {
-      const sql = carecoreDb();
-      await sql`ALTER TABLE carecore_residents ADD COLUMN IF NOT EXISTS photo_base64 TEXT`;
-      await sql`ALTER TABLE carecore_residents ADD COLUMN IF NOT EXISTS photo_mime_type VARCHAR(40)`;
-      await sql`ALTER TABLE carecore_residents ADD COLUMN IF NOT EXISTS photo_updated_at TIMESTAMPTZ`;
-    })().catch((error) => {
-      schemaPromise = null;
-      throw error;
-    });
-  }
-  await schemaPromise;
-}
-
 async function access(residentId: string, permission: Permission) {
   const actor = await carecoreActor();
   if (!actor?.organizationId || !/^[0-9a-f-]{36}$/i.test(residentId)) return null;
   if (!hasPermission(actor, permission)) return "forbidden" as const;
   const sql = carecoreDb();
-  await ensurePhotoColumns();
   const rows = await sql`SELECT id FROM carecore_residents WHERE id = ${residentId} AND organization_id = ${actor.organizationId} LIMIT 1`;
   return rows[0] ? sql : null;
 }

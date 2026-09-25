@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
 
-// Keep in sync with roleKeys in lib/admin-users.ts and the seeded roles in database/schema.sql.
+// Keep in sync with roleKeys in lib/admin-users.ts and the seeded roles in database/migrations/0001_baseline.sql.
 export type Permission =
   | "residents.read"
   | "residents.write"
