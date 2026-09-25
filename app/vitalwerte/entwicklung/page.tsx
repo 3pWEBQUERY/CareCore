@@ -1,5 +1,5 @@
-import VitalsSecondaryWorkspace from "../components/vitals-secondary-workspace";
+import VitalsWorkspace from "../components/vitals-workspace";
 
 export default function VitalDevelopmentPage() {
-  return <VitalsSecondaryWorkspace view="development" />;
+  return <VitalsWorkspace view="development" />;
 }

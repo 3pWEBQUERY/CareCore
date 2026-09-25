@@ -1,5 +1,5 @@
-import VitalsSecondaryWorkspace from "../components/vitals-secondary-workspace";
+import VitalsWorkspace from "../components/vitals-workspace";
 
 export default function VitalThresholdsPage() {
-  return <VitalsSecondaryWorkspace view="thresholds" />;
+  return <VitalsWorkspace view="thresholds" />;
 }
