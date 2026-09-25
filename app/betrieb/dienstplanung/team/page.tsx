@@ -1,5 +1,5 @@
-import OperationsWorkspace from "../../components/operations-workspace";
+import ScheduleWorkspace from "../../components/schedule-workspace";
 
 export default function TeamSchedulePage() {
-  return <OperationsWorkspace view="teamSchedule" />;
+  return <ScheduleWorkspace team />;
 }

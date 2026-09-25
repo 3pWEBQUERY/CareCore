@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { carecoreActor, carecoreDb } from "@/lib/server-data";
+import { createShiftReminders } from "@/lib/schedule";
 import { createDueReminders } from "@/lib/tasks";
 
 export const runtime = "nodejs";
@@ -9,10 +10,12 @@ export async function GET() {
     const actor = await carecoreActor();
     if (!actor) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
     const sql = carecoreDb();
-    if (actor.organizationId)
-      await createDueReminders({ actor: { ...actor, organizationId: actor.organizationId }, sql }).catch((error) =>
-        console.error("Task reminders failed", error),
+    if (actor.organizationId) {
+      const ctx = { actor: { ...actor, organizationId: actor.organizationId }, sql };
+      await Promise.all([createDueReminders(ctx), createShiftReminders(ctx)]).catch((error) =>
+        console.error("Reminders failed", error),
       );
+    }
     const notifications =
       await sql`SELECT id, title, body, type, priority, link_url, read_at, created_at FROM carecore_notifications WHERE user_id = ${actor.id} ORDER BY created_at DESC LIMIT 100`;
     return NextResponse.json({ notifications });
