@@ -49,7 +49,7 @@ export default function LoginPage() {
       <div className="login-form-wrap">
         <div className="login-mobile-brand"><span><Pulse/></span><strong>CareCore</strong></div>
         <div className="login-heading"><p className="eyebrow">Willkommen zurück</p><h2>Bei CareCore anmelden</h2><p>Melde dich mit deinem persönlichen Benutzerkonto an.</p></div>
-        <form className="login-form" onSubmit={submit}>
+        <form className="login-form" method="post" onSubmit={submit}>
           <label htmlFor="username">Benutzername</label>
           <div className="login-input"><User/><input id="username" name="username" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="Benutzername eingeben" required/></div>
           <div className="login-password-label"><label htmlFor="password">Passwort</label><span>Geschützter Zugang</span></div>
