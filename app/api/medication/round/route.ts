@@ -21,8 +21,7 @@ export async function POST(request: Request) {
   try {
     const ctx = await medicationContext("medication.manage");
     if (ctx instanceof NextResponse) return ctx;
-    await documentScheduledDose(ctx, (await request.json()) as Record<string, unknown>);
-    return NextResponse.json({ ok: true });
+    return NextResponse.json(await documentScheduledDose(ctx, (await request.json()) as Record<string, unknown>));
   } catch (error) {
     return medicationErrorResponse(error, "Gabe konnte nicht dokumentiert werden.");
   }

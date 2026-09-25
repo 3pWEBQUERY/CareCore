@@ -60,6 +60,8 @@ export type MedOrder = {
   form: string;
   route: string;
   amount: string;
+  // Units deducted from stock per dose (e.g. 1 for „1 Tablette“); null = no stock booking.
+  stockQuantity: number | null;
   times: string[];
   weekdays: number[];
   isPrn: boolean;
@@ -86,6 +88,8 @@ export type OrderInput = {
   form: string;
   route: string;
   amount: string;
+  // Units deducted from stock per dose (e.g. 1 for „1 Tablette“); null = no stock booking.
+  stockQuantity: number | null;
   times: string[];
   weekdays: number[];
   isPrn: boolean;

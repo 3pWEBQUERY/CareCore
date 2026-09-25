@@ -276,7 +276,7 @@ function AdministerDialog({
   onSaved: (message: string) => void;
 }) {
   const [note, setNote] = useState("");
-  const [quantity, setQuantity] = useState("1");
+  const [quantity, setQuantity] = useState(String(order.stockQuantity ?? 1));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const save = async () => {

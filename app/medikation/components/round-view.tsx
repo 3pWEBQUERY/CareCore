@@ -78,11 +78,13 @@ export default function RoundView({ showToast }: { showToast: ShowToast }) {
   async function documentDose(dose: RoundDose, status: AdministrationStatus, note?: string) {
     setBusy(keyOf(dose));
     try {
-      await requestJson("/api/medication/round", {
+      const result = await requestJson<{ stockNote: string | null }>("/api/medication/round", {
         method: "POST",
         body: { orderId: dose.orderId, scheduledAt: dose.scheduledAt, status, note },
       });
-      showToast(`${dose.residentName}: ${dose.medication} – ${administrationLabels[status]} dokumentiert`);
+      showToast(
+        `${dose.residentName}: ${dose.medication} – ${administrationLabels[status]} dokumentiert${result.stockNote ? `. ${result.stockNote}` : ""}`,
+      );
       setPending(null);
       reload();
     } finally {

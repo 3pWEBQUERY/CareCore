@@ -47,6 +47,7 @@ function draftFromOrder(order: MedOrder | null, isPrn: boolean): OrderInput {
       form: "Tablette",
       route: "oral",
       amount: "",
+      stockQuantity: 1,
       times: isPrn ? [] : ["08:00"],
       weekdays: [],
       isPrn,
@@ -64,6 +65,7 @@ function draftFromOrder(order: MedOrder | null, isPrn: boolean): OrderInput {
     form: order.form,
     route: order.route || "oral",
     amount: order.amount,
+    stockQuantity: order.stockQuantity,
     times: order.times,
     weekdays: order.weekdays,
     isPrn: order.isPrn,
@@ -191,8 +193,28 @@ export default function OrderEditor({
           required
           maxLength={120}
           value={draft.amount}
-          onChange={(e) => update("amount", e.target.value)}
+          onChange={(e) => {
+            // Keep the stock quantity in step with a leading number in the dose, e.g. "2 Tabletten".
+            const leading = /^\s*(\d+(?:[.,]\d+)?)\s/.exec(e.target.value);
+            setDraft((current) => ({
+              ...current,
+              amount: e.target.value,
+              stockQuantity: leading ? Number(leading[1].replace(",", ".")) : current.stockQuantity,
+            }));
+          }}
           placeholder="z. B. 1 Tablette"
+        />
+      </label>
+      <label>
+        <span>Bestandsabbuchung je Gabe</span>
+        <input
+          type="number"
+          min={0}
+          max={100}
+          step={0.5}
+          value={draft.stockQuantity ?? ""}
+          onChange={(e) => update("stockQuantity", e.target.value ? Number(e.target.value) : null)}
+          placeholder="leer = keine Abbuchung"
         />
       </label>
       <label>

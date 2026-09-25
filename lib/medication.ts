@@ -71,6 +71,10 @@ export function parseOrderInput(body: Record<string, unknown>): OrderInput {
     form: text(body.form, 80),
     route: text(body.route, 80) || "oral",
     amount: text(body.amount, 120),
+    stockQuantity:
+      typeof body.stockQuantity === "number" && body.stockQuantity > 0 && body.stockQuantity <= 100
+        ? body.stockQuantity
+        : null,
     times: Array.isArray(body.times)
       ? [...new Set(body.times.filter((t): t is string => typeof t === "string" && TIME.test(t)))].sort()
       : [],
@@ -233,6 +237,7 @@ export async function listOrders(ctx: MedicationContext, residentIdInput: unknow
       form: String(row.form),
       route: String(row.route),
       amount: typeof dosage.amount === "string" ? dosage.amount : "",
+      stockQuantity: num(dosage.quantity),
       times: Array.isArray(schedule.times)
         ? (schedule.times as unknown[]).filter((t): t is string => typeof t === "string")
         : [],
@@ -262,8 +267,13 @@ function orderJson(input: OrderInput) {
   return {
     dosage: JSON.stringify(
       input.isPrn
-        ? { amount: input.amount, maxDosesPer24h: input.maxDosesPer24h, minIntervalHours: input.minIntervalHours }
-        : { amount: input.amount },
+        ? {
+            amount: input.amount,
+            quantity: input.stockQuantity,
+            maxDosesPer24h: input.maxDosesPer24h,
+            minIntervalHours: input.minIntervalHours,
+          }
+        : { amount: input.amount, quantity: input.stockQuantity },
     ),
     schedule: JSON.stringify(input.isPrn ? { type: "prn" } : { times: input.times, weekdays: input.weekdays }),
   };
@@ -319,7 +329,7 @@ export async function setOrderStatus(ctx: MedicationContext, orderId: unknown, s
     throw new MedicationError("Die Verordnung ist bereits abgesetzt.", 409);
   await ctx.sql`
     UPDATE carecore_medication_orders
-    SET status = ${status}, end_on = CASE WHEN ${status} = 'stopped' THEN LEAST(COALESCE(end_on, CURRENT_DATE), CURRENT_DATE) ELSE end_on END, updated_at = NOW()
+    SET status = ${status}, end_on = CASE WHEN ${status} = 'stopped' THEN LEAST(COALESCE(end_on, (SELECT (NOW() AT TIME ZONE timezone)::date FROM carecore_organizations WHERE id = ${ctx.actor.organizationId})), (SELECT (NOW() AT TIME ZONE timezone)::date FROM carecore_organizations WHERE id = ${ctx.actor.organizationId})) ELSE end_on END, updated_at = NOW()
     WHERE id = ${before.id}`;
   await audit(
     ctx,
@@ -412,7 +422,7 @@ export async function documentScheduledDose(ctx: MedicationContext, body: Record
   if (!scheduledAt) throw new MedicationError("Ungültiger Zeitpunkt.");
   // The slot must be a real scheduled time of an active order of this organization.
   const valid = (await ctx.sql`
-    SELECT o.id, o.resident_id FROM carecore_medication_orders o
+    SELECT o.id, o.resident_id, o.medication_id, o.dosage FROM carecore_medication_orders o
     JOIN carecore_residents r ON r.id = o.resident_id AND r.organization_id = ${ctx.actor.organizationId}
     CROSS JOIN (SELECT timezone AS tz FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}) org
     CROSS JOIN LATERAL (SELECT (${scheduledAt}::timestamptz AT TIME ZONE org.tz) AS local) l
@@ -445,6 +455,72 @@ export async function documentScheduledDose(ctx: MedicationContext, body: Record
     before[0] ?? null,
     { status, note: note || null, scheduledAt },
   );
+  const quantity = num(((valid[0].dosage ?? {}) as Record<string, unknown>).quantity);
+  return syncDoseStock(ctx, String(rows[0].id), valid[0], quantity, status);
+}
+
+// Resident-owned stock first, then the ward stock of the resident's current care unit.
+async function findStock(ctx: MedicationContext, residentId: string, medId: string | null, quantity: number) {
+  if (!medId) return null;
+  const rows = (await ctx.sql`
+    SELECT st.id FROM carecore_medication_stock st
+    WHERE st.organization_id = ${ctx.actor.organizationId} AND st.medication_id = ${medId} AND st.quantity >= ${quantity}
+      AND (st.resident_id = ${residentId}
+        OR (st.resident_id IS NULL AND st.care_unit_id = (SELECT care_unit_id FROM carecore_resident_stays WHERE resident_id = ${residentId} AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1)))
+    ORDER BY (st.resident_id IS NULL), st.expires_on NULLS LAST
+    LIMIT 1`) as Row[];
+  return rows[0] ? String(rows[0].id) : null;
+}
+
+// Keeps stock in line with a scheduled dose: deducts once when it becomes "administered"
+// and books it back when it is corrected to another status. The journal rows linked to
+// the administration are the source of truth, so repeated corrections never double-book.
+async function syncDoseStock(
+  ctx: MedicationContext,
+  administrationId: string,
+  order: Row,
+  quantity: number | null,
+  status: AdministrationStatus,
+): Promise<{ stockNote: string | null }> {
+  const netRows = (await ctx.sql`
+    SELECT COALESCE(SUM(delta), 0) AS net FROM carecore_medication_stock_movements WHERE administration_id = ${administrationId}`) as Row[];
+  const net = Number(netRows[0].net);
+  if (status === "administered" && net === 0) {
+    if (!quantity)
+      return { stockNote: "Keine abzubuchende Menge in der Verordnung hinterlegt – Bestand nicht abgebucht." };
+    const stockId = await findStock(ctx, String(order.resident_id), order.medication_id as string | null, quantity);
+    const booked = stockId
+      ? ((await ctx.sql`
+          WITH s AS (
+            UPDATE carecore_medication_stock SET quantity = quantity - ${quantity}, updated_at = NOW()
+            WHERE id = ${stockId} AND quantity >= ${quantity}
+              AND (SELECT COALESCE(SUM(delta), 0) FROM carecore_medication_stock_movements WHERE administration_id = ${administrationId}) = 0
+            RETURNING id, medication_id
+          )
+          INSERT INTO carecore_medication_stock_movements (id, organization_id, stock_id, medication_id, resident_id, administration_id, delta, reason, note, created_by)
+          SELECT ${randomUUID()}, ${ctx.actor.organizationId}, s.id, s.medication_id, ${order.resident_id}, ${administrationId}, ${-quantity}, 'administration', 'Regelgabe', ${ctx.actor.id}
+          FROM s RETURNING id`) as Row[])
+      : [];
+    return { stockNote: booked[0] ? null : "Kein ausreichender Bestand – Gabe dokumentiert, Bestand nicht abgebucht." };
+  }
+  if (status !== "administered" && net < 0) {
+    const last = (await ctx.sql`
+      SELECT stock_id FROM carecore_medication_stock_movements
+      WHERE administration_id = ${administrationId} AND reason = 'administration' AND stock_id IS NOT NULL
+      ORDER BY created_at DESC LIMIT 1`) as Row[];
+    if (!last[0]) return { stockNote: "Bestandsposition nicht mehr vorhanden – Rückbuchung nicht möglich." };
+    await ctx.sql`
+      WITH s AS (
+        UPDATE carecore_medication_stock SET quantity = quantity + ${-net}, updated_at = NOW()
+        WHERE id = ${last[0].stock_id}
+          AND (SELECT COALESCE(SUM(delta), 0) FROM carecore_medication_stock_movements WHERE administration_id = ${administrationId}) = ${net}
+        RETURNING id, medication_id
+      )
+      INSERT INTO carecore_medication_stock_movements (id, organization_id, stock_id, medication_id, resident_id, administration_id, delta, reason, note, created_by)
+      SELECT ${randomUUID()}, ${ctx.actor.organizationId}, s.id, s.medication_id, ${order.resident_id}, ${administrationId}, ${-net}, 'correction', 'Rückbuchung: Gabe korrigiert', ${ctx.actor.id}
+      FROM s`;
+  }
+  return { stockNote: null };
 }
 
 // ---------------------------------------------------------------- reserves
@@ -455,14 +531,15 @@ export async function administerPrn(ctx: MedicationContext, body: Record<string,
   if (!note) throw new MedicationError("Bitte den Anlass der Reservegabe dokumentieren, z. B. „Schmerzen NRS 5“.");
   const quantity = typeof body.quantity === "number" && body.quantity > 0 && body.quantity <= 100 ? body.quantity : 1;
   const orders = (await ctx.sql`
-    SELECT o.id, o.resident_id, o.medication_id, o.dosage, o.status, o.start_on <= CURRENT_DATE AS started,
-      (o.end_on IS NULL OR o.end_on >= CURRENT_DATE) AS not_ended
+    SELECT o.id, o.resident_id, o.medication_id, o.dosage, o.status, (o.start_on IS NULL OR o.start_on <= org.today) AS started,
+      (o.end_on IS NULL OR o.end_on >= org.today) AS not_ended
     FROM carecore_medication_orders o
     JOIN carecore_residents r ON r.id = o.resident_id AND r.organization_id = ${ctx.actor.organizationId}
+    CROSS JOIN (SELECT (NOW() AT TIME ZONE timezone)::date AS today FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}) org
     WHERE o.id = ${orderId} AND o.is_prn LIMIT 1`) as Row[];
   const order = orders[0];
   if (!order) throw new MedicationError("Reserveverordnung nicht gefunden.", 404);
-  if (order.status !== "active" || order.started === false || !order.not_ended)
+  if (order.status !== "active" || !order.started || !order.not_ended)
     throw new MedicationError("Die Reserveverordnung ist nicht gültig oder pausiert.", 409);
   const dosage = (order.dosage ?? {}) as Record<string, unknown>;
   const maxDoses = num(dosage.maxDosesPer24h);
@@ -490,14 +567,8 @@ export async function administerPrn(ctx: MedicationContext, body: Record<string,
     );
 
   // Resident-owned stock first, then the ward stock of the resident's care unit.
-  const stock = (await ctx.sql`
-    SELECT st.id FROM carecore_medication_stock st
-    WHERE st.organization_id = ${ctx.actor.organizationId} AND st.medication_id = ${order.medication_id} AND st.quantity >= ${quantity}
-      AND (st.resident_id = ${order.resident_id}
-        OR (st.resident_id IS NULL AND st.care_unit_id = (SELECT care_unit_id FROM carecore_resident_stays WHERE resident_id = ${order.resident_id} AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1)))
-    ORDER BY (st.resident_id IS NULL), st.expires_on NULLS LAST
-    LIMIT 1`) as Row[];
-  if (!stock[0])
+  const stockId = await findStock(ctx, String(order.resident_id), order.medication_id as string | null, quantity);
+  if (!stockId)
     throw new MedicationError(
       "Kein ausreichender Bestand im Bewohner- oder Stationsbestand. Bitte zuerst einen Eingang buchen.",
       409,
@@ -509,7 +580,7 @@ export async function administerPrn(ctx: MedicationContext, body: Record<string,
   const result = (await ctx.sql`
     WITH s AS (
       UPDATE carecore_medication_stock SET quantity = quantity - ${quantity}, updated_at = NOW()
-      WHERE id = ${stock[0].id} AND quantity >= ${quantity}
+      WHERE id = ${stockId} AND quantity >= ${quantity}
         AND (SELECT COUNT(*) FROM carecore_medication_administrations WHERE medication_order_id = ${orderId} AND status = 'administered' AND administered_at > NOW() - INTERVAL '24 hours') < ${maxDoses}
         AND NOT EXISTS (SELECT 1 FROM carecore_medication_administrations WHERE medication_order_id = ${orderId} AND status = 'administered' AND administered_at > NOW() - make_interval(mins => ${Math.round(minInterval * 60)}))
       RETURNING id, medication_id
