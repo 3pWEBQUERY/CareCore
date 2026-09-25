@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "./documentation.css";
 
 export const metadata: Metadata = {
   title: "CareCore · Pflegedokumentation",
