@@ -12787,6 +12787,9 @@ h1 {
   inset: calc(100% + 6px) 0 auto;
   z-index: 30;
   display: grid;
+  max-height: 300px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   gap: 3px;
   padding: 6px;
   border: 1px solid #bfdbfe;

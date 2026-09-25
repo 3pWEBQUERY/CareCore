@@ -346,7 +346,10 @@ export default function Home() {
 
   useEffect(() => {
     let active = true;
-    void Promise.all([fetch("/api/tasks", { cache: "no-store" }), fetch("/api/residents", { cache: "no-store" })])
+    void Promise.all([
+      fetch("/api/tasks?scope=mine", { cache: "no-store" }),
+      fetch("/api/residents", { cache: "no-store" }),
+    ])
       .then(async ([tasksResponse, residentsResponse]) => {
         if (!tasksResponse.ok || !residentsResponse.ok)
           throw new Error("Dashboard-Daten konnten nicht geladen werden.");
@@ -354,12 +357,11 @@ export default function Home() {
           tasks: Array<{
             id: string;
             title: string;
-            resident_name: string;
-            due_at: string | null;
+            residentName: string | null;
+            dueAt: string | null;
             status: string;
-            assigned_to: string | null;
+            overdue: boolean;
           }>;
-          currentUserId: string;
         };
         const residentData = (await residentsResponse.json()) as {
           residents: Array<{
@@ -375,17 +377,17 @@ export default function Home() {
         if (!active) return;
         setTasks(
           taskData.tasks
-            .filter((item) => item.assigned_to === taskData.currentUserId && item.status !== "cancelled")
+            .filter((item) => item.status !== "cancelled")
             .map((item) => ({
               id: item.id,
               title: item.title,
-              resident: item.resident_name,
-              dueAt: item.due_at,
-              time: item.due_at
-                ? new Date(item.due_at).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })
+              resident: item.residentName ?? "",
+              dueAt: item.dueAt,
+              time: item.dueAt
+                ? new Date(item.dueAt).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })
                 : "—",
               completed: item.status === "completed",
-              overdue: Boolean(item.due_at && new Date(item.due_at).getTime() < Date.now()),
+              overdue: item.overdue,
             })),
         );
         setAssignedResidents(

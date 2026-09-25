@@ -1,5 +1,5 @@
-import OperationsWorkspace from "../components/operations-workspace";
+import ShiftWorkspace from "../components/shift-workspace";
 
-export default function MyShiftPage() {
-  return <OperationsWorkspace view="shift" />;
+export default function ShiftPage() {
+  return <ShiftWorkspace view="shift" />;
 }

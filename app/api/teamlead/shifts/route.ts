@@ -8,7 +8,7 @@ export async function GET() {
   if (!actor?.organizationId || !hasPermission(actor, "schedule.manage")) return forbidden();
   const sql = carecoreDb();
   const shifts =
-    await sql`SELECT s.id, s.name, s.starts_at, s.ends_at, s.status, cu.name AS care_unit_name, COALESCE(string_agg(u.display_name, ', ' ORDER BY u.display_name), '') AS assignees FROM carecore_shifts s LEFT JOIN carecore_care_units cu ON cu.id = s.care_unit_id LEFT JOIN carecore_shift_assignments a ON a.shift_id = s.id LEFT JOIN carecore_users u ON u.id = a.user_id WHERE cu.id IN (SELECT cu2.id FROM carecore_care_units cu2 JOIN carecore_sites si ON si.id = cu2.site_id WHERE si.organization_id = ${actor.organizationId}) GROUP BY s.id, cu.name ORDER BY s.starts_at DESC LIMIT 100`;
+    await sql`SELECT s.id, s.name, s.starts_at, s.ends_at, s.status, cu.name AS care_unit_name, COALESCE(string_agg(u.display_name, ', ' ORDER BY u.display_name), '') AS assignees FROM carecore_shifts s LEFT JOIN carecore_care_units cu ON cu.id = s.care_unit_id LEFT JOIN carecore_shift_assignments a ON a.shift_id = s.id LEFT JOIN carecore_users u ON u.id = a.user_id WHERE s.organization_id = ${actor.organizationId} GROUP BY s.id, cu.name ORDER BY s.starts_at DESC LIMIT 100`;
   const employees =
     await sql`SELECT u.id, u.display_name FROM carecore_users u JOIN carecore_user_profiles p ON p.user_id = u.id WHERE p.organization_id = ${actor.organizationId} AND u.active = TRUE ORDER BY u.display_name`;
   const units =
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
         await sql`SELECT user_id FROM carecore_user_profiles WHERE organization_id = ${actor.organizationId} AND user_id = ANY(${body.employeeIds}::uuid[])`
       ).map((row) => row.user_id as string)
     : [];
-  await sql`INSERT INTO carecore_shifts (id, care_unit_id, name, starts_at, ends_at) VALUES (${id}, ${body.careUnitId || null}, ${body.name}, ${body.startsAt}, ${body.endsAt})`;
+  await sql`INSERT INTO carecore_shifts (id, organization_id, care_unit_id, name, starts_at, ends_at) VALUES (${id}, ${actor.organizationId}, ${body.careUnitId || null}, ${body.name}, ${body.startsAt}, ${body.endsAt})`;
   for (const userId of employeeIds)
     await sql`INSERT INTO carecore_shift_assignments (id, shift_id, user_id, role) VALUES (${randomUUID()}, ${id}, ${userId}, 'Mitarbeitende:r') ON CONFLICT (shift_id, user_id) DO NOTHING`;
   return NextResponse.json({ id }, { status: 201 });
@@ -51,7 +51,7 @@ export async function PATCH(request: Request) {
   if (!body.id) return NextResponse.json({ error: "Dienst fehlt." }, { status: 400 });
   const sql = carecoreDb();
   const rows =
-    await sql`UPDATE carecore_shifts SET status = ${body.action === "archive" ? "cancelled" : "planned"} WHERE id = ${body.id} AND care_unit_id IN (SELECT cu.id FROM carecore_care_units cu JOIN carecore_sites si ON si.id = cu.site_id WHERE si.organization_id = ${actor.organizationId}) RETURNING id`;
+    await sql`UPDATE carecore_shifts SET status = ${body.action === "archive" ? "cancelled" : "planned"} WHERE id = ${body.id} AND organization_id = ${actor.organizationId} RETURNING id`;
   if (!rows[0]) return NextResponse.json({ error: "Dienst nicht gefunden." }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

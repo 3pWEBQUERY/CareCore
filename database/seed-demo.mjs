@@ -508,13 +508,21 @@ await seed("carecore_fluid_entries", [
 await seed("carecore_shifts", [
   {
     id: id("shift-early"),
+    organization_id: org,
     care_unit_id: unit,
     name: "Frühdienst",
     starts_at: date(0, -1),
     ends_at: date(0, 7),
     status: "active",
   },
-  { id: id("shift-late"), care_unit_id: unit, name: "Spätdienst", starts_at: date(1, 7), ends_at: date(1, 15) },
+  {
+    id: id("shift-late"),
+    organization_id: org,
+    care_unit_id: unit,
+    name: "Spätdienst",
+    starts_at: date(1, 7),
+    ends_at: date(1, 15),
+  },
 ]);
 await seed("carecore_shift_assignments", [
   {
@@ -541,6 +549,7 @@ await seed("carecore_tasks", [
     assigned_to: actor,
     created_by: actor,
     title: "Blutzucker kontrollieren",
+    category: "Vitalwerte",
     description: "Vor der nächsten Mahlzeit messen und dokumentieren.",
     priority: "high",
     due_at: date(0, 1),
@@ -553,6 +562,7 @@ await seed("carecore_tasks", [
     assigned_to: actor,
     created_by: actor,
     title: "Sturz-Nachkontrolle",
+    category: "Pflege",
     description: "Neurologische Verlaufskontrolle durchführen.",
     priority: "critical",
     due_at: date(0, 2),
@@ -565,6 +575,7 @@ await seed("carecore_tasks", [
     assigned_to: actor,
     created_by: actor,
     title: "Medikation verabreichen",
+    category: "Medikation",
     description: "Metoprolol gemäss aktuellem Plan.",
     due_at: date(0, 3),
   },
@@ -572,6 +583,7 @@ await seed("carecore_tasks", [
 await seed("carecore_handovers", [
   {
     id: id("handover-hans"),
+    organization_id: org,
     care_unit_id: unit,
     resident_id: resident[0],
     author_user_id: actor,
@@ -581,6 +593,7 @@ await seed("carecore_handovers", [
   },
   {
     id: id("handover-maria"),
+    organization_id: org,
     care_unit_id: unit,
     resident_id: resident[1],
     author_user_id: actor,

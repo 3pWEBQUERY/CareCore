@@ -74,7 +74,7 @@ function AreaSelect({
     setOpen((current) => {
       if (!current) {
         const rect = rootRef.current?.getBoundingClientRect();
-        const menuHeight = options.length * 42 + 16;
+        const menuHeight = Math.min(options.length * 42 + 16, 300);
         setOpenUp(Boolean(rect && window.innerHeight - rect.bottom < menuHeight && rect.top > menuHeight));
       } else setOpenUp(false);
       return !current;

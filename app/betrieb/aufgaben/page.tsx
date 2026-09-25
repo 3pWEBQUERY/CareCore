@@ -1,5 +1,5 @@
-import OperationsWorkspace from "../components/operations-workspace";
+import TaskWorkspace from "../components/task-workspace";
 
-export default function MyTasksPage() {
-  return <OperationsWorkspace view="tasks" />;
+export default function TasksPage() {
+  return <TaskWorkspace team={false} />;
 }
