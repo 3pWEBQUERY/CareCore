@@ -1,0 +1,83 @@
+/* Additions for the database-backed wound module. */
+
+.wound-size-inputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wound-size-inputs input {
+  min-width: 0;
+  flex: 1;
+}
+
+.wound-dialog-section {
+  margin: 8px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.wound-timeline {
+  display: grid;
+  margin: 0;
+  padding: 0 18px 12px;
+  list-style: none;
+}
+
+.wound-timeline li {
+  display: grid;
+  gap: 3px;
+  padding: 10px 0 10px 14px;
+  border-left: 2px solid var(--line);
+  position: relative;
+}
+
+.wound-timeline li::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 14px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+.wound-timeline li.infection::before {
+  background: var(--critical);
+}
+
+.wound-timeline time,
+.wound-timeline small,
+.wound-timeline em {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.wound-timeline strong {
+  font-size: 13px;
+}
+
+.wound-timeline p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.wound-timeline .wound-timeline-note {
+  color: var(--muted);
+}
+
+.wound-doc-next {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.wound-focus-body dd {
+  overflow-wrap: anywhere;
+}
