@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { ModuleIcon } from "@/app/components/module-page-shell";
 import {
   EmptyState,
@@ -25,10 +27,14 @@ import {
   type WoundEntry,
 } from "@/lib/wounds-shared";
 import { EntryDialog, WoundDialog, type WoundsPayload } from "./wound-dialogs";
+import WoundPhotos from "./wound-photos";
 
 const FILTERS = ["Alle", "Überfällig", "In Behandlung", "Heilend", "Abgeschlossen"] as const;
 type Dialog =
-  { kind: "wound"; wound: Wound | null } | { kind: "entry"; wound: Wound } | { kind: "close"; wound: Wound } | null;
+  | { kind: "wound"; wound: Wound | null; residentId?: string; observationId?: string }
+  | { kind: "entry"; wound: Wound }
+  | { kind: "close"; wound: Wound }
+  | null;
 
 function statusText(wound: Wound) {
   if (wound.status === "closed") return STATUS_LABELS.closed;
@@ -46,8 +52,23 @@ export function nextCareLabel(wound: Wound) {
 export default function OverviewView({ showToast }: { showToast: ShowToast }) {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("Alle");
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [dialog, setDialog] = useState<Dialog>(null);
+  // Links from the resident record: ?wound=<id> selects a wound, ?resident=&observation= opens
+  // the dialog for a new wound linked to that body map marker.
+  const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [selectedId, setSelectedId] = useState<string | null>(() => params.get("wound"));
+  const [dialog, setDialog] = useState<Dialog>(() => {
+    const residentId = params.get("resident");
+    return residentId
+      ? { kind: "wound", wound: null, residentId, observationId: params.get("observation") ?? undefined }
+      : null;
+  });
+  // The link parameters are consumed once; drop them so a reload does not reopen the dialog.
+  const hasParams = params.size > 0;
+  useEffect(() => {
+    if (hasParams) router.replace(pathname, { scroll: false });
+  }, [hasParams, router, pathname]);
   const data = useApiData<WoundsPayload>(`/api/wounds${filter === "Abgeschlossen" ? "?closed=1" : ""}`);
   const wounds = data.data?.wounds ?? [];
   const open = wounds.filter((w) => w.status !== "closed");
@@ -249,6 +270,16 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
                       {ORIGIN_LABELS[selected.origin]} · festgestellt {formatDate(selected.discoveredAt)}
                     </dd>
                   </div>
+                  <div>
+                    <dt>Körperkarte</dt>
+                    <dd>
+                      {selected.bodyObservation
+                        ? `${selected.bodyObservation.label} · ${selected.bodyObservation.location}`
+                        : "Nicht verknüpft"}
+                      {" · "}
+                      <Link href={`/bewohner?resident=${selected.residentId}`}>Bewohnerakte</Link>
+                    </dd>
+                  </div>
                   {selected.treatmentPlan && (
                     <div>
                       <dt>Behandlungsplan</dt>
@@ -321,6 +352,21 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
             <section className="card wound-schedule-card">
               <div className="card-header">
                 <div>
+                  <h2 className="card-title">Fotodokumentation</h2>
+                  <p className="card-subtitle">{selected.photoCount} Fotos</p>
+                </div>
+              </div>
+              <WoundPhotos
+                key={selected.id}
+                wound={selected}
+                canWrite={canWrite}
+                showToast={showToast}
+                onChanged={data.reload}
+              />
+            </section>
+            <section className="card wound-schedule-card">
+              <div className="card-header">
+                <div>
                   <h2 className="card-title">Wundverlauf</h2>
                   <p className="card-subtitle">{selected.entryCount} Einträge</p>
                 </div>
@@ -331,7 +377,14 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
         )}
       </div>
       {dialog?.kind === "wound" && data.data && (
-        <WoundDialog wound={dialog.wound} data={data.data} onClose={() => setDialog(null)} onSaved={done} />
+        <WoundDialog
+          wound={dialog.wound}
+          data={data.data}
+          initialResidentId={dialog.residentId}
+          initialObservationId={dialog.observationId}
+          onClose={() => setDialog(null)}
+          onSaved={done}
+        />
       )}
       {dialog?.kind === "entry" && <EntryDialog wound={dialog.wound} onClose={() => setDialog(null)} onSaved={done} />}
       {dialog?.kind === "close" && (

@@ -32,7 +32,7 @@ export async function PATCH(request: Request, context: Context) {
       return NextResponse.json({ error: "Ungültige Befundangaben." }, { status: 400 });
     const sql = carecoreDb();
     const rows =
-      await sql`UPDATE carecore_body_observations o SET kind = ${kind}, label = ${label}, location = ${location}, status = ${status || "Beobachten"}, notes = ${notes}, body_x = ${x}, body_y = ${y}, body_z = ${z}, updated_by = ${actor.id}, updated_at = NOW() FROM carecore_residents r WHERE o.id = ${observationId} AND o.resident_id = ${residentId} AND o.archived_at IS NULL AND r.id = o.resident_id AND r.organization_id = ${actor.organizationId} RETURNING o.id, o.kind, o.label, o.location, o.status, o.notes, o.body_x, o.body_y, o.body_z, o.created_at, o.updated_at`;
+      await sql`UPDATE carecore_body_observations o SET kind = ${kind}, label = ${label}, location = ${location}, status = ${status || "Beobachten"}, notes = ${notes}, body_x = ${x}, body_y = ${y}, body_z = ${z}, updated_by = ${actor.id}, updated_at = NOW() FROM carecore_residents r WHERE o.id = ${observationId} AND o.resident_id = ${residentId} AND o.archived_at IS NULL AND r.id = o.resident_id AND r.organization_id = ${actor.organizationId} RETURNING o.id, o.kind, o.label, o.location, o.status, o.notes, o.body_x, o.body_y, o.body_z, o.created_at, o.updated_at, o.wound_id`;
     if (!rows[0]) return NextResponse.json({ error: "Befund nicht gefunden." }, { status: 404 });
     return NextResponse.json({ observation: { ...rows[0], author: actor.display_name } });
   } catch (error) {

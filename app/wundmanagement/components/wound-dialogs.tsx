@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
-import { EditorDialog, requestJson, timeInZurich, todayInZurich } from "@/app/components/workspace-ui";
+import { EditorDialog, requestJson, timeInZurich, todayInZurich, useApiData } from "@/app/components/workspace-ui";
 import { zurichTimeToIso } from "@/lib/resident-appointments";
 import {
   ENTRY_TYPES,
@@ -30,12 +30,14 @@ export function WoundDialog({
   wound,
   data,
   initialResidentId,
+  initialObservationId,
   onClose,
   onSaved,
 }: {
   wound: Wound | null;
   data: WoundsPayload;
   initialResidentId?: string;
+  initialObservationId?: string;
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
@@ -51,10 +53,19 @@ export function WoundDialog({
     careIntervalDays: (wound ? wound.careIntervalDays : 2) as number | null,
     treatmentPlan: wound?.treatmentPlan ?? "",
     responsibleId: wound?.responsibleId ?? "",
+    bodyObservationId: wound?.bodyObservation?.id ?? initialObservationId ?? "",
   });
   const [entry, setEntry] = useState<EntryDraft>(emptyEntry);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // Body map markers of the resident that are free or already linked to this wound.
+  const markers = useApiData<{
+    observations: Array<{ id: string; kind: string; label: string; location: string; wound_id: string | null }>;
+  }>(residentId ? `/api/residents/${residentId}/body-observations` : null);
+  const markerOptions = (markers.data?.observations ?? []).filter(
+    (o) => (o.kind === "wound" || o.kind === "redness") && (!o.wound_id || o.wound_id === wound?.id),
+  );
+  const markerLabel = (o: { label: string; location: string }) => `${o.label} · ${o.location}`;
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
   const residentLabel = (r: { name: string; room: string }) => `${r.name}${r.room ? ` · ${r.room}` : ""}`;
@@ -70,6 +81,7 @@ export function WoundDialog({
         residentId,
         category: form.woundType === "Dekubitus" ? form.category : null,
         responsibleId: form.responsibleId || null,
+        bodyObservationId: form.bodyObservationId || null,
         ...(wound ? {} : { initialEntry: entryPayload(entry) }),
       };
       if (wound) await requestJson(`/api/wounds/${wound.id}`, { method: "PATCH", body });
@@ -186,6 +198,22 @@ export function WoundDialog({
           value={responsible?.name ?? "Nicht festgelegt"}
           options={["Nicht festgelegt", ...data.staff.map((u) => u.name)]}
           onChange={(v) => set("responsibleId", data.staff.find((u) => u.name === v)?.id ?? "")}
+        />
+      </label>
+      <label className="area-editor-wide">
+        <span>Markierung auf der Körperkarte</span>
+        <CareSelect
+          label="Markierung auf der Körperkarte"
+          value={(() => {
+            const marker = markerOptions.find((o) => o.id === form.bodyObservationId);
+            return marker
+              ? markerLabel(marker)
+              : markerOptions.length
+                ? "Keine Verknüpfung"
+                : "Keine freie Markierung vorhanden";
+          })()}
+          options={["Keine Verknüpfung", ...markerOptions.map(markerLabel)]}
+          onChange={(value) => set("bodyObservationId", markerOptions.find((o) => markerLabel(o) === value)?.id ?? "")}
         />
       </label>
       <label className="area-editor-wide">

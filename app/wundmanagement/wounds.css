@@ -81,3 +81,107 @@
 .wound-focus-body dd {
   overflow-wrap: anywhere;
 }
+
+.wound-photos {
+  padding: 0 18px 14px;
+}
+
+.wound-photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+}
+
+.wound-photos-grid > button {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-soft);
+  cursor: pointer;
+}
+
+.wound-photos-grid > button img {
+  object-fit: cover;
+}
+
+.wound-photos-grid > button small {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 3px 5px;
+  background: rgb(11 31 58 / 70%);
+  color: white;
+  font-size: 9px;
+  text-align: left;
+}
+
+.wound-photos-grid > .wound-photo-add {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 4px;
+  border-style: dashed;
+  color: var(--brand-dark);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.wound-photos-grid > .wound-photo-add svg {
+  width: 22px;
+  height: 22px;
+}
+
+.wound-photo-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  margin: 0 auto;
+  border-radius: 6px;
+}
+
+.wound-photo-viewer > section {
+  width: min(1100px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  margin: 24px auto;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.wound-photo-viewer header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.wound-photo-viewer header > div {
+  display: grid;
+  flex: 1;
+}
+
+.wound-photo-viewer header small {
+  color: var(--muted);
+}
+
+.wound-photo-frame {
+  overflow: auto;
+  background: #0b1f3a;
+}
+
+.wound-photo-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.wound-photo-viewer header .area-editor-close {
+  border-color: var(--line);
+  background: var(--surface-soft);
+  color: var(--ink);
+}

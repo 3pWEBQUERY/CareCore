@@ -59,7 +59,12 @@ async function queryWounds(ctx: ApiContext, woundId: string | null, includeClose
     SELECT w.*, r.first_name, r.last_name, COALESCE(ro.name, '') AS room, COALESCE(cu.name, '') AS care_unit,
       ru.display_name AS responsible_name,
       (SELECT COUNT(*)::int FROM carecore_wound_entries WHERE wound_id = w.id) AS entry_count,
-      first_sized.length_cm * first_sized.width_cm AS first_area, sized.length_cm * sized.width_cm AS current_area,
+      (SELECT COUNT(*)::int FROM carecore_wound_photos WHERE wound_id = w.id AND deleted_at IS NULL) AS photo_count,
+      bo.id AS body_observation_id, bo.label AS body_observation_label, bo.location AS body_observation_location,
+      first_sized.length_cm * first_sized.width_cm AS first_area,
+      -- A healing trend needs at least two measurements.
+      CASE WHEN (SELECT COUNT(*) FROM carecore_wound_entries WHERE wound_id = w.id AND length_cm IS NOT NULL AND width_cm IS NOT NULL) >= 2
+        THEN sized.length_cm * sized.width_cm END AS current_area,
       to_jsonb(latest_entry) AS latest,
       COALESCE(latest_entry.observed_at, w.discovered_at, w.created_at) + make_interval(days => w.care_interval_days) AS next_care_at,
       (w.status <> 'closed' AND w.care_interval_days IS NOT NULL
@@ -74,6 +79,7 @@ async function queryWounds(ctx: ApiContext, woundId: string | null, includeClose
     LEFT JOIN carecore_care_units cu ON cu.id = stay.care_unit_id
     LEFT JOIN carecore_rooms ro ON ro.id = stay.room_id
     LEFT JOIN carecore_users ru ON ru.id = w.responsible_user_id
+    LEFT JOIN carecore_body_observations bo ON bo.wound_id = w.id AND bo.archived_at IS NULL
     LEFT JOIN LATERAL (
       SELECT length_cm, width_cm FROM carecore_wound_entries
       WHERE wound_id = w.id AND length_cm IS NOT NULL AND width_cm IS NOT NULL ORDER BY observed_at LIMIT 1) first_sized ON TRUE
@@ -110,6 +116,14 @@ async function queryWounds(ctx: ApiContext, woundId: string | null, includeClose
       closedAt: iso(row.closed_at),
       closedReason: (row.closed_reason as string | null) ?? null,
       entryCount: Number(row.entry_count),
+      photoCount: Number(row.photo_count),
+      bodyObservation: row.body_observation_id
+        ? {
+            id: String(row.body_observation_id),
+            label: String(row.body_observation_label),
+            location: String(row.body_observation_location),
+          }
+        : null,
       firstArea: num(row.first_area),
       currentArea: num(row.current_area),
       latest: row.latest ? mapEntry(row.latest as Row) : null,
@@ -170,6 +184,8 @@ export function parseWoundInput(body: Record<string, unknown>): WoundInput {
         : null,
     treatmentPlan: text(body.treatmentPlan, 4000),
     responsibleId: typeof body.responsibleId === "string" && body.responsibleId ? body.responsibleId : null,
+    bodyObservationId:
+      typeof body.bodyObservationId === "string" && body.bodyObservationId ? body.bodyObservationId : null,
   };
   if (!input.bodyLocation) throw new ApiError("Bitte die Lokalisation angeben, z. B. „Sakralbereich“.");
   if (!input.title) input.title = `${woundType}${category ? ` ${category}` : ""} · ${input.bodyLocation}`.slice(0, 180);
@@ -195,6 +211,7 @@ export async function createWound(ctx: ApiContext, body: Record<string, unknown>
   const entry = body.initialEntry
     ? parseEntryInput({ ...(body.initialEntry as Record<string, unknown>), entryType: "Erstbeurteilung" })
     : null;
+  await assertLinkable(ctx, null, residentId, input.bodyObservationId);
   const id = randomUUID();
   await ctx.sql.transaction([
     ctx.sql`
@@ -203,6 +220,7 @@ export async function createWound(ctx: ApiContext, body: Record<string, unknown>
       VALUES (${id}, ${residentId}, ${input.title}, ${input.bodyLocation}, ${input.diagnosis || null}, 'active', ${input.discoveredOn}::date,
         ${input.responsibleId}, ${input.woundType}, ${input.category}, ${input.origin}, ${input.careIntervalDays}, ${input.treatmentPlan || null})`,
     ...(entry ? [insertEntry(ctx, id, entry)] : []),
+    ...linkStatements(ctx, id, input.bodyObservationId),
   ]);
   await writeAudit(ctx, "wound", id, "created", null, { ...input, initialEntry: entry });
   return id;
@@ -213,13 +231,45 @@ export async function updateWound(ctx: ApiContext, woundId: unknown, body: Recor
   if (before.status === "closed") throw new ApiError("Abgeschlossene Wunden bitte zuerst wieder eröffnen.", 409);
   const input = parseWoundInput({ ...body, residentId: before.residentId });
   await assertStaff(ctx, input.responsibleId);
-  await ctx.sql`
+  await assertLinkable(ctx, before.id, before.residentId, input.bodyObservationId);
+  await ctx.sql.transaction([
+    ctx.sql`
     UPDATE carecore_wounds SET title = ${input.title}, body_location = ${input.bodyLocation}, diagnosis = ${input.diagnosis || null},
       discovered_at = ${input.discoveredOn}::date, responsible_user_id = ${input.responsibleId}, wound_type = ${input.woundType},
       category = ${input.category}, origin = ${input.origin}, care_interval_days = ${input.careIntervalDays},
       treatment_plan = ${input.treatmentPlan || null}, updated_at = NOW()
-    WHERE id = ${before.id}`;
+    WHERE id = ${before.id}`,
+    ...linkStatements(ctx, before.id, input.bodyObservationId),
+  ]);
   await writeAudit(ctx, "wound", before.id, "updated", before, input);
+}
+
+// A body map marker can be linked to one wound of the same resident. Checked before
+// writing; the link statements run in the same transaction as the wound itself.
+async function assertLinkable(
+  ctx: ApiContext,
+  woundId: string | null,
+  residentId: string,
+  observationId: string | null,
+) {
+  if (!observationId) return;
+  const rows = (await ctx.sql`
+    SELECT id, wound_id FROM carecore_body_observations
+    WHERE id = ${assertUuid(observationId, "Markierung")} AND resident_id = ${residentId} AND archived_at IS NULL`) as Row[];
+  if (!rows[0]) throw new ApiError("Die Markierung gehört nicht zu diesem Bewohner.");
+  if (rows[0].wound_id && rows[0].wound_id !== woundId)
+    throw new ApiError("Diese Markierung ist bereits mit einer anderen Wunde verknüpft.", 409);
+}
+
+function linkStatements(ctx: ApiContext, woundId: string, observationId: string | null) {
+  return [
+    ctx.sql`UPDATE carecore_body_observations SET wound_id = NULL WHERE wound_id = ${woundId} AND id IS DISTINCT FROM ${observationId}::uuid`,
+    ...(observationId
+      ? [
+          ctx.sql`UPDATE carecore_body_observations SET wound_id = ${woundId}, updated_at = NOW() WHERE id = ${observationId}`,
+        ]
+      : []),
+  ];
 }
 
 export async function setWoundStatus(ctx: ApiContext, woundId: unknown, status: unknown, reasonInput: unknown) {

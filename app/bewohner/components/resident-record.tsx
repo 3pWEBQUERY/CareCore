@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
+import Link from "next/link";
 import { BodyMap3D, type BodyPoint } from "./body-map-3d";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import ResidentAppointmentEditor from "@/app/components/resident-appointment-editor";
@@ -34,6 +35,7 @@ import {
   User,
   Warning,
   X,
+  FirstAidKit,
 } from "@phosphor-icons/react";
 
 export type ResidentRecordData = {
@@ -104,6 +106,7 @@ type BodyObservation = {
   body_x: number;
   body_y: number;
   body_z: number;
+  wound_id?: string | null;
 };
 type ObservationDraft = {
   kind: BodyObservation["kind"];
@@ -1449,6 +1452,20 @@ export function ResidentRecord({ resident, onClose, onAction, onGenderChanged, o
                                 </div>
                               </dl>
                               <div className="body-observation-links">
+                                {observation.wound_id ? (
+                                  <Link href={`/wundmanagement?wound=${observation.wound_id}`}>
+                                    <FirstAidKit aria-hidden="true" /> Wundakte öffnen
+                                  </Link>
+                                ) : (
+                                  (observation.kind === "wound" || observation.kind === "redness") &&
+                                  resident.id && (
+                                    <Link
+                                      href={`/wundmanagement?resident=${resident.id}&observation=${observation.id}`}
+                                    >
+                                      <FirstAidKit aria-hidden="true" /> Als Wunde erfassen
+                                    </Link>
+                                  )
+                                )}
                                 <button type="button" onClick={() => editBodyObservation(observation)}>
                                   <PencilSimple aria-hidden="true" /> Bearbeiten
                                 </button>

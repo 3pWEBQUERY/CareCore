@@ -82,6 +82,9 @@ export type Wound = {
   closedAt: string | null;
   closedReason: string | null;
   entryCount: number;
+  photoCount: number;
+  // Linked marker on the resident body map.
+  bodyObservation: { id: string; label: string; location: string } | null;
   // Area (cm²) of the first and the most recent entry with length and width.
   firstArea: number | null;
   currentArea: number | null;
@@ -103,6 +106,7 @@ export type WoundInput = {
   careIntervalDays: number | null;
   treatmentPlan: string;
   responsibleId: string | null;
+  bodyObservationId: string | null;
 };
 
 export const area = (entry: Pick<WoundEntry, "lengthCm" | "widthCm"> | null) =>

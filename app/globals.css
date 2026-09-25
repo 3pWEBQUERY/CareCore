@@ -6691,8 +6691,10 @@ h1 {
   gap: 7px;
   margin-top: 12px;
 }
-.body-observation-links button {
+.body-observation-links button,
+.body-observation-links a {
   min-height: 31px;
+  text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -6705,7 +6707,8 @@ h1 {
   font-weight: 750;
   cursor: pointer;
 }
-.body-observation-links button:hover {
+.body-observation-links button:hover,
+.body-observation-links a:hover {
   background: var(--brand-soft);
 }
 .body-observation-links svg {

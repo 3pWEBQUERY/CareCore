@@ -455,6 +455,11 @@ await seed("carecore_wounds", [
     severity: "attention",
     discovered_at: date(-4),
     responsible_user_id: actor,
+    wound_type: "Dekubitus",
+    category: "Kategorie 1",
+    origin: "inhouse",
+    care_interval_days: 2,
+    treatment_plan: "Hautschutz, Druckentlastung durch Lagerung, Kontrolle alle 2 Tage.",
   },
 ]);
 await seed("carecore_wound_entries", [
@@ -465,6 +470,7 @@ await seed("carecore_wound_entries", [
     observed_at: date(0, -2),
     length_cm: 2.1,
     width_cm: 1.4,
+    entry_type: "Erstbeurteilung",
     pain_score: 2,
     treatment: "Hautschutz und Druckentlastung.",
     note: "Rötung rückläufig.",
