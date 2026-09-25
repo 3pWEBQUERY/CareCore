@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { hasPermission } from "@/lib/server-data";
-import { listCareUnits, listMedicationResidents, medicationContext, medicationErrorResponse } from "@/lib/medication";
+import { apiContext, apiErrorResponse } from "@/lib/api-context";
+import { listCareUnits, listMedicationResidents } from "@/lib/medication";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    const ctx = await medicationContext("residents.read");
+    const ctx = await apiContext("residents.read");
     if (ctx instanceof NextResponse) return ctx;
     const [residents, careUnits] = await Promise.all([listMedicationResidents(ctx), listCareUnits(ctx)]);
     return NextResponse.json({
@@ -16,6 +17,6 @@ export async function GET() {
       canEditAllergies: hasPermission(ctx.actor, "residents.write"),
     });
   } catch (error) {
-    return medicationErrorResponse(error, "Bewohner konnten nicht geladen werden.");
+    return apiErrorResponse(error, "Bewohner konnten nicht geladen werden.");
   }
 }

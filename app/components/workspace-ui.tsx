@@ -1,8 +1,12 @@
 "use client";
 
+// Building blocks shared by the database-backed module workspaces (data loading,
+// formatting, headings, tiles, empty/error states and editor dialogs).
+
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Check, X } from "@phosphor-icons/react";
 import { ModuleIcon, type ModuleIconName } from "@/app/components/module-page-shell";
+import "./workspace-ui.css";
 
 export type ShowToast = (message: string) => void;
 
@@ -19,7 +23,7 @@ export async function requestJson<T>(url: string, init?: { method?: string; body
 }
 
 // Loads JSON for `url`; `reload()` refetches while keeping the previous data visible.
-export function useMedicationData<T>(url: string | null) {
+export function useApiData<T>(url: string | null) {
   const [version, setVersion] = useState(0);
   const [state, setState] = useState<{ key: string; url: string; data?: T; error?: string } | null>(null);
   const key = url ? `${url}#${version}` : null;
@@ -72,20 +76,22 @@ export function formatNumber(value: number) {
   return value.toLocaleString("de-CH", { maximumFractionDigits: 2 });
 }
 
-export function MedicationHeading({
+export function PageHeading({
+  eyebrow,
   title,
   description,
   action,
 }: {
+  eyebrow: string;
   title: string;
   description: string;
   action?: { label: string; onClick: () => void; disabled?: boolean };
 }) {
   return (
-    <section className="page-heading care-page-heading" aria-labelledby="medication-title">
+    <section className="page-heading care-page-heading" aria-labelledby="page-title">
       <div className="heading-copy">
-        <p className="eyebrow">CareCore Med</p>
-        <h1 id="medication-title">{title}</h1>
+        <p className="eyebrow">{eyebrow}</p>
+        <h1 id="page-title">{title}</h1>
         <p>{description}</p>
       </div>
       {action && (
@@ -149,8 +155,8 @@ export function LoadError({ message, onRetry }: { message: string; onRetry: () =
   );
 }
 
-// Modal frame shared by all medication dialogs.
-export function MedicationDialog({
+// Side panel dialog used for all editor forms.
+export function EditorDialog({
   id,
   eyebrow,
   title,
@@ -189,7 +195,12 @@ export function MedicationDialog({
         if (event.currentTarget === event.target && !saving) onClose();
       }}
     >
-      <section className="area-editor-panel med-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
+      <section
+        className="area-editor-panel editor-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${id}-title`}
+      >
         <header className="area-editor-header">
           <div>
             <p className="eyebrow">{eyebrow}</p>
@@ -224,6 +235,7 @@ export function MedicationDialog({
 
 // Asks for a mandatory reason, e.g. for declined doses or stopped orders.
 export function ReasonDialog({
+  eyebrow = "CareCore · Dokumentation",
   title,
   description,
   label,
@@ -235,6 +247,7 @@ export function ReasonDialog({
   children,
 }: {
   children?: ReactNode;
+  eyebrow?: string;
   title: string;
   description: string;
   label: string;
@@ -262,9 +275,9 @@ export function ReasonDialog({
     }
   };
   return (
-    <MedicationDialog
+    <EditorDialog
       id="med-reason"
-      eyebrow="CareCore Med · Dokumentation"
+      eyebrow={eyebrow}
       title={title}
       description={description}
       onClose={onClose}
@@ -286,6 +299,6 @@ export function ReasonDialog({
           placeholder={placeholder}
         />
       </label>
-    </MedicationDialog>
+    </EditorDialog>
   );
 }

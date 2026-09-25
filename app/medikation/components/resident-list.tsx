@@ -62,7 +62,7 @@ export default function ResidentList({
           </button>
         ))}
         {!loading && !filtered.length && (
-          <p className="med-list-hint">{residents.length ? "Keine Treffer." : "Keine aktiven Bewohner erfasst."}</p>
+          <p className="list-hint">{residents.length ? "Keine Treffer." : "Keine aktiven Bewohner erfasst."}</p>
         )}
       </div>
     </section>

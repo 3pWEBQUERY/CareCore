@@ -6,15 +6,15 @@ import { movementLabels, type StockItem, type StockMovement } from "@/lib/medica
 import {
   EmptyState,
   LoadError,
-  MedicationHeading,
+  PageHeading,
   SummaryTiles,
   formatDate,
   formatDateTime,
   formatNumber,
   todayInZurich,
-  useMedicationData,
+  useApiData,
   type ShowToast,
-} from "./medication-ui";
+} from "@/app/components/workspace-ui";
 import { CorrectionDialog, ReceiptDialog } from "./stock-dialogs";
 
 type StockPayload = {
@@ -59,14 +59,14 @@ export function MovementJournal({
             </span>
           </p>
         ))}
-        {!movements.length && <p className="med-list-hint">Noch keine Buchungen.</p>}
+        {!movements.length && <p className="list-hint">Noch keine Buchungen.</p>}
       </div>
     </section>
   );
 }
 
 export default function StockView({ showToast }: { showToast: ShowToast }) {
-  const { data, error, loading, reload } = useMedicationData<StockPayload>("/api/medication/stock");
+  const { data, error, loading, reload } = useApiData<StockPayload>("/api/medication/stock");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("Alle");
   const [dialog, setDialog] = useState<{ kind: "receipt" } | { kind: "correction"; item: StockItem } | null>(null);
@@ -94,7 +94,8 @@ export default function StockView({ showToast }: { showToast: ShowToast }) {
 
   return (
     <>
-      <MedicationHeading
+      <PageHeading
+        eyebrow="CareCore Med"
         title="Medikamentenbestände"
         description="Bestände, Mindestmengen und Verfalldaten zentral überwachen."
         action={data?.canManage ? { label: "Wareneingang", onClick: () => setDialog({ kind: "receipt" }) } : undefined}
@@ -212,7 +213,7 @@ export default function StockView({ showToast }: { showToast: ShowToast }) {
               text={items.length ? "Suche oder Filter anpassen." : "Über „Wareneingang“ den ersten Bestand anlegen."}
             />
           )}
-          {loading && !data && <p className="med-list-hint">Bestände werden geladen …</p>}
+          {loading && !data && <p className="list-hint">Bestände werden geladen …</p>}
         </div>
       </section>
       <MovementJournal movements={data?.movements ?? []} />

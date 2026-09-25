@@ -6,12 +6,12 @@ import { WEEKDAYS, type MedOrder, type MedResident, type StockMovement } from "@
 import {
   EmptyState,
   LoadError,
-  MedicationHeading,
+  PageHeading,
   formatDate,
   todayInZurich,
-  useMedicationData,
+  useApiData,
   type ShowToast,
-} from "./medication-ui";
+} from "@/app/components/workspace-ui";
 import { useOrderDialogs } from "./order-dialogs";
 import ResidentList, { AllergyBadge } from "./resident-list";
 
@@ -37,11 +37,11 @@ export function orderTone(order: MedOrder): { tone: string; label: string } {
 
 // Resident list plus the selected resident's orders; shared by plan and reserves.
 export function useSelectedResident() {
-  const residents = useMedicationData<ResidentsPayload>("/api/medication/residents");
+  const residents = useApiData<ResidentsPayload>("/api/medication/residents");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const list = residents.data?.residents ?? [];
   const resident = list.find((item) => item.id === selectedId) ?? list[0] ?? null;
-  const detail = useMedicationData<ResidentDetail>(resident ? `/api/medication/residents/${resident.id}` : null);
+  const detail = useApiData<ResidentDetail>(resident ? `/api/medication/residents/${resident.id}` : null);
   return {
     residents,
     list,
@@ -72,7 +72,8 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
 
   return (
     <>
-      <MedicationHeading
+      <PageHeading
+        eyebrow="CareCore Med"
         title="Medikamentenplan"
         description="Ärztliche Verordnungen, Dosierungen und Einnahmezeiten sicher im Blick."
         action={
@@ -178,7 +179,7 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
                       }
                     />
                   )}
-                  {detail.loading && !detail.data && <p className="med-list-hint">Verordnungen werden geladen …</p>}
+                  {detail.loading && !detail.data && <p className="list-hint">Verordnungen werden geladen …</p>}
                 </div>
               </section>
             </>

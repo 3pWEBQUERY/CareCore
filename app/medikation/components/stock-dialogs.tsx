@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import type { StockItem } from "@/lib/medication-shared";
-import { MedicationDialog, formatNumber, requestJson, todayInZurich } from "./medication-ui";
+import { EditorDialog, formatNumber, requestJson, todayInZurich } from "@/app/components/workspace-ui";
 
 const UNITS = ["Tabletten", "Kapseln", "Stk.", "Amp.", "ml", "Beutel", "Pens", "Pflaster", "Hübe", "Zäpfchen"];
 
@@ -81,7 +81,7 @@ export function ReceiptDialog({
   }
 
   return (
-    <MedicationDialog
+    <EditorDialog
       id="med-receipt"
       eyebrow="CareCore Med · Bestand"
       title={preset?.residentName ? `Eingang für ${preset.residentName}` : "Wareneingang buchen"}
@@ -245,7 +245,7 @@ export function ReceiptDialog({
           placeholder="z. B. Lieferung Apotheke"
         />
       </label>
-    </MedicationDialog>
+    </EditorDialog>
   );
 }
 
@@ -291,7 +291,7 @@ export function CorrectionDialog({
   }
 
   return (
-    <MedicationDialog
+    <EditorDialog
       id="med-correction"
       eyebrow={`CareCore Med · ${item.owner}`}
       title={`${item.name} ${item.strength}`.trim()}
@@ -358,6 +358,6 @@ export function CorrectionDialog({
           placeholder="Pflicht bei Mengenänderung, z. B. Monatsinventur oder abgelaufene Charge"
         />
       </label>
-    </MedicationDialog>
+    </EditorDialog>
   );
 }

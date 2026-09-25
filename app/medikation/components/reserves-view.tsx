@@ -6,8 +6,8 @@ import type { MedOrder } from "@/lib/medication-shared";
 import {
   EmptyState,
   LoadError,
-  MedicationDialog,
-  MedicationHeading,
+  EditorDialog,
+  PageHeading,
   SummaryTiles,
   formatDate,
   formatDateTime,
@@ -15,7 +15,7 @@ import {
   requestJson,
   timeInZurich,
   type ShowToast,
-} from "./medication-ui";
+} from "@/app/components/workspace-ui";
 import { useOrderDialogs } from "./order-dialogs";
 import { orderTone, useSelectedResident } from "./plan-view";
 import ResidentList, { AllergyBadge } from "./resident-list";
@@ -50,7 +50,8 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
 
   return (
     <>
-      <MedicationHeading
+      <PageHeading
+        eyebrow="CareCore Med"
         title="Reserven"
         description="Ärztlich verordnete Bedarfsmedikation mit geprüfter Maximaldosis und Mindestabstand."
         action={
@@ -226,7 +227,7 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
                       text="Eine Reserve kann nur mit gültiger ärztlicher Verordnung angelegt werden."
                     />
                   )}
-                  {detail.loading && !detail.data && <p className="med-list-hint">Reserven werden geladen …</p>}
+                  {detail.loading && !detail.data && <p className="list-hint">Reserven werden geladen …</p>}
                 </div>
               </section>
               <MovementJournal movements={detail.data?.movements ?? []} title={`Bestandsjournal · ${resident.name}`} />
@@ -294,7 +295,7 @@ function AdministerDialog({
     }
   };
   return (
-    <MedicationDialog
+    <EditorDialog
       id="med-prn"
       eyebrow={`CareCore Med · ${residentName}`}
       title={`${order.name} ${order.strength}`.trim()}
@@ -321,6 +322,6 @@ function AdministerDialog({
         <span>Ausgebuchte Menge ({order.stockUnit ?? "Einheiten"})</span>
         <input required inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
       </label>
-    </MedicationDialog>
+    </EditorDialog>
   );
 }

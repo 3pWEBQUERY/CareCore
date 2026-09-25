@@ -4,7 +4,7 @@ import { useState } from "react";
 import { X } from "@phosphor-icons/react";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import { WEEKDAYS, type MedOrder, type OrderInput } from "@/lib/medication-shared";
-import { MedicationDialog, requestJson, todayInZurich } from "./medication-ui";
+import { EditorDialog, requestJson, todayInZurich } from "@/app/components/workspace-ui";
 
 const ROUTES = [
   "oral",
@@ -117,7 +117,7 @@ export default function OrderEditor({
   }
 
   return (
-    <MedicationDialog
+    <EditorDialog
       id="med-order"
       eyebrow={`CareCore Med · ${residentName}`}
       title={order ? "Verordnung bearbeiten" : isPrn ? "Reserve verordnen" : "Verordnung erfassen"}
@@ -150,7 +150,7 @@ export default function OrderEditor({
       }
     >
       {legacyPrn && (
-        <p className="med-form-note area-editor-wide" role="note">
+        <p className="form-note area-editor-wide" role="note">
           Dieser Reserve fehlen strukturierte Grenzwerte. Bitte Maximaldosis und Mindestabstand ergänzen, damit Gaben
           dokumentiert werden können.
         </p>
@@ -266,11 +266,11 @@ export default function OrderEditor({
         </>
       ) : (
         <>
-          <div className="area-editor-wide med-field">
+          <div className="area-editor-wide form-field">
             <span>Einnahmezeiten</span>
-            <div className="med-chip-row">
+            <div className="chip-row">
               {draft.times.map((time) => (
-                <span className="med-chip" key={time}>
+                <span className="chip" key={time}>
                   {time}
                   <button
                     type="button"
@@ -286,7 +286,7 @@ export default function OrderEditor({
                   </button>
                 </span>
               ))}
-              <div className="med-chip-add">
+              <div className="chip-add">
                 <CareSelect
                   label="Einnahmezeit hinzufügen"
                   value="+ Zeit hinzufügen"
@@ -296,9 +296,9 @@ export default function OrderEditor({
               </div>
             </div>
           </div>
-          <div className="area-editor-wide med-field">
+          <div className="area-editor-wide form-field">
             <span>Wochentage</span>
-            <div className="med-chip-row" role="group" aria-label="Wochentage">
+            <div className="chip-row" role="group" aria-label="Wochentage">
               {WEEKDAYS.map((day, index) => {
                 const value = index + 1;
                 const active = draft.weekdays.includes(value);
@@ -306,7 +306,7 @@ export default function OrderEditor({
                   <button
                     type="button"
                     key={day}
-                    className={`med-day ${active ? "active" : ""}`}
+                    className={`day-toggle ${active ? "active" : ""}`}
                     aria-pressed={active}
                     onClick={() =>
                       update(
@@ -338,9 +338,9 @@ export default function OrderEditor({
         <span>Gültig ab</span>
         <CareDatePicker label="Gültig ab" value={draft.startOn} onChange={(v) => update("startOn", v)} />
       </label>
-      <div className="med-field">
+      <div className="form-field">
         <span>Befristung</span>
-        <label className="med-checkbox">
+        <label className="form-checkbox">
           <input
             type="checkbox"
             checked={draft.endOn !== null}
@@ -355,6 +355,6 @@ export default function OrderEditor({
           <CareDatePicker label="Gültig bis" value={draft.endOn} onChange={(v) => update("endOn", v)} />
         </label>
       )}
-    </MedicationDialog>
+    </EditorDialog>
   );
 }

@@ -14,16 +14,16 @@ import {
 import {
   EmptyState,
   LoadError,
-  MedicationHeading,
+  PageHeading,
   ReasonDialog,
   SummaryTiles,
   formatDateTime,
   requestJson,
   timeInZurich,
   todayInZurich,
-  useMedicationData,
+  useApiData,
   type ShowToast,
-} from "./medication-ui";
+} from "@/app/components/workspace-ui";
 import type { ResidentsPayload } from "./plan-view";
 
 const statusTone: Record<RoundDose["status"], string> = {
@@ -63,9 +63,9 @@ export default function RoundView({ showToast }: { showToast: ShowToast }) {
     status: Exclude<AdministrationStatus, "administered">;
   } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const permissions = useMedicationData<ResidentsPayload>("/api/medication/residents");
+  const permissions = useApiData<ResidentsPayload>("/api/medication/residents");
   const canManage = permissions.data?.canManage ?? false;
-  const { data, error, loading, reload } = useMedicationData<{ date: string; doses: RoundDose[] }>(
+  const { data, error, loading, reload } = useApiData<{ date: string; doses: RoundDose[] }>(
     `/api/medication/round?round=${round}&date=${date}`,
   );
   const doses = data?.doses ?? [];
@@ -94,7 +94,8 @@ export default function RoundView({ showToast }: { showToast: ShowToast }) {
 
   return (
     <>
-      <MedicationHeading
+      <PageHeading
+        eyebrow="CareCore Med"
         title="Medikamentenrunde"
         description="Geplante Gaben vorbereiten, prüfen und direkt dokumentieren."
       />
@@ -211,7 +212,7 @@ export default function RoundView({ showToast }: { showToast: ShowToast }) {
               text="Für den gewählten Zeitraum sind keine Regelmedikationen verordnet."
             />
           )}
-          {loading && !data && <p className="med-list-hint">Runde wird geladen …</p>}
+          {loading && !data && <p className="list-hint">Runde wird geladen …</p>}
         </div>
       </section>
       {pending && (

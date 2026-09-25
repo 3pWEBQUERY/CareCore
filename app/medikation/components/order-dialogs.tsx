@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import type { MedOrder } from "@/lib/medication-shared";
-import { MedicationDialog, ReasonDialog, requestJson, type ShowToast } from "./medication-ui";
+import { EditorDialog, ReasonDialog, requestJson, type ShowToast } from "@/app/components/workspace-ui";
 import OrderEditor from "./order-editor";
 
 type Dialog =
@@ -112,7 +112,7 @@ function AllergyDialog({
     }
   };
   return (
-    <MedicationDialog
+    <EditorDialog
       id="med-allergies"
       eyebrow={`CareCore Med · ${resident.name}`}
       title="Medikamentenallergien"
@@ -134,6 +134,6 @@ function AllergyDialog({
           placeholder="z. B. Penicillin (Exanthem), Ibuprofen – oder „Keine bekannt“"
         />
       </label>
-    </MedicationDialog>
+    </EditorDialog>
   );
 }

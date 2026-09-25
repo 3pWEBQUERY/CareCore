@@ -1,13 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { NextResponse } from "next/server";
 import {
-  carecoreActor,
-  carecoreDb,
-  forbidden,
-  hasPermission,
-  type CarecoreActor,
-  type Permission,
-} from "@/lib/server-data";
+  ApiError,
+  assertResident,
+  assertUuid,
+  iso,
+  num,
+  text,
+  writeAudit,
+  type ApiContext,
+  type Row,
+} from "@/lib/api-context";
 import {
   ADMINISTRATION_STATUSES,
   ROUNDS,
@@ -22,46 +24,8 @@ import {
   type StockMovement,
 } from "@/lib/medication-shared";
 
-type Sql = ReturnType<typeof carecoreDb>;
-type Row = Record<string, unknown>;
-export type MedicationContext = { actor: CarecoreActor & { organizationId: string }; sql: Sql };
-
-// Thrown for invalid input or violated safety rules; routes turn it into a 4xx response.
-export class MedicationError extends Error {
-  constructor(
-    message: string,
-    public status = 400,
-  ) {
-    super(message);
-  }
-}
-
-export async function medicationContext(permission: Permission): Promise<MedicationContext | NextResponse> {
-  const actor = await carecoreActor();
-  if (!actor) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
-  if (!actor.organizationId) return NextResponse.json({ error: "Keine Organisation zugeordnet." }, { status: 400 });
-  if (!hasPermission(actor, permission)) return forbidden();
-  return { actor: actor as MedicationContext["actor"], sql: carecoreDb() };
-}
-
-export function medicationErrorResponse(error: unknown, fallback: string) {
-  if (error instanceof MedicationError) return NextResponse.json({ error: error.message }, { status: error.status });
-  console.error(fallback, error);
-  return NextResponse.json({ error: fallback }, { status: 500 });
-}
-
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const UUID = /^[0-9a-f-]{36}$/i;
-
-const text = (value: unknown, max: number) => (typeof value === "string" ? value.trim().slice(0, max) : "");
-const iso = (value: unknown) => (value instanceof Date ? value.toISOString() : value ? String(value) : null);
-const num = (value: unknown) => (value === null || value === undefined || value === "" ? null : Number(value));
-
-export function assertUuid(value: unknown, label: string): string {
-  if (typeof value !== "string" || !UUID.test(value)) throw new MedicationError(`${label} ist ungültig.`);
-  return value;
-}
 
 export function parseOrderInput(body: Record<string, unknown>): OrderInput {
   const isPrn = body.isPrn === true;
@@ -90,53 +54,29 @@ export function parseOrderInput(body: Record<string, unknown>): OrderInput {
     startOn: typeof body.startOn === "string" && DATE.test(body.startOn) ? body.startOn : "",
     endOn: typeof body.endOn === "string" && DATE.test(body.endOn) ? body.endOn : null,
   };
-  if (!input.name) throw new MedicationError("Bitte das Präparat angeben.");
-  if (!input.amount) throw new MedicationError("Bitte die Dosis angeben, z. B. „1 Tablette“.");
-  if (!input.prescribedBy)
-    throw new MedicationError("Bitte die verordnende Ärztin oder den verordnenden Arzt angeben.");
-  if (!input.startOn) throw new MedicationError("Bitte ein gültiges Startdatum angeben.");
-  if (input.endOn && input.endOn < input.startOn) throw new MedicationError("Das Enddatum liegt vor dem Startdatum.");
+  if (!input.name) throw new ApiError("Bitte das Präparat angeben.");
+  if (!input.amount) throw new ApiError("Bitte die Dosis angeben, z. B. „1 Tablette“.");
+  if (!input.prescribedBy) throw new ApiError("Bitte die verordnende Ärztin oder den verordnenden Arzt angeben.");
+  if (!input.startOn) throw new ApiError("Bitte ein gültiges Startdatum angeben.");
+  if (input.endOn && input.endOn < input.startOn) throw new ApiError("Das Enddatum liegt vor dem Startdatum.");
   if (isPrn) {
     if (!input.maxDosesPer24h || input.maxDosesPer24h < 1 || input.maxDosesPer24h > 24)
-      throw new MedicationError("Für eine Reserve ist die maximale Anzahl Gaben pro 24 Stunden (1–24) erforderlich.");
+      throw new ApiError("Für eine Reserve ist die maximale Anzahl Gaben pro 24 Stunden (1–24) erforderlich.");
     if (!input.minIntervalHours || input.minIntervalHours < 0.5 || input.minIntervalHours > 72)
-      throw new MedicationError("Für eine Reserve ist ein Mindestabstand zwischen 0,5 und 72 Stunden erforderlich.");
-    if (!input.indication) throw new MedicationError("Für eine Reserve ist die Indikation erforderlich.");
+      throw new ApiError("Für eine Reserve ist ein Mindestabstand zwischen 0,5 und 72 Stunden erforderlich.");
+    if (!input.indication) throw new ApiError("Für eine Reserve ist die Indikation erforderlich.");
     input.times = [];
     input.weekdays = [];
   } else {
-    if (!input.times.length) throw new MedicationError("Bitte mindestens eine Einnahmezeit angeben.");
-    if (input.times.length > 12) throw new MedicationError("Höchstens 12 Einnahmezeiten pro Verordnung.");
+    if (!input.times.length) throw new ApiError("Bitte mindestens eine Einnahmezeit angeben.");
+    if (input.times.length > 12) throw new ApiError("Höchstens 12 Einnahmezeiten pro Verordnung.");
     input.maxDosesPer24h = null;
     input.minIntervalHours = null;
   }
   return input;
 }
 
-async function audit(
-  ctx: MedicationContext,
-  entityType: string,
-  entityId: string,
-  action: string,
-  before: unknown,
-  after: unknown,
-) {
-  await ctx.sql`
-    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, before_data, after_data)
-    VALUES (${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, ${entityType}, ${entityId}, ${action},
-      ${before === null ? null : JSON.stringify(before)}::jsonb, ${after === null ? null : JSON.stringify(after)}::jsonb)
-  `;
-}
-
-async function assertResident({ sql, actor }: MedicationContext, residentId: unknown) {
-  const id = assertUuid(residentId, "Bewohner");
-  const rows =
-    await sql`SELECT id FROM carecore_residents WHERE id = ${id} AND organization_id = ${actor.organizationId} LIMIT 1`;
-  if (!rows[0]) throw new MedicationError("Bewohner nicht gefunden.", 404);
-  return id;
-}
-
-async function medicationId({ sql, actor }: MedicationContext, name: string, strength: string, form: string) {
+async function medicationId({ sql, actor }: ApiContext, name: string, strength: string, form: string) {
   const existing = await sql`
     SELECT id FROM carecore_medications
     WHERE organization_id = ${actor.organizationId} AND LOWER(name) = LOWER(${name})
@@ -156,7 +96,7 @@ async function medicationId({ sql, actor }: MedicationContext, name: string, str
 
 // ---------------------------------------------------------------- residents
 
-export async function listMedicationResidents({ sql, actor }: MedicationContext): Promise<MedResident[]> {
+export async function listMedicationResidents({ sql, actor }: ApiContext): Promise<MedResident[]> {
   const rows = (await sql`
     SELECT r.id, r.first_name, r.last_name, r.medication_allergies,
       COALESCE(ro.name, '') AS room, COALESCE(cu.name, '') AS care_unit,
@@ -183,12 +123,12 @@ export async function listMedicationResidents({ sql, actor }: MedicationContext)
   });
 }
 
-export async function updateMedicationAllergies(ctx: MedicationContext, residentId: unknown, allergies: unknown) {
+export async function updateMedicationAllergies(ctx: ApiContext, residentId: unknown, allergies: unknown) {
   const id = await assertResident(ctx, residentId);
   const value = text(allergies, 1000);
   const before = await ctx.sql`SELECT medication_allergies FROM carecore_residents WHERE id = ${id}`;
   await ctx.sql`UPDATE carecore_residents SET medication_allergies = ${value || null}, updated_at = NOW() WHERE id = ${id}`;
-  await audit(ctx, "resident", id, "medication_allergies_updated", before[0] ?? null, {
+  await writeAudit(ctx, "resident", id, "medication_allergies_updated", before[0] ?? null, {
     medication_allergies: value || null,
   });
   return value || null;
@@ -196,7 +136,7 @@ export async function updateMedicationAllergies(ctx: MedicationContext, resident
 
 // ------------------------------------------------------------------- orders
 
-export async function listOrders(ctx: MedicationContext, residentIdInput: unknown): Promise<MedOrder[]> {
+export async function listOrders(ctx: ApiContext, residentIdInput: unknown): Promise<MedOrder[]> {
   const residentId = await assertResident(ctx, residentIdInput);
   const rows = (await ctx.sql`
     SELECT o.id, o.resident_id, o.medication_id, COALESCE(m.name, 'Unbekanntes Präparat') AS name,
@@ -279,7 +219,7 @@ function orderJson(input: OrderInput) {
   };
 }
 
-export async function createOrder(ctx: MedicationContext, residentIdInput: unknown, input: OrderInput) {
+export async function createOrder(ctx: ApiContext, residentIdInput: unknown, input: OrderInput) {
   const residentId = await assertResident(ctx, residentIdInput);
   const medId = await medicationId(ctx, input.name, input.strength, input.form);
   const { dosage, schedule } = orderJson(input);
@@ -288,26 +228,26 @@ export async function createOrder(ctx: MedicationContext, residentIdInput: unkno
     INSERT INTO carecore_medication_orders (id, resident_id, medication_id, prescribed_by, indication, dosage, route, schedule, is_prn, prn_instructions, start_on, end_on, status, created_by)
     VALUES (${id}, ${residentId}, ${medId}, ${input.prescribedBy}, ${input.indication || null}, ${dosage}::jsonb, ${input.route}, ${schedule}::jsonb,
       ${input.isPrn}, ${input.prnInstructions || null}, ${input.startOn}, ${input.endOn}, 'active', ${ctx.actor.id})`;
-  await audit(ctx, "medication_order", id, "created", null, { residentId, ...input });
+  await writeAudit(ctx, "medication_order", id, "created", null, { residentId, ...input });
   return id;
 }
 
-async function loadOrderForUpdate({ sql, actor }: MedicationContext, orderId: unknown) {
+async function loadOrderForUpdate({ sql, actor }: ApiContext, orderId: unknown) {
   const id = assertUuid(orderId, "Verordnung");
   const rows = (await sql`
     SELECT o.* FROM carecore_medication_orders o
     JOIN carecore_residents r ON r.id = o.resident_id AND r.organization_id = ${actor.organizationId}
     WHERE o.id = ${id} LIMIT 1`) as Row[];
-  if (!rows[0]) throw new MedicationError("Verordnung nicht gefunden.", 404);
+  if (!rows[0]) throw new ApiError("Verordnung nicht gefunden.", 404);
   return rows[0];
 }
 
-export async function updateOrder(ctx: MedicationContext, orderId: unknown, input: OrderInput) {
+export async function updateOrder(ctx: ApiContext, orderId: unknown, input: OrderInput) {
   const before = await loadOrderForUpdate(ctx, orderId);
   if (before.status === "stopped" || before.status === "completed")
-    throw new MedicationError("Abgesetzte Verordnungen können nicht geändert werden.", 409);
+    throw new ApiError("Abgesetzte Verordnungen können nicht geändert werden.", 409);
   if (Boolean(before.is_prn) !== input.isPrn)
-    throw new MedicationError("Regel- und Reservemedikation können nicht ineinander umgewandelt werden.");
+    throw new ApiError("Regel- und Reservemedikation können nicht ineinander umgewandelt werden.");
   const medId = await medicationId(ctx, input.name, input.strength, input.form);
   const { dosage, schedule } = orderJson(input);
   await ctx.sql`
@@ -315,23 +255,21 @@ export async function updateOrder(ctx: MedicationContext, orderId: unknown, inpu
       dosage = ${dosage}::jsonb, route = ${input.route}, schedule = ${schedule}::jsonb, prn_instructions = ${input.prnInstructions || null},
       start_on = ${input.startOn}, end_on = ${input.endOn}, updated_at = NOW()
     WHERE id = ${before.id}`;
-  await audit(ctx, "medication_order", String(before.id), "updated", before, input);
+  await writeAudit(ctx, "medication_order", String(before.id), "updated", before, input);
 }
 
-export async function setOrderStatus(ctx: MedicationContext, orderId: unknown, status: unknown, reason: unknown) {
-  if (status !== "active" && status !== "paused" && status !== "stopped")
-    throw new MedicationError("Ungültiger Status.");
+export async function setOrderStatus(ctx: ApiContext, orderId: unknown, status: unknown, reason: unknown) {
+  if (status !== "active" && status !== "paused" && status !== "stopped") throw new ApiError("Ungültiger Status.");
   const note = text(reason, 1000);
-  if (status !== "active" && !note)
-    throw new MedicationError("Bitte einen Grund für das Pausieren oder Absetzen angeben.");
+  if (status !== "active" && !note) throw new ApiError("Bitte einen Grund für das Pausieren oder Absetzen angeben.");
   const before = await loadOrderForUpdate(ctx, orderId);
   if (before.status === "stopped" || before.status === "completed")
-    throw new MedicationError("Die Verordnung ist bereits abgesetzt.", 409);
+    throw new ApiError("Die Verordnung ist bereits abgesetzt.", 409);
   await ctx.sql`
     UPDATE carecore_medication_orders
     SET status = ${status}, end_on = CASE WHEN ${status} = 'stopped' THEN LEAST(COALESCE(end_on, (SELECT (NOW() AT TIME ZONE timezone)::date FROM carecore_organizations WHERE id = ${ctx.actor.organizationId})), (SELECT (NOW() AT TIME ZONE timezone)::date FROM carecore_organizations WHERE id = ${ctx.actor.organizationId})) ELSE end_on END, updated_at = NOW()
     WHERE id = ${before.id}`;
-  await audit(
+  await writeAudit(
     ctx,
     "medication_order",
     String(before.id),
@@ -344,7 +282,7 @@ export async function setOrderStatus(ctx: MedicationContext, orderId: unknown, s
 // -------------------------------------------------------------------- round
 
 export async function listRound(
-  ctx: MedicationContext,
+  ctx: ApiContext,
   round: RoundKey,
   dateInput: unknown,
 ): Promise<{ date: string; doses: RoundDose[] }> {
@@ -409,17 +347,17 @@ export async function listRound(
   };
 }
 
-export async function documentScheduledDose(ctx: MedicationContext, body: Record<string, unknown>) {
+export async function documentScheduledDose(ctx: ApiContext, body: Record<string, unknown>) {
   const orderId = assertUuid(body.orderId, "Verordnung");
   const status = body.status as AdministrationStatus;
-  if (!ADMINISTRATION_STATUSES.includes(status)) throw new MedicationError("Ungültiger Dokumentationsstatus.");
+  if (!ADMINISTRATION_STATUSES.includes(status)) throw new ApiError("Ungültiger Dokumentationsstatus.");
   const note = text(body.note, 2000);
-  if (status !== "administered" && !note) throw new MedicationError("Bitte eine Begründung dokumentieren.");
+  if (status !== "administered" && !note) throw new ApiError("Bitte eine Begründung dokumentieren.");
   const scheduledAt =
     typeof body.scheduledAt === "string" && !Number.isNaN(Date.parse(body.scheduledAt))
       ? new Date(body.scheduledAt).toISOString()
       : null;
-  if (!scheduledAt) throw new MedicationError("Ungültiger Zeitpunkt.");
+  if (!scheduledAt) throw new ApiError("Ungültiger Zeitpunkt.");
   // The slot must be a real scheduled time of an active order of this organization.
   const valid = (await ctx.sql`
     SELECT o.id, o.resident_id, o.medication_id, o.dosage FROM carecore_medication_orders o
@@ -435,10 +373,7 @@ export async function documentScheduledDose(ctx: MedicationContext, body: Record
         OR o.schedule->'weekdays' @> to_jsonb(EXTRACT(ISODOW FROM l.local)::int))
     LIMIT 1`) as Row[];
   if (!valid[0])
-    throw new MedicationError(
-      "Für diesen Zeitpunkt ist keine Gabe verordnet oder sie liegt zu weit in der Zukunft.",
-      409,
-    );
+    throw new ApiError("Für diesen Zeitpunkt ist keine Gabe verordnet oder sie liegt zu weit in der Zukunft.", 409);
   const before =
     await ctx.sql`SELECT id, status, administered_at, administered_by, note FROM carecore_medication_administrations WHERE medication_order_id = ${orderId} AND scheduled_at = ${scheduledAt}`;
   const rows = await ctx.sql`
@@ -447,7 +382,7 @@ export async function documentScheduledDose(ctx: MedicationContext, body: Record
     ON CONFLICT (medication_order_id, scheduled_at) DO UPDATE
       SET status = EXCLUDED.status, administered_at = EXCLUDED.administered_at, administered_by = EXCLUDED.administered_by, note = EXCLUDED.note, updated_at = NOW()
     RETURNING id`;
-  await audit(
+  await writeAudit(
     ctx,
     "medication_administration",
     String(rows[0].id),
@@ -460,7 +395,7 @@ export async function documentScheduledDose(ctx: MedicationContext, body: Record
 }
 
 // Resident-owned stock first, then the ward stock of the resident's current care unit.
-async function findStock(ctx: MedicationContext, residentId: string, medId: string | null, quantity: number) {
+async function findStock(ctx: ApiContext, residentId: string, medId: string | null, quantity: number) {
   if (!medId) return null;
   const rows = (await ctx.sql`
     SELECT st.id FROM carecore_medication_stock st
@@ -476,7 +411,7 @@ async function findStock(ctx: MedicationContext, residentId: string, medId: stri
 // and books it back when it is corrected to another status. The journal rows linked to
 // the administration are the source of truth, so repeated corrections never double-book.
 async function syncDoseStock(
-  ctx: MedicationContext,
+  ctx: ApiContext,
   administrationId: string,
   order: Row,
   quantity: number | null,
@@ -525,10 +460,10 @@ async function syncDoseStock(
 
 // ---------------------------------------------------------------- reserves
 
-export async function administerPrn(ctx: MedicationContext, body: Record<string, unknown>) {
+export async function administerPrn(ctx: ApiContext, body: Record<string, unknown>) {
   const orderId = assertUuid(body.orderId, "Verordnung");
   const note = text(body.note, 2000);
-  if (!note) throw new MedicationError("Bitte den Anlass der Reservegabe dokumentieren, z. B. „Schmerzen NRS 5“.");
+  if (!note) throw new ApiError("Bitte den Anlass der Reservegabe dokumentieren, z. B. „Schmerzen NRS 5“.");
   const quantity = typeof body.quantity === "number" && body.quantity > 0 && body.quantity <= 100 ? body.quantity : 1;
   const orders = (await ctx.sql`
     SELECT o.id, o.resident_id, o.medication_id, o.dosage, o.status, (o.start_on IS NULL OR o.start_on <= org.today) AS started,
@@ -538,14 +473,14 @@ export async function administerPrn(ctx: MedicationContext, body: Record<string,
     CROSS JOIN (SELECT (NOW() AT TIME ZONE timezone)::date AS today FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}) org
     WHERE o.id = ${orderId} AND o.is_prn LIMIT 1`) as Row[];
   const order = orders[0];
-  if (!order) throw new MedicationError("Reserveverordnung nicht gefunden.", 404);
+  if (!order) throw new ApiError("Reserveverordnung nicht gefunden.", 404);
   if (order.status !== "active" || !order.started || !order.not_ended)
-    throw new MedicationError("Die Reserveverordnung ist nicht gültig oder pausiert.", 409);
+    throw new ApiError("Die Reserveverordnung ist nicht gültig oder pausiert.", 409);
   const dosage = (order.dosage ?? {}) as Record<string, unknown>;
   const maxDoses = num(dosage.maxDosesPer24h);
   const minInterval = num(dosage.minIntervalHours);
   if (!maxDoses || !minInterval)
-    throw new MedicationError(
+    throw new ApiError(
       "Der Verordnung fehlen Maximaldosis oder Mindestabstand. Bitte zuerst die Verordnung ergänzen.",
       409,
     );
@@ -555,13 +490,13 @@ export async function administerPrn(ctx: MedicationContext, body: Record<string,
       MAX(administered_at) + make_interval(mins => ${Math.round(minInterval * 60)}) AS next_allowed
     FROM carecore_medication_administrations WHERE medication_order_id = ${orderId} AND status = 'administered'`) as Row[];
   if (Number(recent[0].count_24h) >= maxDoses)
-    throw new MedicationError(
+    throw new ApiError(
       `Maximaldosis erreicht: bereits ${recent[0].count_24h} von ${maxDoses} Gaben in 24 Stunden. Bitte ärztliche Rücksprache halten.`,
       409,
     );
   const nextAllowed = recent[0].next_allowed ? new Date(String(iso(recent[0].next_allowed))) : null;
   if (nextAllowed && nextAllowed > new Date())
-    throw new MedicationError(
+    throw new ApiError(
       `Mindestabstand von ${String(minInterval).replace(".", ",")} Stunden noch nicht erreicht. Nächste Gabe frühestens ${nextAllowed.toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Zurich" })} Uhr.`,
       409,
     );
@@ -569,7 +504,7 @@ export async function administerPrn(ctx: MedicationContext, body: Record<string,
   // Resident-owned stock first, then the ward stock of the resident's care unit.
   const stockId = await findStock(ctx, String(order.resident_id), order.medication_id as string | null, quantity);
   if (!stockId)
-    throw new MedicationError(
+    throw new ApiError(
       "Kein ausreichender Bestand im Bewohner- oder Stationsbestand. Bitte zuerst einen Eingang buchen.",
       409,
     );
@@ -594,11 +529,11 @@ export async function administerPrn(ctx: MedicationContext, body: Record<string,
     FROM s CROSS JOIN a
     RETURNING id`) as Row[];
   if (!result[0])
-    throw new MedicationError(
+    throw new ApiError(
       "Die Gabe wurde gerade anderweitig dokumentiert oder der Bestand hat sich geändert. Bitte neu laden.",
       409,
     );
-  await audit(ctx, "medication_administration", administrationId, "prn_administered", null, {
+  await writeAudit(ctx, "medication_administration", administrationId, "prn_administered", null, {
     orderId,
     quantity,
     note,
@@ -610,7 +545,7 @@ export async function administerPrn(ctx: MedicationContext, body: Record<string,
 export async function listStock({
   sql,
   actor,
-}: MedicationContext): Promise<{ items: StockItem[]; movements: StockMovement[] }> {
+}: ApiContext): Promise<{ items: StockItem[]; movements: StockMovement[] }> {
   const [items, movements] = (await Promise.all([
     sql`
       SELECT st.id, st.medication_id, m.name, COALESCE(m.strength, '') AS strength, COALESCE(m.form, '') AS form,
@@ -668,10 +603,7 @@ function mapMovement(row: Row): StockMovement {
   };
 }
 
-export async function listResidentMovements(
-  ctx: MedicationContext,
-  residentIdInput: unknown,
-): Promise<StockMovement[]> {
+export async function listResidentMovements(ctx: ApiContext, residentIdInput: unknown): Promise<StockMovement[]> {
   const residentId = await assertResident(ctx, residentIdInput);
   const rows = (await ctx.sql`
     SELECT mv.id, mv.created_at, TRIM(CONCAT_WS(' ', m.name, m.strength)) AS medication, NULL AS resident_name,
@@ -685,7 +617,7 @@ export async function listResidentMovements(
 }
 
 async function recordMovement(
-  ctx: MedicationContext,
+  ctx: ApiContext,
   stockId: string,
   medId: string,
   residentId: string | null,
@@ -702,9 +634,9 @@ const quantityValue = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) && value > 0 && value <= 100000 ? value : null;
 
 // Receipt into an existing stock row or a new one (ward stock or resident-owned).
-export async function receiveStock(ctx: MedicationContext, body: Record<string, unknown>) {
+export async function receiveStock(ctx: ApiContext, body: Record<string, unknown>) {
   const quantity = quantityValue(body.quantity);
-  if (!quantity) throw new MedicationError("Bitte eine Menge größer als 0 angeben.");
+  if (!quantity) throw new ApiError("Bitte eine Menge größer als 0 angeben.");
   const note = text(body.note, 1000);
   if (typeof body.stockId === "string") {
     const stockId = assertUuid(body.stockId, "Bestand");
@@ -712,7 +644,7 @@ export async function receiveStock(ctx: MedicationContext, body: Record<string, 
       UPDATE carecore_medication_stock SET quantity = quantity + ${quantity}, updated_at = NOW()
       WHERE id = ${stockId} AND organization_id = ${ctx.actor.organizationId}
       RETURNING id, medication_id, resident_id`) as Row[];
-    if (!rows[0]) throw new MedicationError("Bestand nicht gefunden.", 404);
+    if (!rows[0]) throw new ApiError("Bestand nicht gefunden.", 404);
     await recordMovement(
       ctx,
       stockId,
@@ -726,7 +658,7 @@ export async function receiveStock(ctx: MedicationContext, body: Record<string, 
   }
   const name = text(body.name, 220);
   const unit = text(body.unit, 32);
-  if (!name || !unit) throw new MedicationError("Präparat und Einheit sind erforderlich.");
+  if (!name || !unit) throw new ApiError("Präparat und Einheit sind erforderlich.");
   let careUnitId: string | null = null;
   let residentId: string | null = null;
   if (typeof body.residentId === "string" && body.residentId) residentId = await assertResident(ctx, body.residentId);
@@ -734,7 +666,7 @@ export async function receiveStock(ctx: MedicationContext, body: Record<string, 
     careUnitId = assertUuid(body.careUnitId, "Wohnbereich");
     const unitRows =
       await ctx.sql`SELECT cu.id FROM carecore_care_units cu JOIN carecore_sites si ON si.id = cu.site_id WHERE cu.id = ${careUnitId} AND si.organization_id = ${ctx.actor.organizationId} LIMIT 1`;
-    if (!unitRows[0]) throw new MedicationError("Wohnbereich nicht gefunden.", 404);
+    if (!unitRows[0]) throw new ApiError("Wohnbereich nicht gefunden.", 404);
   }
   const expiresOn = typeof body.expiresOn === "string" && DATE.test(body.expiresOn) ? body.expiresOn : null;
   const minimum = typeof body.minimum === "number" && body.minimum >= 0 ? body.minimum : null;
@@ -763,17 +695,17 @@ export async function receiveStock(ctx: MedicationContext, body: Record<string, 
 }
 
 // Correction or disposal: sets the counted quantity and journals the difference.
-export async function correctStock(ctx: MedicationContext, stockIdInput: unknown, body: Record<string, unknown>) {
+export async function correctStock(ctx: ApiContext, stockIdInput: unknown, body: Record<string, unknown>) {
   const stockId = assertUuid(stockIdInput, "Bestand");
   const note = text(body.note, 1000);
   const reason = body.reason === "disposal" ? "disposal" : "correction";
   if (typeof body.quantity !== "number" || !Number.isFinite(body.quantity) || body.quantity < 0)
-    throw new MedicationError("Bitte den gezählten Bestand angeben.");
+    throw new ApiError("Bitte den gezählten Bestand angeben.");
   const rows =
     (await ctx.sql`SELECT id, medication_id, resident_id, quantity FROM carecore_medication_stock WHERE id = ${stockId} AND organization_id = ${ctx.actor.organizationId}`) as Row[];
-  if (!rows[0]) throw new MedicationError("Bestand nicht gefunden.", 404);
+  if (!rows[0]) throw new ApiError("Bestand nicht gefunden.", 404);
   const delta = body.quantity - Number(rows[0].quantity);
-  if (delta !== 0 && !note) throw new MedicationError("Bitte einen Grund für die Bestandsänderung angeben.");
+  if (delta !== 0 && !note) throw new ApiError("Bitte einen Grund für die Bestandsänderung angeben.");
   const expiresOn = typeof body.expiresOn === "string" && DATE.test(body.expiresOn) ? body.expiresOn : null;
   const minimum = typeof body.minimum === "number" && body.minimum >= 0 ? body.minimum : null;
   await ctx.sql`
@@ -792,7 +724,7 @@ export async function correctStock(ctx: MedicationContext, stockIdInput: unknown
     );
 }
 
-export async function listCareUnits({ sql, actor }: MedicationContext) {
+export async function listCareUnits({ sql, actor }: ApiContext) {
   return (await sql`
     SELECT cu.id, cu.name FROM carecore_care_units cu JOIN carecore_sites si ON si.id = cu.site_id
     WHERE si.organization_id = ${actor.organizationId} AND cu.active = TRUE ORDER BY cu.name`) as Array<{
