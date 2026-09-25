@@ -285,8 +285,8 @@ function ResidentPickerPopover({
 }
 
 export default function AppHeader({
-  locationPrimary = "Alterszentrum Sonnengarten",
-  locationSecondary = "Wohnbereich 2 · 1. OG",
+  locationPrimary = "…",
+  locationSecondary = "…",
   searchOpen,
   onSearch,
   onToast,
@@ -550,11 +550,11 @@ export default function AppHeader({
             setProfileOpen((value) => !value);
           }}
         >
-          <span className="avatar">{initials(profile?.displayName ?? "Anna Meier")}</span>
+          <span className="avatar">{profile ? initials(profile.displayName) : "…"}</span>
           {!compact && (
             <span>
-              <small>{profile?.jobTitle ?? "Pflegefachfrau HF"}</small>
-              <strong>{profile?.displayName ?? "Anna Meier"}</strong>
+              <small>{profile?.jobTitle ?? "…"}</small>
+              <strong>{profile?.displayName ?? "Wird geladen"}</strong>
             </span>
           )}
           <ModuleIcon name="caretDown" className="profile-caret" />

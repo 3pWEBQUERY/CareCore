@@ -22,8 +22,74 @@ const users =
   await sql`SELECT id FROM carecore_users WHERE active = TRUE ORDER BY role = 'admin' DESC, created_at LIMIT 1`;
 if (!users[0]) throw new Error("Create an employee before seeding demo content.");
 const actor = users[0].id;
-const bases = await sql`SELECT id FROM carecore_residents WHERE id IN (${resident[0]}, ${resident[1]}, ${resident[2]})`;
-if (bases.length < 3) throw new Error("The three CareCore demo residents are missing. Open /c once before seeding.");
+
+// Demo organization, care units, rooms and residents. Existing rows are never overwritten.
+const site = "00000000-0000-4000-8000-000000000102";
+const units = [
+  ["00000000-0000-4000-8000-000000000201", "Wohnbereich 1", "EG"],
+  [unit, "Wohnbereich 2", "1. OG"],
+  ["00000000-0000-4000-8000-000000000203", "Wohnbereich 3", "2. OG"],
+  ["00000000-0000-4000-8000-000000000204", "Pflegewohngruppe", "EG"],
+];
+const rooms = [
+  ["00000000-0000-4000-8000-000000000301", units[0][0], "Zimmer 101"],
+  ["00000000-0000-4000-8000-000000000302", unit, "Zimmer 207"],
+  ["00000000-0000-4000-8000-000000000303", unit, "Zimmer 204"],
+  ["00000000-0000-4000-8000-000000000304", units[2][0], "Zimmer 301"],
+  ["00000000-0000-4000-8000-000000000305", units[3][0], "Zimmer 12"],
+];
+const residents = [
+  [resident[0], "501", "Hans", "Müller", "male", unit, rooms[1][0], "Sturzrisiko", "critical"],
+  [resident[1], "502", "Maria", "Keller", "female", unit, rooms[2][0], "Diabetes", "attention"],
+  [resident[2], "503", "Erika", "Meier", "female", unit, rooms[1][0], "Stabil", "stable"],
+  [
+    "00000000-0000-4000-8000-000000000404",
+    "504",
+    "Peter",
+    "Aebischer",
+    "male",
+    units[0][0],
+    rooms[0][0],
+    "Beobachtung",
+    "info",
+  ],
+  [
+    "00000000-0000-4000-8000-000000000405",
+    "505",
+    "Walter",
+    "Brunner",
+    "male",
+    units[2][0],
+    rooms[3][0],
+    "Stabil",
+    "stable",
+  ],
+  [
+    "00000000-0000-4000-8000-000000000406",
+    "506",
+    "Anna",
+    "Berger",
+    "female",
+    units[3][0],
+    rooms[4][0],
+    "Stabil",
+    "stable",
+  ],
+];
+await sql`INSERT INTO carecore_organizations (id, name) VALUES (${org}, 'Alterszentrum Sonnengarten') ON CONFLICT (id) DO NOTHING`;
+await sql`INSERT INTO carecore_sites (id, organization_id, name) VALUES (${site}, ${org}, 'Alterszentrum Sonnengarten') ON CONFLICT (id) DO NOTHING`;
+for (const [unitId, name, floor] of units)
+  await sql`INSERT INTO carecore_care_units (id, site_id, name, floor, capacity) VALUES (${unitId}, ${site}, ${name}, ${floor}, 12) ON CONFLICT (id) DO NOTHING`;
+for (const [roomId, careUnitId, name] of rooms)
+  await sql`INSERT INTO carecore_rooms (id, care_unit_id, name, room_number) VALUES (${roomId}, ${careUnitId}, ${name}, ${name.replace("Zimmer ", "")}) ON CONFLICT (id) DO NOTHING`;
+for (const [residentId, stay, firstName, lastName, gender, careUnitId, roomId, flag, tone] of residents) {
+  await sql`INSERT INTO carecore_residents (id, organization_id, first_name, last_name, gender, status, risk_flags) VALUES (${residentId}, ${org}, ${firstName}, ${lastName}, ${gender}, 'active', ${json([{ label: flag, tone }])}::jsonb) ON CONFLICT (id) DO NOTHING`;
+  await sql`INSERT INTO carecore_resident_stays (id, resident_id, care_unit_id, room_id) VALUES (${`00000000-0000-4000-8000-000000000${stay}`}, ${residentId}, ${careUnitId}, ${roomId}) ON CONFLICT (id) DO NOTHING`;
+}
+// The seeding user joins the demo organization only if not yet assigned to one.
+await sql`INSERT INTO carecore_user_profiles (user_id, organization_id, primary_care_unit_id) VALUES (${actor}, ${org}, ${unit}) ON CONFLICT (user_id) DO UPDATE SET organization_id = COALESCE(carecore_user_profiles.organization_id, EXCLUDED.organization_id), primary_care_unit_id = COALESCE(carecore_user_profiles.primary_care_unit_id, EXCLUDED.primary_care_unit_id)`;
+await sql`INSERT INTO carecore_user_unit_assignments (user_id, care_unit_id, assignment_role, is_primary) VALUES (${actor}, ${unit}, 'Pflegefachperson', TRUE) ON CONFLICT (user_id, care_unit_id) DO NOTHING`;
+console.log("Demo-Organisation, Wohnbereiche und Bewohner vorbereitet");
 const tables = new Set([
   "carecore_resident_contacts",
   "carecore_resident_clinical_flags",
@@ -37,7 +103,6 @@ const tables = new Set([
   "carecore_vital_thresholds",
   "carecore_medications",
   "carecore_medication_orders",
-  "carecore_medication_administrations",
   "carecore_medication_stock",
   "carecore_wounds",
   "carecore_wound_entries",
@@ -334,9 +399,9 @@ await seed("carecore_medication_orders", [
     medication_id: id("med-paracetamol"),
     prescribed_by: "Dr. Martin Weber",
     indication: "Schmerzen",
-    dosage: json({ amount: "1 Tablette" }),
+    dosage: json({ amount: "1 Tablette", quantity: 1, maxDosesPer24h: 4, minIntervalHours: 6 }),
     route: "oral",
-    schedule: json({ type: "bei Bedarf" }),
+    schedule: json({ type: "prn" }),
     is_prn: true,
     prn_instructions: "Maximal 4 Tabletten in 24 Stunden.",
     start_on: day(-5),
@@ -348,25 +413,17 @@ await seed("carecore_medication_orders", [
     medication_id: id("med-metoprolol"),
     prescribed_by: "Dr. Martin Weber",
     indication: "Hypertonie",
-    dosage: json({ amount: "1 Tablette" }),
+    dosage: json({ amount: "1 Tablette", quantity: 1 }),
     route: "oral",
     schedule: json({ times: ["08:00"] }),
     start_on: day(-2),
     created_by: actor,
   },
 ]);
-await seed("carecore_medication_administrations", [
-  {
-    id: id("administration-erika"),
-    medication_order_id: id("order-erika"),
-    resident_id: resident[2],
-    scheduled_at: date(0, 1),
-    status: "scheduled",
-  },
-]);
 await seed("carecore_medication_stock", [
   {
     id: id("stock-paracetamol"),
+    organization_id: org,
     care_unit_id: unit,
     medication_id: id("med-paracetamol"),
     quantity: 42,
@@ -377,6 +434,7 @@ await seed("carecore_medication_stock", [
   },
   {
     id: id("stock-metoprolol"),
+    organization_id: org,
     care_unit_id: unit,
     medication_id: id("med-metoprolol"),
     quantity: 18,

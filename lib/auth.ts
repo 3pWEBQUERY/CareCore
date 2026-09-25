@@ -68,6 +68,24 @@ async function bootstrapAdmin(sql: ReturnType<typeof database>) {
     ON CONFLICT DO NOTHING
   `;
   await sql`UPDATE carecore_users SET password_hash = ${passwordHash}, updated_at = NOW() WHERE password_hash = ${LEGACY_DEFAULT_ADMIN_HASH}`;
+  await ensureAdminOrganization(sql);
+}
+
+// On an empty database, create the organization with one site and care unit so
+// the admin can start working; an existing organization is only assigned.
+async function ensureAdminOrganization(sql: ReturnType<typeof database>) {
+  const organizationName = process.env.CARECORE_ORGANIZATION_NAME?.trim().slice(0, 180) || "CareCore";
+  const organizationId = randomUUID();
+  const siteId = randomUUID();
+  await sql.transaction([
+    sql`INSERT INTO carecore_organizations (id, name) SELECT ${organizationId}, ${organizationName} WHERE NOT EXISTS (SELECT 1 FROM carecore_organizations)`,
+    sql`INSERT INTO carecore_sites (id, organization_id, name) SELECT ${siteId}, ${organizationId}, ${organizationName} WHERE EXISTS (SELECT 1 FROM carecore_organizations WHERE id = ${organizationId})`,
+    sql`INSERT INTO carecore_care_units (id, site_id, name) SELECT ${randomUUID()}, ${siteId}, 'Wohnbereich 1' WHERE EXISTS (SELECT 1 FROM carecore_sites WHERE id = ${siteId})`,
+    sql`
+      INSERT INTO carecore_user_profiles (user_id, organization_id, job_title)
+      VALUES (${ADMIN_USER_ID}, (SELECT id FROM carecore_organizations ORDER BY created_at LIMIT 1), 'CareCore Administrator')
+      ON CONFLICT (user_id) DO UPDATE SET organization_id = COALESCE(carecore_user_profiles.organization_id, EXCLUDED.organization_id)`,
+  ]);
 }
 
 // Tables are created by database/migrations; only the admin bootstrap runs here, once per process.

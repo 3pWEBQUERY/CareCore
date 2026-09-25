@@ -17,6 +17,8 @@ function errorResponse(error: unknown) {
       { error: "Das eigene Administrationskonto kann nicht gesperrt oder gelöscht werden." },
       { status: 400 },
     );
+  if (error instanceof Error && error.message === "USER_NOT_FOUND")
+    return NextResponse.json({ error: "Mitarbeiter ist in dieser Organisation nicht verfügbar." }, { status: 404 });
   if (error instanceof Error && error.message === "CARE_UNIT_NOT_FOUND")
     return NextResponse.json({ error: "Der gewählte Wohnbereich ist nicht verfügbar." }, { status: 400 });
   if (error instanceof Error && error.message === "INVALID_USER_INPUT")
@@ -64,9 +66,9 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
-    if (!(await adminUser()))
-      return NextResponse.json({ error: "Keine Administrationsberechtigung." }, { status: 403 });
-    return NextResponse.json(await listManagedUsers());
+    const actor = await adminUser();
+    if (!actor) return NextResponse.json({ error: "Keine Administrationsberechtigung." }, { status: 403 });
+    return NextResponse.json(await listManagedUsers(actor.id));
   } catch (error) {
     return errorResponse(error);
   }

@@ -194,8 +194,8 @@ export default function ModulePageShell({
   activeModule,
   activeChild,
   pageClass,
-  locationPrimary = "Alterszentrum Sonnengarten",
-  locationSecondary = "Wohnbereich 2 · 1. OG",
+  locationPrimary,
+  locationSecondary,
   children,
 }: {
   activeModule?: string;

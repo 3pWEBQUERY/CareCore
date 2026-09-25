@@ -56,7 +56,8 @@ function database() {
   return neon(connectionString);
 }
 
-export async function listManagedUsers(): Promise<{
+// Users of the administrator's organization, plus users not yet assigned to any organization.
+export async function listManagedUsers(actorId: string): Promise<{
   users: ManagedUser[];
   careUnits: AdminCareUnit[];
   roles: ManagedRole[];
@@ -64,7 +65,7 @@ export async function listManagedUsers(): Promise<{
 }> {
   const sql = database();
   const users =
-    (await sql`SELECT u.id, u.username, u.display_name, u.role, u.active, u.archived_at, u.created_at, p.job_title, p.phone, p.primary_care_unit_id, p.last_seen_at, cu.name AS primary_care_unit_name FROM carecore_users u LEFT JOIN carecore_user_profiles p ON p.user_id = u.id LEFT JOIN carecore_care_units cu ON cu.id = p.primary_care_unit_id ORDER BY u.archived_at NULLS FIRST, u.active DESC, u.display_name ASC`) as unknown as Array<{
+    (await sql`SELECT u.id, u.username, u.display_name, u.role, u.active, u.archived_at, u.created_at, p.job_title, p.phone, p.primary_care_unit_id, p.last_seen_at, cu.name AS primary_care_unit_name FROM carecore_users u LEFT JOIN carecore_user_profiles p ON p.user_id = u.id LEFT JOIN carecore_care_units cu ON cu.id = p.primary_care_unit_id WHERE p.organization_id IS NULL OR p.organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}) ORDER BY u.archived_at NULLS FIRST, u.active DESC, u.display_name ASC`) as unknown as Array<{
       id: string;
       username: string;
       display_name: string;
@@ -79,7 +80,7 @@ export async function listManagedUsers(): Promise<{
       primary_care_unit_name: string | null;
     }>;
   const careUnits =
-    (await sql`SELECT id, name, COALESCE(floor, '') AS floor FROM carecore_care_units WHERE active = TRUE ORDER BY name`) as unknown as Array<{
+    (await sql`SELECT cu.id, cu.name, COALESCE(cu.floor, '') AS floor FROM carecore_care_units cu JOIN carecore_sites si ON si.id = cu.site_id WHERE cu.active = TRUE AND si.organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}) ORDER BY cu.name`) as unknown as Array<{
       id: string;
       name: string;
       floor: string;
@@ -147,6 +148,22 @@ export async function listManagedRoles(): Promise<ManagedRole[]> {
   }));
 }
 
+async function assertManagedUser(sql: ReturnType<typeof database>, actorId: string, userId: string) {
+  const found = await sql`
+    SELECT u.id FROM carecore_users u LEFT JOIN carecore_user_profiles p ON p.user_id = u.id
+    WHERE u.id = ${userId} AND (p.organization_id IS NULL OR p.organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}))
+    LIMIT 1`;
+  if (!found[0]) throw new Error("USER_NOT_FOUND");
+}
+
+async function assertCareUnit(sql: ReturnType<typeof database>, actorId: string, careUnitId: string) {
+  const unit = await sql`
+    SELECT cu.id FROM carecore_care_units cu JOIN carecore_sites si ON si.id = cu.site_id
+    WHERE cu.id = ${careUnitId} AND cu.active = TRUE AND si.organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId})
+    LIMIT 1`;
+  if (!unit[0]) throw new Error("CARE_UNIT_NOT_FOUND");
+}
+
 async function assertRole(sql: ReturnType<typeof database>, role: string) {
   const found = (await sql`SELECT key FROM carecore_roles WHERE key = ${role} LIMIT 1`) as unknown as Array<{
     key: string;
@@ -168,6 +185,7 @@ export async function updateManagedUser(
   },
 ) {
   const sql = database();
+  await assertManagedUser(sql, actorId, userId);
   if (input.action === "lock") {
     if (userId === actorId) throw new Error("CANNOT_LOCK_SELF");
     await sql`UPDATE carecore_users SET active = FALSE, archived_at = NOW(), archived_by = ${actorId}, archive_reason = 'Zugriff durch Administration gesperrt', updated_at = NOW() WHERE id = ${userId}`;
@@ -180,22 +198,16 @@ export async function updateManagedUser(
     const role = input.role?.trim().slice(0, 40);
     if (!name || !username || !role) throw new Error("INVALID_USER_INPUT");
     await assertRole(sql, role);
-    if (input.primaryCareUnitId) {
-      const unit =
-        (await sql`SELECT id FROM carecore_care_units WHERE id = ${input.primaryCareUnitId} AND active = TRUE LIMIT 1`) as unknown as Array<{
-          id: string;
-        }>;
-      if (!unit[0]) throw new Error("CARE_UNIT_NOT_FOUND");
-    }
+    if (input.primaryCareUnitId) await assertCareUnit(sql, actorId, input.primaryCareUnitId);
     await sql`UPDATE carecore_users SET display_name = ${name}, username = ${username}, role = ${role}, updated_at = NOW() WHERE id = ${userId}`;
-    await sql`INSERT INTO carecore_user_profiles (user_id, job_title, phone, primary_care_unit_id) VALUES (${userId}, ${input.jobTitle?.trim().slice(0, 140) || null}, ${input.phone?.trim().slice(0, 60) || null}, ${input.primaryCareUnitId ?? null}) ON CONFLICT (user_id) DO UPDATE SET job_title = EXCLUDED.job_title, phone = EXCLUDED.phone, primary_care_unit_id = EXCLUDED.primary_care_unit_id, updated_at = NOW()`;
+    await sql`INSERT INTO carecore_user_profiles (user_id, organization_id, job_title, phone, primary_care_unit_id) VALUES (${userId}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}), ${input.jobTitle?.trim().slice(0, 140) || null}, ${input.phone?.trim().slice(0, 60) || null}, ${input.primaryCareUnitId ?? null}) ON CONFLICT (user_id) DO UPDATE SET organization_id = COALESCE(carecore_user_profiles.organization_id, EXCLUDED.organization_id), job_title = EXCLUDED.job_title, phone = EXCLUDED.phone, primary_care_unit_id = EXCLUDED.primary_care_unit_id, updated_at = NOW()`;
     if (input.primaryCareUnitId) {
       await sql`UPDATE carecore_user_unit_assignments SET is_primary = FALSE WHERE user_id = ${userId}`;
       await sql`INSERT INTO carecore_user_unit_assignments (user_id, care_unit_id, assignment_role, is_primary) VALUES (${userId}, ${input.primaryCareUnitId}, 'Mitarbeitende:r', TRUE) ON CONFLICT (user_id, care_unit_id) DO UPDATE SET is_primary = TRUE, ends_on = NULL`;
     }
   }
   await audit(actorId, userId, input.action ?? "updated", input);
-  return listManagedUsers();
+  return listManagedUsers(actorId);
 }
 
 export async function createManagedUser(
@@ -216,17 +228,12 @@ export async function createManagedUser(
   if (!displayName || !username || !role || input.password.length < 10) throw new Error("INVALID_EMPLOYEE_INPUT");
   const sql = database();
   await assertRole(sql, role);
-  if (input.primaryCareUnitId) {
-    const unit =
-      (await sql`SELECT id FROM carecore_care_units WHERE id = ${input.primaryCareUnitId} AND active = TRUE LIMIT 1`) as unknown as Array<{
-        id: string;
-      }>;
-    if (!unit[0]) throw new Error("CARE_UNIT_NOT_FOUND");
-  }
+  if (input.primaryCareUnitId) await assertCareUnit(sql, actorId, input.primaryCareUnitId);
   const id = randomUUID();
   const passwordHash = await hashPassword(input.password);
   await sql`INSERT INTO carecore_users (id, username, display_name, role, password_hash) VALUES (${id}, ${username}, ${displayName}, ${role}, ${passwordHash})`;
-  await sql`INSERT INTO carecore_user_profiles (user_id, job_title, phone, primary_care_unit_id) VALUES (${id}, ${input.jobTitle?.trim().slice(0, 140) || null}, ${input.phone?.trim().slice(0, 60) || null}, ${input.primaryCareUnitId ?? null})`;
+  // New employees belong to the organization of the administrator who creates them.
+  await sql`INSERT INTO carecore_user_profiles (user_id, organization_id, job_title, phone, primary_care_unit_id) VALUES (${id}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}), ${input.jobTitle?.trim().slice(0, 140) || null}, ${input.phone?.trim().slice(0, 60) || null}, ${input.primaryCareUnitId ?? null})`;
   if (input.primaryCareUnitId)
     await sql`INSERT INTO carecore_user_unit_assignments (user_id, care_unit_id, assignment_role, is_primary) VALUES (${id}, ${input.primaryCareUnitId}, 'Mitarbeitende:r', TRUE)`;
   await audit(actorId, id, "created", {
@@ -235,15 +242,16 @@ export async function createManagedUser(
     role,
     primaryCareUnitId: input.primaryCareUnitId ?? null,
   });
-  return listManagedUsers();
+  return listManagedUsers(actorId);
 }
 
 export async function deleteManagedUser(actorId: string, userId: string) {
   if (userId === actorId) throw new Error("CANNOT_DELETE_SELF");
   const sql = database();
+  await assertManagedUser(sql, actorId, userId);
   await audit(actorId, userId, "deleted", { permanentlyDeleted: true });
   await sql`DELETE FROM carecore_users WHERE id = ${userId}`;
-  return listManagedUsers();
+  return listManagedUsers(actorId);
 }
 
 function normalizePermissions(value: unknown) {
