@@ -1,0 +1,15 @@
+import { NextResponse } from "next/server";
+import { administerPrn, medicationContext, medicationErrorResponse } from "@/lib/medication";
+
+export const runtime = "nodejs";
+
+export async function POST(request: Request) {
+  try {
+    const ctx = await medicationContext("medication.manage");
+    if (ctx instanceof NextResponse) return ctx;
+    await administerPrn(ctx, (await request.json()) as Record<string, unknown>);
+    return NextResponse.json({ ok: true }, { status: 201 });
+  } catch (error) {
+    return medicationErrorResponse(error, "Reservegabe konnte nicht dokumentiert werden.");
+  }
+}

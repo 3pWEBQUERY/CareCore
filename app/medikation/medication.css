@@ -1,0 +1,159 @@
+/* Elements introduced with the database-backed medication module. */
+
+.med-dialog {
+  width: min(760px, calc(100vw - 32px));
+}
+
+.med-field {
+  display: grid;
+  gap: 7px;
+}
+
+.med-field > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.med-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.med-chip-row > small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.med-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 6px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.med-chip button {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.med-chip button:hover {
+  background: rgb(37 99 235 / 12%);
+}
+
+.med-chip-add {
+  min-width: 170px;
+}
+
+.med-day {
+  min-width: 40px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.med-day.active {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: white;
+}
+
+.med-checkbox {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  font-size: 13px;
+}
+
+.med-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--brand);
+}
+
+.med-form-note,
+.med-reserve-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--attention-soft);
+  color: var(--attention);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.med-reserve-note {
+  margin-top: 10px;
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+.med-reserve-note strong {
+  color: var(--attention);
+}
+
+.med-list-hint {
+  margin: 0;
+  padding: 18px 16px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.med-allergy-text {
+  color: var(--critical) !important;
+  font-weight: 700;
+}
+
+.med-plan-list > button:disabled {
+  cursor: default;
+}
+
+.med-round-actions button:disabled,
+.med-reserve-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.med-stock-level.low strong {
+  color: var(--critical);
+}
+
+.med-round-toolbar .schedule-date-picker {
+  min-width: 150px;
+}
+
+.med-dialog .appointment-danger-button,
+.med-dialog .primary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
