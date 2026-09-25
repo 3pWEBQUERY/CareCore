@@ -1,5 +1,5 @@
-import OperationsWorkspace from "../../betrieb/components/operations-workspace";
+import AssessmentsWorkspace from "../components/assessments-workspace";
 
 export default function AssessmentDuePage() {
-  return <OperationsWorkspace view="assessmentDue" />;
+  return <AssessmentsWorkspace view="due" />;
 }

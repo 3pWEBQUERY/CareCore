@@ -4,16 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import ModulePageShell, { ModuleIcon, type ModuleIconName } from "@/app/components/module-page-shell";
 
 type OperationsView =
-  | "shift"
-  | "shiftHistory"
-  | "tasks"
-  | "teamTasks"
-  | "handover"
-  | "lastShift"
-  | "schedule"
-  | "teamSchedule"
-  | "assessments"
-  | "assessmentDue";
+  "shift" | "shiftHistory" | "tasks" | "teamTasks" | "handover" | "lastShift" | "schedule" | "teamSchedule";
 type Tone = "stable" | "attention" | "critical" | "info";
 type Task = {
   id: string;
@@ -26,20 +17,6 @@ type Task = {
   due?: string;
   status?: string;
 };
-type Assessment = {
-  id: string;
-  resident: string;
-  room: string;
-  type: string;
-  score: string;
-  status: string;
-  tone: Tone;
-  updated: string;
-  next: string;
-  dueTime?: string;
-  owner?: string;
-};
-
 function ScheduleSelect({
   label,
   value,
@@ -982,22 +959,6 @@ const viewMeta: Record<
     description: "Besetzung, Rollen und offene Dienste im gesamten Team.",
     action: "Dienst einteilen",
   },
-  assessments: {
-    module: "assess",
-    child: "Einschätzungen",
-    eyebrow: "CareCore Assess",
-    title: "Einschätzungen",
-    description: "Pflegefachliche Assessments zentral erfassen und fortschreiben.",
-    action: "Assessment starten",
-  },
-  assessmentDue: {
-    module: "assess",
-    child: "Fälligkeiten",
-    eyebrow: "CareCore Assess",
-    title: "Fälligkeiten",
-    description: "Anstehende und überfällige Einschätzungen sicher im Blick.",
-    action: "Fälligkeit zuweisen",
-  },
 };
 
 const shiftTasks: Task[] = [
@@ -1207,107 +1168,6 @@ const teamMembers = [
     name: "Dr. Martin Weber",
     role: "Hausarzt · Belegarzt",
     shifts: ["Visite", "", "Visite", "", "Visite", "", ""],
-  },
-];
-
-const assessments: Assessment[] = [
-  {
-    id: "a1",
-    resident: "Hans Müller",
-    room: "Zimmer 207",
-    type: "Morse Sturzrisiko",
-    score: "65 Punkte",
-    status: "Hoch",
-    tone: "critical" as Tone,
-    updated: "Heute, 07:50",
-    next: "Heute",
-  },
-  {
-    id: "a2",
-    resident: "Maria Keller",
-    room: "Zimmer 204",
-    type: "NRS Schmerzassessment",
-    score: "2 / 10",
-    status: "Stabil",
-    tone: "stable" as Tone,
-    updated: "Heute, 07:35",
-    next: "In 3 Tagen",
-  },
-  {
-    id: "a3",
-    resident: "Erika Meier",
-    room: "Zimmer 211",
-    type: "Braden Dekubitusrisiko",
-    score: "16 Punkte",
-    status: "Mittel",
-    tone: "attention" as Tone,
-    updated: "Gestern, 15:10",
-    next: "Heute",
-  },
-  {
-    id: "a4",
-    resident: "Ruth Baumann",
-    room: "Zimmer 214",
-    type: "Barthel-Index",
-    score: "75 Punkte",
-    status: "Stabil",
-    tone: "stable" as Tone,
-    updated: "10.09.2026",
-    next: "In 8 Tagen",
-  },
-  {
-    id: "a5",
-    resident: "Peter Aebischer",
-    room: "Zimmer 115",
-    type: "MNA Ernährung",
-    score: "9 Punkte",
-    status: "Risiko",
-    tone: "attention" as Tone,
-    updated: "Heute, 06:58",
-    next: "Heute",
-  },
-  {
-    id: "a6",
-    resident: "Walter Brunner",
-    room: "Zimmer 306",
-    type: "Delir-Screening",
-    score: "Nicht auffällig",
-    status: "Stabil",
-    tone: "stable" as Tone,
-    updated: "09.09.2026",
-    next: "In 4 Tagen",
-  },
-];
-
-const dueAssessments: Assessment[] = [
-  { ...assessments[0], dueTime: "Heute · 10:00", owner: "Anna Meier" },
-  { ...assessments[2], dueTime: "Heute · 11:00", owner: "Nora Baumann" },
-  { ...assessments[4], dueTime: "Heute · 12:30", owner: "Lea Frei" },
-  {
-    id: "d4",
-    resident: "Bernhard Koch",
-    room: "Zimmer 012",
-    type: "Kognitives Assessment",
-    score: "Ausstehend",
-    status: "Überfällig",
-    tone: "critical" as Tone,
-    updated: "01.09.2026",
-    next: "Überfällig",
-    dueTime: "Seit 11.09.",
-    owner: "Sven Keller",
-  },
-  {
-    id: "d5",
-    resident: "Anna Schmid",
-    room: "Zimmer 118",
-    type: "Sturzrisiko",
-    score: "42 Punkte",
-    status: "Fällig",
-    tone: "attention" as Tone,
-    updated: "12.08.2026",
-    next: "Morgen",
-    dueTime: "Morgen · 09:00",
-    owner: "Anna Meier",
   },
 ];
 
@@ -2028,134 +1888,6 @@ function ScheduleView({ team, showToast }: { team: boolean; showToast: (message:
   );
 }
 
-function AssessmentsView({ due, showToast }: { due: boolean; showToast: (message: string) => void }) {
-  const [filter, setFilter] = useState("Alle");
-  const [query, setQuery] = useState("");
-  const [completed, setCompleted] = useState<string[]>([]);
-  const source = due ? dueAssessments : assessments;
-  const filters = due ? ["Alle", "Heute", "Überfällig", "Morgen"] : ["Alle", "Kritisch", "Beobachten", "Stabil"];
-  const filtered = source.filter(
-    (item) =>
-      (filter === "Alle" ||
-        (due
-          ? filter === "Heute"
-            ? (item.dueTime ?? "").startsWith("Heute")
-            : filter === "Morgen"
-              ? (item.dueTime ?? "").startsWith("Morgen")
-              : item.next === "Überfällig"
-          : filter === "Kritisch"
-            ? item.tone === "critical"
-            : filter === "Beobachten"
-              ? item.tone === "attention"
-              : item.tone === "stable")) &&
-      `${item.resident} ${item.room} ${item.type}`
-        .toLocaleLowerCase("de-CH")
-        .includes(query.trim().toLocaleLowerCase("de-CH")),
-  );
-  return (
-    <>
-      <Summary
-        items={[
-          { icon: "assess", value: due ? "12" : "48", label: due ? "Assessments fällig" : "aktive Einschätzungen" },
-          { icon: "alert", value: due ? "3" : "7", label: due ? "überfällig" : "mit Risiko", tone: "critical" },
-          { icon: "calendar", value: due ? "9" : "18", label: "diese Woche", tone: "attention" },
-          { icon: "check", value: due ? "86%" : "94%", label: "aktuell", tone: "info" },
-        ]}
-      />
-      <section className="card assessments-card">
-        <div className="operations-toolbar">
-          <div>
-            <h2 className="card-title">{due ? "Anstehende Fälligkeiten" : "Assessmentübersicht"}</h2>
-            <p className="card-subtitle">
-              {filtered.length} von {source.length} Einträgen
-            </p>
-          </div>
-          <label className="resident-search">
-            <ModuleIcon name="search" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Bewohner oder Assessment"
-              aria-label="Einschätzungen durchsuchen"
-            />
-          </label>
-          <div className="operations-filter-buttons">
-            {filters.map((item) => (
-              <button
-                className={filter === item ? "active" : ""}
-                type="button"
-                key={item}
-                aria-pressed={filter === item}
-                onClick={() => setFilter(item)}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="assessment-table-head">
-          <span>Bewohner</span>
-          <span>Assessment</span>
-          <span>Ergebnis</span>
-          <span>{due ? "Fällig" : "Aktualisiert"}</span>
-          <span>Aktion</span>
-        </div>
-        <div className="assessment-list">
-          {filtered.map((item) => {
-            const isDone = completed.includes(item.id);
-            return (
-              <article key={item.id} className={isDone ? "complete" : ""}>
-                <span className="resident-avatar">
-                  {item.resident
-                    .split(" ")
-                    .map((part) => part[0])
-                    .join("")}
-                </span>
-                <span>
-                  <strong>{item.resident}</strong>
-                  <small>{item.room}</small>
-                </span>
-                <span>
-                  <strong>{item.type}</strong>
-                  <small>{item.score}</small>
-                </span>
-                <span className={`status-badge ${isDone ? "stable" : item.tone}`}>
-                  {isDone ? "Erledigt" : item.status}
-                </span>
-                <span>
-                  <strong>{due ? item.dueTime : item.updated}</strong>
-                  <small>{due ? `Zuständig: ${item.owner}` : `Nächste: ${item.next}`}</small>
-                </span>
-                <button
-                  className="quiet-button"
-                  type="button"
-                  onClick={() => {
-                    setCompleted((current) =>
-                      current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id],
-                    );
-                    showToast(
-                      `${item.type} für ${item.resident} ${isDone ? "wieder geöffnet" : "als erledigt markiert"}`,
-                    );
-                  }}
-                >
-                  {isDone ? "Öffnen" : due ? "Bearbeiten" : "Details"}
-                </button>
-              </article>
-            );
-          })}
-          {filtered.length === 0 && (
-            <div className="resident-empty">
-              <ModuleIcon name="search" />
-              <strong>Keine Einschätzungen gefunden</strong>
-              <p>Suchbegriff oder Filter anpassen.</p>
-            </div>
-          )}
-        </div>
-      </section>
-    </>
-  );
-}
-
 export default function OperationsWorkspace({ view }: { view: OperationsView }) {
   const meta = viewMeta[view];
   const [absenceEditorOpen, setAbsenceEditorOpen] = useState(false);
@@ -2213,8 +1945,6 @@ export default function OperationsWorkspace({ view }: { view: OperationsView }) 
           {view === "lastShift" && <HandoverView lastShift showToast={showToast} />}{" "}
           {view === "schedule" && <ScheduleView team={false} showToast={showToast} />}{" "}
           {view === "teamSchedule" && <ScheduleView team showToast={showToast} />}{" "}
-          {view === "assessments" && <AssessmentsView due={false} showToast={showToast} />}{" "}
-          {view === "assessmentDue" && <AssessmentsView due showToast={showToast} />}
         </main>
       )}
     </ModulePageShell>

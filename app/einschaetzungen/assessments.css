@@ -1,0 +1,150 @@
+/* Additions for the database-backed assessments module. */
+
+.assessment-item {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.assessment-item legend {
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.assessment-item > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 6px;
+}
+
+.assessment-item > div.compact {
+  grid-template-columns: repeat(11, minmax(0, 1fr));
+}
+
+.assessment-item button {
+  min-height: 36px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.assessment-item > div.compact button {
+  text-align: center;
+  font-weight: 800;
+}
+
+.assessment-item button.active {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: white;
+}
+
+.assessment-score {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.assessment-score strong {
+  font-size: 20px;
+}
+
+.assessment-score.critical {
+  background: var(--critical-soft);
+  color: var(--critical);
+}
+
+.assessment-score.attention {
+  background: var(--attention-soft);
+  color: var(--attention);
+}
+
+.assessment-score.stable {
+  background: #e7f5ee;
+  color: var(--success);
+}
+
+.assessment-history-body {
+  display: grid;
+  gap: 12px;
+  padding: 18px 22px 24px;
+  overflow: auto;
+}
+
+.assessment-history-body > button {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.assessment-history-body article {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.assessment-history-body article header {
+  display: grid;
+  gap: 2px;
+}
+
+.assessment-history-body article small {
+  color: var(--muted);
+}
+
+.assessment-history-body dl {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.assessment-history-body dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.assessment-history-body dt {
+  color: var(--muted);
+}
+
+.assessment-history-body dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: right;
+}
+
+.assessment-history-body p {
+  margin: 0;
+  font-size: 12px;
+}
+
+.assessments-card .area-custom-select {
+  min-width: 200px;
+}
+
+.status-text.critical {
+  color: var(--critical);
+  font-weight: 700;
+}
+
+.status-text.attention {
+  color: var(--attention);
+}
+
+.status-text.stable {
+  color: var(--success);
+}
