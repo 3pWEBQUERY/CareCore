@@ -13,7 +13,7 @@ import {
   type ShowToast,
 } from "@/app/components/workspace-ui";
 import { useOrderDialogs } from "./order-dialogs";
-import ResidentList, { AllergyBadge } from "./resident-list";
+import ResidentList, { AllergyBadge } from "@/app/components/resident-list";
 
 export type ResidentsPayload = { residents: MedResident[]; canManage: boolean; canEditAllergies: boolean };
 export type ResidentDetail = { orders: MedOrder[]; movements: StockMovement[] };

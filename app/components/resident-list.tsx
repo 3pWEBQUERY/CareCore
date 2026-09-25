@@ -2,20 +2,23 @@
 
 import { useState } from "react";
 import { ModuleIcon } from "@/app/components/module-page-shell";
-import type { MedResident } from "@/lib/medication-shared";
 
-export default function ResidentList({
+// Minimal resident fields the list needs; modules pass their own richer types.
+export type ListResident = { id: string; name: string; initials: string; room: string; careUnit: string };
+
+// Searchable resident list used by the medication and care planning workspaces.
+export default function ResidentList<T extends ListResident>({
   residents,
   selectedId,
   onSelect,
   loading,
   countLabel,
 }: {
-  residents: MedResident[];
+  residents: T[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   loading: boolean;
-  countLabel: (resident: MedResident) => string;
+  countLabel: (resident: T) => string;
 }) {
   const [query, setQuery] = useState("");
   const needle = query.trim().toLocaleLowerCase("de-CH");

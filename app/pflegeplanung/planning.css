@@ -1,0 +1,309 @@
+/* Additions for the database-backed care planning module. */
+
+.care-plan-empty {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding-bottom: 20px;
+}
+
+.care-plan-head {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.care-plan-focus {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.care-plan-head dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.care-plan-head dl div {
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--surface-soft);
+}
+
+.care-plan-head dt {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.care-plan-head dd {
+  margin: 2px 0 0;
+  font-weight: 700;
+}
+
+.care-plan-head dd.due {
+  color: var(--critical);
+}
+
+.care-plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.care-goal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 6px 0 -4px;
+}
+
+.care-goal-list {
+  display: grid;
+  gap: 12px;
+}
+
+.care-goal-grid {
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  align-items: start;
+}
+
+.care-goal {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.care-goal.achieved,
+.care-goal.not_achieved {
+  opacity: 0.85;
+}
+
+.care-goal header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.care-goal-category {
+  color: var(--brand-dark);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.care-goal h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.care-goal-context {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0;
+}
+
+.care-goal-context dt,
+.care-goal h4 {
+  margin: 0 0 3px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.care-goal-context dd {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.care-goal-interventions,
+.care-goal-evaluations {
+  display: grid;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.care-intervention {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: start;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.care-intervention > svg {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  color: var(--brand);
+}
+
+.care-intervention > span:nth-child(2) {
+  display: grid;
+  gap: 2px;
+}
+
+.care-intervention small,
+.care-intervention em {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.care-intervention.paused,
+.care-intervention.completed {
+  opacity: 0.6;
+}
+
+.care-intervention-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.care-intervention-actions button {
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--brand-dark);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.care-goal-evaluations p {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.care-goal-evaluations p span {
+  color: var(--muted);
+}
+
+.care-goal footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.care-goal-resident {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.care-goal-resident a {
+  font-weight: 800;
+}
+
+.care-goal-resident span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.care-goal-filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.care-goal-filterbar .area-custom-select {
+  min-width: 220px;
+}
+
+.care-goal-filterbar small {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.care-outcome-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.care-outcome-counts b {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-soft);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.care-outcome-counts b.stable {
+  color: var(--success);
+}
+
+.care-outcome-counts b.info {
+  color: var(--info);
+}
+
+.care-outcome-counts b.critical {
+  color: var(--critical);
+}
+
+.care-due-card ul {
+  display: grid;
+  margin: 0;
+  padding: 0 18px 12px;
+  list-style: none;
+}
+
+.care-due-card li {
+  display: grid;
+  grid-template-columns: 82px 1fr;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.care-due-card li.overdue time {
+  color: var(--critical);
+  font-weight: 800;
+}
+
+.care-due-card li span {
+  display: grid;
+  gap: 2px;
+}
+
+.care-due-card li small {
+  color: var(--muted);
+}
+
+.care-due-card li svg {
+  width: 11px;
+  height: 11px;
+  vertical-align: -1px;
+}
+
+@media (max-width: 720px) {
+  .care-goal-context {
+    grid-template-columns: 1fr;
+  }
+
+  .care-goal-grid {
+    grid-template-columns: 1fr;
+  }
+}

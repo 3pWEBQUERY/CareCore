@@ -18,7 +18,7 @@ import {
 } from "@/app/components/workspace-ui";
 import { useOrderDialogs } from "./order-dialogs";
 import { orderTone, useSelectedResident } from "./plan-view";
-import ResidentList, { AllergyBadge } from "./resident-list";
+import ResidentList, { AllergyBadge } from "@/app/components/resident-list";
 import { ReceiptDialog } from "./stock-dialogs";
 import { MovementJournal } from "./stock-view";
 

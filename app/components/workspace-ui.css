@@ -123,3 +123,9 @@
   color: var(--muted);
   font-size: 12px;
 }
+
+.editor-dialog .appointment-kind-switch {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  width: 100%;
+}
