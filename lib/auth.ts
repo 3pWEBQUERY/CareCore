@@ -4,7 +4,13 @@ import { neon } from "@neondatabase/serverless";
 
 export const SESSION_COOKIE = "carecore_session";
 const SESSION_DAYS = 7;
-const ADMIN_PASSWORD_HASH = "scrypt:01a0fdc66a4455589c11381adeb7f306:653cb4f3ad74171c86dd33e71582ab3cca7c7f75734302e64fac4cc60c99033911bb3f981397df4e0049ccbc72a1d40adf5824bcb710ee1e4c8c4ea537ba372f";
+const ADMIN_USER_ID = "00000000-0000-4000-8000-000000000001";
+const MIN_ADMIN_PASSWORD_LENGTH = 12;
+// Formerly shipped default admin hash. Kept only to detect and block accounts that still use it.
+const LEGACY_DEFAULT_ADMIN_HASH = "scrypt:01a0fdc66a4455589c11381adeb7f306:653cb4f3ad74171c86dd33e71582ab3cca7c7f75734302e64fac4cc60c99033911bb3f981397df4e0049ccbc72a1d40adf5824bcb710ee1e4c8c4ea537ba372f";
+const LOGIN_WINDOW_MINUTES = 15;
+const MAX_FAILED_LOGINS_PER_USERNAME = 5;
+const MAX_FAILED_LOGINS_PER_IP = 20;
 const scrypt = promisify(scryptCallback);
 
 type UserRow = {
@@ -43,6 +49,24 @@ export async function hashPassword(password: string) {
   return `scrypt:${salt}:${derived.toString("hex")}`;
 }
 
+// Creates the initial admin (or replaces the formerly shipped default password)
+// from CARECORE_ADMIN_PASSWORD. Without that variable no admin is seeded.
+async function bootstrapAdmin(sql: ReturnType<typeof database>) {
+  const password = process.env.CARECORE_ADMIN_PASSWORD;
+  if (!password) return;
+  if (password.length < MIN_ADMIN_PASSWORD_LENGTH) {
+    console.error(`CARECORE_ADMIN_PASSWORD must be at least ${MIN_ADMIN_PASSWORD_LENGTH} characters; admin bootstrap skipped.`);
+    return;
+  }
+  const passwordHash = await hashPassword(password);
+  await sql`
+    INSERT INTO carecore_users (id, username, display_name, role, password_hash)
+    VALUES (${ADMIN_USER_ID}, 'Admin', 'CareCore Administrator', 'admin', ${passwordHash})
+    ON CONFLICT DO NOTHING
+  `;
+  await sql`UPDATE carecore_users SET password_hash = ${passwordHash}, updated_at = NOW() WHERE password_hash = ${LEGACY_DEFAULT_ADMIN_HASH}`;
+}
+
 export async function ensureAuthSchema() {
   if (!schemaPromise) {
     schemaPromise = (async () => {
@@ -71,10 +95,16 @@ export async function ensureAuthSchema() {
       `;
       await sql`CREATE INDEX IF NOT EXISTS carecore_sessions_expiry_idx ON carecore_sessions (expires_at)`;
       await sql`
-        INSERT INTO carecore_users (id, username, display_name, role, password_hash)
-        VALUES ('00000000-0000-4000-8000-000000000001', 'Admin', 'CareCore Administrator', 'admin', ${ADMIN_PASSWORD_HASH})
-        ON CONFLICT DO NOTHING
+        CREATE TABLE IF NOT EXISTS carecore_login_attempts (
+          id UUID PRIMARY KEY,
+          username_key VARCHAR(80) NOT NULL,
+          ip_address VARCHAR(64) NOT NULL,
+          attempted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
       `;
+      await sql`CREATE INDEX IF NOT EXISTS carecore_login_attempts_username_idx ON carecore_login_attempts (username_key, attempted_at)`;
+      await sql`CREATE INDEX IF NOT EXISTS carecore_login_attempts_ip_idx ON carecore_login_attempts (ip_address, attempted_at)`;
+      await bootstrapAdmin(sql);
     })().catch((error) => {
       schemaPromise = null;
       throw error;
@@ -94,6 +124,10 @@ export async function authenticate(username: string, password: string): Promise<
   ` as unknown as UserRow[];
   const user = rows[0];
   if (!user || !(await verifyPassword(password, user.password_hash))) return null;
+  if (user.password_hash === LEGACY_DEFAULT_ADMIN_HASH) {
+    console.warn(`Login for "${user.username}" blocked: account still uses the former default password. Set CARECORE_ADMIN_PASSWORD to replace it.`);
+    return null;
+  }
   const { password_hash: _passwordHash, ...safeUser } = user;
   void _passwordHash;
   return safeUser;
@@ -133,4 +167,38 @@ export async function deleteSession(token: string | undefined) {
   await ensureAuthSchema();
   const sql = database();
   await sql`DELETE FROM carecore_sessions WHERE token_hash = ${hashSessionToken(token)}`;
+}
+
+function usernameKey(username: string) {
+  return username.trim().toLowerCase().slice(0, 80);
+}
+
+export async function isLoginThrottled(username: string, ipAddress: string) {
+  await ensureAuthSchema();
+  const sql = database();
+  const rows = await sql`
+    SELECT
+      COUNT(*) FILTER (WHERE username_key = ${usernameKey(username)})::int AS by_username,
+      COUNT(*) FILTER (WHERE ip_address = ${ipAddress})::int AS by_ip
+    FROM carecore_login_attempts
+    WHERE attempted_at > NOW() - make_interval(mins => ${LOGIN_WINDOW_MINUTES})
+  ` as unknown as Array<{ by_username: number; by_ip: number }>;
+  const counts = rows[0];
+  return !!counts && (counts.by_username >= MAX_FAILED_LOGINS_PER_USERNAME || counts.by_ip >= MAX_FAILED_LOGINS_PER_IP);
+}
+
+export async function recordFailedLogin(username: string, ipAddress: string) {
+  await ensureAuthSchema();
+  const sql = database();
+  await sql`DELETE FROM carecore_login_attempts WHERE attempted_at <= NOW() - make_interval(mins => ${LOGIN_WINDOW_MINUTES})`;
+  await sql`
+    INSERT INTO carecore_login_attempts (id, username_key, ip_address)
+    VALUES (${randomUUID()}, ${usernameKey(username)}, ${ipAddress.slice(0, 64)})
+  `;
+}
+
+export async function clearFailedLogins(username: string) {
+  await ensureAuthSchema();
+  const sql = database();
+  await sql`DELETE FROM carecore_login_attempts WHERE username_key = ${usernameKey(username)}`;
 }

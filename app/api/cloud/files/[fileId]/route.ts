@@ -4,6 +4,14 @@ import { carecoreActor, carecoreDb } from "@/lib/server-data";
 export const runtime = "nodejs";
 type Context = { params: Promise<{ fileId: string }> };
 
+// Only types that cannot execute script are ever rendered inline; everything else is downloaded.
+const inlinePreviewTypes = new Set([
+  "image/jpeg", "image/png", "image/webp", "image/gif", "image/avif",
+  "video/mp4", "video/webm", "video/quicktime",
+  "audio/mpeg", "audio/mp4", "audio/wav", "audio/ogg", "audio/webm",
+  "application/pdf", "text/plain",
+]);
+
 export async function GET(request: Request, { params }: Context) {
   try {
     const actor = await carecoreActor();
@@ -18,11 +26,14 @@ export async function GET(request: Request, { params }: Context) {
     ` as unknown as Array<{ name: string; mime_type: string; content_base64: string }>;
     if (!rows[0]) return NextResponse.json({ error: "Datei nicht gefunden." }, { status: 404 });
     const safeName = rows[0].name.replace(/["\r\n]/g, "_");
-    const preview = new URL(request.url).searchParams.get("preview") === "1";
+    const mimeType = (rows[0].mime_type || "").split(";")[0].trim().toLowerCase();
+    const preview = new URL(request.url).searchParams.get("preview") === "1" && inlinePreviewTypes.has(mimeType);
     return new Response(Buffer.from(rows[0].content_base64, "base64"), {
       headers: {
-        "Content-Type": rows[0].mime_type || "application/octet-stream",
+        "Content-Type": preview ? (mimeType === "text/plain" ? "text/plain; charset=utf-8" : mimeType) : "application/octet-stream",
         "Content-Disposition": `${preview ? "inline" : "attachment"}; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(rows[0].name)}`,
+        // Chrome's PDF viewer refuses to render in a sandboxed document, so PDFs get a restrictive CSP without sandbox.
+        "Content-Security-Policy": mimeType === "application/pdf" && preview ? "default-src 'none'; object-src 'self'" : "sandbox; default-src 'none'; img-src 'self'; style-src 'unsafe-inline'",
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, no-store",
       },

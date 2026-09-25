@@ -31,6 +31,18 @@ CREATE TABLE IF NOT EXISTS carecore_sessions (
 CREATE INDEX IF NOT EXISTS carecore_sessions_expiry_idx
   ON carecore_sessions (expires_at);
 
+CREATE TABLE IF NOT EXISTS carecore_login_attempts (
+  id UUID PRIMARY KEY,
+  username_key VARCHAR(80) NOT NULL,
+  ip_address VARCHAR(64) NOT NULL,
+  attempted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS carecore_login_attempts_username_idx
+  ON carecore_login_attempts (username_key, attempted_at);
+CREATE INDEX IF NOT EXISTS carecore_login_attempts_ip_idx
+  ON carecore_login_attempts (ip_address, attempted_at);
+
 -- CareCore domain model. IDs are created in the application layer so the schema
 -- works equally with Neon pooled and direct connections.
 
@@ -822,12 +834,4 @@ INSERT INTO carecore_roles (id, key, name, description, permissions, system_role
   ('00000000-0000-4000-8000-000000000705', 'mitarbeitende:r', 'Mitarbeitende:r', 'Eingeschränkter Fachzugriff.', '["residents.read"]'::jsonb, TRUE)
 ON CONFLICT (key) DO NOTHING;
 
-INSERT INTO carecore_users (id, username, display_name, role, password_hash)
-VALUES (
-  '00000000-0000-4000-8000-000000000001',
-  'Admin',
-  'CareCore Administrator',
-  'admin',
-  'scrypt:01a0fdc66a4455589c11381adeb7f306:653cb4f3ad74171c86dd33e71582ab3cca7c7f75734302e64fac4cc60c99033911bb3f981397df4e0049ccbc72a1d40adf5824bcb710ee1e4c8c4ea537ba372f'
-)
-ON CONFLICT DO NOTHING;
+-- The initial admin account is created by the app from CARECORE_ADMIN_PASSWORD (see lib/auth.ts).
