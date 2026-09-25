@@ -127,7 +127,8 @@ export async function createManagedRole(actorId: string, input: { key: string; n
 export async function updateManagedRole(actorId: string, roleId: string, input: { name: string; description?: string; permissions?: unknown }) {
   await ensureAdminUsersSchema(); const sql = database(); const name = input.name.trim().slice(0, 100);
   if (!name) throw new Error("INVALID_ROLE_INPUT"); const permissions = normalizePermissions(input.permissions);
-  const updated = await sql`UPDATE carecore_roles SET name = ${name}, description = ${input.description?.trim().slice(0, 500) ?? ""}, permissions = ${JSON.stringify(permissions)}::jsonb, updated_at = NOW() WHERE id = ${roleId} RETURNING id` as unknown as Array<{ id: string }>;
+  // The admin role always keeps every permission so administrators cannot lock themselves out.
+  const updated = await sql`UPDATE carecore_roles SET name = ${name}, description = ${input.description?.trim().slice(0, 500) ?? ""}, permissions = CASE WHEN key = 'admin' THEN ${JSON.stringify(roleKeys)}::jsonb ELSE ${JSON.stringify(permissions)}::jsonb END, updated_at = NOW() WHERE id = ${roleId} RETURNING id` as unknown as Array<{ id: string }>;
   if (!updated[0]) throw new Error("ROLE_NOT_FOUND"); await auditRole(actorId, roleId, "updated", { name, permissions }); return listManagedRoles();
 }
 

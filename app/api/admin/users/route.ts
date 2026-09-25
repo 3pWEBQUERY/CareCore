@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
+import { carecoreActor, hasPermission } from "@/lib/server-data";
 import { createManagedUser, deleteManagedUser, listManagedUsers, updateManagedUser } from "@/lib/admin-users";
 
 export const runtime = "nodejs";
 
 async function adminUser() {
-  const cookieStore = await cookies();
-  const user = await getSessionUser(cookieStore.get(SESSION_COOKIE)?.value);
-  return user?.role === "admin" ? user : null;
+  const actor = await carecoreActor();
+  return hasPermission(actor, "administration.manage") ? actor : null;
 }
 
 function errorResponse(error: unknown) {

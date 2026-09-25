@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { carecoreActor, carecoreDb } from "@/lib/server-data";
+import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ residentId: string; observationId: string }> };
@@ -8,6 +8,7 @@ export async function PATCH(request: Request, context: Context) {
   try {
     const actor = await carecoreActor();
     if (!actor?.organizationId) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
+    if (!hasPermission(actor, "documentation.write")) return forbidden();
     const { residentId, observationId } = await context.params;
     const input = await request.json() as Record<string, unknown>;
     const kind = typeof input.kind === "string" ? input.kind : "";
@@ -31,6 +32,7 @@ export async function DELETE(_request: Request, context: Context) {
   try {
     const actor = await carecoreActor();
     if (!actor?.organizationId) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
+    if (!hasPermission(actor, "documentation.write")) return forbidden();
     const { residentId, observationId } = await context.params;
     const sql = carecoreDb();
     const rows = await sql`UPDATE carecore_body_observations o SET archived_at = NOW(), updated_by = ${actor.id}, updated_at = NOW() FROM carecore_residents r WHERE o.id = ${observationId} AND o.resident_id = ${residentId} AND o.archived_at IS NULL AND r.id = o.resident_id AND r.organization_id = ${actor.organizationId} RETURNING o.id`;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { carecoreActor, carecoreDb } from "@/lib/server-data";
+import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
 
@@ -27,6 +27,7 @@ export async function GET(_request: Request, context: { params: Promise<{ reside
     const { residentId } = await context.params;
     const active = await permittedResident(residentId);
     if (!active) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (!hasPermission(active.actor, "residents.read")) return forbidden();
     const rows = await active.sql`
       SELECT b.life_story, b.important_people, b.daily_routines, b.preferences, b.strengths, b.sensitive_topics, b.updated_at, u.display_name AS updated_by
       FROM carecore_resident_biographies b
@@ -47,6 +48,7 @@ export async function PUT(request: Request, context: { params: Promise<{ residen
     const { residentId } = await context.params;
     const active = await permittedResident(residentId);
     if (!active) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (!hasPermission(active.actor, "residents.write")) return forbidden();
     const input = await request.json() as BiographyInput;
     const value = (key: keyof BiographyInput) => typeof input[key] === "string" ? input[key].trim().slice(0, 8000) : "";
     const lifeStory = value("lifeStory");

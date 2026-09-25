@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { carecoreActor, carecoreDb } from "@/lib/server-data";
+import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
 
@@ -8,6 +8,7 @@ export async function GET() {
   try {
     const actor = await carecoreActor();
     if (!actor) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
+    if (!hasPermission(actor, "residents.read")) return forbidden();
     if (!actor.organizationId) return NextResponse.json({ residents: [], units: [] });
     const sql = carecoreDb();
     const [rows, units, profile] = await Promise.all([
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
   try {
     const actor = await carecoreActor();
     if (!actor) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
+    if (!hasPermission(actor, "residents.write")) return forbidden();
     if (!actor.organizationId) return NextResponse.json({ error: "Keine Organisation zugeordnet." }, { status: 400 });
     const body = await request.json() as Record<string, unknown>;
     const value = (key: string, limit: number) => typeof body[key] === "string" ? (body[key] as string).trim().slice(0, limit) : "";

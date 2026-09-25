@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { carecoreActor, carecoreDb } from "@/lib/server-data";
+import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 import { parseAppointmentInput } from "@/lib/server-appointments";
 
 export const runtime = "nodejs";
@@ -9,6 +9,7 @@ export async function PATCH(request: Request, context: Context) {
   try {
     const actor = await carecoreActor();
     if (!actor?.organizationId) return NextResponse.json({ error: "Nicht angemeldet oder keiner Organisation zugeordnet." }, { status: 401 });
+    if (!hasPermission(actor, "residents.write")) return forbidden();
     const { appointmentId } = await context.params;
     if (!/^[0-9a-f-]{36}$/i.test(appointmentId)) return NextResponse.json({ error: "Ungültiger Termin." }, { status: 400 });
     const parsed = parseAppointmentInput(await request.json() as Record<string, unknown>);
@@ -36,6 +37,7 @@ export async function DELETE(_request: Request, context: Context) {
   try {
     const actor = await carecoreActor();
     if (!actor?.organizationId) return NextResponse.json({ error: "Nicht angemeldet oder keiner Organisation zugeordnet." }, { status: 401 });
+    if (!hasPermission(actor, "residents.write")) return forbidden();
     const { appointmentId } = await context.params;
     if (!/^[0-9a-f-]{36}$/i.test(appointmentId)) return NextResponse.json({ error: "Ungültiger Termin." }, { status: 400 });
     const sql = carecoreDb();

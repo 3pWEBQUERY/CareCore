@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { carecoreActor, carecoreDb } from "@/lib/server-data";
+import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
 
@@ -25,6 +25,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ resid
     const { residentId, supplyId } = await context.params;
     const active = await supplyContext(residentId, supplyId);
     if (!active) return NextResponse.json({ error: "Pflegebedarf nicht verfügbar." }, { status: 404 });
+    if (!hasPermission(active.actor, "residents.write")) return forbidden();
     const input = supplyValues(await request.json() as SupplyInput);
     if (!input.itemName) return NextResponse.json({ error: "Bitte gib eine Bezeichnung an." }, { status: 400 });
     const rows = await active.sql`UPDATE carecore_resident_supplies SET item_name = ${input.itemName}, category = ${input.category}, unit = ${input.unit}, current_quantity = ${input.currentQuantity}, target_quantity = ${input.targetQuantity}, status = ${input.status}, notes = ${input.notes || null}, updated_by = ${active.actor.id}, updated_at = NOW() WHERE id = ${supplyId} RETURNING id, product_id, item_name, category, unit, current_quantity, target_quantity, status, notes, updated_at`;
@@ -37,6 +38,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ res
     const { residentId, supplyId } = await context.params;
     const active = await supplyContext(residentId, supplyId);
     if (!active) return NextResponse.json({ error: "Pflegebedarf nicht verfügbar." }, { status: 404 });
+    if (!hasPermission(active.actor, "residents.write")) return forbidden();
     await active.sql`DELETE FROM carecore_resident_supplies WHERE id = ${supplyId}`;
     return NextResponse.json({ ok: true });
   } catch (error) { console.error("Supplies DELETE failed", error); return NextResponse.json({ error: "Pflegebedarf konnte nicht entfernt werden." }, { status: 500 }); }

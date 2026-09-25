@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { carecoreActor, carecoreDb } from "@/lib/server-data";
+import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
 
@@ -8,6 +8,7 @@ export async function GET() {
   try {
     const actor = await carecoreActor();
     if (!actor) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
+    if (!hasPermission(actor, "residents.read")) return forbidden();
     if (!actor.organizationId) return NextResponse.json({ entries: [] });
     const sql = carecoreDb();
     const entries = await sql`SELECT d.id, d.title, d.body, d.category, d.importance, d.occurred_at,
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
   try {
     const actor = await carecoreActor();
     if (!actor) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
+    if (!hasPermission(actor, "documentation.write")) return forbidden();
     const body = await request.json() as Record<string, unknown>;
     const residentName = typeof body.residentName === "string" ? body.residentName.trim() : "";
     const content = typeof body.content === "string" ? body.content.trim().slice(0, 10000) : "";

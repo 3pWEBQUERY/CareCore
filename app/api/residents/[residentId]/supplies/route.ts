@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { carecoreActor, carecoreDb } from "@/lib/server-data";
+import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
 
@@ -26,6 +26,7 @@ export async function GET(_request: Request, context: { params: Promise<{ reside
     const { residentId } = await context.params;
     const active = await residentContext(residentId);
     if (!active) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (!hasPermission(active.actor, "residents.read")) return forbidden();
     const [supplies, products] = await Promise.all([
       active.sql`SELECT id, product_id, item_name, category, unit, current_quantity, target_quantity, status, notes, updated_at FROM carecore_resident_supplies WHERE resident_id = ${residentId} ORDER BY status = 'active' DESC, category, item_name`,
       active.sql`SELECT id, item_name, category, unit, default_target_quantity FROM carecore_care_supply_products WHERE organization_id = ${active.actor.organizationId} AND status = 'active' ORDER BY category, item_name`,
@@ -39,6 +40,7 @@ export async function POST(request: Request, context: { params: Promise<{ reside
     const { residentId } = await context.params;
     const active = await residentContext(residentId);
     if (!active) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (!hasPermission(active.actor, "residents.write")) return forbidden();
     const body = await request.json() as SupplyInput;
     if (typeof body.productId === "string" && body.productId) {
       const quantity = typeof body.quantity === "number" && Number.isInteger(body.quantity) ? Math.max(1, Math.min(100000, body.quantity)) : 0;

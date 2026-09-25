@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { carecoreActor, carecoreDb } from "@/lib/server-data";
+import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
 
@@ -10,7 +10,7 @@ async function contactContext(residentId: string, contactId: string) {
   if (!actor?.organizationId) return null;
   const sql = carecoreDb();
   const rows = await sql`SELECT c.id FROM carecore_resident_contacts c INNER JOIN carecore_residents r ON r.id = c.resident_id WHERE c.id = ${contactId} AND c.resident_id = ${residentId} AND r.organization_id = ${actor.organizationId} LIMIT 1`;
-  return rows[0] ? { sql } : null;
+  return rows[0] ? { actor, sql } : null;
 }
 
 function contactValues(input: ContactInput) {
@@ -23,6 +23,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ resid
     const { residentId, contactId } = await context.params;
     const active = await contactContext(residentId, contactId);
     if (!active) return NextResponse.json({ error: "Kontaktperson nicht verfügbar." }, { status: 404 });
+    if (!hasPermission(active.actor, "residents.write")) return forbidden();
     const input = contactValues(await request.json() as ContactInput);
     if (!input.fullName) return NextResponse.json({ error: "Bitte gib einen Namen an." }, { status: 400 });
     if (input.isPrimary) await active.sql`UPDATE carecore_resident_contacts SET is_primary = FALSE, updated_at = NOW() WHERE resident_id = ${residentId} AND id <> ${contactId}`;
@@ -39,6 +40,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ res
     const { residentId, contactId } = await context.params;
     const active = await contactContext(residentId, contactId);
     if (!active) return NextResponse.json({ error: "Kontaktperson nicht verfügbar." }, { status: 404 });
+    if (!hasPermission(active.actor, "residents.write")) return forbidden();
     await active.sql`DELETE FROM carecore_resident_contacts WHERE id = ${contactId}`;
     return NextResponse.json({ ok: true });
   } catch (error) {

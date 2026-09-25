@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { carecoreActor, carecoreDb } from "@/lib/server-data";
+import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
 
@@ -19,6 +19,7 @@ export async function GET(_request: Request, context: { params: Promise<{ reside
     const { residentId } = await context.params;
     const allowed = await access(residentId);
     if (!allowed) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (!hasPermission(allowed.actor, "residents.read")) return forbidden();
     const observations = await allowed.sql`SELECT o.id, o.kind, o.label, o.location, o.status, o.notes, o.body_x, o.body_y, o.body_z, o.created_at, o.updated_at, COALESCE(u.display_name, 'Mitarbeitende') AS author FROM carecore_body_observations o LEFT JOIN carecore_users u ON u.id = o.created_by WHERE o.resident_id = ${residentId} AND o.archived_at IS NULL ORDER BY o.created_at DESC`;
     return NextResponse.json({ observations });
   } catch (error) {
@@ -32,6 +33,7 @@ export async function POST(request: Request, context: { params: Promise<{ reside
     const { residentId } = await context.params;
     const allowed = await access(residentId);
     if (!allowed) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (!hasPermission(allowed.actor, "documentation.write")) return forbidden();
     const input = await request.json() as Record<string, unknown>;
     const kind = typeof input.kind === "string" ? input.kind : "";
     const label = typeof input.label === "string" ? input.label.trim() : "";

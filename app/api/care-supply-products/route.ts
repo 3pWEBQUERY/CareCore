@@ -1,10 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { carecoreActor, carecoreDb } from "@/lib/server-data";
+import { carecoreActor, carecoreDb, hasPermission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
 type ProductInput = { itemName?: unknown; category?: unknown; unit?: unknown; description?: unknown; defaultTargetQuantity?: unknown; currentStockQuantity?: unknown; status?: unknown };
-const isAdmin = (role: string) => role === "admin";
 const cleanText = (value: unknown, max: number) => typeof value === "string" ? value.trim().slice(0, max) : "";
 const quantity = (value: unknown) => typeof value === "number" && Number.isInteger(value) ? Math.max(0, Math.min(100000, value)) : 0;
 
@@ -13,7 +12,7 @@ export async function GET() {
     const actor = await carecoreActor();
     if (!actor?.organizationId) return NextResponse.json({ error: "Keine Anmeldung." }, { status: 401 });
     const sql = carecoreDb();
-    const products = actor.role === "admin"
+    const products = hasPermission(actor, "administration.manage")
       ? await sql`SELECT id, item_name, category, unit, description, default_target_quantity, current_stock_quantity, status, created_at, updated_at FROM carecore_care_supply_products WHERE organization_id = ${actor.organizationId} ORDER BY status = 'active' DESC, category, item_name`
       : await sql`SELECT id, item_name, category, unit, description, default_target_quantity, current_stock_quantity, status, created_at, updated_at FROM carecore_care_supply_products WHERE organization_id = ${actor.organizationId} AND status = 'active' ORDER BY category, item_name`;
     return NextResponse.json({ products });
@@ -23,7 +22,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const actor = await carecoreActor();
-    if (!actor || !isAdmin(actor.role) || !actor.organizationId) return NextResponse.json({ error: "Nur Administratoren können den Produktkatalog verwalten." }, { status: 403 });
+    if (!actor?.organizationId || !hasPermission(actor, "administration.manage")) return NextResponse.json({ error: "Nur Administratoren können den Produktkatalog verwalten." }, { status: 403 });
     const input = await request.json() as ProductInput;
     const itemName = cleanText(input.itemName, 180);
     const category = cleanText(input.category, 80) || "Pflege & Hygiene";
@@ -45,7 +44,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const actor = await carecoreActor();
-    if (!actor || !isAdmin(actor.role) || !actor.organizationId) return NextResponse.json({ error: "Nur Administratoren können den Produktkatalog verwalten." }, { status: 403 });
+    if (!actor?.organizationId || !hasPermission(actor, "administration.manage")) return NextResponse.json({ error: "Nur Administratoren können den Produktkatalog verwalten." }, { status: 403 });
     const input = await request.json() as ProductInput & { id?: unknown };
     const id = typeof input.id === "string" ? input.id : "";
     const itemName = cleanText(input.itemName, 180);

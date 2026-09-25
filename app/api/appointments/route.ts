@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { carecoreActor, carecoreDb } from "@/lib/server-data";
+import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 import { parseAppointmentInput } from "@/lib/server-appointments";
 
 export const runtime = "nodejs";
@@ -9,6 +9,7 @@ export async function GET(request: Request) {
   try {
     const actor = await carecoreActor();
     if (!actor?.organizationId) return NextResponse.json({ error: "Nicht angemeldet oder keiner Organisation zugeordnet." }, { status: 401 });
+    if (!hasPermission(actor, "residents.read")) return forbidden();
     const params = new URL(request.url).searchParams;
     const residentId = params.get("residentId");
     const from = params.get("from");
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
   try {
     const actor = await carecoreActor();
     if (!actor?.organizationId) return NextResponse.json({ error: "Nicht angemeldet oder keiner Organisation zugeordnet." }, { status: 401 });
+    if (!hasPermission(actor, "residents.write")) return forbidden();
     const parsed = parseAppointmentInput(await request.json() as Record<string, unknown>);
     if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
     const sql = carecoreDb();
