@@ -1,0 +1,80 @@
+/* Additions for the database-backed operations views (handover). */
+
+.handover-filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+}
+
+.handover-filterbar .area-custom-select {
+  min-width: 230px;
+}
+
+.handover-filterbar small {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.handover-side {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.handover-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.handover-editor > .area-custom-select,
+.handover-editor > .care-record-filters {
+  margin: 0 18px;
+}
+
+.handover-notes ul {
+  display: grid;
+  margin: 0;
+  padding: 0 18px 12px;
+  list-style: none;
+}
+
+.handover-notes li {
+  display: grid;
+  gap: 5px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.handover-notes li.read {
+  opacity: 0.7;
+}
+
+.handover-notes li header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.handover-notes li p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.handover-notes li small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.handover-notes li button {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.handover-event-list small a {
+  font-weight: 700;
+}

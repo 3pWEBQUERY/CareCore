@@ -1,5 +1,5 @@
-import OperationsWorkspace from "../../components/operations-workspace";
+import HandoverWorkspace from "../../components/handover-view";
 
 export default function LastShiftPage() {
-  return <OperationsWorkspace view="lastShift" />;
+  return <HandoverWorkspace lastShift />;
 }

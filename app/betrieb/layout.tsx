@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "./operations.css";
 
 export const metadata: Metadata = {
   title: "CareCore · Betrieb",

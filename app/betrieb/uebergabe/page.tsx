@@ -1,5 +1,5 @@
-import OperationsWorkspace from "../components/operations-workspace";
+import HandoverWorkspace from "../components/handover-view";
 
 export default function MyHandoverPage() {
-  return <OperationsWorkspace view="handover" />;
+  return <HandoverWorkspace lastShift={false} />;
 }

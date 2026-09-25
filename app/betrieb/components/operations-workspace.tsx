@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import ModulePageShell, { ModuleIcon, type ModuleIconName } from "@/app/components/module-page-shell";
 
-type OperationsView =
-  "shift" | "shiftHistory" | "tasks" | "teamTasks" | "handover" | "lastShift" | "schedule" | "teamSchedule";
+type OperationsView = "shift" | "shiftHistory" | "tasks" | "teamTasks" | "schedule" | "teamSchedule";
 type Tone = "stable" | "attention" | "critical" | "info";
 type Task = {
   id: string;
@@ -927,22 +926,6 @@ const viewMeta: Record<
     description: "Aufgaben im Team verteilen, verfolgen und gemeinsam abschliessen.",
     action: "Teamaufgabe erstellen",
   },
-  handover: {
-    module: "handover",
-    child: "Meine Übergabe",
-    eyebrow: "CareCore Handover",
-    title: "Meine Übergabe",
-    description: "Wichtige Beobachtungen strukturiert an den nächsten Dienst übergeben.",
-    action: "Übergabe veröffentlichen",
-  },
-  lastShift: {
-    module: "handover",
-    child: "Seit letztem Dienst",
-    eyebrow: "CareCore Handover",
-    title: "Seit letztem Dienst",
-    description: "Veränderungen und Ereignisse seit deiner letzten Anwesenheit.",
-    action: "Alles als gelesen markieren",
-  },
   schedule: {
     module: "schedule",
     child: "Mein Dienstplan",
@@ -1037,39 +1020,6 @@ const shiftHistory = [
     handover: "Vollständig",
     entries: 20,
     tone: "stable" as Tone,
-  },
-];
-
-const handoverEvents = [
-  {
-    time: "07:42",
-    title: "Vitalwerte erfasst",
-    detail: "Hans Müller · Blutdruck 132/78, Puls 72/min",
-    tone: "stable" as Tone,
-  },
-  {
-    time: "07:30",
-    title: "Medikationsplan angepasst",
-    detail: "Erika Meier · Metoprolol ab heute 50 mg",
-    tone: "attention" as Tone,
-  },
-  {
-    time: "06:55",
-    title: "Wundversorgung dokumentiert",
-    detail: "Maria Keller · Verband trocken und reizlos",
-    tone: "stable" as Tone,
-  },
-  {
-    time: "Gestern 21:10",
-    title: "Sturzereignis",
-    detail: "Hans Müller · nächtliche Kontrolle bis 14:00 Uhr",
-    tone: "critical" as Tone,
-  },
-  {
-    time: "Gestern 18:40",
-    title: "Angehörigenkontakt",
-    detail: "Peter Aebischer · Tochter telefonisch informiert",
-    tone: "info" as Tone,
   },
 ];
 
@@ -1616,119 +1566,6 @@ function TaskView({ team, showToast }: { team: boolean; showToast: (message: str
   );
 }
 
-function HandoverView({ lastShift, showToast }: { lastShift: boolean; showToast: (message: string) => void }) {
-  const [filter, setFilter] = useState("Alle");
-  const [note, setNote] = useState("");
-  const [saved, setSaved] = useState(false);
-  const filters = ["Alle", "Kritisch", "Medikation", "Pflege"];
-  const events = lastShift ? handoverEvents : handoverEvents.slice(0, 3);
-  const filtered = events.filter(
-    (event) =>
-      filter === "Alle" ||
-      (filter === "Kritisch"
-        ? event.tone === "critical"
-        : filter === "Medikation"
-          ? event.title.includes("Medikation")
-          : filter === "Pflege"
-            ? event.title.includes("Wund") || event.title.includes("Vital")
-            : true),
-  );
-  return (
-    <>
-      <Summary
-        items={[
-          { icon: "handover", value: lastShift ? "14" : "6", label: lastShift ? "Veränderungen" : "Übergabepunkte" },
-          { icon: "alert", value: lastShift ? "2" : "1", label: "kritische Hinweise", tone: "critical" },
-          { icon: "check", value: "4", label: "bereits gelesen", tone: "info" },
-          { icon: "residents", value: "3", label: "beteiligte Personen" },
-        ]}
-      />
-      <div className="handover-layout">
-        <section className="card handover-feed">
-          <div className="operations-toolbar">
-            <div>
-              <h2 className="card-title">
-                {lastShift ? "Seit deiner letzten Schicht" : "Übergabepunkte für den nächsten Dienst"}
-              </h2>
-              <p className="card-subtitle">{filtered.length} relevante Einträge</p>
-            </div>
-            <div className="operations-filter-buttons">
-              {filters.map((item) => (
-                <button
-                  className={filter === item ? "active" : ""}
-                  type="button"
-                  key={item}
-                  aria-pressed={filter === item}
-                  onClick={() => setFilter(item)}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="handover-event-list">
-            {filtered.map((event) => (
-              <article className={event.tone} key={`${event.time}-${event.title}`}>
-                <time>{event.time}</time>
-                <span className="operations-timeline-icon">
-                  <ModuleIcon
-                    name={event.tone === "critical" ? "alert" : event.title.includes("Medikation") ? "med" : "note"}
-                  />
-                </span>
-                <div>
-                  <strong>{event.title}</strong>
-                  <p>{event.detail}</p>
-                  <small>Anna Meier · Pflegefachfrau HF</small>
-                </div>
-                <button type="button" onClick={() => showToast(`${event.title} geöffnet`)}>
-                  <ModuleIcon name="chevron" />
-                </button>
-              </article>
-            ))}
-          </div>
-        </section>
-        {!lastShift && (
-          <section className="card handover-editor">
-            <div className="card-header">
-              <div>
-                <p className="eyebrow">Eigene Ergänzung</p>
-                <h2 className="card-title">Notiz hinzufügen</h2>
-              </div>
-            </div>
-            <textarea
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              placeholder="Was soll der nächste Dienst wissen?"
-              aria-label="Übergabenotiz"
-            />
-            <div className="handover-editor-footer">
-              <span>{note.length}/500 Zeichen</span>
-              <button
-                className="primary-button"
-                type="button"
-                disabled={!note.trim()}
-                onClick={() => {
-                  setSaved(true);
-                  setNote("");
-                  showToast("Übergabepunkt gespeichert");
-                }}
-              >
-                Speichern
-              </button>
-            </div>
-            {saved && (
-              <p className="handover-saved">
-                <ModuleIcon name="check" />
-                Notiz ist für den nächsten Dienst vorgemerkt.
-              </p>
-            )}
-          </section>
-        )}
-      </div>
-    </>
-  );
-}
-
 function ScheduleView({ team, showToast }: { team: boolean; showToast: (message: string) => void }) {
   const [selectedDay, setSelectedDay] = useState(0);
   const [selectedMonthDay, setSelectedMonthDay] = useState(14);
@@ -1941,8 +1778,6 @@ export default function OperationsWorkspace({ view }: { view: OperationsView }) 
           {view === "shiftHistory" && <ShiftHistoryView showToast={showToast} />}{" "}
           {view === "tasks" && <TaskView team={false} showToast={showToast} />}{" "}
           {view === "teamTasks" && <TaskView team showToast={showToast} />}{" "}
-          {view === "handover" && <HandoverView lastShift={false} showToast={showToast} />}{" "}
-          {view === "lastShift" && <HandoverView lastShift showToast={showToast} />}{" "}
           {view === "schedule" && <ScheduleView team={false} showToast={showToast} />}{" "}
           {view === "teamSchedule" && <ScheduleView team showToast={showToast} />}{" "}
         </main>
