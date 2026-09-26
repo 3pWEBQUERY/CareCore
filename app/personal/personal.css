@@ -225,3 +225,100 @@ a.quiet-button {
     justify-content: flex-start;
   }
 }
+
+/* Documents and standards */
+
+.documents-file-icon.stable,
+.documents-preview-badge.stable {
+  color: var(--success);
+  background: #e8f5ef;
+}
+
+.documents-file-icon.attention,
+.documents-preview-badge.attention {
+  color: var(--attention);
+  background: var(--attention-soft);
+}
+
+.documents-file-icon.critical,
+.documents-preview-badge.critical {
+  color: var(--critical);
+  background: var(--critical-soft);
+}
+
+.documents-file-icon.info,
+.documents-preview-badge.info {
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.documents-file-icon.archived,
+.documents-preview-badge.archived {
+  color: #64748b;
+  background: #f1f5f9;
+}
+
+.documents-facts {
+  display: grid;
+  gap: 9px;
+  margin: 0 15px 15px;
+}
+
+.documents-facts dt {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 740;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.documents-facts dd {
+  margin: 3px 0 0;
+  color: var(--ink);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.documents-facts dd.overdue {
+  color: var(--critical);
+  font-weight: 700;
+}
+
+.documents-versions {
+  display: grid;
+  gap: 3px;
+}
+
+.documents-versions a {
+  color: var(--brand-dark);
+}
+
+a.primary-button {
+  text-decoration: none;
+}
+
+.documents-preview > a.primary-button,
+.documents-preview > button.primary-button {
+  width: calc(100% - 30px);
+  margin: 0 15px 10px;
+  justify-content: center;
+}
+
+.documents-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 15px 15px;
+}
+
+.documents-preview-actions .secondary-button,
+.documents-preview-actions .quiet-button {
+  min-height: 30px;
+  font-size: 9px;
+}
+
+.documents-table article > a.quiet-button {
+  min-height: 28px;
+  justify-content: center;
+  font-size: 8px;
+}

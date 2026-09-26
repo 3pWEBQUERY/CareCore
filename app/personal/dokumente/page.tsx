@@ -1,5 +1,5 @@
-import GovernanceWorkspace from "../../verwaltung/components/governance-workspace";
+import DocumentsWorkspace from "./components/documents-workspace";
 
 export default function DocumentsPage() {
-  return <GovernanceWorkspace view="documents" />;
+  return <DocumentsWorkspace kind="document" />;
 }
