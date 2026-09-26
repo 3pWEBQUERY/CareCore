@@ -16,38 +16,11 @@ import {
   useApiData,
   type ShowToast,
 } from "@/app/components/workspace-ui";
-import {
-  ORIGIN_LABELS,
-  STATUS_LABELS,
-  formatCm,
-  healingProgress,
-  sizeLabel,
-  woundTone,
-  type Wound,
-  type WoundEntry,
-} from "@/lib/wounds-shared";
+import { ORIGIN_LABELS, formatCm, healingProgress, sizeLabel, woundTone, type WoundEntry } from "@/lib/wounds-shared";
 import { EntryDialog, WoundDialog, type WoundsPayload } from "./wound-dialogs";
 import WoundPhotos from "./wound-photos";
-
-const FILTERS = ["Alle", "Überfällig", "In Behandlung", "Heilend", "Abgeschlossen"] as const;
-type Dialog =
-  | { kind: "wound"; wound: Wound | null; residentId?: string; observationId?: string }
-  | { kind: "entry"; wound: Wound }
-  | { kind: "close"; wound: Wound }
-  | null;
-
-function statusText(wound: Wound) {
-  if (wound.status === "closed") return STATUS_LABELS.closed;
-  if (wound.overdue) return "Überfällig";
-  if (wound.latest?.infectionSigns) return "Infektionszeichen";
-  return STATUS_LABELS[wound.status];
-}
-
-export function nextCareLabel(wound: Wound) {
-  if (wound.status === "closed") return `Abgeschlossen ${formatDate(wound.closedAt)}`;
-  if (!wound.nextCareAt) return "Kein Intervall festgelegt";
-  return `${wound.overdue ? "Überfällig seit" : "Fällig"} ${formatDateTime(wound.nextCareAt)}`;
-}
+import { FILTERS, Dialog, statusText, nextCareLabel } from "./overview-utils";
+import { WoundTimeline } from "./wound-timeline";
 
 export default function OverviewView({ showToast }: { showToast: ShowToast }) {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("Alle");
@@ -406,37 +379,5 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
         />
       )}
     </>
-  );
-}
-
-export function WoundTimeline({ entries, loading }: { entries: WoundEntry[]; loading: boolean }) {
-  if (loading) return <p className="list-hint">Verlauf wird geladen …</p>;
-  if (!entries.length) return <p className="list-hint">Noch keine Einträge dokumentiert.</p>;
-  return (
-    <ol className="wound-timeline">
-      {entries.map((entry) => (
-        <li key={entry.id} className={entry.infectionSigns ? "infection" : ""}>
-          <time>{formatDateTime(entry.observedAt)}</time>
-          <strong>
-            {entry.entryType} · {sizeLabel(entry)}
-          </strong>
-          <small>
-            {[
-              entry.tissue,
-              entry.exudate && `Exsudat ${entry.exudate.toLowerCase()}`,
-              entry.woundEdge && `Rand ${entry.woundEdge.toLowerCase()}`,
-              entry.painScore !== null && `NRS ${entry.painScore}`,
-              entry.infectionSigns && "Infektionszeichen",
-              entry.odor && "Geruch",
-            ]
-              .filter(Boolean)
-              .join(" · ") || "Keine strukturierten Befunde"}
-          </small>
-          {entry.treatment && <p>{entry.treatment}</p>}
-          {entry.note && <p className="wound-timeline-note">{entry.note}</p>}
-          <em>{entry.author ?? "unbekannt"}</em>
-        </li>
-      ))}
-    </ol>
   );
 }

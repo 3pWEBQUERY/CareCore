@@ -14,7 +14,8 @@ import {
 } from "@/app/components/workspace-ui";
 import { initials } from "@/lib/medication-shared";
 import { ENTRY_TYPES, sizeLabel, type WoundEntry } from "@/lib/wounds-shared";
-import { WoundTimeline, nextCareLabel } from "./overview-view";
+import { WoundTimeline } from "./wound-timeline";
+import { nextCareLabel } from "./overview-utils";
 import { EntryDialog, type WoundsPayload } from "./wound-dialogs";
 
 type FeedEntry = WoundEntry & {

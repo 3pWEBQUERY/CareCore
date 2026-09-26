@@ -1,7 +1,8 @@
 "use client";
 
 import ModulePageShell from "@/app/components/module-page-shell";
-import { DueView, OverviewView } from "./assessment-views";
+import { OverviewView } from "./assessment-views";
+import { DueView } from "./assessment-due-view";
 
 export default function AssessmentsWorkspace({ view }: { view: "overview" | "due" }) {
   return (
