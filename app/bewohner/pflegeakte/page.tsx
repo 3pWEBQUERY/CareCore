@@ -6,15 +6,10 @@ import ModulePageShell from "@/app/components/module-page-shell";
 import { ModuleIcon, type ModuleIconName } from "@/app/components/module-icon";
 import { EmptyState, LoadError, formatDate, useApiData } from "@/app/components/workspace-ui";
 import type { CareGoal } from "@/lib/care-planning-shared";
-import {
-  RECORD_FILTERS,
-  RECORD_TONES,
-  type CareRecordDetail,
-  type CareRecordsOverview,
-  type RecordFilter,
-} from "@/lib/care-records-shared";
+import { RECORD_TONES, type CareRecordDetail, type CareRecordsOverview } from "@/lib/care-records-shared";
 import { CareRecordEditor } from "./care-record-editor";
-import { useCareResident } from "@/app/components/care-context";
+import { useCareResident, useHeaderResident } from "@/app/components/care-context";
+import HeaderResidentHint from "@/app/components/header-resident-hint";
 
 const categoryIcons: Record<string, ModuleIconName> = {
   Mobilität: "pulse",
@@ -54,27 +49,13 @@ const nextEvaluation = (reviewOn: string | null, goals: CareGoal[]) =>
     .sort()[0] ?? null;
 
 export default function CareRecordsPage() {
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<RecordFilter>("Alle");
-  const [selectedId, setSelectedId] = useCareResident();
+  const [, setSelectedId] = useCareResident();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
 
   const overview = useApiData<CareRecordsOverview>("/api/care-records");
   const records = useMemo(() => overview.data?.records ?? [], [overview.data]);
-  const filteredRecords = useMemo(
-    () =>
-      records.filter((record) => {
-        const matchesFilter = filter === "Alle" || record.status === filter;
-        const searchable =
-          `${record.name} ${record.room} ${record.careUnit} ${record.careLevel ?? ""} ${record.focus ?? ""}`.toLocaleLowerCase(
-            "de-CH",
-          );
-        return matchesFilter && searchable.includes(query.trim().toLocaleLowerCase("de-CH"));
-      }),
-    [filter, query, records],
-  );
-  const selected = records.find((record) => record.id === selectedId) ?? records[0] ?? null;
+  const { resident: selected, missing } = useHeaderResident(records, overview.loading);
   const detail = useApiData<CareRecordDetail>(selected ? `/api/care-records/${selected.id}` : null);
   const plan = detail.data?.plan ?? null;
   const domains = domainsOf(plan?.goals ?? []);
@@ -83,7 +64,6 @@ export default function CareRecordsPage() {
   const dueRecord = records
     .filter((record) => record.status === "Evaluation fällig")
     .sort((a, b) => (a.reviewOn ?? "9999").localeCompare(b.reviewOn ?? "9999"))[0];
-  const count = (status: RecordFilter) => records.filter((record) => record.status === status).length;
   const canWrite = overview.data?.canWrite ?? false;
   const planningHref = selected ? `/pflegeplanung?resident=${selected.id}` : "/pflegeplanung";
 
@@ -100,7 +80,7 @@ export default function CareRecordsPage() {
             <div className="heading-copy">
               <p className="eyebrow">CareCore Bewohner</p>
               <h1 id="care-records-title">Pflegeakten</h1>
-              <p>Pflegeprofile, Ziele, Massnahmen und Evaluationen aller aktiven Bewohner.</p>
+              <p>Pflegeprofil, Ziele, Massnahmen und Evaluationen des Bewohners in der Kopfzeile.</p>
             </div>
             {canWrite && (
               <button className="primary-button" type="button" onClick={() => setEditorOpen(true)}>
@@ -108,45 +88,6 @@ export default function CareRecordsPage() {
                 Pflegeakte erstellen
               </button>
             )}
-          </section>
-
-          <section className="wound-summary" aria-label="Status der Pflegeakten">
-            <div>
-              <span className="summary-icon">
-                <ModuleIcon name="residents" />
-              </span>
-              <span>
-                <strong>{records.length - count("Ohne Planung")}</strong>
-                <small>aktive Pflegeakten</small>
-              </span>
-            </div>
-            <div>
-              <span className="summary-icon">
-                <ModuleIcon name="check" />
-              </span>
-              <span>
-                <strong>{count("Aktuell")}</strong>
-                <small>aktuell</small>
-              </span>
-            </div>
-            <div>
-              <span className="summary-icon attention">
-                <ModuleIcon name="calendar" />
-              </span>
-              <span>
-                <strong>{count("Evaluation fällig")}</strong>
-                <small>Evaluationen fällig</small>
-              </span>
-            </div>
-            <div>
-              <span className="summary-icon info">
-                <ModuleIcon name="note" />
-              </span>
-              <span>
-                <strong>{count("Ohne Planung") + count("Entwurf")}</strong>
-                <small>ohne Planung oder im Entwurf</small>
-              </span>
-            </div>
           </section>
 
           {overview.error && <LoadError message={overview.error} onRetry={overview.reload} />}
@@ -181,79 +122,7 @@ export default function CareRecordsPage() {
             </section>
           )}
 
-          <div className="care-page-layout">
-            <section className="card care-resident-browser" aria-labelledby="care-resident-list-title">
-              <div className="care-resident-toolbar">
-                <div>
-                  <h2 className="card-title" id="care-resident-list-title">
-                    Bewohner
-                  </h2>
-                  <p className="card-subtitle">
-                    {overview.loading && !overview.data
-                      ? "Pflegeakten werden geladen …"
-                      : `${filteredRecords.length} von ${records.length} Bewohnern`}
-                  </p>
-                </div>
-                <label className="resident-search">
-                  <ModuleIcon name="search" />
-                  <input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Bewohner oder Pflegefokus"
-                    aria-label="Pflegeakten durchsuchen"
-                  />
-                </label>
-                <div className="care-record-filters" aria-label="Pflegeaktenstatus filtern">
-                  {RECORD_FILTERS.map((item) => (
-                    <button
-                      className={filter === item ? "active" : ""}
-                      type="button"
-                      key={item}
-                      aria-pressed={filter === item}
-                      onClick={() => setFilter(item)}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="care-resident-list">
-                {filteredRecords.map((record) => (
-                  <button
-                    className={`care-resident-row ${selected?.id === record.id ? "selected" : ""}`}
-                    type="button"
-                    key={record.id}
-                    onClick={() => {
-                      setSelectedId(record.id);
-                      setSelectedCategory(null);
-                    }}
-                  >
-                    <span className="resident-avatar">{record.initials}</span>
-                    <span>
-                      <strong>{record.name}</strong>
-                      <small>
-                        {record.room || "Ohne Zimmer"} · {record.careUnit || "Ohne Wohnbereich"}
-                      </small>
-                      <em>{record.focus ?? "Noch kein Pflegeplan angelegt"}</em>
-                    </span>
-                    <span className={`status-badge ${RECORD_TONES[record.status]}`}>{record.status}</span>
-                    <ModuleIcon name="chevron" />
-                  </button>
-                ))}
-                {!overview.loading && filteredRecords.length === 0 && (
-                  <div className="resident-empty">
-                    <ModuleIcon name="search" />
-                    <strong>{records.length ? "Keine Pflegeakten gefunden" : "Keine aktiven Bewohner"}</strong>
-                    <p>
-                      {records.length
-                        ? "Suchbegriff oder Statusfilter anpassen."
-                        : "Aktive Bewohner erscheinen hier nach dem Eintritt."}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </section>
-
+          <div className="care-page-layout header-resident-layout">
             {selected && (
               <section className="care-profile-workspace" aria-live="polite">
                 <section className="card care-profile-header">
@@ -523,6 +392,13 @@ export default function CareRecordsPage() {
                   </aside>
                 </div>
               </section>
+            )}
+            {!selected && (
+              <HeaderResidentHint
+                loading={overview.loading}
+                missing={missing}
+                text="Die Pflegeakte zeigt Ziele, Massnahmen, Risiken und Verantwortliche des Bewohners in der Kopfzeile."
+              />
             )}
           </div>
           {editorOpen && (

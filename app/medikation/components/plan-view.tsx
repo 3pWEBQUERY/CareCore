@@ -12,8 +12,9 @@ import {
   type ShowToast,
 } from "@/app/components/workspace-ui";
 import { useOrderDialogs } from "./order-dialogs";
-import ResidentList, { AllergyBadge } from "@/app/components/resident-list";
-import { useCareResident } from "@/app/components/care-context";
+import { AllergyBadge } from "@/app/components/resident-list";
+import { useHeaderResident } from "@/app/components/care-context";
+import HeaderResidentHint from "@/app/components/header-resident-hint";
 
 export type ResidentsPayload = { residents: MedResident[]; canManage: boolean; canEditAllergies: boolean };
 export type ResidentDetail = { orders: MedOrder[]; movements: StockMovement[] };
@@ -35,18 +36,17 @@ export function orderTone(order: MedOrder): { tone: string; label: string } {
   return { tone: "stable", label: "Aktiv" };
 }
 
-// Resident list plus the selected resident's orders; shared by plan and reserves.
+// The header resident and its orders; shared by plan and reserves.
 export function useSelectedResident() {
   const residents = useApiData<ResidentsPayload>("/api/medication/residents");
-  const [selectedId, setSelectedId] = useCareResident();
   const list = residents.data?.residents ?? [];
-  const resident = list.find((item) => item.id === selectedId) ?? list[0] ?? null;
+  const { resident, missing } = useHeaderResident(list, residents.loading);
   const detail = useApiData<ResidentDetail>(resident ? `/api/medication/residents/${resident.id}` : null);
   return {
     residents,
     list,
     resident,
-    setSelectedId,
+    missing,
     detail,
     reloadAll: () => {
       residents.reload();
@@ -56,7 +56,7 @@ export function useSelectedResident() {
 }
 
 export default function PlanView({ showToast }: { showToast: ShowToast }) {
-  const { residents, list, resident, setSelectedId, detail, reloadAll } = useSelectedResident();
+  const { residents, resident, missing, detail, reloadAll } = useSelectedResident();
   const canManage = residents.data?.canManage ?? false;
   const { openCreate, openEdit, openAllergies, dialogs } = useOrderDialogs({
     resident,
@@ -83,14 +83,7 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
         }
       />
       {residents.error && <LoadError message={residents.error} onRetry={residents.reload} />}
-      <div className="medication-two-column">
-        <ResidentList
-          residents={list}
-          selectedId={resident?.id ?? null}
-          onSelect={setSelectedId}
-          loading={residents.loading}
-          countLabel={(r) => `${r.regularCount} Dauermedikation${r.regularCount === 1 ? "" : "en"}`}
-        />
+      <div className="medication-two-column header-resident-layout">
         <section className="med-main-column">
           {resident ? (
             <>
@@ -184,9 +177,7 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
               </section>
             </>
           ) : (
-            !residents.loading && (
-              <EmptyState icon="residents" title="Keine Bewohner" text="Es sind keine aktiven Bewohner erfasst." />
-            )
+            <HeaderResidentHint loading={residents.loading} missing={missing} />
           )}
         </section>
       </div>

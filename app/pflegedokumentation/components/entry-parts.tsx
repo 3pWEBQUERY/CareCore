@@ -5,6 +5,7 @@ import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls"
 import { EditorDialog, formatDateTime, requestJson, timeInZurich, todayInZurich } from "@/app/components/workspace-ui";
 import { zurichTimeToIso } from "@/lib/resident-appointments";
 import { DOC_CATEGORIES, IMPORTANCE, TEMPLATES, type DocEntry, type Importance } from "@/lib/documentation-shared";
+import { useCareResident } from "@/app/components/care-context";
 
 export type ResidentOption = { id: string; name: string; room: string };
 
@@ -44,10 +45,13 @@ export function EntryFields({
   draft,
   onChange,
   residents,
+  lockResident,
 }: {
   draft: EntryDraft;
   onChange: (draft: EntryDraft) => void;
   residents: ResidentOption[];
+  // The quick documentation always documents for the resident chosen in the header.
+  lockResident?: boolean;
 }) {
   const set = <K extends keyof EntryDraft>(key: K, value: EntryDraft[K]) => onChange({ ...draft, [key]: value });
   const label = (r: ResidentOption) => `${r.name}${r.room ? ` · ${r.room}` : ""}`;
@@ -56,12 +60,16 @@ export function EntryFields({
     <>
       <label className="area-editor-wide">
         <span>Bewohner</span>
-        <CareSelect
-          label="Bewohner"
-          value={resident ? label(resident) : "Bewohner wählen"}
-          options={residents.map(label)}
-          onChange={(value) => set("residentId", residents.find((r) => label(r) === value)?.id ?? "")}
-        />
+        {lockResident ? (
+          <input value={resident ? label(resident) : "In der Kopfzeile auswählen"} readOnly />
+        ) : (
+          <CareSelect
+            label="Bewohner"
+            value={resident ? label(resident) : "Bewohner wählen"}
+            options={residents.map(label)}
+            onChange={(value) => set("residentId", residents.find((r) => label(r) === value)?.id ?? "")}
+          />
+        )}
       </label>
       <label>
         <span>Dokumentationsart</span>
@@ -141,7 +149,10 @@ export function EntryDialog({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
-  const [draft, setDraft] = useState<EntryDraft>(() => newDraft(residentId ?? residents[0]?.id));
+  const [contextId] = useCareResident();
+  const [draft, setDraft] = useState<EntryDraft>(() =>
+    newDraft(residentId ?? residents.find((r) => r.id === contextId)?.id ?? residents[0]?.id),
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   return (

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CareSelect } from "@/app/components/care-form-controls";
 import { ModuleIcon } from "@/app/components/module-icon";
-import { EmptyState, LoadError, PageHeading, formatDateTime, useApiData } from "@/app/components/workspace-ui";
+import { LoadError, PageHeading, formatDateTime, useApiData } from "@/app/components/workspace-ui";
 import {
   VITAL_METRICS,
   formatRange,
@@ -16,7 +16,8 @@ import {
 } from "@/lib/vitals-shared";
 import { abnormalValues, type VitalsOverview } from "./overview-view";
 import TrendChart from "./trend-chart";
-import { useCareResident } from "@/app/components/care-context";
+import { useCareResident, useHeaderResident } from "@/app/components/care-context";
+import HeaderResidentHint from "@/app/components/header-resident-hint";
 
 type History = { measurements: VitalMeasurement[]; threshold: EffectiveThreshold };
 const RANGES = [
@@ -34,10 +35,10 @@ const sourceLabel = {
 export default function DevelopmentView() {
   const overview = useApiData<VitalsOverview>("/api/vitals/overview");
   const residents = overview.data?.residents ?? [];
-  const [residentId, setResidentId] = useCareResident();
+  const [, setResidentId] = useCareResident();
   const [metric, setMetric] = useState(VITAL_METRICS[0].key);
   const [days, setDays] = useState(30);
-  const resident = residents.find((r) => r.id === residentId) ?? residents[0] ?? null;
+  const { resident, missing } = useHeaderResident(residents, overview.loading);
   const history = useApiData<History>(
     resident ? `/api/vitals/residents/${resident.id}?metric=${encodeURIComponent(metric)}&days=${days}` : null,
   );
@@ -45,7 +46,6 @@ export default function DevelopmentView() {
   const measurements = history.data?.measurements ?? [];
   const values = measurements.map((m) => m.value);
   const inTarget = measurements.filter((m) => m.status === "normal").length;
-  const labelOf = (r: { name: string; room: string }) => `${r.name}${r.room ? ` · ${r.room}` : ""}`;
   const fmt = (v: number) => formatVital(metric, v, null);
 
   return (
@@ -70,12 +70,6 @@ export default function DevelopmentView() {
             </div>
           </div>
           <div className="development-controls">
-            <CareSelect
-              label="Bewohner auswählen"
-              value={resident ? labelOf(resident) : "Bewohner wählen"}
-              options={residents.map(labelOf)}
-              onChange={(value) => setResidentId(residents.find((r) => labelOf(r) === value)?.id ?? residentId)}
-            />
             <CareSelect
               label="Messwert auswählen"
               value={metric}
@@ -105,9 +99,7 @@ export default function DevelopmentView() {
               label={metric}
             />
           )}
-          {!resident && !overview.loading && (
-            <EmptyState icon="residents" title="Keine Bewohner" text="Es sind keine aktiven Bewohner erfasst." />
-          )}
+          {!resident && <HeaderResidentHint loading={overview.loading} missing={missing} />}
           {measurements.length > 0 && (
             <div className="vital-stats">
               <span>

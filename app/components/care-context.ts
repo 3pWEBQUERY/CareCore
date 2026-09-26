@@ -85,3 +85,23 @@ export function useWorkContext() {
   }, []);
   return context;
 }
+
+// Resident-centred pages show the resident chosen in the header. `missing` means the
+// header resident has no data on this page (e.g. not in the page's list).
+export function useHeaderResident<T extends { id: string }>(list: T[], loading: boolean) {
+  const [contextId] = useCareResident();
+  const resident = contextId ? (list.find((item) => item.id === contextId) ?? null) : null;
+  return { resident, contextId, missing: !loading && !!contextId && !resident };
+}
+
+const PICK_EVENT = "carecore:pick-resident";
+
+// Opens the resident picker of the header.
+export const openResidentPicker = () => window.dispatchEvent(new Event(PICK_EVENT));
+
+export function useResidentPickerRequests(open: () => void) {
+  useEffect(() => {
+    window.addEventListener(PICK_EVENT, open);
+    return () => window.removeEventListener(PICK_EVENT, open);
+  }, [open]);
+}

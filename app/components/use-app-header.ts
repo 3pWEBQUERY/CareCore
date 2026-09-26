@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CareUnit, ContextResident, WorkContext } from "@/lib/work-context";
-import { loadWorkContext, useCareResident, useCareUnit } from "./care-context";
+import { loadWorkContext, useCareResident, useCareUnit, useResidentPickerRequests } from "./care-context";
 import { HeaderNotification } from "./header-parts";
 
 export function useAppHeader({
@@ -27,6 +27,8 @@ export function useAppHeader({
   const [locationOpen, setLocationOpen] = useState(false);
   const [storedAreaId, setStoredAreaId] = useCareUnit();
   const [residentOpen, setResidentOpen] = useState(false);
+  const openPicker = useCallback(() => setResidentOpen(true), []);
+  useResidentPickerRequests(openPicker);
   const [storedResidentId, setStoredResidentId] = useCareResident();
   const [headerNotifications, setHeaderNotifications] = useState<HeaderNotification[]>([]);
   const unreadNotifications = headerNotifications.filter((item) => !item.read_at).length;

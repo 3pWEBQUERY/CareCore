@@ -52,7 +52,7 @@ function QuickView({ showToast }: { showToast: ShowToast }) {
   const canWrite = today.data?.canWrite ?? false;
   const [contextId, setContextId] = useCareResident();
   const contextResident = residents.find((r) => r.id === contextId)?.id;
-  const effective = { ...draft, residentId: contextResident || draft.residentId || residents[0]?.id || "" };
+  const effective = { ...draft, residentId: contextResident ?? "" };
   // Choosing a resident for the entry also makes it the working context of the other modules.
   const changeDraft = (next: EntryDraft) => {
     if (next.residentId && next.residentId !== effective.residentId) setContextId(next.residentId);
@@ -112,7 +112,7 @@ function QuickView({ showToast }: { showToast: ShowToast }) {
           {canWrite ? (
             <form className="area-editor-form doc-inline-form" onSubmit={submit}>
               <div className="area-editor-grid">
-                <EntryFields draft={effective} onChange={changeDraft} residents={residents} />
+                <EntryFields draft={effective} onChange={changeDraft} residents={residents} lockResident />
               </div>
               {error && (
                 <p className="appointment-editor-error" role="alert">

@@ -18,7 +18,8 @@ import {
 } from "@/app/components/workspace-ui";
 import { useOrderDialogs } from "./order-dialogs";
 import { orderTone, useSelectedResident } from "./plan-view";
-import ResidentList, { AllergyBadge } from "@/app/components/resident-list";
+import { AllergyBadge } from "@/app/components/resident-list";
+import HeaderResidentHint from "@/app/components/header-resident-hint";
 import { ReceiptDialog } from "./stock-dialogs";
 import { MovementJournal } from "./stock-view";
 
@@ -35,7 +36,7 @@ function availableStock(order: MedOrder) {
 }
 
 export default function ReservesView({ showToast }: { showToast: ShowToast }) {
-  const { residents, list, resident, setSelectedId, detail, reloadAll } = useSelectedResident();
+  const { residents, resident, missing, detail, reloadAll } = useSelectedResident();
   const canManage = residents.data?.canManage ?? false;
   const { openCreate, openEdit, dialogs } = useOrderDialogs({ resident, showToast, onChanged: reloadAll });
   const [administer, setAdminister] = useState<MedOrder | null>(null);
@@ -61,19 +62,23 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
       <SummaryTiles
         label="Reservenübersicht"
         tiles={[
-          { icon: "residents", value: list.filter((r) => r.prnCount > 0).length, caption: "Bewohner mit Reserve" },
-          { icon: "med", value: list.reduce((sum, r) => sum + r.prnCount, 0), caption: "aktive Reserveverordnungen" },
+          { icon: "med", value: reserves.length, caption: "aktive Reserveverordnungen" },
           {
             icon: "alert",
             value: reserves.filter((o) => (availableStock(o)?.amount ?? 0) <= 3).length,
-            caption: "Bestand knapp (Auswahl)",
+            caption: "Bestand knapp",
             tone: "attention",
           },
           {
             icon: "check",
             value: reserves.reduce((sum, o) => sum + o.administeredLast24h, 0),
-            caption: "Gaben 24 h (Auswahl)",
+            caption: "Gaben in 24 h",
             tone: "info",
+          },
+          {
+            icon: "residents",
+            value: resident ? resident.name : "–",
+            caption: resident ? [resident.room, resident.careUnit].filter(Boolean).join(" · ") : "Bewohner wählen",
           },
         ]}
       />
@@ -90,14 +95,7 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
         </div>
       </section>
       {residents.error && <LoadError message={residents.error} onRetry={residents.reload} />}
-      <div className="medication-two-column">
-        <ResidentList
-          residents={list}
-          selectedId={resident?.id ?? null}
-          onSelect={setSelectedId}
-          loading={residents.loading}
-          countLabel={(r) => (r.prnCount ? `${r.prnCount} Reserve${r.prnCount === 1 ? "" : "n"}` : "Keine Reserve")}
-        />
+      <div className="medication-two-column header-resident-layout">
         <section className="med-main-column">
           {resident && (
             <>
@@ -233,6 +231,7 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
               <MovementJournal movements={detail.data?.movements ?? []} title={`Bestandsjournal · ${resident.name}`} />
             </>
           )}
+          {!resident && <HeaderResidentHint loading={residents.loading} missing={missing} />}
         </section>
       </div>
       {dialogs}

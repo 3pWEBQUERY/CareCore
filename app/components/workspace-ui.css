@@ -129,3 +129,16 @@
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   width: 100%;
 }
+
+/* Resident-centred pages without a header resident. */
+.header-resident-hint {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding-bottom: 20px;
+}
+
+/* Resident-centred pages: the resident comes from the header, no list column. */
+.medication-two-column.header-resident-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
