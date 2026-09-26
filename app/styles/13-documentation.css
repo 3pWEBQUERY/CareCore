@@ -405,7 +405,11 @@
   justify-content: flex-end;
   gap: 6px;
 }
-.resident-document-actions button {
+.resident-document-actions button,
+.resident-document-actions a {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
   min-height: 31px;
   padding: 0 8px;
   border: 1px solid var(--line);
@@ -416,11 +420,13 @@
   font-weight: 750;
   cursor: pointer;
 }
-.resident-document-actions button:first-child {
+.resident-document-actions button:first-child,
+.resident-document-actions a:first-child {
   border-color: #bfdbfe;
   background: var(--brand-soft);
 }
-.resident-document-actions button:hover {
+.resident-document-actions button:hover,
+.resident-document-actions a:hover {
   border-color: #93c5fd;
 }
 .document-empty {

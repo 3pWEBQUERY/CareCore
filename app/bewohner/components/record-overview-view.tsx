@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { setCareResident } from "@/app/components/care-context";
+import { formatDate, formatDateTime } from "@/app/components/workspace-ui";
 import { BodyMap3D } from "./body-map-3d";
 import { appointmentDateLabel, appointmentLocalParts } from "@/lib/resident-appointments";
 import {
@@ -25,7 +28,6 @@ import type { ResidentRecordState } from "./use-resident-record";
 export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
   const {
     resident,
-    onAction,
     contentRef,
     entries,
     setActiveView,
@@ -44,7 +46,16 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
     editBodyObservation,
     archiveBodyObservation,
     openDocumentation,
+    live,
   } = r;
+  const router = useRouter();
+  const summary = live.summary.data;
+  // Quick actions open the module for this resident; the record's resident becomes the working context.
+  const openModule = (href: string) => {
+    if (resident.id) setCareResident(resident.id);
+    router.push(href);
+  };
+  const loading = live.summary.loading && !summary;
   return (
     <main className="resident-record-content" ref={contentRef} key="overview">
       <section className="record-metrics" aria-label="Aktenübersicht">
@@ -54,7 +65,9 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
           </span>
           <span>
             <small>Bezugspflege</small>
-            <strong>Anna Meier</strong>
+            <strong>
+              {summary?.primaryNurse ?? summary?.planOwner ?? (loading ? "Wird geladen…" : "Nicht festgelegt")}
+            </strong>
           </span>
         </div>
         <div>
@@ -63,7 +76,13 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
           </span>
           <span>
             <small>Letzte Vitalwerte</small>
-            <strong>Heute, 07:42</strong>
+            <strong>
+              {summary?.lastVital
+                ? `${formatDateTime(summary.lastVital.measuredAt)} · ${summary.lastVital.metric}`
+                : loading
+                  ? "Wird geladen…"
+                  : "Noch keine Messung"}
+            </strong>
           </span>
         </div>
         <div>
@@ -72,7 +91,13 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
           </span>
           <span>
             <small>Medikationen heute</small>
-            <strong>4 von 6 erfolgt</strong>
+            <strong>
+              {summary
+                ? summary.medsToday.total
+                  ? `${summary.medsToday.given} von ${summary.medsToday.total} erfolgt`
+                  : "Keine geplanten Gaben"
+                : "Wird geladen…"}
+            </strong>
           </span>
         </div>
         <div>
@@ -108,21 +133,21 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
               <small>Pflegeeintrag</small>
             </span>
           </button>
-          <button type="button" onClick={() => onAction("Vitalwerterfassung vorbereitet")}>
+          <button type="button" onClick={() => openModule("/c/vitalwerte/entwicklung")}>
             <Heartbeat aria-hidden="true" />
             <span>
               <strong>Vitalwert</strong>
               <small>Messung erfassen</small>
             </span>
           </button>
-          <button type="button" onClick={() => onAction("Medikationsgabe vorbereitet")}>
+          <button type="button" onClick={() => openModule("/c/medikation")}>
             <Pill aria-hidden="true" />
             <span>
               <strong>Medikation</strong>
               <small>Gabe erfassen</small>
             </span>
           </button>
-          <button type="button" onClick={() => onAction("Aufgabe vorbereitet")}>
+          <button type="button" onClick={() => openModule("/c/betrieb/aufgaben")}>
             <ListChecks aria-hidden="true" />
             <span>
               <strong>Aufgabe</strong>
@@ -136,21 +161,21 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
               <small>Ziele öffnen</small>
             </span>
           </button>
-          <button type="button" onClick={() => onAction("Wunddokumentation vorbereitet")}>
+          <button type="button" onClick={() => openModule(`/c/wundmanagement?resident=${resident.id ?? ""}`)}>
             <Pulse aria-hidden="true" />
             <span>
               <strong>Wunde</strong>
               <small>Status erfassen</small>
             </span>
           </button>
-          <button type="button" onClick={() => onAction("Trinkmenge vorbereitet")}>
+          <button type="button" onClick={() => openModule("/c/ernaehrung/trinkprotokoll")}>
             <User aria-hidden="true" />
             <span>
               <strong>Trinkmenge</strong>
               <small>Flüssigkeit erfassen</small>
             </span>
           </button>
-          <button type="button" onClick={() => onAction("Neue Einschätzung vorbereitet")}>
+          <button type="button" onClick={() => openModule("/c/einschaetzungen")}>
             <Stethoscope aria-hidden="true" />
             <span>
               <strong>Einschätzung</strong>
@@ -343,15 +368,21 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
               </div>
               <div>
                 <dt>Hausarzt</dt>
-                <dd>Dr. med. Martin Weber</dd>
+                <dd>{summary?.master.gpName ?? "Nicht erfasst"}</dd>
               </div>
               <div>
                 <dt>Eintritt</dt>
-                <dd>12. Februar 2024</dd>
+                <dd>{summary?.master.admittedOn ? formatDate(summary.master.admittedOn) : "Nicht erfasst"}</dd>
               </div>
               <div>
                 <dt>Aktenstatus</dt>
-                <dd>Vollständig</dd>
+                <dd>
+                  {!summary
+                    ? "–"
+                    : summary.missing.length
+                      ? `${summary.missing.length} Angabe${summary.missing.length === 1 ? "" : "n"} fehlen`
+                      : "Vollständig"}
+                </dd>
               </div>
             </dl>
           </section>
@@ -360,7 +391,11 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
             <FileText aria-hidden="true" />
             <span>
               <strong>Dokumente und Berichte</strong>
-              <small>12 hinterlegte Dokumente</small>
+              <small>
+                {summary
+                  ? `${summary.documentsCount} hinterlegte${summary.documentsCount === 1 ? "s" : ""} Dokument${summary.documentsCount === 1 ? "" : "e"}`
+                  : "Wird geladen…"}
+              </small>
             </span>
           </button>
         </aside>
@@ -376,7 +411,10 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
             </button>
           </div>
           <div className="record-history">
-            {entries.map((entry) => (
+            {!live.documentation.loading && entries.length === 0 && (
+              <p className="body-observation-empty">Noch keine Einträge in den letzten 30 Tagen.</p>
+            )}
+            {entries.slice(0, 6).map((entry) => (
               <button
                 className="record-history-entry"
                 type="button"

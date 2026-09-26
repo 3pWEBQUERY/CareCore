@@ -10,21 +10,44 @@ import {
   Pulse,
   Warning,
 } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
+import { setCareResident } from "@/app/components/care-context";
+import { formatDateTime } from "@/app/components/workspace-ui";
+import { appointmentDateLabel, appointmentLocalParts } from "@/lib/resident-appointments";
 import { HistoryFilter } from "./resident-record-data";
 import type { ResidentRecordState } from "./use-resident-record";
 
 export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
   const {
     resident,
-    onAction,
     contentRef,
     entries,
     setActiveView,
     historyFilter,
     setHistoryFilter,
     visibleHistoryEntries,
+    historyEntries,
     openDocumentation,
+    live,
+    nextAppointment,
   } = r;
+  const router = useRouter();
+  // eslint-disable-next-line react-hooks/purity -- "diese Woche" and "heute" are relative to the moment of rendering.
+  const now = Date.now();
+  const lastWeek = historyEntries.filter((entry) => now - Date.parse(entry.occurredAt) < 7 * 86_400_000);
+  const today = new Date(now).toLocaleDateString("de-CH", { timeZone: "Europe/Zurich" });
+  const todayCount = historyEntries.filter(
+    (entry) =>
+      entry.category === "Pflege" &&
+      new Date(entry.occurredAt).toLocaleDateString("de-CH", { timeZone: "Europe/Zurich" }) === today,
+  ).length;
+  const noticeable = lastWeek.filter((entry) => entry.tone === "critical" || entry.tone === "attention").length;
+  const lastCare = historyEntries.find((entry) => entry.category === "Pflege");
+  const flags = live.care.data?.flags ?? [];
+  const openModule = (href: string) => {
+    if (resident.id) setCareResident(resident.id);
+    router.push(href);
+  };
   return (
     <main className="resident-record-content record-history-view" ref={contentRef} key="history">
       <div className="record-subpage-heading">
@@ -44,8 +67,8 @@ export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
             <ClipboardText aria-hidden="true" />
           </span>
           <p>
-            <small>Diese Woche</small>
-            <strong>28 Ereignisse</strong>
+            <small>Letzte 7 Tage</small>
+            <strong>{lastWeek.length} Ereignisse</strong>
           </p>
         </div>
         <div>
@@ -54,7 +77,9 @@ export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
           </span>
           <p>
             <small>Heute dokumentiert</small>
-            <strong>4 Einträge</strong>
+            <strong>
+              {todayCount} Eintr{todayCount === 1 ? "ag" : "äge"}
+            </strong>
           </p>
         </div>
         <div>
@@ -62,8 +87,10 @@ export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
             <Warning aria-hidden="true" />
           </span>
           <p>
-            <small>In Beobachtung</small>
-            <strong>2 Entwicklungen</strong>
+            <small>Auffällig (7 Tage)</small>
+            <strong>
+              {noticeable} Ereignis{noticeable === 1 ? "" : "se"}
+            </strong>
           </p>
         </div>
         <div>
@@ -71,8 +98,8 @@ export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
             <ArrowsLeftRight aria-hidden="true" />
           </span>
           <p>
-            <small>Letzte Übergabe</small>
-            <strong>Heute, 06:55</strong>
+            <small>Letzte Pflegedokumentation</small>
+            <strong>{lastCare ? formatDateTime(lastCare.occurredAt) : "–"}</strong>
           </p>
         </div>
       </section>
@@ -130,7 +157,14 @@ export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
                         onClick={() => {
                           const documentationEntry = entries.find((item) => item.id === entry.documentationId);
                           if (documentationEntry) openDocumentation(documentationEntry);
-                          else onAction(`${entry.title} geöffnet`);
+                          else
+                            openModule(
+                              entry.category === "Vitalwerte"
+                                ? "/c/vitalwerte/entwicklung"
+                                : entry.category === "Medikation"
+                                  ? "/c/medikation"
+                                  : "/c/betrieb/schicht/kalender",
+                            );
                         }}
                       >
                         Öffnen
@@ -151,40 +185,43 @@ export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
               </div>
             </div>
             <div className="history-focus-list">
-              <article className="critical">
-                <Warning aria-hidden="true" />
-                <div>
-                  <strong>Wundheilung beobachten</strong>
-                  <p>Verbandwechsel am linken Unterarm morgen um 08:00 Uhr.</p>
-                  <button type="button" onClick={() => onAction("Wundmanagement geöffnet")}>
-                    Wundmanagement öffnen
-                  </button>
-                </div>
-              </article>
-              <article className="attention">
-                <Pulse aria-hidden="true" />
-                <div>
-                  <strong>Rötung kontrollieren</strong>
-                  <p>Erneute Hautkontrolle während der Abendpflege vorgesehen.</p>
-                  <button type="button" onClick={() => setActiveView("overview")}>
-                    Körperübersicht öffnen
-                  </button>
-                </div>
-              </article>
+              {flags.map((flag) => (
+                <article className={flag.severity === "critical" ? "critical" : "attention"} key={flag.id}>
+                  {flag.severity === "critical" ? <Warning aria-hidden="true" /> : <Pulse aria-hidden="true" />}
+                  <div>
+                    <strong>{flag.label}</strong>
+                    <p>{flag.details ?? flag.category}</p>
+                    <button type="button" onClick={() => setActiveView("care-record")}>
+                      Pflegeakte öffnen
+                    </button>
+                  </div>
+                </article>
+              ))}
+              {!live.care.loading && !flags.length && (
+                <p className="body-observation-empty">Keine aktuellen Risiken oder Beobachtungen erfasst.</p>
+              )}
             </div>
           </section>
           <section className="record-card history-next-event">
             <div className="record-card-heading">
               <div>
                 <span className="record-section-label">Nächster Termin</span>
-                <h3>Arztvisite</h3>
+                <h3>{nextAppointment?.title ?? "Kein Termin geplant"}</h3>
               </div>
             </div>
             <div>
               <CalendarDots aria-hidden="true" />
               <p>
-                <strong>Heute, 09:30 Uhr</strong>
-                <small>Visitenzimmer · Dr. Martin Weber</small>
+                <strong>
+                  {nextAppointment
+                    ? `${appointmentDateLabel(nextAppointment.starts_at, { day: "2-digit", month: "2-digit" })}, ${appointmentLocalParts(nextAppointment.starts_at).time} Uhr`
+                    : "–"}
+                </strong>
+                <small>
+                  {nextAppointment
+                    ? [nextAppointment.location, nextAppointment.category].filter(Boolean).join(" · ") || "Ohne Ort"
+                    : "Termine werden im Reiter „Termine“ geplant."}
+                </small>
               </p>
             </div>
           </section>

@@ -56,6 +56,7 @@ export type CareDomain = {
   summary: string;
   goal: string;
   measures: string[];
+  targetDate: string | null;
 };
 
 export type BodyObservation = {
@@ -88,23 +89,13 @@ export type HistoryEntry = {
   id: string;
   date: string;
   time: string;
+  occurredAt: string;
   category: Exclude<HistoryFilter, "Alle">;
   title: string;
   description: string;
   author: string;
   tone: "critical" | "attention" | "info" | "stable";
   documentationId?: string;
-};
-
-export type ResidentDocument = {
-  id: string;
-  title: string;
-  category: "Arztberichte" | "Pflege" | "Medikation" | "Administration";
-  fileType: string;
-  size: string;
-  updated: string;
-  owner: string;
-  status: "Aktuell" | "Neu" | "Unterschrift offen";
 };
 
 export const recordTabs = [
@@ -214,5 +205,3 @@ export const emptySupply: SupplyDraft = {
   status: "active",
   notes: "",
 };
-
-export { careDomains, historyEntries, residentDocuments, getDocumentationEntries } from "./resident-record-samples";
