@@ -3,34 +3,82 @@
 import { useEffect, useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { CareSelect } from "@/app/components/care-form-controls";
+import { useWorkContext } from "@/app/components/care-context";
+import { requestJson, todayInZurich } from "@/app/components/workspace-ui";
+import type { RaiWorkplace } from "@/lib/rai-shared";
 
+const SCOPES = { all: "Alle offenen Erfassungen", overdue: "Nur überfällige Erfassungen", new: "Nur neue Bewohner" };
+const PERIODS = { 30: "Nächste 30 Tage", 7: "Nächste 7 Tage", 90: "Nächste 90 Tage" };
+type Scope = keyof typeof SCOPES;
+
+// Plans the due interRAI assessments of the chosen care units (see refreshRaiDue).
 export function RaiRefreshPopover({
-  open,
+  workplace,
   onClose,
+  onDone,
   showToast,
 }: {
-  open: boolean;
+  workplace: RaiWorkplace;
   onClose: () => void;
+  onDone: () => void;
   showToast: (message: string) => void;
 }) {
-  const [scope, setScope] = useState("Alle offenen Erfassungen");
-  const [period, setPeriod] = useState("Aktueller Monat");
-  const [units, setUnits] = useState(["Wohnbereich 1", "Wohnbereich 2", "Wohnbereich 3", "Pflegewohngruppe"]);
+  const context = useWorkContext();
+  const careUnits = context?.careUnits ?? [];
+  const [scope, setScope] = useState<Scope>("all");
+  const [days, setDays] = useState(30);
+  const [excluded, setExcluded] = useState<string[]>([]);
   const [notify, setNotify] = useState(true);
-  const [logChanges, setLogChanges] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!open) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [onClose]);
 
-  if (!open) return null;
-  const toggleUnit = (unit: string) =>
-    setUnits((current) => (current.includes(unit) ? current.filter((item) => item !== unit) : [...current, unit]));
+  const unitIds = careUnits.map((unit) => unit.id).filter((id) => !excluded.includes(id));
+  const toggleUnit = (id: string) =>
+    setExcluded((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  const limit = (() => {
+    const date = new Date(`${todayInZurich()}T12:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString().slice(0, 10);
+  })();
+  const preview = workplace.residents.filter(
+    (row) =>
+      row.state !== "current" &&
+      row.state !== "in_progress" &&
+      (row.dueOn ?? "9999") <= limit &&
+      row.careUnitId !== null &&
+      unitIds.includes(row.careUnitId) &&
+      (scope === "overdue" ? row.state === "overdue" : scope === "new" ? !row.lastCompletedOn : true),
+  ).length;
+
+  const submit = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      const result = await requestJson<{ due: number; planned: number; notified: number }>("/api/rai/refresh", {
+        method: "POST",
+        body: { scope, days, unitIds, notify },
+      });
+      onDone();
+      onClose();
+      showToast(
+        `${result.due} Fälligkeit${result.due === 1 ? "" : "en"} · ${result.planned} neu geplant${
+          result.notified ? ` · ${result.notified} Verantwortliche informiert` : ""
+        }`,
+      );
+    } catch (reason) {
+      setError((reason as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
     <div
       className="area-editor-overlay rai-refresh-overlay"
@@ -60,8 +108,7 @@ export function RaiRefreshPopover({
           className="area-editor-form"
           onSubmit={(event) => {
             event.preventDefault();
-            onClose();
-            showToast("RAI-Fälligkeiten wurden aktualisiert");
+            void submit();
           }}
         >
           <div className="area-editor-intro">
@@ -70,7 +117,7 @@ export function RaiRefreshPopover({
             </span>
             <div>
               <strong>Neue Aktualisierung</strong>
-              <p>Die Prüfung berücksichtigt Eintritte, Austritte und offene Erfassungsbereiche.</p>
+              <p>Erstfassungen nach Eintritt und Folgeerfassungen werden geplant und überfällige markiert.</p>
             </div>
             <span className="duty-assignment-status">
               <i />
@@ -82,27 +129,31 @@ export function RaiRefreshPopover({
               Aktualisierungsumfang
               <CareSelect
                 label="Aktualisierungsumfang"
-                value={scope}
-                options={["Alle offenen Erfassungen", "Nur überfällige Erfassungen", "Nur neue Bewohner"]}
-                onChange={setScope}
+                value={SCOPES[scope]}
+                options={Object.values(SCOPES)}
+                onChange={(label) =>
+                  setScope((Object.keys(SCOPES) as Scope[]).find((key) => SCOPES[key] === label) ?? "all")
+                }
               />
             </label>
             <label>
               Zeitraum
               <CareSelect
                 label="Zeitraum"
-                value={period}
-                options={["Aktueller Monat", "Nächste 30 Tage", "Aktuelles Quartal"]}
-                onChange={setPeriod}
+                value={PERIODS[days as keyof typeof PERIODS]}
+                options={Object.values(PERIODS)}
+                onChange={(label) =>
+                  setDays(Number(Object.entries(PERIODS).find(([, value]) => value === label)?.[0] ?? 30))
+                }
               />
             </label>
             <fieldset className="area-editor-wide rai-refresh-units">
               <legend>Wohnbereiche einbeziehen</legend>
               <div className="area-service-options">
-                {["Wohnbereich 1", "Wohnbereich 2", "Wohnbereich 3", "Pflegewohngruppe"].map((unit) => (
-                  <label className={units.includes(unit) ? "selected" : ""} key={unit}>
-                    <input type="checkbox" checked={units.includes(unit)} onChange={() => toggleUnit(unit)} />
-                    <span>{unit}</span>
+                {careUnits.map((unit) => (
+                  <label className={unitIds.includes(unit.id) ? "selected" : ""} key={unit.id}>
+                    <input type="checkbox" checked={unitIds.includes(unit.id)} onChange={() => toggleUnit(unit.id)} />
+                    <span>{unit.name}</span>
                   </label>
                 ))}
               </div>
@@ -114,14 +165,6 @@ export function RaiRefreshPopover({
                   <input type="checkbox" checked={notify} onChange={() => setNotify((value) => !value)} />
                   <span>Verantwortliche benachrichtigen</span>
                 </label>
-                <label className={logChanges ? "selected" : ""}>
-                  <input type="checkbox" checked={logChanges} onChange={() => setLogChanges((value) => !value)} />
-                  <span>Änderungen protokollieren</span>
-                </label>
-                <label>
-                  <input type="checkbox" defaultChecked />
-                  <span>Fälligkeiten neu priorisieren</span>
-                </label>
               </div>
             </fieldset>
             <section className="rai-refresh-preview area-editor-wide" aria-label="Vorschau der Aktualisierung">
@@ -132,16 +175,16 @@ export function RaiRefreshPopover({
                 <span>
                   <strong>Vorschau</strong>
                   <small>
-                    {scope} · {period}
+                    {SCOPES[scope]} · {PERIODS[days as keyof typeof PERIODS]}
                   </small>
                 </span>
               </div>
               <span>
-                <strong>{units.length}</strong>
+                <strong>{unitIds.length}</strong>
                 <small>Wohnbereiche</small>
               </span>
               <span>
-                <strong>7</strong>
+                <strong>{preview}</strong>
                 <small>mögliche Fälligkeiten</small>
               </span>
             </section>
@@ -150,8 +193,13 @@ export function RaiRefreshPopover({
             <button className="secondary-button" type="button" onClick={onClose}>
               Abbrechen
             </button>
-            <button className="primary-button" type="submit" disabled={units.length === 0}>
-              <ModuleIcon name="check" /> Fälligkeiten aktualisieren
+            {error && (
+              <p className="appointment-editor-error" role="alert">
+                {error}
+              </p>
+            )}
+            <button className="primary-button" type="submit" disabled={unitIds.length === 0 || saving}>
+              <ModuleIcon name="check" /> {saving ? "Wird aktualisiert …" : "Fälligkeiten aktualisieren"}
             </button>
           </footer>
         </form>

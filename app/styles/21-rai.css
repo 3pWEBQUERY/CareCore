@@ -898,3 +898,12 @@
   width: 32px;
   height: 32px;
 }
+.rai-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.rai-form-actions .secondary-button {
+  min-height: 38px;
+  font-size: 10px;
+}

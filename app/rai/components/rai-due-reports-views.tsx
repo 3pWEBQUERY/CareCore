@@ -1,24 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
-import { residents } from "./rai-data";
+import { LoadError, todayInZurich } from "@/app/components/workspace-ui";
+import { RAI_STATE } from "@/lib/rai-shared";
+import type { RaiData } from "./rai-data";
+import { nextLabel, useOpenAssessment } from "./rai-overview-view";
 
-export function DueView({ showToast }: { showToast: (message: string) => void }) {
+const inDays = (days: number) => {
+  const date = new Date(`${todayInZurich()}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+};
+
+// The CSV export is a download, not a page.
+export function downloadRaiReport() {
+  const link = document.createElement("a");
+  link.href = "/api/rai/export";
+  link.click();
+}
+
+export function DueView({ rai }: { rai: RaiData }) {
+  const openAssessment = useOpenAssessment();
   const [filter, setFilter] = useState("Alle");
-  const items = [
-    { ...residents[2], due: "Heute · 16:00", reason: "Jährliche Folgeerfassung" },
-    { ...residents[4], due: "Morgen · 09:30", reason: "Nach Eintritt ergänzen" },
-    { ...residents[0], due: "18.09.2026", reason: "Offene Bereiche abschliessen" },
-  ];
+  const items = useMemo(
+    () =>
+      (rai.data?.residents ?? [])
+        .filter((row) => row.state !== "current")
+        .sort((a, b) => (a.dueOn ?? "9999").localeCompare(b.dueOn ?? "9999")),
+    [rai.data],
+  );
+  if (rai.error && !rai.data) return <LoadError message={rai.error} onRetry={rai.reload} />;
+  const today = todayInZurich();
+  const week = inDays(7);
   const visible = items.filter(
     (item) =>
       filter === "Alle" ||
       (filter === "Heute"
-        ? item.due.startsWith("Heute")
+        ? (item.dueOn ?? "9999") <= today
         : filter === "Diese Woche"
-          ? !item.due.startsWith("Heute")
-          : item.reason.includes("Eintritt")),
+          ? (item.dueOn ?? "9999") <= week
+          : !item.lastCompletedOn),
   );
   return (
     <section className="card rai-due-card">
@@ -27,7 +49,9 @@ export function DueView({ showToast }: { showToast: (message: string) => void })
           <p className="eyebrow">Arbeitskorb</p>
           <h2 className="card-title">RAI-Fälligkeiten</h2>
           <p className="card-subtitle">
-            {visible.length} von {items.length} Erfassungen benötigen Aufmerksamkeit
+            {rai.loading && !rai.data
+              ? "Wird geladen …"
+              : `${visible.length} von ${items.length} Erfassungen benötigen Aufmerksamkeit`}
           </p>
         </div>
         <div className="rai-filter-row">
@@ -36,6 +60,7 @@ export function DueView({ showToast }: { showToast: (message: string) => void })
               className={filter === item ? "active" : ""}
               type="button"
               key={item}
+              aria-pressed={filter === item}
               onClick={() => setFilter(item)}
             >
               {item}
@@ -62,23 +87,24 @@ export function DueView({ showToast }: { showToast: (message: string) => void })
                 </small>
               </span>
             </span>
-            <span>{item.reason}</span>
-            <span className={`status-badge ${item.tone}`}>{item.due}</span>
-            <span>{item.assessor}</span>
-            <button
-              className="quiet-button"
-              type="button"
-              onClick={() => showToast(`Fälligkeit für ${item.name} geöffnet`)}
-            >
+            <span>
+              {item.reason}
+              {item.state === "in_progress" ? ` · ${item.progress}%` : ""}
+            </span>
+            <span className={`status-badge ${RAI_STATE[item.state].tone}`}>
+              {item.dueOn === today ? "Heute" : nextLabel(item)}
+            </span>
+            <span>{item.assessor ?? "–"}</span>
+            <button className="quiet-button" type="button" onClick={() => openAssessment(item.id)}>
               Öffnen <ModuleIcon name="chevron" />
             </button>
           </article>
         ))}
-        {visible.length === 0 && (
+        {rai.data && visible.length === 0 && (
           <div className="resident-empty">
             <ModuleIcon name="calendar" />
             <strong>Keine Fälligkeiten</strong>
-            <p>Der Filter zeigt aktuell keine Einträge.</p>
+            <p>{items.length ? "Der Filter zeigt aktuell keine Einträge." : "Alle Erfassungen sind aktuell."}</p>
           </div>
         )}
       </div>
@@ -86,55 +112,112 @@ export function DueView({ showToast }: { showToast: (message: string) => void })
   );
 }
 
-export function ReportsView({ showToast }: { showToast: (message: string) => void }) {
+export function ReportsView({ rai }: { rai: RaiData }) {
+  const openAssessment = useOpenAssessment();
+  const [selected, setSelected] = useState<string | null>(null);
+  if (rai.error && !rai.data) return <LoadError message={rai.error} onRetry={rai.reload} />;
+  const residents = rai.data?.residents ?? [];
+  const summary = rai.data?.summary;
+  const scored = residents.filter((row) => row.averageScore !== null);
+  const average = scored.length ? scored.reduce((sum, row) => sum + (row.averageScore ?? 0), 0) / scored.length : null;
+  const monthEnd = (() => {
+    const date = new Date(`${todayInZurich().slice(0, 7)}-01T12:00:00Z`);
+    date.setUTCMonth(date.getUTCMonth() + 1);
+    date.setUTCDate(0);
+    return date.toISOString().slice(0, 10);
+  })();
+  const dueThisMonth = residents.filter((row) => row.state !== "current" && (row.dueOn ?? "9999") <= monthEnd);
+  const monthName = new Date().toLocaleDateString("de-CH", { month: "long", timeZone: "Europe/Zurich" });
   const reports = [
     {
+      id: "complete",
       title: "RAI-Vollständigkeit Haus",
-      detail: "Aktive Akten und offene Bereiche nach Wohnbereich",
-      value: "86%",
+      detail: `${residents.filter((row) => row.state === "current" || row.state === "due").length} von ${residents.length} Bewohnern mit aktueller Erfassung`,
+      value: summary ? `${summary.currentShare}%` : "–",
       tone: "stable",
+      rows: residents.filter((row) => row.state !== "current" && row.state !== "due"),
     },
     {
+      id: "need",
       title: "Unterstützungsbedarf",
-      detail: "Verteilung der interRAI-Scores im aktuellen Quartal",
-      value: "48",
+      detail: `Ø Einschätzung über alle Bereiche (0–4) bei ${scored.length} abgeschlossenen Erfassungen`,
+      value: average === null ? "–" : average.toFixed(1).replace(".", ","),
       tone: "info",
+      rows: [...scored].sort((a, b) => (b.averageScore ?? 0) - (a.averageScore ?? 0)),
     },
     {
-      title: "Fälligkeiten September",
-      detail: "Erfassungen mit Termin und verantwortlicher Person",
-      value: "7",
-      tone: "attention",
+      id: "month",
+      title: `Fälligkeiten ${monthName}`,
+      detail: "Erfassungen bis Monatsende mit verantwortlicher Person",
+      value: String(dueThisMonth.length),
+      tone: dueThisMonth.length ? "attention" : "stable",
+      rows: dueThisMonth,
     },
   ];
+  const active = reports.find((report) => report.id === selected) ?? null;
+  const drafts = residents.filter((row) => row.draftId);
   return (
     <div className="rai-reports-layout">
       <section className="card rai-report-grid">
         <div className="rai-card-header">
           <div>
             <p className="eyebrow">Auswertung</p>
-            <h2 className="card-title">RAI-Berichte</h2>
-            <p className="card-subtitle">Transparente Kennzahlen für Pflege und Leitung.</p>
+            <h2 className="card-title">{active ? active.title : "RAI-Berichte"}</h2>
+            <p className="card-subtitle">
+              {active ? `${active.rows.length} Bewohner` : "Transparente Kennzahlen für Pflege und Leitung."}
+            </p>
           </div>
-          <button className="secondary-button" type="button" onClick={() => showToast("RAI-Bericht wird exportiert")}>
-            Exportieren <ModuleIcon name="docs" />
-          </button>
-        </div>
-        <div className="rai-report-cards">
-          {reports.map((report) => (
-            <button
-              type="button"
-              className="rai-report-card"
-              key={report.title}
-              onClick={() => showToast(`${report.title} geöffnet`)}
-            >
-              <span className={`rai-report-value ${report.tone}`}>{report.value}</span>
-              <strong>{report.title}</strong>
-              <small>{report.detail}</small>
-              <ModuleIcon name="chevron" />
+          {active ? (
+            <button className="secondary-button" type="button" onClick={() => setSelected(null)}>
+              Zurück zur Übersicht
             </button>
-          ))}
+          ) : (
+            <button className="secondary-button" type="button" onClick={downloadRaiReport}>
+              Exportieren <ModuleIcon name="docs" />
+            </button>
+          )}
         </div>
+        {active ? (
+          <div className="rai-due-list">
+            {active.rows.map((row) => (
+              <article key={row.id}>
+                <span className="resident-person">
+                  <span className="resident-avatar">{row.initials}</span>
+                  <span>
+                    <strong>{row.name}</strong>
+                    <small>
+                      {row.room} · {row.unit}
+                    </small>
+                  </span>
+                </span>
+                <span>{active.id === "need" ? `Ø ${row.averageScore?.toFixed(1).replace(".", ",")}` : row.reason}</span>
+                <span className={`status-badge ${RAI_STATE[row.state].tone}`}>{RAI_STATE[row.state].label}</span>
+                <span>{row.assessor ?? "–"}</span>
+                <button className="quiet-button" type="button" onClick={() => openAssessment(row.id)}>
+                  Öffnen <ModuleIcon name="chevron" />
+                </button>
+              </article>
+            ))}
+            {!active.rows.length && (
+              <div className="resident-empty">
+                <ModuleIcon name="check" />
+                <strong>Keine Einträge</strong>
+                <p>Für diesen Bericht gibt es nichts zu tun.</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="rai-report-cards">
+            {reports.map((report) => (
+              <button type="button" className="rai-report-card" key={report.id} onClick={() => setSelected(report.id)}>
+                <span className={`rai-report-value ${report.tone}`}>{report.value}</span>
+                <strong>{report.title}</strong>
+                <small>{report.detail}</small>
+                <ModuleIcon name="chevron" />
+              </button>
+            ))}
+          </div>
+        )}
       </section>
       <aside className="card rai-report-note">
         <div className="card-header">
@@ -144,11 +227,20 @@ export function ReportsView({ showToast }: { showToast: (message: string) => voi
           </div>
         </div>
         <div className="rai-report-meter">
-          <span style={{ width: "86%" }} />
+          <span style={{ width: `${summary?.currentShare ?? 0}%` }} />
         </div>
-        <strong>86% vollständig freigegeben</strong>
-        <p>4 Entwürfe warten auf die Prüfung durch eine RAI Verantwortliche.</p>
-        <button className="primary-button" type="button" onClick={() => showToast("Freigabewarteschlange geöffnet")}>
+        <strong>{summary ? `${summary.currentShare}% aktuell abgeschlossen` : "Wird geladen …"}</strong>
+        <p>
+          {drafts.length
+            ? `${drafts.length} Entw${drafts.length === 1 ? "urf wartet" : "ürfe warten"} auf den Abschluss durch eine RAI Verantwortliche.`
+            : "Keine offenen Entwürfe."}
+        </p>
+        <button
+          className="primary-button"
+          type="button"
+          disabled={!drafts.length}
+          onClick={() => drafts[0] && openAssessment(drafts[0].id)}
+        >
           Freigaben prüfen
         </button>
       </aside>

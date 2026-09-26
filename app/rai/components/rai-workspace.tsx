@@ -4,16 +4,19 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { ModuleIcon } from "@/app/components/module-icon";
+import { useApiData } from "@/app/components/workspace-ui";
+import type { RaiWorkplace } from "@/lib/rai-shared";
 import { RaiView, meta } from "./rai-data";
 import { OverviewView } from "./rai-overview-view";
-import { AssessmentView } from "./rai-assessment-view";
-import { DueView, ReportsView } from "./rai-due-reports-views";
+import { AssessmentView, requestRaiSave } from "./rai-assessment-view";
+import { DueView, ReportsView, downloadRaiReport } from "./rai-due-reports-views";
 import { RaiRefreshPopover } from "./rai-refresh-popover";
 
 export default function RaiWorkspace({ view }: { view: RaiView }) {
   const router = useRouter();
   const current = meta[view];
   const [refreshOpen, setRefreshOpen] = useState(false);
+  const rai = useApiData<RaiWorkplace>(view === "assessment" ? null : "/api/rai");
   return (
     <ModulePageShell
       activeModule="rai"
@@ -35,22 +38,31 @@ export default function RaiWorkspace({ view }: { view: RaiView }) {
                 type="button"
                 onClick={() =>
                   view === "overview"
-                    ? router.push("/rai/erfassung")
+                    ? router.push("/c/rai/erfassung")
                     : view === "due"
                       ? setRefreshOpen(true)
-                      : showToast(`${current.action} vorbereitet`)
+                      : view === "assessment"
+                        ? requestRaiSave()
+                        : downloadRaiReport()
                 }
               >
                 <ModuleIcon name={view === "overview" ? "plus" : "check"} className="button-icon" />
                 {current.action}
               </button>
             </section>
-            {view === "overview" && <OverviewView showToast={showToast} />}{" "}
-            {view === "assessment" && <AssessmentView showToast={showToast} />}{" "}
-            {view === "due" && <DueView showToast={showToast} />}{" "}
-            {view === "reports" && <ReportsView showToast={showToast} />}
+            {view === "overview" && <OverviewView rai={rai} />}
+            {view === "assessment" && <AssessmentView showToast={showToast} />}
+            {view === "due" && <DueView rai={rai} />}
+            {view === "reports" && <ReportsView rai={rai} />}
           </main>
-          <RaiRefreshPopover open={refreshOpen} onClose={() => setRefreshOpen(false)} showToast={showToast} />
+          {refreshOpen && rai.data && (
+            <RaiRefreshPopover
+              workplace={rai.data}
+              onClose={() => setRefreshOpen(false)}
+              onDone={rai.reload}
+              showToast={showToast}
+            />
+          )}
         </>
       )}
     </ModulePageShell>

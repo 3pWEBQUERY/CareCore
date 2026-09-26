@@ -1,23 +1,54 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { setCareResident } from "@/app/components/care-context";
 import { ModuleIcon } from "@/app/components/module-icon";
-import { residents, assessorOptions } from "./rai-data";
+import { LoadError, formatDate } from "@/app/components/workspace-ui";
+import { RAI_STATE, type RaiResidentRow } from "@/lib/rai-shared";
+import type { RaiData } from "./rai-data";
 
-export function OverviewView({ showToast }: { showToast: (message: string) => void }) {
+const FILTERS = ["Alle", "Fällig", "In Bearbeitung", "Aktuell"];
+
+export function nextLabel(row: RaiResidentRow) {
+  if (!row.dueOn) return "offen";
+  return formatDate(row.dueOn);
+}
+
+// Opens the interRAI assessment of a resident; the header resident follows.
+export function useOpenAssessment() {
+  const router = useRouter();
+  return (residentId: string) => {
+    setCareResident(residentId);
+    router.push(`/c/rai/erfassung?resident=${residentId}`);
+  };
+}
+
+export function OverviewView({ rai }: { rai: RaiData }) {
+  const router = useRouter();
+  const openAssessment = useOpenAssessment();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("Alle");
+  const residents = useMemo(() => rai.data?.residents ?? [], [rai.data]);
   const filtered = useMemo(
     () =>
       residents.filter(
         (resident) =>
-          (filter === "Alle" || resident.status === filter) &&
+          (filter === "Alle" || RAI_STATE[resident.state].label === filter) &&
           `${resident.name} ${resident.room} ${resident.unit}`
             .toLocaleLowerCase("de-CH")
             .includes(query.trim().toLocaleLowerCase("de-CH")),
       ),
-    [filter, query],
+    [filter, query, residents],
   );
+  if (rai.error && !rai.data) return <LoadError message={rai.error} onRetry={rai.reload} />;
+  const summary = rai.data?.summary;
+  const people = rai.data?.people ?? [];
+  const next =
+    residents.find((row) => row.state === "in_progress") ??
+    residents.find((row) => row.state === "overdue") ??
+    residents.find((row) => row.state === "due" || row.state === "new") ??
+    null;
   return (
     <>
       <section className="rai-summary" aria-label="RAI Übersicht">
@@ -26,7 +57,7 @@ export function OverviewView({ showToast }: { showToast: (message: string) => vo
             <ModuleIcon name="assess" />
           </span>
           <span>
-            <strong>48</strong>
+            <strong>{summary?.records ?? "–"}</strong>
             <small>aktive RAI-Akten</small>
           </span>
         </div>
@@ -35,7 +66,7 @@ export function OverviewView({ showToast }: { showToast: (message: string) => vo
             <ModuleIcon name="calendar" />
           </span>
           <span>
-            <strong>7</strong>
+            <strong>{summary?.due ?? "–"}</strong>
             <small>Erfassungen fällig</small>
           </span>
         </div>
@@ -44,7 +75,7 @@ export function OverviewView({ showToast }: { showToast: (message: string) => vo
             <ModuleIcon name="check" />
           </span>
           <span>
-            <strong>86%</strong>
+            <strong>{summary ? `${summary.currentShare}%` : "–"}</strong>
             <small>hausweit aktuell</small>
           </span>
         </div>
@@ -53,7 +84,7 @@ export function OverviewView({ showToast }: { showToast: (message: string) => vo
             <ModuleIcon name="team" />
           </span>
           <span>
-            <strong>4</strong>
+            <strong>{summary?.responsible ?? "–"}</strong>
             <small>RAI Verantwortliche</small>
           </span>
         </div>
@@ -65,7 +96,9 @@ export function OverviewView({ showToast }: { showToast: (message: string) => vo
               <p className="eyebrow">Arbeitskorb</p>
               <h2 className="card-title">Bewohner und Erfassungen</h2>
               <p className="card-subtitle">
-                {filtered.length} von {residents.length} Einträgen sichtbar
+                {rai.loading && !rai.data
+                  ? "Wird geladen …"
+                  : `${filtered.length} von ${residents.length} Einträgen sichtbar`}
               </p>
             </div>
             <label className="resident-search">
@@ -79,7 +112,7 @@ export function OverviewView({ showToast }: { showToast: (message: string) => vo
             </label>
           </div>
           <div className="rai-filter-row">
-            {["Alle", "Fällig", "In Bearbeitung", "Aktuell"].map((item) => (
+            {FILTERS.map((item) => (
               <button
                 className={filter === item ? "active" : ""}
                 type="button"
@@ -97,7 +130,7 @@ export function OverviewView({ showToast }: { showToast: (message: string) => vo
                 type="button"
                 className="rai-resident-row"
                 key={resident.id}
-                onClick={() => showToast(`${resident.name} für interRAI ausgewählt`)}
+                onClick={() => openAssessment(resident.id)}
               >
                 <span className="resident-avatar">{resident.initials}</span>
                 <span>
@@ -106,7 +139,7 @@ export function OverviewView({ showToast }: { showToast: (message: string) => vo
                     {resident.room} · {resident.unit}
                   </small>
                   <em>
-                    {resident.assessor} · nächste Erfassung {resident.next}
+                    {resident.assessor ?? "Noch nicht zugewiesen"} · {resident.reason} · fällig {nextLabel(resident)}
                   </em>
                 </span>
                 <span className="rai-progress">
@@ -115,11 +148,13 @@ export function OverviewView({ showToast }: { showToast: (message: string) => vo
                   </i>
                   <b>{resident.progress}%</b>
                 </span>
-                <span className={`status-badge ${resident.tone}`}>{resident.status}</span>
+                <span className={`status-badge ${RAI_STATE[resident.state].tone}`}>
+                  {RAI_STATE[resident.state].label}
+                </span>
                 <ModuleIcon name="chevron" />
               </button>
             ))}
-            {filtered.length === 0 && (
+            {rai.data && filtered.length === 0 && (
               <div className="resident-empty">
                 <ModuleIcon name="search" />
                 <strong>Keine RAI-Akten gefunden</strong>
@@ -135,32 +170,30 @@ export function OverviewView({ showToast }: { showToast: (message: string) => vo
                 <p className="eyebrow">Rollen und Rechte</p>
                 <h2 className="card-title">RAI Verantwortliche</h2>
               </div>
-              <span className="status-badge stable">4 aktiv</span>
+              <span className="status-badge stable">{people.length} aktiv</span>
             </div>
             <div className="rai-responsible-list">
-              {assessorOptions.slice(0, 4).map((name, index) => (
-                <div key={name}>
-                  <span className="avatar">
-                    {name
-                      .split(" ")
-                      .map((part) => part[0])
-                      .join("")}
-                  </span>
+              {people.map((person) => (
+                <div key={person.id}>
+                  <span className="avatar">{person.initials}</span>
                   <span>
-                    <strong>{name}</strong>
+                    <strong>{person.name}</strong>
                     <small>
-                      {index === 0
-                        ? "Leitung RAI · LTCF"
-                        : index === 1
-                          ? "RAI Verantwortliche · HC"
-                          : "RAI Verantwortliche · LTCF"}
+                      {person.openAssessments
+                        ? `${person.openAssessments} offene Erfassung${person.openAssessments === 1 ? "" : "en"}`
+                        : "keine offenen Erfassungen"}
                     </small>
                   </span>
-                  <span className="rai-online-dot" />
+                  {person.online && <span className="rai-online-dot" title="Gerade aktiv" />}
                 </div>
               ))}
+              {rai.data && !people.length && <p className="card-subtitle">Noch niemand mit RAI-Berechtigung.</p>}
             </div>
-            <button className="secondary-button" type="button" onClick={() => showToast("RAI-Berechtigungen geöffnet")}>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => router.push("/c/leitung/administration/mitarbeiter")}
+            >
               Berechtigungen verwalten <ModuleIcon name="chevron" />
             </button>
           </section>
@@ -168,21 +201,34 @@ export function OverviewView({ showToast }: { showToast: (message: string) => vo
             <div className="card-header">
               <div>
                 <p className="eyebrow">Nächster Schritt</p>
-                <h2 className="card-title">Erfassung fortsetzen</h2>
+                <h2 className="card-title">
+                  {next?.state === "in_progress" ? "Erfassung fortsetzen" : "Nächste Erfassung"}
+                </h2>
               </div>
             </div>
             <span className="rai-next-icon">
               <ModuleIcon name="assess" />
             </span>
-            <strong>Hans Müller · interRAI LTCF</strong>
-            <p>Die Erfassung ist zu 68% abgeschlossen. Die letzten Bereiche warten auf deine fachliche Einschätzung.</p>
-            <button
-              className="primary-button"
-              type="button"
-              onClick={() => showToast("interRAI-Erfassung für Hans Müller geöffnet")}
-            >
-              Weiterarbeiten <ModuleIcon name="chevron" />
-            </button>
+            {next ? (
+              <>
+                <strong>
+                  {next.name} · {next.instrument ?? "interRAI LTCF"}
+                </strong>
+                <p>
+                  {next.state === "in_progress"
+                    ? `Die Erfassung ist zu ${next.progress}% abgeschlossen. Die offenen Bereiche warten auf deine fachliche Einschätzung.`
+                    : `${next.reason} · fällig ${nextLabel(next)}.`}
+                </p>
+                <button className="primary-button" type="button" onClick={() => openAssessment(next.id)}>
+                  {next.state === "in_progress" ? "Weiterarbeiten" : "Erfassung starten"} <ModuleIcon name="chevron" />
+                </button>
+              </>
+            ) : (
+              <>
+                <strong>Alles aktuell</strong>
+                <p>{rai.data ? "Keine Erfassung ist offen oder fällig." : "Wird geladen …"}</p>
+              </>
+            )}
           </section>
         </aside>
       </div>
