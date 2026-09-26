@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import ModulePageShell, { ModuleIcon, type ModuleIconName } from "@/app/components/module-page-shell";
+import ModulePageShell from "@/app/components/module-page-shell";
+import { type ModuleIconName } from "@/app/components/module-icon";
+import { ModuleIcon } from "@/app/components/module-icon";
 
 type Filter = "Alle" | "Ungelesen" | "Kritisch";
 type Item = {

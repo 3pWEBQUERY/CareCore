@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import {
   EditorDialog,
   LoadError,

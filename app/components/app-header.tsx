@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { useRouter } from "next/navigation";
-import { ModuleIcon, type ModuleIconName } from "./module-page-shell";
+import { type ModuleIconName } from "./module-icon";
+import { ModuleIcon } from "./module-icon";
 import type { CareUnit, ContextResident, WorkContext } from "@/lib/work-context";
 
 type HeaderNotification = {

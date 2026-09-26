@@ -5,7 +5,8 @@
 
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Check, X } from "@phosphor-icons/react";
-import { ModuleIcon, type ModuleIconName } from "@/app/components/module-page-shell";
+import { type ModuleIconName } from "@/app/components/module-icon";
+import { ModuleIcon } from "@/app/components/module-icon";
 import "./workspace-ui.css";
 
 export type ShowToast = (message: string) => void;

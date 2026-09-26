@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { EditorDialog, requestJson } from "@/app/components/workspace-ui";
 import {
   ASSIGNMENT_STATUS,

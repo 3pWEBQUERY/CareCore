@@ -1,6 +1,6 @@
 "use client";
 
-import { type ModuleIconName } from "@/app/components/module-page-shell";
+import { type ModuleIconName } from "@/app/components/module-icon";
 import { type Post } from "@/lib/team-news-shared";
 
 export const FILTERS = ["Alle", "Ungelesen", "Wichtig", "Bestätigung offen", "Angeheftet"] as const;

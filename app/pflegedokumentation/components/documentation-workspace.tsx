@@ -2,7 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import { CareSelect } from "@/app/components/care-form-controls";
-import ModulePageShell, { ModuleIcon } from "@/app/components/module-page-shell";
+import ModulePageShell from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import {
   EmptyState,
   LoadError,

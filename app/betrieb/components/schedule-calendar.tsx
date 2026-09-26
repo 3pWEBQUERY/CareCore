@@ -1,6 +1,6 @@
 "use client";
 
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { openSlots } from "@/lib/schedule-shared";
 import { ScheduleSelect } from "./operations-ui";
 import {

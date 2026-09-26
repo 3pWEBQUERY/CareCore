@@ -1,6 +1,6 @@
 "use client";
 
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { personInitials } from "@/lib/tasks-shared";
 import type { NewsViewState } from "./use-news-view";
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ModuleIcon } from "./module-page-shell";
+import { ModuleIcon } from "./module-icon";
 
 export function formatCareDate(value: string) {
   return new Date(`${value}T12:00:00`).toLocaleDateString("de-CH", {

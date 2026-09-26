@@ -1,6 +1,6 @@
 "use client";
 
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { COMPLIANCE_STATES } from "@/lib/learning-shared";
 import { complianceText, STATE_ICON } from "./learning-utils";
 import { FocusTraining } from "./focus-training";

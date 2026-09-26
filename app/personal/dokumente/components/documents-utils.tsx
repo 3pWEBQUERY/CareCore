@@ -1,6 +1,6 @@
 "use client";
 
-import { type ModuleIconName } from "@/app/components/module-page-shell";
+import { type ModuleIconName } from "@/app/components/module-icon";
 import { DOCUMENT_STATUS, PREVIEW_TYPES, type LibraryDocument } from "@/lib/documents-shared";
 
 export type Folder = {

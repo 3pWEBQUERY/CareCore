@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { LoadError, formatDateTime, todayInZurich, useApiData } from "@/app/components/workspace-ui";
 import { CHECKLIST, HANDOVER_STATUS, type ShiftHistory, type ShiftHistoryEntry } from "@/lib/shift-shared";
 import { Summary, formatScheduleDate } from "./operations-ui";

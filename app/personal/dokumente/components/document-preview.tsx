@@ -1,6 +1,6 @@
 "use client";
 
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { formatDate } from "@/app/components/workspace-ui";
 import { fileSizeLabel, fileTypeLabel, type DocumentsPayload, type LibraryDocument } from "@/lib/documents-shared";
 import { current, statusOf, fileIcon, fileUrl, Dialog } from "./documents-utils";

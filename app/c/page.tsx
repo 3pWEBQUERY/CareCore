@@ -15,7 +15,7 @@ import {
 import { HomeHero } from "./components/home-hero";
 import { HomeNews } from "./components/home-news";
 import { DashboardCustomizer } from "./components/dashboard-customizer";
-import { MobileNavMenu, MobileBottomNav } from "./components/mobile-nav";
+import { MobileNavigation } from "@/app/components/mobile-navigation";
 import { SearchDialog } from "./components/search-dialog";
 import { NoteViewDialog, NoteEditorDialog } from "./components/note-dialogs";
 
@@ -32,7 +32,6 @@ export default function Home() {
     widgetOrder,
     hiddenWidgets,
     setDraggedWidget,
-    mobileMenuOpen,
     openSearch,
     moveWidget,
     openNote,
@@ -95,8 +94,7 @@ export default function Home() {
       <button className="floating-action" type="button" aria-label="Notiz erstellen" onClick={() => openNote("new")}>
         <Icon name="plus" />
       </button>
-      {mobileMenuOpen && <MobileNavMenu r={r} />}
-      <MobileBottomNav r={r} />
+      <MobileNavigation activeModule="home" />
 
       {searchOpen && <SearchDialog r={r} />}
 

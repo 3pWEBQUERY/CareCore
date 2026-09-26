@@ -1,6 +1,6 @@
 "use client";
 
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { timeInZurich } from "@/app/components/workspace-ui";
 import { COMPLIANCE_STATES, TRAINING_FORMATS } from "@/lib/learning-shared";
 import { MONTHS, zurichDay } from "./learning-utils";

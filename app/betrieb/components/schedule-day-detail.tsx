@@ -1,6 +1,6 @@
 "use client";
 
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { ABSENCE_KINDS, ABSENCE_STATUS, ASSIGNMENT_STATUS, activeAssignments, openSlots } from "@/lib/schedule-shared";
 import { personInitials } from "@/lib/tasks-shared";
 import { ALL_UNITS, shortDay, longDay, times } from "./schedule-utils";

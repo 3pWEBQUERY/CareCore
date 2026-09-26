@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { EditorDialog, requestJson } from "@/app/components/workspace-ui";
 import { type ShiftOverview } from "@/lib/shift-shared";
 import { notifyOperationsChanged } from "./operations-ui";

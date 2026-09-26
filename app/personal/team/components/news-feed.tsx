@@ -1,6 +1,6 @@
 "use client";
 
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { POST_IMPORTANCE } from "@/lib/team-news-shared";
 import { SearchField, relativeTime } from "../../components/personal-ui";
 import { FILTERS, postIcon } from "./news-utils";

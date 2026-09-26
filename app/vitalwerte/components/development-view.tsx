@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CareSelect } from "@/app/components/care-form-controls";
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { EmptyState, LoadError, PageHeading, formatDateTime, useApiData } from "@/app/components/workspace-ui";
 import {
   VITAL_METRICS,

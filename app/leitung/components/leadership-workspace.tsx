@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import ModulePageShell, { ModuleIcon, type ModuleIconName } from "@/app/components/module-page-shell";
+import ModulePageShell from "@/app/components/module-page-shell";
+import { type ModuleIconName } from "@/app/components/module-icon";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { LeadershipVariant, LocationEditor } from "./leadership-variants";
 import type { AdminUserStats } from "@/lib/admin-users";
 

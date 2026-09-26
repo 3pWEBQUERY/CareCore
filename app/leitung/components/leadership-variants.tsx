@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import type { BoardItem, LeadershipView } from "./leadership-workspace";
 import AdminUserManagement from "./admin-user-management";
 

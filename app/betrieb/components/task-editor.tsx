@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { requestJson, todayInZurich, useApiData } from "@/app/components/workspace-ui";
 import { zurichTimeToIso } from "@/lib/resident-appointments";
 import {

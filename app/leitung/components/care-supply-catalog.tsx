@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Archive, Check, ClipboardText, PencilSimple, Plus, Prohibit, Sparkle } from "@phosphor-icons/react";
-import ModulePageShell, { ModuleIcon } from "@/app/components/module-page-shell";
+import ModulePageShell from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { SidebarTooltip } from "@/app/components/app-sidebar";
 import { CareSelect } from "@/app/components/care-form-controls";
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import ModulePageShell, { ModuleIcon } from "@/app/components/module-page-shell";
+import ModulePageShell from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 
 type IntelligenceView = "assistant" | "drafts";
 

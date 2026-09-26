@@ -7,7 +7,6 @@ import { useDashboardNotes } from "./use-dashboard-notes";
 import { useDashboardLayout } from "./use-dashboard-layout";
 import { useDashboardNews } from "./use-dashboard-news";
 import { useDashboardTasks } from "./use-dashboard-tasks";
-import { useMobileNavigation } from "./use-mobile-navigation";
 
 export function useDashboard() {
   const {
@@ -75,18 +74,6 @@ export function useDashboard() {
     primaryCareUnitName,
     setToast,
   });
-  const [role, setRole] = useState<string | null>(null);
-  const {
-    mobileMenuOpen,
-    setMobileMenuOpen,
-    mobileGroupId,
-    setMobileGroupId,
-    visibleNavigation,
-    mobileGroup,
-    mobileNeedsMenu,
-    chooseMobileGroup,
-    chooseMobileChild,
-  } = useMobileNavigation({ role, router });
 
   useEffect(() => {
     const tick = () => setNow(new Date());
@@ -129,7 +116,7 @@ export function useDashboard() {
       .then((response) =>
         response.ok
           ? (response.json() as Promise<{
-              profile?: { displayName?: string; primaryCareUnitName?: string; role?: string };
+              profile?: { displayName?: string; primaryCareUnitName?: string };
             }>)
           : null,
       )
@@ -137,7 +124,6 @@ export function useDashboard() {
         if (active && context?.profile?.displayName) {
           setEmployeeName(context.profile.displayName);
           setPrimaryCareUnitName(context.profile.primaryCareUnitName ?? "");
-          setRole(context.profile.role ?? null);
         }
       })
       .catch(() => undefined);
@@ -260,17 +246,6 @@ export function useDashboard() {
     setHiddenWidgets,
     draggedWidget,
     setDraggedWidget,
-    mobileMenuOpen,
-    setMobileMenuOpen,
-    mobileGroupId,
-    setMobileGroupId,
-    role,
-    setRole,
-    visibleNavigation,
-    mobileGroup,
-    mobileNeedsMenu,
-    chooseMobileGroup,
-    chooseMobileChild,
     openSearch,
     closeSearch,
     loadNotes,

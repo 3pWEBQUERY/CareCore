@@ -1,6 +1,6 @@
 "use client";
 
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { formatDate } from "@/app/components/workspace-ui";
 import { COMPLIANCE_STATES } from "@/lib/learning-shared";
 import { ScheduleSelect } from "@/app/betrieb/components/operations-ui";

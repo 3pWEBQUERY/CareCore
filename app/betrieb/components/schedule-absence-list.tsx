@@ -1,6 +1,6 @@
 "use client";
 
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { formatDateTime } from "@/app/components/workspace-ui";
 import { ABSENCE_KINDS, ABSENCE_STATUS, weekdaysBetween, type SchedulePayload } from "@/lib/schedule-shared";
 import { shortDay, Dialog } from "./schedule-utils";

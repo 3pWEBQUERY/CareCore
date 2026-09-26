@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { LoadError, useApiData, type ShowToast } from "@/app/components/workspace-ui";
 import { type ShiftOverview } from "@/lib/shift-shared";
 import { ScheduleSelect, Summary, formatScheduleDate } from "./operations-ui";

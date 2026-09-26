@@ -1,7 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import ModulePageShell, { ModuleIcon, type ModuleIconName } from "@/app/components/module-page-shell";
+import ModulePageShell from "@/app/components/module-page-shell";
+import { type ModuleIconName } from "@/app/components/module-icon";
+import { ModuleIcon } from "@/app/components/module-icon";
 import type { ShowToast } from "@/app/components/workspace-ui";
 
 // Page frame and parts shared by the Personal workspaces (team news, learning, documents).

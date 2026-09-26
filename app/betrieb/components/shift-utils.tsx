@@ -1,6 +1,6 @@
 "use client";
 
-import { type ModuleIconName } from "@/app/components/module-page-shell";
+import { type ModuleIconName } from "@/app/components/module-icon";
 import { timeInZurich, todayInZurich } from "@/app/components/workspace-ui";
 import { type ShiftType, type TimelineItem } from "@/lib/shift-shared";
 

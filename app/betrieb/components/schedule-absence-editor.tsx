@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { requestJson } from "@/app/components/workspace-ui";
 import { ABSENCE_KINDS, weekdaysBetween, type AbsenceKind, type SchedulePayload } from "@/lib/schedule-shared";
 import { ScheduleDatePicker, ScheduleSelect, formatScheduleDate, notifyOperationsChanged } from "./operations-ui";

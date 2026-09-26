@@ -1,6 +1,6 @@
 "use client";
 
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { formatDate, formatDateTime } from "@/app/components/workspace-ui";
 import {
   GOAL_STATUS_LABELS,

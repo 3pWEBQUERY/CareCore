@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import ModulePageShell, { ModuleIcon } from "@/app/components/module-page-shell";
+import ModulePageShell from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import { CareDatePicker, CareSelect, formatCareDate } from "@/app/components/care-form-controls";
 
 export type RaiView = "overview" | "assessment" | "due" | "reports";

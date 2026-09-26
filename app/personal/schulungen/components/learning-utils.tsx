@@ -1,6 +1,6 @@
 "use client";
 
-import { type ModuleIconName } from "@/app/components/module-page-shell";
+import { type ModuleIconName } from "@/app/components/module-icon";
 import { formatDate, timeInZurich } from "@/app/components/workspace-ui";
 import { TRAINING_FORMATS, type ComplianceRow, type ComplianceState, type Training } from "@/lib/learning-shared";
 

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 import type { AdminCareUnit, ManagedRole, ManagedUser } from "@/lib/admin-users";
 
 type Data = { users: ManagedUser[]; careUnits: AdminCareUnit[]; roles: ManagedRole[] };

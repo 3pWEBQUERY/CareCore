@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ModuleIcon } from "@/app/components/module-page-shell";
+import { ModuleIcon } from "@/app/components/module-icon";
 
 // Minimal resident fields the list needs; modules pass their own richer types.
 export type ListResident = { id: string; name: string; initials: string; room: string; careUnit: string };
