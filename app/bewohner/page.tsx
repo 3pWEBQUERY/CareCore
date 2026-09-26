@@ -6,7 +6,8 @@ import Image from "next/image";
 import AppHeader from "../components/app-header";
 import AppSidebar from "../components/app-sidebar";
 import { CareDatePicker, CareSelect, formatCareDate } from "../components/care-form-controls";
-import { ResidentRecord, type ResidentRecordData } from "./components/resident-record";
+import { ResidentRecord } from "./components/resident-record";
+import type { ResidentRecordData } from "./components/resident-record-data";
 import {
   ArrowsLeftRight,
   Bell,
