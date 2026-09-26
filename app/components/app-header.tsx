@@ -9,6 +9,7 @@ import { HeaderResidentSelector } from "./header-resident-selector";
 import { HeaderLocationControl } from "./header-location-control";
 import { HeaderProfileMenu } from "./header-profile-menu";
 import { HeaderNotificationMenu } from "./header-notification-menu";
+import { KeyboardShortcutsMenu } from "./keyboard-shortcuts";
 
 export default function AppHeader(props: {
   locationPrimary?: string;
@@ -62,6 +63,7 @@ export default function AppHeader(props: {
             <span>Suchen…</span>
             <kbd>⌘ K</kbd>
           </button>
+          <KeyboardShortcutsMenu />
           <HeaderNotificationMenu r={r} ref={notificationMenuRef} />
           <HeaderProfileMenu r={r} ref={profileMenuRef} />
         </div>

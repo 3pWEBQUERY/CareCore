@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { isTyping } from "@/app/components/keyboard-shortcuts";
 import { requestJson, timeInZurich, todayInZurich } from "@/app/components/workspace-ui";
 import { zurichTimeToIso } from "@/lib/resident-appointments";
 import type { Importance } from "@/lib/documentation-shared";
@@ -143,13 +144,17 @@ export function useResidentRecord({
   useEffect(() => {
     onViewChange?.(activeView);
   }, [activeView, onViewChange]);
-  // Alt + arrow up/down steps to the previous or next resident.
+  // Alt + arrow up/down or J/K steps to the previous or next resident.
   useEffect(() => {
     if (!navigation) return;
     const onKey = (event: KeyboardEvent) => {
-      if (!event.altKey || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
+      const typing = isTyping(event.target);
+      const arrows = event.altKey && (event.key === "ArrowUp" || event.key === "ArrowDown");
+      const letters =
+        !typing && !event.altKey && !event.metaKey && !event.ctrlKey && ["j", "k"].includes(event.key.toLowerCase());
+      if (!arrows && !letters) return;
       event.preventDefault();
-      if (event.key === "ArrowUp") navigation.onPrevious();
+      if (event.key === "ArrowUp" || event.key.toLowerCase() === "k") navigation.onPrevious();
       else navigation.onNext();
     };
     window.addEventListener("keydown", onKey);
