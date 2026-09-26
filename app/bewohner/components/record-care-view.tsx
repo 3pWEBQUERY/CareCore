@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { CalendarDots, Check, ClipboardText, Heartbeat, ListChecks, Pulse, User, Warning } from "@phosphor-icons/react";
 import { setCareResident } from "@/app/components/care-context";
 import { formatDate, formatDateTime } from "@/app/components/workspace-ui";
+import { RecordCareProcess } from "./record-care-process";
 import type { ResidentRecordState } from "./use-resident-record";
 
 const initialsOf = (name: string) =>
@@ -60,6 +61,8 @@ export function RecordCareView({ r }: { r: ResidentRecordState }) {
           </button>
         </div>
       </div>
+
+      <RecordCareProcess r={r} />
 
       <section className="care-record-status" aria-label="Status der Pflegeakte">
         <div>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { setCareResident } from "@/app/components/care-context";
 import { formatDate, formatDateTime } from "@/app/components/workspace-ui";
 import { BodyMap3D } from "./body-map-3d";
+import { RecordCareProcess } from "./record-care-process";
 import { appointmentDateLabel, appointmentLocalParts } from "@/lib/resident-appointments";
 import {
   CalendarDots,
@@ -58,6 +59,7 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
   const loading = live.summary.loading && !summary;
   return (
     <main className="resident-record-content" ref={contentRef} key="overview">
+      <RecordCareProcess r={r} />
       <section className="record-metrics" aria-label="Aktenübersicht">
         <div>
           <span className="record-metric-icon">
