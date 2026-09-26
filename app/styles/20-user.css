@@ -521,3 +521,12 @@
 .user-editor-confirm .user-editor-footer {
   margin: 0 -46px -28px;
 }
+.organization-root[role="button"] {
+  cursor: pointer;
+}
+.organization-root.selected {
+  border-color: var(--brand);
+}
+.organization-tree > button + .organization-root {
+  margin-top: 12px;
+}

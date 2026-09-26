@@ -1,20 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { ModuleIcon } from "@/app/components/module-icon";
+import { AdminBoard } from "./admin-board";
 import { LeadershipVariant } from "./leadership-variants";
-import { LocationEditor } from "./location-editor";
 import type { AdminUserStats } from "@/lib/admin-users";
-import { meta, boardItems } from "./leadership-data";
+import type { OrganizationStructure } from "@/lib/organization-shared";
+import type { SystemStatus } from "@/lib/settings";
+import { SETTING_DEFINITIONS, SETTING_KEYS, type AppSettings, type SettingKey } from "@/lib/settings-shared";
+import { useApiData } from "@/app/components/workspace-ui";
+import { meta } from "./leadership-data";
 import { LeadershipView, Tone } from "./leadership-data";
 
 export default function LeadershipWorkspace({ view }: { view: LeadershipView }) {
   const page = meta[view];
-  const rows = boardItems[view];
-  const [selectedId, setSelectedId] = useState(rows[0].id);
-  const [query, setQuery] = useState("");
-  const [completed, setCompleted] = useState<string[]>([]);
+  const [settingKey, setSettingKey] = useState<SettingKey>(SETTING_KEYS[0]);
+  const [settingEditorOpen, setSettingEditorOpen] = useState(false);
   const [locationEditorOpen, setLocationEditorOpen] = useState(false);
   const [employeeCreatorOpen, setEmployeeCreatorOpen] = useState(false);
   const [employeeStats, setEmployeeStats] = useState<AdminUserStats | null>(null);
@@ -31,16 +33,18 @@ export default function LeadershipWorkspace({ view }: { view: LeadershipView }) 
       active = false;
     };
   }, [view]);
-  const selected = rows.find((row) => row.id === selectedId) ?? rows[0];
-  const visibleRows = useMemo(
-    () =>
-      rows.filter((row) =>
-        `${row.title} ${row.detail} ${row.metric} ${row.status}`
-          .toLocaleLowerCase("de-CH")
-          .includes(query.trim().toLocaleLowerCase("de-CH")),
-      ),
-    [query, rows],
+  const organization = useApiData<OrganizationStructure>(view === "organization" ? "/api/organization" : null);
+  const orgTotals = organization.data?.totals;
+  const configuration = useApiData<{ settings: AppSettings; system: SystemStatus }>(
+    view === "configuration" ? "/api/settings" : null,
   );
+  const config = configuration.data;
+  const enabledSettings = config ? SETTING_KEYS.filter((key) => config.settings[key].enabled) : [];
+  const disabledReminders = config
+    ? (["documentationReminder", "vitalsReminder", "medicationOverdue"] as SettingKey[]).filter(
+        (key) => !config.settings[key].enabled,
+      )
+    : [];
 
   const kpis =
     view === "users" && employeeStats
@@ -72,7 +76,60 @@ export default function LeadershipWorkspace({ view }: { view: LeadershipView }) 
             employeeStats.auditEntriesLast30Days > 0 ? ("stable" as Tone) : ("attention" as Tone),
           ],
         ]
-      : page.kpis;
+      : view === "organization" && orgTotals
+        ? [
+            [
+              String(orgTotals.units),
+              orgTotals.units === 1 ? "Wohnbereich" : "Wohnbereiche",
+              `${orgTotals.occupied} von ${orgTotals.places} Plätzen belegt`,
+              orgTotals.places && orgTotals.occupied > orgTotals.places ? ("critical" as Tone) : ("info" as Tone),
+            ],
+            [String(orgTotals.staff), "Mitarbeitende", `in ${orgTotals.roles} Rollen`, "stable" as Tone],
+            [
+              String(orgTotals.sites),
+              orgTotals.sites === 1 ? "Standort" : "Standorte",
+              orgTotals.unassignedStaff
+                ? `${orgTotals.unassignedStaff} Mitarbeitende ohne Bereich`
+                : "alle Mitarbeitenden zugeteilt",
+              orgTotals.unassignedStaff ? ("attention" as Tone) : ("info" as Tone),
+            ],
+            [
+              String(orgTotals.unitsWithoutLead),
+              "Ohne Leitung",
+              orgTotals.unitsWithoutLead ? "Wohnbereiche zuweisen" : "alle Bereiche geführt",
+              orgTotals.unitsWithoutLead ? ("attention" as Tone) : ("stable" as Tone),
+            ],
+          ]
+        : view === "configuration" && config
+          ? [
+              [
+                String(enabledSettings.length),
+                "Einstellungen aktiv",
+                `von ${SETTING_KEYS.length} Einstellungen`,
+                "stable" as Tone,
+              ],
+              [
+                config.system.schemaVersion ?? "–",
+                "Datenbankstand",
+                `${config.system.migrations} Migrationen · ${config.system.databaseMs} ms`,
+                "info" as Tone,
+              ],
+              [
+                String(disabledReminders.length),
+                "Prüfung empfohlen",
+                disabledReminders.length
+                  ? disabledReminders.map((key) => SETTING_DEFINITIONS[key].title).join(", ")
+                  : "alle Erinnerungen aktiv",
+                disabledReminders.length ? ("attention" as Tone) : ("stable" as Tone),
+              ],
+              [
+                String(config.system.auditEntries30Days),
+                "Protokolleinträge",
+                "in den letzten 30 Tagen",
+                "stable" as Tone,
+              ],
+            ]
+          : page.kpis;
   return (
     <ModulePageShell
       activeModule={page.module}
@@ -96,7 +153,7 @@ export default function LeadershipWorkspace({ view }: { view: LeadershipView }) 
                   ? setLocationEditorOpen(true)
                   : view === "users"
                     ? setEmployeeCreatorOpen(true)
-                    : showToast(`${page.action} vorbereitet`)
+                    : setSettingEditorOpen(true)
               }
             >
               <ModuleIcon name="plus" className="button-icon" />
@@ -114,212 +171,19 @@ export default function LeadershipWorkspace({ view }: { view: LeadershipView }) 
           </section>
           <LeadershipVariant
             view={view}
-            rows={rows}
-            visibleRows={visibleRows}
-            selected={selected}
-            query={query}
-            setQuery={setQuery}
-            setSelectedId={setSelectedId}
-            completed={completed}
-            setCompleted={setCompleted}
             showToast={showToast}
             employeeCreatorOpen={employeeCreatorOpen}
             onCloseEmployeeCreator={() => setEmployeeCreatorOpen(false)}
+            organization={organization}
+            siteCreatorOpen={locationEditorOpen}
+            onCloseSiteCreator={() => setLocationEditorOpen(false)}
+            configuration={configuration}
+            settingKey={settingKey}
+            onSelectSetting={setSettingKey}
+            settingEditorOpen={settingEditorOpen}
+            onCloseSettingEditor={() => setSettingEditorOpen(false)}
           />
-          <LocationEditor
-            open={locationEditorOpen}
-            onClose={() => setLocationEditorOpen(false)}
-            showToast={showToast}
-          />
-          <div className="leadership-board legacy-leadership-board" aria-hidden="true">
-            <section className="card leadership-radar">
-              <div className="card-header">
-                <div>
-                  <p className="eyebrow">Management Cockpit</p>
-                  <h2 className="card-title">Entwicklung im Zeitraum</h2>
-                  <p className="card-subtitle">Vergleich der letzten sechs Wochen</p>
-                </div>
-                <button className="filter-pill" type="button" onClick={() => showToast("Zeitraum ausgewählt")}>
-                  6 Wochen
-                </button>
-              </div>
-              <div className="leadership-bars" aria-label="Kennzahlenverlauf">
-                <div>
-                  <span style={{ height: "48%" }} />
-                  <span style={{ height: "64%" }} />
-                  <span style={{ height: "58%" }} />
-                  <span style={{ height: "76%" }} />
-                  <span style={{ height: "71%" }} />
-                  <span style={{ height: "84%" }} />
-                  <small>Qualität</small>
-                </div>
-                <div>
-                  <span style={{ height: "62%" }} />
-                  <span style={{ height: "56%" }} />
-                  <span style={{ height: "67%" }} />
-                  <span style={{ height: "74%" }} />
-                  <span style={{ height: "81%" }} />
-                  <span style={{ height: "88%" }} />
-                  <small>Plan</small>
-                </div>
-                <div>
-                  <span style={{ height: "73%" }} />
-                  <span style={{ height: "70%" }} />
-                  <span style={{ height: "77%" }} />
-                  <span style={{ height: "68%" }} />
-                  <span style={{ height: "79%" }} />
-                  <span style={{ height: "92%" }} />
-                  <small>Aktuell</small>
-                </div>
-              </div>
-              <div className="leadership-chart-legend">
-                <span>
-                  <i className="quality" />
-                  Qualität
-                </span>
-                <span>
-                  <i className="plan" />
-                  Plan
-                </span>
-                <span>
-                  <i className="actual" />
-                  Aktuell
-                </span>
-              </div>
-            </section>
-            <section className="card leadership-priority">
-              <div className="card-header">
-                <div>
-                  <p className="eyebrow">Führungskreis</p>
-                  <h2 className="card-title">Prioritäten heute</h2>
-                </div>
-                <span className="status-badge attention">3 offen</span>
-              </div>
-              <div className="leadership-priority-list">
-                <button type="button" onClick={() => showToast("Sturzereignis geöffnet")}>
-                  <span className="governance-icon critical">
-                    <ModuleIcon name="alert" />
-                  </span>
-                  <span>
-                    <strong>Sturzereignis prüfen</strong>
-                    <small>Wohnbereich 2 · bis 10:00</small>
-                  </span>
-                  <ModuleIcon name="chevron" className="chevron" />
-                </button>
-                <button type="button" onClick={() => showToast("Besetzung geöffnet")}>
-                  <span className="governance-icon attention">
-                    <ModuleIcon name="team" />
-                  </span>
-                  <span>
-                    <strong>Spätdienst besetzen</strong>
-                    <small>Wohnbereich 3 · heute</small>
-                  </span>
-                  <ModuleIcon name="chevron" className="chevron" />
-                </button>
-                <button type="button" onClick={() => showToast("Qualitätsziel geöffnet")}>
-                  <span className="governance-icon">
-                    <ModuleIcon name="chart" />
-                  </span>
-                  <span>
-                    <strong>Dokumentationsziel</strong>
-                    <small>Massnahme bis Freitag</small>
-                  </span>
-                  <ModuleIcon name="chevron" className="chevron" />
-                </button>
-              </div>
-            </section>
-            <section className="card leadership-register">
-              <div className="operations-toolbar">
-                <div>
-                  <p className="eyebrow">Arbeitsliste</p>
-                  <h2 className="card-title">{page.title}</h2>
-                  <p className="card-subtitle">
-                    {visibleRows.length} von {rows.length} Einträgen
-                  </p>
-                </div>
-                <label className="resident-search">
-                  <ModuleIcon name="search" />
-                  <input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Suchen…"
-                    aria-label={`${page.title} durchsuchen`}
-                  />
-                </label>
-              </div>
-              <div className="leadership-register-list">
-                {visibleRows.map((row) => (
-                  <button
-                    className={selected.id === row.id ? "selected" : ""}
-                    type="button"
-                    key={row.id}
-                    onClick={() => setSelectedId(row.id)}
-                  >
-                    <span className={`governance-icon ${row.tone}`}>
-                      <ModuleIcon name={row.icon} />
-                    </span>
-                    <span>
-                      <strong>{row.title}</strong>
-                      <small>{row.detail}</small>
-                    </span>
-                    <span>
-                      <strong>{row.metric}</strong>
-                      <small>{row.status}</small>
-                    </span>
-                    <ModuleIcon name="chevron" className="chevron" />
-                  </button>
-                ))}
-                {visibleRows.length === 0 && (
-                  <div className="resident-empty">
-                    <ModuleIcon name="search" />
-                    <strong>Keine Einträge gefunden</strong>
-                    <p>Suchbegriff anpassen.</p>
-                  </div>
-                )}
-              </div>
-            </section>
-            <section className="card leadership-decision">
-              <div className="card-header">
-                <div>
-                  <p className="eyebrow">Entscheidung</p>
-                  <h2 className="card-title">{selected.title}</h2>
-                </div>
-                <span className={`status-badge ${selected.tone}`}>
-                  {completed.includes(selected.id) ? "Erledigt" : selected.status}
-                </span>
-              </div>
-              <div className="leadership-decision-body">
-                <p>{selected.detail}</p>
-                <div>
-                  <span>Messwert</span>
-                  <strong>{selected.metric}</strong>
-                </div>
-                <div>
-                  <span>Verantwortung</span>
-                  <strong>Leitung Pflege</strong>
-                </div>
-              </div>
-              <div className="leadership-decision-actions">
-                <button
-                  className="primary-button"
-                  type="button"
-                  onClick={() => {
-                    setCompleted((current) =>
-                      current.includes(selected.id)
-                        ? current.filter((id) => id !== selected.id)
-                        : [...current, selected.id],
-                    );
-                    showToast(`${selected.title} aktualisiert`);
-                  }}
-                >
-                  {completed.includes(selected.id) ? "Wieder öffnen" : "Als geprüft markieren"}
-                </button>
-                <button className="secondary-button" type="button" onClick={() => showToast("Detailansicht geöffnet")}>
-                  Details
-                </button>
-              </div>
-            </section>
-          </div>
+          <AdminBoard view={view} />
         </main>
       )}
     </ModulePageShell>

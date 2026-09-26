@@ -1,0 +1,217 @@
+"use client";
+
+import { useState } from "react";
+import { ModuleIcon } from "@/app/components/module-icon";
+import { EditorDialog, LoadError, formatDateTime, requestJson } from "@/app/components/workspace-ui";
+import { loadWorkContext } from "@/app/components/care-context";
+import type { SystemStatus } from "@/lib/settings";
+import { SETTING_DEFINITIONS, SETTING_KEYS, type AppSettings, type SettingKey } from "@/lib/settings-shared";
+import { notifyAdminChanged } from "./admin-board";
+
+export type ConfigurationData = {
+  data?: { settings: AppSettings; system: SystemStatus };
+  error?: string;
+  loading: boolean;
+  reload: () => void;
+};
+
+// "Leitung · Konfiguration": organisation-wide settings and the live system status.
+export function ConfigurationView({
+  configuration,
+  showToast,
+  selectedKey,
+  onSelect,
+  editorOpen,
+  onCloseEditor,
+}: {
+  configuration: ConfigurationData;
+  showToast: (message: string) => void;
+  selectedKey: SettingKey;
+  onSelect: (key: SettingKey) => void;
+  editorOpen: boolean;
+  onCloseEditor: () => void;
+}) {
+  const { data, error, reload } = configuration;
+  const [saving, setSaving] = useState<SettingKey | null>(null);
+  if (error && !data) return <LoadError message={error} onRetry={reload} />;
+
+  const save = async (key: SettingKey, change: { enabled?: boolean; value?: number }) => {
+    setSaving(key);
+    try {
+      await requestJson(`/api/settings/${key}`, { method: "PATCH", body: change });
+      reload();
+      notifyAdminChanged();
+      void loadWorkContext(true);
+      const title = SETTING_DEFINITIONS[key].title;
+      showToast(
+        change.enabled === undefined
+          ? `${title} gespeichert`
+          : `${title} ${change.enabled ? "eingeschaltet" : "ausgeschaltet"}`,
+      );
+      return true;
+    } catch (reason) {
+      showToast((reason as Error).message);
+      return false;
+    } finally {
+      setSaving(null);
+    }
+  };
+  const system = data?.system;
+  const healthy = system ? system.databaseMs < 1000 : true;
+
+  return (
+    <div className="admin-config-layout">
+      <section className="card admin-config-card">
+        <div className="card-header">
+          <div>
+            <p className="eyebrow">Systemsteuerung</p>
+            <h2 className="card-title">Konfiguration</h2>
+            <p className="card-subtitle">Einstellungen für alle Mitarbeitenden der Organisation</p>
+          </div>
+          <span className={`status-badge ${healthy ? "stable" : "attention"}`}>
+            {healthy ? "System aktiv" : "System langsam"}
+          </span>
+        </div>
+        <div className="admin-setting-list">
+          {SETTING_KEYS.map((key) => {
+            const definition = SETTING_DEFINITIONS[key];
+            const setting = data?.settings[key];
+            const on = setting?.enabled ?? false;
+            return (
+              <button
+                className={selectedKey === key ? "selected" : ""}
+                type="button"
+                key={key}
+                onClick={() => onSelect(key)}
+              >
+                <span className={`governance-icon ${on ? "stable" : "attention"}`}>
+                  <ModuleIcon name={definition.icon} />
+                </span>
+                <span>
+                  <strong>{definition.title}</strong>
+                  <small>
+                    {definition.area} · {definition.describe(setting?.value ?? definition.defaults.value)}
+                  </small>
+                </span>
+                <span className={`status-badge ${on ? "stable" : "attention"}`}>{on ? "Aktiv" : "Aus"}</span>
+                {/* Quick switch; keyboard users change the setting via "Einstellung ändern". */}
+                <span
+                  className={`admin-toggle ${on ? "on" : ""}`}
+                  aria-hidden="true"
+                  title={on ? "Ausschalten" : "Einschalten"}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (data && saving !== key) void save(key, { enabled: !on });
+                  }}
+                />
+              </button>
+            );
+          })}
+        </div>
+      </section>
+      <aside className="card admin-system-card">
+        <div className="card-header">
+          <div>
+            <p className="eyebrow">Systemstatus</p>
+            <h2 className="card-title">Integrität</h2>
+          </div>
+        </div>
+        <div className="admin-system-score">
+          <strong>{system ? `${system.databaseMs} ms` : "–"}</strong>
+          <span>Antwortzeit der Datenbank</span>
+        </div>
+        <ul>
+          <li>
+            <ModuleIcon name={system ? "check" : "pulse"} />{" "}
+            {system ? "Datenbank verbunden" : "Verbindung wird geprüft …"}
+          </li>
+          <li>
+            <ModuleIcon name="check" />{" "}
+            {system?.schemaVersion
+              ? `Datenbankstand ${system.schemaVersion} · ${system.migrations} Migrationen`
+              : "Datenbankstand wird geladen"}
+          </li>
+          <li>
+            <ModuleIcon name="check" />{" "}
+            {system
+              ? `${system.auditEntries30Days} protokollierte Änderungen in 30 Tagen${
+                  system.lastAuditAt ? ` · zuletzt ${formatDateTime(system.lastAuditAt)}` : ""
+                }`
+              : "Protokoll wird geladen"}
+          </li>
+        </ul>
+        <button
+          className="secondary-button"
+          type="button"
+          onClick={() => document.getElementById("admin-log")?.scrollIntoView({ behavior: "smooth" })}
+        >
+          Protokoll ansehen <ModuleIcon name="chevron" />
+        </button>
+      </aside>
+      {editorOpen && data && (
+        <SettingEditor
+          key={selectedKey}
+          settingKey={selectedKey}
+          settings={data.settings}
+          saving={saving === selectedKey}
+          onClose={onCloseEditor}
+          onSave={async (change) => (await save(selectedKey, change)) && onCloseEditor()}
+        />
+      )}
+    </div>
+  );
+}
+
+function SettingEditor({
+  settingKey,
+  settings,
+  saving,
+  onClose,
+  onSave,
+}: {
+  settingKey: SettingKey;
+  settings: AppSettings;
+  saving: boolean;
+  onClose: () => void;
+  onSave: (change: { enabled: boolean; value?: number }) => void;
+}) {
+  const definition = SETTING_DEFINITIONS[settingKey];
+  const [enabled, setEnabled] = useState(settings[settingKey].enabled);
+  const [value, setValue] = useState(String(settings[settingKey].value ?? ""));
+  return (
+    <EditorDialog
+      id="setting-editor"
+      title={definition.title}
+      eyebrow={`Konfiguration · ${definition.area}`}
+      description={definition.describe(Number(value) || definition.defaults.value)}
+      submitLabel="Speichern"
+      saving={saving}
+      error=""
+      onClose={onClose}
+      onSubmit={() => onSave(definition.unit ? { enabled, value: Number(value) } : { enabled })}
+    >
+      <fieldset className="area-editor-wide">
+        <legend>Status</legend>
+        <div className="area-service-options">
+          <label>
+            <input type="checkbox" checked={enabled} onChange={() => setEnabled((current) => !current)} />
+            <span>Für alle Mitarbeitenden eingeschaltet</span>
+          </label>
+        </div>
+      </fieldset>
+      {definition.unit && (
+        <label>
+          {definition.unit} (Standard {definition.defaults.value})
+          <input
+            type="number"
+            min={definition.min}
+            max={definition.max}
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            required
+          />
+        </label>
+      )}
+    </EditorDialog>
+  );
+}
