@@ -41,7 +41,11 @@ export function ResidentRecord(props: ResidentRecordProps) {
     selectTab,
   } = r;
   return (
-    <div className="resident-record-layer">
+    <div
+      className="resident-record-layer"
+      role="presentation"
+      onMouseDown={(event) => event.currentTarget === event.target && onClose()}
+    >
       <article
         className="resident-record-panel"
         role="dialog"

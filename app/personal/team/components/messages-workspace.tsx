@@ -301,7 +301,11 @@ export default function MessagesWorkspace() {
           </section>
 
           {editor && (
-            <div className="messages-editor-backdrop" role="presentation">
+            <div
+              className="messages-editor-backdrop"
+              role="presentation"
+              onMouseDown={(event) => event.currentTarget === event.target && setEditor(null)}
+            >
               <form className="messages-editor" onSubmit={createConversation}>
                 <header>
                   <div>
