@@ -12,6 +12,7 @@ import {
   DashboardTasksCard,
   DashboardResidentsCard,
 } from "./components/dashboard-widgets";
+import { DashboardWorklistCard } from "./components/dashboard-worklist";
 import { HomeHero } from "./components/home-hero";
 import { HomeNews } from "./components/home-news";
 import { DashboardCustomizer } from "./components/dashboard-customizer";
@@ -39,6 +40,7 @@ export default function Home() {
   } = r;
   const dashboardContent: Record<DashboardWidgetId, ReactNode> = {
     summary: <DashboardSummaryStrip r={r} />,
+    worklist: <DashboardWorklistCard />,
     critical: criticalChange ? <DashboardCriticalAlert r={r} /> : null,
     shift: <DashboardTimelineCard r={r} />,
     tasks: <DashboardTasksCard r={r} />,

@@ -105,3 +105,27 @@ export function useResidentPickerRequests(open: () => void) {
     return () => window.removeEventListener(PICK_EVENT, open);
   }, [open]);
 }
+
+// Stepping through the residents of the current resident's care unit (header arrows,
+// "Speichern & nächster Bewohner"). Order: as in the header picker.
+export function useResidentNavigation() {
+  const context = useWorkContext();
+  const [residentId, setResidentId] = useCareResident();
+  const residents = context?.residents ?? [];
+  const current = residents.find((resident) => resident.id === residentId) ?? null;
+  const list = current ? residents.filter((resident) => resident.careUnitId === current.careUnitId) : residents;
+  const index = current ? list.findIndex((resident) => resident.id === current.id) : -1;
+  const step = (offset: number) => {
+    if (!list.length) return null;
+    const next = list[(Math.max(index, 0) + offset + list.length) % list.length];
+    setResidentId(next.id);
+    return next;
+  };
+  return {
+    position: index + 1,
+    total: list.length,
+    unit: current?.group ?? null,
+    previous: () => step(-1),
+    next: () => step(1),
+  };
+}

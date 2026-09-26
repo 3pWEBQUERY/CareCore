@@ -22,6 +22,10 @@ export type ResidentRecordProps = {
   onAction: (message: string) => void;
   onGenderChanged?: (residentId: string, gender: string) => void;
   onPhotoChanged?: () => void;
+  initialView?: RecordView;
+  onViewChange?: (view: RecordView) => void;
+  // Stepping through the residents of the list the record was opened from.
+  navigation?: { position: number; total: number; onPrevious: () => void; onNext: () => void };
 };
 
 export type RecordView =

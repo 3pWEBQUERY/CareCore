@@ -144,6 +144,37 @@
   align-items: center;
   gap: 18px;
 }
+.record-navigation {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.record-navigation small {
+  min-width: 52px;
+  color: #dbeafe;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+.record-navigation button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 50%;
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+.record-navigation button:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+.record-navigation svg {
+  width: 15px;
+  height: 15px;
+}
 .record-header-actions .status-badge {
   color: white;
   background: rgba(255, 255, 255, 0.12);

@@ -25,6 +25,9 @@ export function useResidentRecord({
   onAction,
   onGenderChanged,
   onPhotoChanged,
+  initialView,
+  onViewChange,
+  navigation,
 }: ResidentRecordProps) {
   const {
     appointments,
@@ -136,7 +139,22 @@ export function useResidentRecord({
   const contentRef = useRef<HTMLElement>(null);
   const live = useRecordLive(resident);
   const { entries, docEntries, careDomains, historyEntries } = live;
-  const [activeView, setActiveView] = useState<RecordView>("overview");
+  const [activeView, setActiveView] = useState<RecordView>(initialView ?? "overview");
+  useEffect(() => {
+    onViewChange?.(activeView);
+  }, [activeView, onViewChange]);
+  // Alt + arrow up/down steps to the previous or next resident.
+  useEffect(() => {
+    if (!navigation) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (!event.altKey || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
+      event.preventDefault();
+      if (event.key === "ArrowUp") navigation.onPrevious();
+      else navigation.onNext();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [navigation]);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [documentationText, setDocumentationText] = useState("");
   const [documentationDate, setDocumentationDate] = useState(todayInZurich);
@@ -233,8 +251,10 @@ export function useResidentRecord({
     else if (tab === "Biografie") setActiveView("biography");
   }
 
+  // The "Speichern & nächster Bewohner" button submits with data-next and opens the next record.
   async function saveDocumentation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const andNext = (event.nativeEvent as SubmitEvent).submitter?.dataset.next === "true";
     if (selectedDocEntry) {
       setAmendingEntryId(selectedDocEntry.id);
       return;
@@ -258,7 +278,11 @@ export function useResidentRecord({
         },
       });
       live.reloadDocumentation();
-      onAction("Dokumentation gespeichert");
+      onAction(andNext ? "Dokumentation gespeichert · nächster Bewohner" : "Dokumentation gespeichert");
+      if (andNext && navigation) {
+        navigation.onNext();
+        return;
+      }
       setDocumentationText("");
       setDocumentationFlags([]);
       setDocumentationGoals([]);
@@ -270,6 +294,7 @@ export function useResidentRecord({
     }
   }
   return {
+    navigation,
     historyEntries,
     live,
     latestAssessments: live.latestAssessments,

@@ -247,6 +247,49 @@
 .resident-context-wrap {
   position: relative;
 }
+.resident-context-wrap {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.resident-context-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.resident-context-nav small {
+  min-width: 34px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+}
+.resident-context-nav button {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: #53677d;
+  background: white;
+  cursor: pointer;
+}
+.resident-context-nav button:hover {
+  border-color: #bfdbfe;
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+.resident-context-nav svg {
+  width: 12px;
+  height: 12px;
+}
+.resident-context-nav .up {
+  transform: rotate(-90deg);
+}
+.resident-context-nav .down {
+  transform: rotate(90deg);
+}
 .location-control.open,
 .resident-context-trigger.open {
   background: var(--brand-soft);
