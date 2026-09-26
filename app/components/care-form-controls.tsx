@@ -79,7 +79,9 @@ export function CareSelect({
                 aria-selected={value === option}
                 className={value === option ? "selected" : ""}
                 key={option}
-                onClick={() => {
+                onClick={(event) => {
+                  // Inside a <label> the click would otherwise re-activate the trigger and reopen the menu.
+                  event.preventDefault();
                   onChange(option);
                   setOpen(false);
                   setOpenUp(false);
