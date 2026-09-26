@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
-import { updateGoal } from "@/lib/care-planning";
+import { updateGoal } from "@/lib/care-plan-goals";
 
 export const runtime = "nodejs";
 

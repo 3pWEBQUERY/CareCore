@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
-import { createTraining } from "@/lib/learning";
+import { createTraining } from "@/lib/learning-trainings";
 
 export const runtime = "nodejs";
 

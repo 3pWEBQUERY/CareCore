@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
-import { checkOut } from "@/lib/shift";
+import { checkOut } from "@/lib/shift-check-in";
 
 export const runtime = "nodejs";
 

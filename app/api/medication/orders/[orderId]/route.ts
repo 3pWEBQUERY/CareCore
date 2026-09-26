@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
-import { parseOrderInput, setOrderStatus, updateOrder } from "@/lib/medication";
+import { parseOrderInput, setOrderStatus, updateOrder } from "@/lib/medication-orders";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ orderId: string }> };

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { hasPermission } from "@/lib/server-data";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
-import { listCareUnits, listMedicationResidents } from "@/lib/medication";
+import { listCareUnits } from "@/lib/medication";
+import { listMedicationResidents } from "@/lib/medication-orders";
 
 export const runtime = "nodejs";
 

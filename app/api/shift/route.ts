@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
-import { shiftOverview } from "@/lib/shift";
+import { shiftOverview } from "@/lib/shift-overview";
 
 export const runtime = "nodejs";
 

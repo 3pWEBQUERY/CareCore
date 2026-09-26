@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
-import { documentScheduledDose, listRound } from "@/lib/medication";
+import { documentScheduledDose, listRound } from "@/lib/medication-round";
 import { ROUNDS, type RoundKey } from "@/lib/medication-shared";
 
 export const runtime = "nodejs";

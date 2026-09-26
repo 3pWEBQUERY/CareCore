@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
-import { administerPrn } from "@/lib/medication";
+import { administerPrn } from "@/lib/medication-round";
 
 export const runtime = "nodejs";
 

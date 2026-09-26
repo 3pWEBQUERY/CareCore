@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
-import { createOrder, parseOrderInput } from "@/lib/medication";
+import { createOrder, parseOrderInput } from "@/lib/medication-orders";
 
 export const runtime = "nodejs";
 

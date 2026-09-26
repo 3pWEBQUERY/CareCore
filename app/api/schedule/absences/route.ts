@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
-import { requestAbsence } from "@/lib/schedule";
+import { requestAbsence } from "@/lib/schedule-absences";
 
 export const runtime = "nodejs";
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
-import { cancelSession } from "@/lib/learning";
+import { cancelSession } from "@/lib/learning-trainings";
 
 export const runtime = "nodejs";
 

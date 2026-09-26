@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
-import { listOrders, listResidentMovements, updateMedicationAllergies } from "@/lib/medication";
+import { listOrders, updateMedicationAllergies } from "@/lib/medication-orders";
+import { listResidentMovements } from "@/lib/medication-stock";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ residentId: string }> };

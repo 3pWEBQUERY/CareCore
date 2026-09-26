@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
-import { changeAssignment } from "@/lib/schedule";
+import { changeAssignment } from "@/lib/schedule-planning";
 
 export const runtime = "nodejs";
 
