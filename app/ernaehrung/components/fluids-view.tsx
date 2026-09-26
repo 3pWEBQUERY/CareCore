@@ -24,6 +24,7 @@ import {
 } from "@/lib/nutrition-shared";
 import DayPanel from "./day-panel";
 import { residentFluidStatus, type NutritionOverview } from "./plan-view";
+import { useCareResident } from "@/app/components/care-context";
 
 const ALL_UNITS = "Gesamtes Haus";
 
@@ -31,7 +32,7 @@ export default function FluidsView({ showToast }: { showToast: ShowToast }) {
   const [date, setDate] = useState(todayInZurich);
   const [unit, setUnit] = useState(ALL_UNITS);
   const [onlyBehind, setOnlyBehind] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useCareResident();
   const overview = useApiData<NutritionOverview>(`/api/nutrition?date=${date}`);
   const isToday = date === todayInZurich();
   const share = isToday ? expectedShare(timeInZurich()) : 1;

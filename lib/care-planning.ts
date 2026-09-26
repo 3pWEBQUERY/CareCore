@@ -63,10 +63,8 @@ export async function planningOverview(ctx: ApiContext) {
       LEFT JOIN carecore_users u ON u.id = p.owner_user_id
       WHERE r.organization_id = ${ctx.actor.organizationId} AND r.status = 'active'
       ORDER BY r.last_name, r.first_name`,
-    ctx.sql`
-      SELECT u.id, u.display_name AS name FROM carecore_users u JOIN carecore_user_profiles p ON p.user_id = u.id
-      WHERE p.organization_id = ${ctx.actor.organizationId} AND u.active ORDER BY u.display_name`,
-  ])) as [Row[], Row[]];
+    staffOf(ctx),
+  ])) as [Row[], Array<{ id: string; name: string }>];
   return {
     residents: residents.map((row): PlanningResident => {
       const name = `${row.first_name} ${row.last_name}`;
@@ -85,8 +83,16 @@ export async function planningOverview(ctx: ApiContext) {
         ownerName: (row.owner_name as string | null) ?? null,
       };
     }),
-    staff: staff.map((row) => ({ id: String(row.id), name: String(row.name) })),
+    staff,
   };
+}
+
+// Active staff of the organization, e.g. to choose the primary nurse of a plan.
+export async function staffOf(ctx: ApiContext) {
+  const rows = (await ctx.sql`
+    SELECT u.id, u.display_name AS name FROM carecore_users u JOIN carecore_user_profiles p ON p.user_id = u.id
+    WHERE p.organization_id = ${ctx.actor.organizationId} AND u.active ORDER BY u.display_name`) as Row[];
+  return rows.map((row) => ({ id: String(row.id), name: String(row.name) }));
 }
 
 // ------------------------------------------------------------ plan detail

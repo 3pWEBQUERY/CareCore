@@ -2,127 +2,70 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { setCareResident, useWorkContext } from "./care-context";
 import { ModuleIcon } from "./module-icon";
-import { type ModuleIconName } from "./navigation";
+import { navigationFor, routeFor, type ModuleIconName } from "./navigation";
 
-export const globalResults = [
-  {
-    title: "Benachrichtigungen",
-    meta: "Aktuelle Hinweise und Aufgaben",
-    icon: "bell" as ModuleIconName,
-    href: "/benachrichtigungen",
-  },
-  { title: "Hans Müller", meta: "Bewohner · Zimmer 207", icon: "residents" as ModuleIconName, href: "/bewohner" },
-  {
-    title: "Bewohnerverlauf",
-    meta: "Alle Ereignisse im Wohnbereich",
-    icon: "note" as ModuleIconName,
-    href: "/bewohner/verlauf",
-  },
-  {
-    title: "Pflegeakten",
-    meta: "Pflegeprofile, Ziele und Maßnahmen",
-    icon: "plan" as ModuleIconName,
-    href: "/bewohner/pflegeakte",
-  },
-  {
-    title: "Vitalwerte",
-    meta: "Hausweite Übersicht aller Messungen",
-    icon: "vitals" as ModuleIconName,
-    href: "/vitalwerte",
-  },
-  {
-    title: "Pflegeplanung",
-    meta: "Ziele, Ressourcen und Interventionen",
-    icon: "plan" as ModuleIconName,
-    href: "/pflegeplanung",
-  },
-  {
-    title: "Ziele & Massnahmen",
-    meta: "Aktive Pflegeziele im Team",
-    icon: "tasks" as ModuleIconName,
-    href: "/pflegeplanung/ziele-massnahmen",
-  },
-  {
-    title: "Schnelldokumentation",
-    meta: "Kurze Beobachtungen dokumentieren",
-    icon: "note" as ModuleIconName,
-    href: "/pflegedokumentation",
-  },
-  {
-    title: "Verlaufsdokumentation",
-    meta: "Chronologische Pflegeverläufe",
-    icon: "note" as ModuleIconName,
-    href: "/pflegedokumentation/verlauf",
-  },
-  {
-    title: "Vitalwerte Entwicklung",
-    meta: "Trends und Verläufe vergleichen",
-    icon: "chart" as ModuleIconName,
-    href: "/vitalwerte/entwicklung",
-  },
-  {
-    title: "Vitalwerte Grenzwerte",
-    meta: "Persönliche Zielbereiche verwalten",
-    icon: "vitals" as ModuleIconName,
-    href: "/vitalwerte/grenzwerte",
-  },
-  {
-    title: "Ernährungsplan",
-    meta: "Kostformen und Trinkziele",
-    icon: "nutrition" as ModuleIconName,
-    href: "/ernaehrung",
-  },
-  {
-    title: "Trinkprotokoll",
-    meta: "Flüssigkeitsaufnahme dokumentieren",
-    icon: "nutrition" as ModuleIconName,
-    href: "/ernaehrung/trinkprotokoll",
-  },
-  {
-    title: "Medikamentenplan",
-    meta: "Verordnungen und Einnahmezeiten",
-    icon: "med" as ModuleIconName,
-    href: "/medikation",
-  },
-  {
-    title: "Medikamentenrunde",
-    meta: "Geplante Gaben dokumentieren",
-    icon: "tasks" as ModuleIconName,
-    href: "/medikation/runde",
-  },
-  {
-    title: "Medikamentenbestände",
-    meta: "Lager, Mindestbestand und Verfall",
-    icon: "docs" as ModuleIconName,
-    href: "/medikation/bestaende",
-  },
-  {
-    title: "Bedarfsmedikation",
-    meta: "Ärztlich verordnete Reserven führen",
-    icon: "plus" as ModuleIconName,
-    href: "/medikation/reserven",
-  },
-  { title: "Wundübersicht", meta: "5 aktive Wundfälle", icon: "wounds" as ModuleIconName, href: "/wundmanagement" },
-  {
-    title: "Wunddokumentation",
-    meta: "Versorgung und Fotodokumentation",
-    icon: "docs" as ModuleIconName,
-    href: "/wundmanagement/dokumentation",
-  },
-];
+type SearchResult = {
+  key: string;
+  title: string;
+  meta: string;
+  icon: ModuleIconName;
+  href: string;
+  residentId?: string;
+};
 
-// Global quick search over the main CareCore areas.
+const MAX_RESULTS = 12;
+
+// Global quick search over the residents and every function the person may use.
+// Choosing a resident opens the resident record and makes it the working context.
 export function GlobalSearchDialog({ onClose }: { onClose: () => void }) {
   const router = useRouter();
+  const context = useWorkContext();
   const [query, setQuery] = useState("");
-  const results = useMemo(
-    () =>
-      globalResults.filter((item) =>
-        `${item.title} ${item.meta}`.toLocaleLowerCase("de-CH").includes(query.trim().toLocaleLowerCase("de-CH")),
+  const all = useMemo(() => {
+    const residents: SearchResult[] = (context?.residents ?? []).map((resident) => ({
+      key: `resident-${resident.id}`,
+      title: resident.name,
+      meta: `Bewohner · ${[resident.room, resident.group].filter(Boolean).join(" · ")}`,
+      icon: "residents",
+      href: `/c/bewohner?resident=${resident.id}`,
+      residentId: resident.id,
+    }));
+    const functions: SearchResult[] = navigationFor(context?.profile.permissions).flatMap((group) =>
+      group.modules.flatMap((module) =>
+        module.children.flatMap((child) => {
+          const href = routeFor(module.id, child);
+          return href
+            ? [
+                {
+                  key: href,
+                  title: child === module.label || module.children.length === 1 ? module.label : child,
+                  meta: `${group.label} · ${module.label}`,
+                  icon: module.icon,
+                  href,
+                },
+              ]
+            : [];
+        }),
       ),
-    [query],
-  );
+    );
+    return { residents, functions };
+  }, [context]);
+  const needle = query.trim().toLocaleLowerCase("de-CH");
+  const matches = (item: SearchResult) => `${item.title} ${item.meta}`.toLocaleLowerCase("de-CH").includes(needle);
+  const results = needle
+    ? [...all.residents.filter(matches), ...all.functions.filter(matches)].slice(0, MAX_RESULTS)
+    : [
+        {
+          key: "notifications",
+          title: "Benachrichtigungen",
+          meta: "Aktuelle Hinweise und Aufgaben",
+          icon: "bell" as ModuleIconName,
+          href: "/c/benachrichtigungen",
+        },
+        ...all.functions.slice(0, MAX_RESULTS - 1),
+      ];
   return (
     <div className="overlay" role="presentation" onClick={(event) => event.currentTarget === event.target && onClose()}>
       <section className="search-dialog" role="dialog" aria-modal="true" aria-label="Globale Suche">
@@ -132,6 +75,9 @@ export function GlobalSearchDialog({ onClose }: { onClose: () => void }) {
             autoFocus
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && results[0]) open(results[0]);
+            }}
             placeholder="Bewohner, Dokumente oder Funktionen suchen…"
             aria-label="Suchbegriff"
           />
@@ -142,15 +88,7 @@ export function GlobalSearchDialog({ onClose }: { onClose: () => void }) {
         <div className="search-results">
           <span className="search-group-label">{query ? "Suchergebnisse" : "Schnellzugriff"}</span>
           {results.map((result) => (
-            <button
-              className="search-result"
-              type="button"
-              key={result.title}
-              onClick={() => {
-                onClose();
-                router.push(`/c${result.href}`);
-              }}
-            >
+            <button className="search-result" type="button" key={result.key} onClick={() => open(result)}>
               <span className="result-icon">
                 <ModuleIcon name={result.icon} />
               </span>
@@ -160,8 +98,15 @@ export function GlobalSearchDialog({ onClose }: { onClose: () => void }) {
               </span>
             </button>
           ))}
+          {needle && !results.length && <span className="search-group-label">Keine Treffer für „{query.trim()}“</span>}
         </div>
       </section>
     </div>
   );
+
+  function open(result: SearchResult) {
+    if (result.residentId) setCareResident(result.residentId);
+    onClose();
+    router.push(result.href);
+  }
 }

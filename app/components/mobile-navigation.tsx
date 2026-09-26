@@ -3,22 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ModuleIcon } from "./module-icon";
-import { navigationForRole, routeFor } from "./navigation";
+import { useWorkContext } from "./care-context";
+import { navigationFor, routeFor } from "./navigation";
 
-// Mobile main menu and bottom navigation; shows only the areas the signed-in role may use.
+// Mobile main menu and bottom navigation; shows only the areas the signed-in person may use.
 export function MobileNavigation({ activeModule }: { activeModule?: string }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [role, setRole] = useState<string | null>(null);
-  const visibleNavigation = useMemo(() => navigationForRole(role), [role]);
+  const permissions = useWorkContext()?.profile.permissions;
+  const visibleNavigation = useMemo(() => navigationFor(permissions), [permissions]);
   const [groupId, setGroupId] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/work-context")
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) => setRole(data?.profile?.role ?? null))
-      .catch(() => undefined);
-  }, []);
   useEffect(() => {
     const timer = window.setTimeout(
       () =>

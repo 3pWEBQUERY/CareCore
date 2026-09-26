@@ -21,6 +21,7 @@ import {
 } from "@/lib/nutrition-shared";
 import DayPanel from "./day-panel";
 import { PlanDialog } from "./nutrition-dialogs";
+import { useCareResident } from "@/app/components/care-context";
 
 export type NutritionOverview = {
   date: string;
@@ -37,7 +38,7 @@ export function residentFluidStatus(r: NutritionResident, share: number) {
 
 export default function PlanView({ showToast }: { showToast: ShowToast }) {
   const overview = useApiData<NutritionOverview>("/api/nutrition");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useCareResident();
   const [editing, setEditing] = useState(false);
   const residents = overview.data?.residents ?? [];
   const resident = residents.find((r) => r.id === selectedId) ?? residents[0] ?? null;

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CareUnit, ContextResident, WorkContext } from "@/lib/work-context";
+import { loadWorkContext, useCareResident, useCareUnit } from "./care-context";
 import { HeaderNotification } from "./header-parts";
 
 export function useAppHeader({
@@ -24,9 +25,9 @@ export function useAppHeader({
   const [profilePopoverOpen, setProfilePopoverOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
-  const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
+  const [storedAreaId, setStoredAreaId] = useCareUnit();
   const [residentOpen, setResidentOpen] = useState(false);
-  const [selectedResident, setSelectedResident] = useState<ContextResident | null>(null);
+  const [storedResidentId, setStoredResidentId] = useCareResident();
   const [headerNotifications, setHeaderNotifications] = useState<HeaderNotification[]>([]);
   const unreadNotifications = headerNotifications.filter((item) => !item.read_at).length;
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -37,26 +38,32 @@ export function useAppHeader({
   const mobileLocationMenuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let live = true;
-    void fetch("/api/work-context")
-      .then(async (response) => (response.ok ? (response.json() as Promise<WorkContext>) : null))
-      .then((data) => {
-        if (!live || !data) return;
-        setContext(data);
-        const primaryId = data.profile.primaryCareUnitId ?? data.careUnits[0]?.id ?? null;
-        setSelectedAreaId(primaryId);
-        setSelectedResident(
-          (current) =>
-            current ??
-            data.residents.find((resident) => resident.careUnitId === primaryId) ??
-            data.residents[0] ??
-            null,
-        );
-      })
-      .catch(() => undefined);
+    void loadWorkContext().then((data) => {
+      if (live && data) setContext(data);
+    });
     return () => {
       live = false;
     };
   }, []);
+  // The working context (care unit and resident) is shared with all modules of the tab;
+  // without a choice yet the primary care unit and its first resident are used.
+  const selectedAreaId =
+    (storedAreaId && context?.careUnits.some((unit) => unit.id === storedAreaId) ? storedAreaId : null) ??
+    context?.profile.primaryCareUnitId ??
+    context?.careUnits[0]?.id ??
+    null;
+  const setSelectedAreaId = setStoredAreaId;
+  const selectedResident: ContextResident | null =
+    context?.residents.find((resident) => resident.id === storedResidentId) ??
+    context?.residents.find((resident) => resident.careUnitId === selectedAreaId) ??
+    context?.residents[0] ??
+    null;
+  const setSelectedResident = (resident: ContextResident | null) => setStoredResidentId(resident?.id ?? null);
+  // Everyone starts with the same resident in the header and in the module lists.
+  const defaultResidentId = storedResidentId ? null : (selectedResident?.id ?? null);
+  useEffect(() => {
+    if (defaultResidentId) setStoredResidentId(defaultResidentId);
+  }, [defaultResidentId, setStoredResidentId]);
   useEffect(() => {
     let live = true;
     void fetch("/api/notifications", { cache: "no-store" })
@@ -136,7 +143,8 @@ export function useAppHeader({
   function chooseArea(area: CareUnit) {
     setSelectedAreaId(area.id);
     setLocationOpen(false);
-    setSelectedResident(context?.residents.find((resident) => resident.careUnitId === area.id) ?? null);
+    if (!selectedResident || selectedResident.careUnitId !== area.id)
+      setSelectedResident(context?.residents.find((resident) => resident.careUnitId === area.id) ?? null);
     onToast(`${area.name} als Arbeitskontext gewählt`);
   }
   function chooseResident(resident: ContextResident) {

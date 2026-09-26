@@ -1,5 +1,5 @@
-import LeadershipWorkspace from "../components/leadership-workspace";
+import InsightsWorkspace from "./components/insights-workspace";
 
 export default function CareInsightsPage() {
-  return <LeadershipWorkspace view="careInsights" />;
+  return <InsightsWorkspace view="care" />;
 }

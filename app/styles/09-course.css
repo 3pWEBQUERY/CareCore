@@ -222,7 +222,8 @@
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
-.course-focus-actions button {
+.course-focus-actions button,
+.course-focus-actions a {
   padding-inline: 8px;
 }
 .course-priority-list {
@@ -497,7 +498,8 @@
   font-weight: 760;
   white-space: nowrap;
 }
-.resident-state.verlegt {
+.resident-state.verlegt,
+.resident-state.geplant {
   color: var(--brand-dark);
   background: var(--brand-soft);
 }

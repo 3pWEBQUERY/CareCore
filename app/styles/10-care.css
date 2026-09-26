@@ -136,6 +136,9 @@
   gap: 5px;
   overflow-x: auto;
 }
+.care-resident-toolbar .care-record-filters {
+  flex-wrap: wrap;
+}
 .care-record-filters button {
   min-height: 32px;
   flex: 0 0 auto;
@@ -540,4 +543,60 @@
 .search-result:hover,
 .search-result:focus-visible {
   background: var(--brand-soft);
+}
+.house-timeline ol {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 4px 18px 16px;
+  list-style: none;
+}
+.house-timeline li {
+  position: relative;
+  padding: 9px 0 9px 16px;
+  border-bottom: 1px solid #edf1f5;
+}
+.house-timeline li:last-child {
+  border-bottom: 0;
+}
+.house-timeline li::before {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand);
+  content: "";
+}
+.house-timeline li.stay::before {
+  border-radius: 2px;
+  background: #7b8794;
+}
+.house-timeline li.critical::before {
+  background: var(--critical);
+}
+.house-timeline li.empty {
+  padding-left: 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+.house-timeline li.empty::before {
+  display: none;
+}
+.house-timeline strong {
+  display: block;
+  font-size: 10px;
+}
+.house-timeline small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 9px;
+}
+.house-timeline p {
+  margin: 5px 0 0;
+  color: #4d5c6b;
+  font-size: 9px;
+  line-height: 1.5;
 }

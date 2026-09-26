@@ -16,6 +16,7 @@ import {
 } from "@/lib/vitals-shared";
 import { abnormalValues, type VitalsOverview } from "./overview-view";
 import TrendChart from "./trend-chart";
+import { useCareResident } from "@/app/components/care-context";
 
 type History = { measurements: VitalMeasurement[]; threshold: EffectiveThreshold };
 const RANGES = [
@@ -33,7 +34,7 @@ const sourceLabel = {
 export default function DevelopmentView() {
   const overview = useApiData<VitalsOverview>("/api/vitals/overview");
   const residents = overview.data?.residents ?? [];
-  const [residentId, setResidentId] = useState<string | null>(null);
+  const [residentId, setResidentId] = useCareResident();
   const [metric, setMetric] = useState(VITAL_METRICS[0].key);
   const [days, setDays] = useState(30);
   const resident = residents.find((r) => r.id === residentId) ?? residents[0] ?? null;

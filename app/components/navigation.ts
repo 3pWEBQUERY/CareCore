@@ -41,48 +41,20 @@ export type NavModule = {
   children: string[];
   badge?: number;
   href?: string;
+  // Permission needed to see the module (all signed-in staff when omitted).
+  permission?: string;
+  // Children that need an additional permission.
+  childPermissions?: Record<string, string>;
 };
 export type NavGroup = { id: string; label: string; modules: NavModule[] };
 
+// Grouped along the working day: my shift, the resident and the care process,
+// team and knowledge, then leadership. Within the care group the modules follow
+// how often they are used during a shift, followed by the care process itself.
 export const navigation: NavGroup[] = [
   {
-    id: "clinical",
-    label: "Pflege & Klinik",
-    modules: [
-      {
-        id: "residents",
-        label: "Bewohner",
-        icon: "residents",
-        href: "/bewohner",
-        children: ["Übersicht", "Verlauf", "Pflegeakte"],
-      },
-      {
-        id: "plan",
-        label: "Pflegeplanung",
-        icon: "plan",
-        children: ["Pflegeplanung", "Ziele & Massnahmen", "Auswertung"],
-      },
-      {
-        id: "chart",
-        label: "Pflegedokumentation",
-        icon: "note",
-        children: ["Schnelldokumentation", "Verlaufsdokumentation"],
-      },
-      { id: "vitals", label: "Vitalwerte", icon: "vitals", children: ["Übersicht", "Entwicklung", "Grenzwerte"] },
-      {
-        id: "med",
-        label: "Medikation",
-        icon: "med",
-        children: ["Medikamentenplan", "Medikamentenrunde", "Bestände", "Reserven"],
-      },
-      { id: "wounds", label: "Wundmanagement", icon: "wounds", children: ["Wundübersicht", "Dokumentation"] },
-      { id: "nutrition", label: "Ernährung", icon: "nutrition", children: ["Ernährungsplan", "Trinkprotokoll"] },
-      { id: "assess", label: "Einschätzungen", icon: "assess", children: ["Einschätzungen", "Fälligkeiten"] },
-    ],
-  },
-  {
     id: "operations",
-    label: "Betrieb",
+    label: "Mein Dienst",
     modules: [
       {
         id: "shift",
@@ -91,65 +63,114 @@ export const navigation: NavGroup[] = [
         href: "/betrieb/schicht",
         children: ["Mein Dienst", "Schichtverlauf"],
       },
-      { id: "tasks", label: "Aufgaben", icon: "tasks", children: ["Meine Aufgaben", "Teamaufgaben"], badge: 3 },
       { id: "handover", label: "Übergabe", icon: "handover", children: ["Meine Übergabe", "Seit letztem Dienst"] },
-      { id: "schedule", label: "Dienste", icon: "calendar", children: ["Mein Dienstplan", "Teamplanung"] },
+      { id: "tasks", label: "Aufgaben", icon: "tasks", children: ["Meine Aufgaben", "Teamaufgaben"] },
+      { id: "care-calendar", label: "Termine", icon: "calendar", children: ["Kalender"] },
+      { id: "schedule", label: "Dienstplan", icon: "calendar", children: ["Mein Dienstplan", "Teamplanung"] },
+    ],
+  },
+  {
+    id: "clinical",
+    label: "Bewohner & Pflege",
+    modules: [
+      {
+        id: "residents",
+        label: "Bewohner",
+        icon: "residents",
+        href: "/bewohner",
+        children: ["Übersicht", "Pflegeakte", "Verlauf & Archiv"],
+      },
+      {
+        id: "chart",
+        label: "Pflegedokumentation",
+        icon: "note",
+        children: ["Schnelldokumentation", "Verlaufsdokumentation"],
+      },
+      {
+        id: "med",
+        label: "Medikation",
+        icon: "med",
+        children: ["Medikamentenrunde", "Medikamentenplan", "Reserven", "Bestände"],
+      },
+      { id: "vitals", label: "Vitalwerte", icon: "vitals", children: ["Übersicht", "Entwicklung", "Grenzwerte"] },
+      { id: "wounds", label: "Wundmanagement", icon: "wounds", children: ["Wundübersicht", "Dokumentation"] },
+      { id: "nutrition", label: "Ernährung", icon: "nutrition", children: ["Trinkprotokoll", "Ernährungsplan"] },
+      { id: "assess", label: "Einschätzungen", icon: "assess", children: ["Fälligkeiten", "Einschätzungen"] },
+      {
+        id: "plan",
+        label: "Pflegeplanung",
+        icon: "plan",
+        children: ["Pflegeplanung", "Ziele & Massnahmen", "Auswertung"],
+      },
+      {
+        id: "rai",
+        label: "RAI / interRAI",
+        icon: "assess",
+        permission: "rai.manage",
+        children: ["Übersicht", "interRAI-Erfassung", "Fälligkeiten", "Berichte"],
+      },
     ],
   },
   {
     id: "workforce",
-    label: "Personal",
+    label: "Team & Wissen",
     modules: [
       { id: "team", label: "Team", icon: "team", children: ["Neuigkeiten & Kanäle"] },
+      { id: "messenger", label: "Nachrichten", icon: "team", children: ["Nachrichten"] },
       { id: "learn", label: "Schulungen", icon: "learn", children: ["Meine Schulungen", "Pflichtnachweise"] },
-      { id: "docs", label: "Dokumente", icon: "docs", children: ["Dokumente", "Standards & Weisungen"] },
+      { id: "docs", label: "Dokumente", icon: "docs", children: ["Standards & Weisungen", "Dokumente"] },
+      { id: "cloud", label: "Meine Dateien", icon: "docs", children: ["Dateien"] },
     ],
   },
   {
     id: "management",
     label: "Leitung",
     modules: [
-      { id: "quality", label: "Qualität", icon: "quality", children: ["Ereignisse", "Massnahmen"] },
-      { id: "insights", label: "Kennzahlen & Analysen", icon: "chart", children: ["Pflege", "Leitung", "Personal"] },
+      {
+        id: "quality",
+        label: "Qualität",
+        icon: "quality",
+        children: ["Ereignisse", "Massnahmen"],
+        childPermissions: { Massnahmen: "quality.manage" },
+      },
+      {
+        id: "insights",
+        label: "Kennzahlen",
+        icon: "chart",
+        permission: "insights.read",
+        children: ["Pflege", "Leitung", "Personal"],
+      },
+      {
+        id: "teamlead",
+        label: "Teamleitung",
+        icon: "team",
+        permission: "team.manage",
+        children: ["Mitarbeiter", "Dienste", "Aufgaben"],
+      },
       {
         id: "admin",
         label: "Administration",
         icon: "settings",
+        permission: "administration.manage",
         children: ["Organisation", "Mitarbeiter", "Pflegebedarf", "Konfiguration"],
       },
-      { id: "teamlead", label: "Teamleitung", icon: "team", children: ["Mitarbeiter", "Dienste", "Aufgaben"] },
     ],
   },
   {
     id: "intelligence",
-    label: "Intelligenz",
-    modules: [{ id: "ai", label: "CareCore KI", icon: "ai", children: ["Assistenz", "KI-Entwürfe"] }],
-  },
-  {
-    id: "rai",
-    label: "CareCore RAI",
+    label: "CareCore KI",
     modules: [
-      {
-        id: "rai",
-        label: "RAI Arbeitsplatz",
-        icon: "assess",
-        children: ["Übersicht", "interRAI-Erfassung", "Fälligkeiten", "Berichte"],
-      },
-    ],
-  },
-  {
-    id: "carecore-one",
-    label: "CareCore One",
-    modules: [
-      { id: "care-calendar", label: "Kalender", icon: "calendar", children: ["Kalender"] },
-      { id: "messenger", label: "Messenger", icon: "team", children: ["Nachrichten"] },
-      { id: "cloud", label: "Cloud", icon: "docs", children: ["Dateien"] },
+      { id: "ai", label: "CareCore KI", icon: "ai", permission: "ai.use", children: ["Assistenz", "KI-Entwürfe"] },
     ],
   },
 ];
 
 const routes: Record<string, Record<string, string>> = {
-  residents: { Übersicht: "/bewohner", Verlauf: "/bewohner/verlauf", Pflegeakte: "/bewohner/pflegeakte" },
+  residents: {
+    Übersicht: "/bewohner",
+    "Verlauf & Archiv": "/bewohner/verlauf",
+    Pflegeakte: "/bewohner/pflegeakte",
+  },
   plan: {
     Pflegeplanung: "/pflegeplanung",
     "Ziele & Massnahmen": "/pflegeplanung/ziele-massnahmen",
@@ -207,20 +228,20 @@ export function routeFor(moduleId: string, child: string) {
   return route ? `/c${route}` : null;
 }
 
-export function navigationForRole(role?: string | null): NavGroup[] {
-  const canLead = role === "admin" || role === "leitung";
-  return navigation.map((group) =>
-    group.id !== "management"
-      ? group
-      : {
-          ...group,
-          modules: group.modules
-            .filter((module) => module.id !== "teamlead" || canLead)
-            .map((module) =>
-              module.id === "admin" && role !== "admin"
-                ? { ...module, children: module.children.filter((child) => child !== "Pflegebedarf") }
-                : module,
-            ),
-        },
-  );
+// Navigation limited to what the signed-in person may use. Until the permissions
+// are known only the modules without a permission are shown.
+export function navigationFor(permissions?: string[] | null): NavGroup[] {
+  const allowed = (permission?: string) => !permission || !!permissions?.includes(permission);
+  return navigation
+    .map((group) => ({
+      ...group,
+      modules: group.modules
+        .filter((module) => allowed(module.permission))
+        .map((module) => ({
+          ...module,
+          children: module.children.filter((child) => allowed(module.childPermissions?.[child])),
+        }))
+        .filter((module) => module.children.length),
+    }))
+    .filter((group) => group.modules.length);
 }

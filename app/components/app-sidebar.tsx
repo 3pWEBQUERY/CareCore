@@ -35,7 +35,8 @@ import {
   Warning,
   X,
 } from "@phosphor-icons/react";
-import { navigationForRole, routeFor, type ModuleIconName } from "./navigation";
+import { useWorkContext } from "./care-context";
+import { navigationFor, routeFor, type ModuleIconName } from "./navigation";
 
 const icons = {
   home: House,
@@ -155,15 +156,8 @@ export function SidebarTooltip({ label, placement = "right" }: { label: string; 
 export default function AppSidebar({ activeModule, activeChild, onToast }: AppSidebarProps) {
   const router = useRouter();
   const [flyoutGroup, setFlyoutGroup] = useState<string | null>(null);
-  const [role, setRole] = useState<string | null>(null);
-  const visibleNavigation = navigationForRole(role);
-
-  useEffect(() => {
-    fetch("/api/work-context")
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) => setRole(data?.profile?.role ?? null))
-      .catch(() => undefined);
-  }, []);
+  const context = useWorkContext();
+  const visibleNavigation = navigationFor(context?.profile.permissions);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -189,13 +183,11 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
 
   const activeGroup = visibleNavigation.find((group) => group.modules.some((module) => module.id === activeModule));
   const groupIcons: Record<string, ModuleIconName | "carecoreOne"> = {
+    operations: "shift",
     clinical: "residents",
-    operations: "calendar",
     workforce: "team",
     management: "chart",
     intelligence: "ai",
-    rai: "assess",
-    "carecore-one": "carecoreOne",
   };
   const flyout = visibleNavigation.find((group) => group.id === flyoutGroup);
 

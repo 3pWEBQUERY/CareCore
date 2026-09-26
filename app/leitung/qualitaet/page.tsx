@@ -1,5 +1,5 @@
-import LeadershipWorkspace from "../components/leadership-workspace";
+import QualityWorkspace from "./components/quality-workspace";
 
 export default function QualityEventsPage() {
-  return <LeadershipWorkspace view="qualityEvents" />;
+  return <QualityWorkspace view="events" />;
 }

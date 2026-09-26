@@ -119,6 +119,7 @@ const tables = new Set([
   "carecore_trainings",
   "carecore_training_enrollments",
   "carecore_quality_events",
+  "carecore_quality_actions",
   "carecore_rai_assessments",
   "carecore_ai_drafts",
   "carecore_notifications",
@@ -688,6 +689,30 @@ await seed("carecore_quality_events", [
     status: "investigating",
     occurred_at: date(-1),
     description: "Beinahe-Sturz beim Aufstehen. Umgebung und Hilfsmittel geprüft.",
+  },
+]);
+await seed("carecore_quality_actions", [
+  {
+    id: id("quality-action-fall"),
+    organization_id: org,
+    quality_event_id: id("quality-fall"),
+    care_unit_id: unit,
+    title: "Sturzprävention im Teambriefing",
+    description: "Transfers mit Rollator und Nachtlicht im Frühdienst besprechen.",
+    owner_user_id: actor,
+    due_on: day(7),
+    status: "planned",
+    created_by: actor,
+  },
+  {
+    id: id("quality-action-cart"),
+    organization_id: org,
+    title: "Kontrollrunde Medikationswagen",
+    description: "Temperatur und Verfallsdaten aller Medikationswagen prüfen.",
+    owner_user_id: actor,
+    due_on: day(2),
+    status: "open",
+    created_by: actor,
   },
 ]);
 await seed("carecore_rai_assessments", [

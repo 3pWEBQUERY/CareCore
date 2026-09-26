@@ -1,35 +1,91 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import ModulePageShell from "@/app/components/module-page-shell";
-import { ModuleIcon } from "@/app/components/module-icon";
-import { careResidents, careDomains } from "./care-records-data";
+import { ModuleIcon, type ModuleIconName } from "@/app/components/module-icon";
+import { EmptyState, LoadError, formatDate, useApiData } from "@/app/components/workspace-ui";
+import type { CareGoal } from "@/lib/care-planning-shared";
+import {
+  RECORD_FILTERS,
+  RECORD_TONES,
+  type CareRecordDetail,
+  type CareRecordsOverview,
+  type RecordFilter,
+} from "@/lib/care-records-shared";
 import { CareRecordEditor } from "./care-record-editor";
-import { RecordFilter } from "./care-records-data";
+import { useCareResident } from "@/app/components/care-context";
 
-const recordFilters: RecordFilter[] = ["Alle", "Aktuell", "Evaluation fällig", "Entwurf"];
+const categoryIcons: Record<string, ModuleIconName> = {
+  Mobilität: "pulse",
+  "Sicherheit & Sturz": "alert",
+  "Ernährung & Flüssigkeit": "nutrition",
+  "Haut & Wunden": "wounds",
+  "Atmung & Kreislauf": "vitals",
+  Stoffwechsel: "vitals",
+  Schmerz: "assess",
+  "Kognition & Kommunikation": "assess",
+  "Psyche & Wohlbefinden": "team",
+  "Soziales & Beschäftigung": "team",
+};
+
+type Domain = { category: string; icon: ModuleIconName; due: boolean; goals: CareGoal[] };
+
+// Care domains are the active goals of the plan grouped by category.
+function domainsOf(goals: CareGoal[]): Domain[] {
+  const domains = new Map<string, Domain>();
+  for (const goal of goals.filter((item) => item.status === "active")) {
+    const domain = domains.get(goal.category) ?? {
+      category: goal.category,
+      icon: categoryIcons[goal.category] ?? "note",
+      due: false,
+      goals: [],
+    };
+    domain.goals.push(goal);
+    domain.due ||= goal.reviewDue;
+    domains.set(goal.category, domain);
+  }
+  return [...domains.values()];
+}
+
+const nextEvaluation = (reviewOn: string | null, goals: CareGoal[]) =>
+  [reviewOn, ...goals.filter((goal) => goal.status === "active").map((goal) => goal.targetDate)]
+    .filter((day): day is string => Boolean(day))
+    .sort()[0] ?? null;
 
 export default function CareRecordsPage() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<RecordFilter>("Alle");
-  const [selectedResidentId, setSelectedResidentId] = useState("hm");
-  const [selectedDomainId, setSelectedDomainId] = useState("mobility");
-  const [recordEditorOpen, setRecordEditorOpen] = useState(false);
+  const [selectedId, setSelectedId] = useCareResident();
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
 
-  const filteredResidents = useMemo(
+  const overview = useApiData<CareRecordsOverview>("/api/care-records");
+  const records = useMemo(() => overview.data?.records ?? [], [overview.data]);
+  const filteredRecords = useMemo(
     () =>
-      careResidents.filter((resident) => {
-        const matchesFilter = filter === "Alle" || resident.status === filter;
+      records.filter((record) => {
+        const matchesFilter = filter === "Alle" || record.status === filter;
         const searchable =
-          `${resident.name} ${resident.room} ${resident.unit} ${resident.careLevel} ${resident.focus}`.toLocaleLowerCase(
+          `${record.name} ${record.room} ${record.careUnit} ${record.careLevel ?? ""} ${record.focus ?? ""}`.toLocaleLowerCase(
             "de-CH",
           );
         return matchesFilter && searchable.includes(query.trim().toLocaleLowerCase("de-CH"));
       }),
-    [filter, query],
+    [filter, query, records],
   );
-  const selectedResident = careResidents.find((resident) => resident.id === selectedResidentId) ?? careResidents[0];
-  const selectedDomain = careDomains.find((domain) => domain.id === selectedDomainId) ?? careDomains[0];
+  const selected = records.find((record) => record.id === selectedId) ?? records[0] ?? null;
+  const detail = useApiData<CareRecordDetail>(selected ? `/api/care-records/${selected.id}` : null);
+  const plan = detail.data?.plan ?? null;
+  const domains = domainsOf(plan?.goals ?? []);
+  const domain = domains.find((item) => item.category === selectedCategory) ?? domains[0] ?? null;
+  const evaluation = selected ? nextEvaluation(plan?.reviewOn ?? selected.reviewOn, plan?.goals ?? []) : null;
+  const dueRecord = records
+    .filter((record) => record.status === "Evaluation fällig")
+    .sort((a, b) => (a.reviewOn ?? "9999").localeCompare(b.reviewOn ?? "9999"))[0];
+  const count = (status: RecordFilter) => records.filter((record) => record.status === status).length;
+  const canWrite = overview.data?.canWrite ?? false;
+  const planningHref = selected ? `/pflegeplanung?resident=${selected.id}` : "/pflegeplanung";
 
   return (
     <ModulePageShell
@@ -44,12 +100,14 @@ export default function CareRecordsPage() {
             <div className="heading-copy">
               <p className="eyebrow">CareCore Bewohner</p>
               <h1 id="care-records-title">Pflegeakten</h1>
-              <p>Pflegeprofile, Ziele, Maßnahmen und Evaluationen aller aktiven Bewohner.</p>
+              <p>Pflegeprofile, Ziele, Massnahmen und Evaluationen aller aktiven Bewohner.</p>
             </div>
-            <button className="primary-button" type="button" onClick={() => setRecordEditorOpen(true)}>
-              <ModuleIcon name="plus" className="button-icon" />
-              Pflegeakte erstellen
-            </button>
+            {canWrite && (
+              <button className="primary-button" type="button" onClick={() => setEditorOpen(true)}>
+                <ModuleIcon name="plus" className="button-icon" />
+                Pflegeakte erstellen
+              </button>
+            )}
           </section>
 
           <section className="wound-summary" aria-label="Status der Pflegeakten">
@@ -58,7 +116,7 @@ export default function CareRecordsPage() {
                 <ModuleIcon name="residents" />
               </span>
               <span>
-                <strong>48</strong>
+                <strong>{records.length - count("Ohne Planung")}</strong>
                 <small>aktive Pflegeakten</small>
               </span>
             </div>
@@ -67,8 +125,8 @@ export default function CareRecordsPage() {
                 <ModuleIcon name="check" />
               </span>
               <span>
-                <strong>42</strong>
-                <small>vollständig &amp; aktuell</small>
+                <strong>{count("Aktuell")}</strong>
+                <small>aktuell</small>
               </span>
             </div>
             <div>
@@ -76,7 +134,7 @@ export default function CareRecordsPage() {
                 <ModuleIcon name="calendar" />
               </span>
               <span>
-                <strong>4</strong>
+                <strong>{count("Evaluation fällig")}</strong>
                 <small>Evaluationen fällig</small>
               </span>
             </div>
@@ -85,31 +143,43 @@ export default function CareRecordsPage() {
                 <ModuleIcon name="note" />
               </span>
               <span>
-                <strong>2</strong>
-                <small>Planungen im Entwurf</small>
+                <strong>{count("Ohne Planung") + count("Entwurf")}</strong>
+                <small>ohne Planung oder im Entwurf</small>
               </span>
             </div>
           </section>
 
-          <section className="critical-alert care-evaluation-alert" aria-label="Fällige Pflegeevaluation">
-            <span className="critical-symbol">
-              <ModuleIcon name="alert" />
-            </span>
-            <div>
-              <strong>Heute evaluieren · Peter Aebischer</strong>
-              <p>Die Pflegeziele für Flüssigkeitsmanagement und Hautschutz sind heute zur Evaluation fällig.</p>
-            </div>
-            <button
-              className="secondary-button"
-              type="button"
-              onClick={() => {
-                setSelectedResidentId("pa");
-                showToast("Pflegeakte von Peter Aebischer ausgewählt");
-              }}
-            >
-              Pflegeakte auswählen <ModuleIcon name="chevron" className="button-icon" />
-            </button>
-          </section>
+          {overview.error && <LoadError message={overview.error} onRetry={overview.reload} />}
+
+          {dueRecord && (
+            <section className="critical-alert care-evaluation-alert" aria-label="Fällige Pflegeevaluation">
+              <span className="critical-symbol">
+                <ModuleIcon name="alert" />
+              </span>
+              <div>
+                <strong>
+                  Evaluation fällig · {dueRecord.name}
+                  {dueRecord.reviewOn ? ` · seit ${formatDate(dueRecord.reviewOn)}` : ""}
+                </strong>
+                <p>
+                  {dueRecord.goalsDue > 0
+                    ? `${dueRecord.goalsDue} Pflegeziel${dueRecord.goalsDue === 1 ? " ist" : "e sind"} zur Evaluation fällig.`
+                    : "Der Pflegeplan ist zur Überprüfung fällig."}
+                </p>
+              </div>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => {
+                  setSelectedId(dueRecord.id);
+                  setSelectedCategory(null);
+                  showToast(`Pflegeakte von ${dueRecord.name} ausgewählt`);
+                }}
+              >
+                Pflegeakte auswählen <ModuleIcon name="chevron" className="button-icon" />
+              </button>
+            </section>
+          )}
 
           <div className="care-page-layout">
             <section className="card care-resident-browser" aria-labelledby="care-resident-list-title">
@@ -119,7 +189,9 @@ export default function CareRecordsPage() {
                     Bewohner
                   </h2>
                   <p className="card-subtitle">
-                    {filteredResidents.length} von {careResidents.length} Demo-Akten
+                    {overview.loading && !overview.data
+                      ? "Pflegeakten werden geladen …"
+                      : `${filteredRecords.length} von ${records.length} Bewohnern`}
                   </p>
                 </div>
                 <label className="resident-search">
@@ -132,7 +204,7 @@ export default function CareRecordsPage() {
                   />
                 </label>
                 <div className="care-record-filters" aria-label="Pflegeaktenstatus filtern">
-                  {recordFilters.map((item) => (
+                  {RECORD_FILTERS.map((item) => (
                     <button
                       className={filter === item ? "active" : ""}
                       type="button"
@@ -146,249 +218,329 @@ export default function CareRecordsPage() {
                 </div>
               </div>
               <div className="care-resident-list">
-                {filteredResidents.map((resident) => (
+                {filteredRecords.map((record) => (
                   <button
-                    className={`care-resident-row ${selectedResident.id === resident.id ? "selected" : ""}`}
+                    className={`care-resident-row ${selected?.id === record.id ? "selected" : ""}`}
                     type="button"
-                    key={resident.id}
-                    onClick={() => setSelectedResidentId(resident.id)}
+                    key={record.id}
+                    onClick={() => {
+                      setSelectedId(record.id);
+                      setSelectedCategory(null);
+                    }}
                   >
-                    <span className="resident-avatar">{resident.initials}</span>
+                    <span className="resident-avatar">{record.initials}</span>
                     <span>
-                      <strong>{resident.name}</strong>
+                      <strong>{record.name}</strong>
                       <small>
-                        {resident.room} · {resident.unit}
+                        {record.room || "Ohne Zimmer"} · {record.careUnit || "Ohne Wohnbereich"}
                       </small>
-                      <em>{resident.focus}</em>
+                      <em>{record.focus ?? "Noch kein Pflegeplan angelegt"}</em>
                     </span>
-                    <span className={`status-badge ${resident.tone}`}>{resident.status}</span>
+                    <span className={`status-badge ${RECORD_TONES[record.status]}`}>{record.status}</span>
                     <ModuleIcon name="chevron" />
                   </button>
                 ))}
-                {filteredResidents.length === 0 && (
+                {!overview.loading && filteredRecords.length === 0 && (
                   <div className="resident-empty">
                     <ModuleIcon name="search" />
-                    <strong>Keine Pflegeakten gefunden</strong>
-                    <p>Suchbegriff oder Statusfilter anpassen.</p>
+                    <strong>{records.length ? "Keine Pflegeakten gefunden" : "Keine aktiven Bewohner"}</strong>
+                    <p>
+                      {records.length
+                        ? "Suchbegriff oder Statusfilter anpassen."
+                        : "Aktive Bewohner erscheinen hier nach dem Eintritt."}
+                    </p>
                   </div>
                 )}
               </div>
             </section>
 
-            <section className="care-profile-workspace" aria-live="polite">
-              <section className="card care-profile-header">
-                <div className="care-profile-identity">
-                  <span className="resident-avatar">{selectedResident.initials}</span>
-                  <div>
-                    <p className="eyebrow">Ausgewählte Pflegeakte</p>
-                    <h2>{selectedResident.name}</h2>
-                    <span>
-                      {selectedResident.room} · {selectedResident.unit} · {selectedResident.careLevel}
-                    </span>
+            {selected && (
+              <section className="care-profile-workspace" aria-live="polite">
+                <section className="card care-profile-header">
+                  <div className="care-profile-identity">
+                    <span className="resident-avatar">{selected.initials}</span>
+                    <div>
+                      <p className="eyebrow">Ausgewählte Pflegeakte</p>
+                      <h2>{selected.name}</h2>
+                      <span>
+                        {[selected.room, selected.careUnit, plan?.careLevel ?? selected.careLevel]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div className="care-profile-actions">
-                  <span className={`status-badge ${selectedResident.tone}`}>{selectedResident.status}</span>
-                  <button
-                    className="secondary-button"
-                    type="button"
-                    onClick={() => showToast("Neue Einschätzung vorbereitet")}
-                  >
-                    Neue Einschätzung
-                  </button>
-                  <button
-                    className="primary-button"
-                    type="button"
-                    onClick={() => showToast(`Pflegeplanung von ${selectedResident.name} geöffnet`)}
-                  >
-                    Pflegeplanung öffnen
-                  </button>
-                </div>
-              </section>
-
-              <section className="care-record-status" aria-label={`Status der Pflegeakte von ${selectedResident.name}`}>
-                <div>
-                  <span>
-                    <ModuleIcon name="check" />
-                  </span>
-                  <p>
-                    <small>Vollständigkeit</small>
-                    <strong>{selectedResident.completeness}% dokumentiert</strong>
-                  </p>
-                </div>
-                <div>
-                  <span>
-                    <ModuleIcon name="alert" />
-                  </span>
-                  <p>
-                    <small>Offene Risiken</small>
-                    <strong>{selectedResident.risks} in Beobachtung</strong>
-                  </p>
-                </div>
-                <div>
-                  <span>
-                    <ModuleIcon name="tasks" />
-                  </span>
-                  <p>
-                    <small>Aktive Maßnahmen</small>
-                    <strong>{selectedResident.measures} geplant</strong>
-                  </p>
-                </div>
-                <div>
-                  <span>
-                    <ModuleIcon name="calendar" />
-                  </span>
-                  <p>
-                    <small>Nächste Evaluation</small>
-                    <strong>{selectedResident.evaluation}</strong>
-                  </p>
-                </div>
-              </section>
-
-              <div className="care-profile-grid">
-                <div className="care-record-primary">
-                  <section className="card">
-                    <div className="card-header">
-                      <div>
-                        <p className="eyebrow">Pflegeprofil</p>
-                        <h2 className="card-title">Pflegebereiche</h2>
-                        <p className="card-subtitle">6 Bereiche der aktuellen Pflegeplanung</p>
-                      </div>
-                    </div>
-                    <div className="care-domain-list">
-                      {careDomains.map((domain) => (
-                        <button
-                          className={selectedDomain.id === domain.id ? "active" : ""}
-                          type="button"
-                          key={domain.id}
-                          aria-pressed={selectedDomain.id === domain.id}
-                          onClick={() => setSelectedDomainId(domain.id)}
-                        >
-                          <span className="care-domain-icon">
-                            <ModuleIcon name={domain.icon} />
-                          </span>
-                          <span>
-                            <strong>{domain.label}</strong>
-                            <small>{domain.summary}</small>
-                          </span>
-                          <span className={`status-badge ${domain.tone}`}>{domain.status}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </section>
-
-                  <section className="card care-domain-detail">
-                    <div className="card-header">
-                      <div>
-                        <p className="eyebrow">Ausgewählter Pflegebereich</p>
-                        <h2 className="card-title">{selectedDomain.label}</h2>
-                      </div>
-                      <button
-                        className="quiet-button"
-                        type="button"
-                        onClick={() => showToast(`${selectedDomain.label} wird bearbeitet`)}
-                      >
-                        Bearbeiten
+                  <div className="care-profile-actions">
+                    <span className={`status-badge ${RECORD_TONES[selected.status]}`}>{selected.status}</span>
+                    <Link className="secondary-button" href="/einschaetzungen">
+                      Neue Einschätzung
+                    </Link>
+                    {plan || !canWrite ? (
+                      <Link className="primary-button" href={planningHref}>
+                        Pflegeplanung öffnen
+                      </Link>
+                    ) : (
+                      <button className="primary-button" type="button" onClick={() => setEditorOpen(true)}>
+                        Pflegeakte erstellen
                       </button>
-                    </div>
-                    <div className="care-domain-summary">
-                      <span className={`status-badge ${selectedDomain.tone}`}>{selectedDomain.status}</span>
-                      <p>{selectedDomain.summary}</p>
-                    </div>
-                    <div className="care-goal-grid">
-                      <section>
-                        <span className="care-detail-icon">
-                          <ModuleIcon name="check" />
-                        </span>
-                        <div>
-                          <small>Pflegeziel</small>
-                          <strong>{selectedDomain.goal}</strong>
-                          <p>Evaluation: {selectedResident.evaluation}</p>
-                        </div>
-                      </section>
-                      <section>
-                        <span className="care-detail-icon">
-                          <ModuleIcon name="tasks" />
-                        </span>
-                        <div>
-                          <small>Geplante Maßnahmen</small>
-                          <ul>
-                            {selectedDomain.measures.map((measure) => (
-                              <li key={measure}>{measure}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </section>
-                    </div>
-                  </section>
-                </div>
+                    )}
+                  </div>
+                </section>
 
-                <aside className="care-record-secondary">
-                  <section className="card">
-                    <div className="card-header">
-                      <div>
-                        <p className="eyebrow">Prioritäten</p>
-                        <h2 className="card-title">Aktuell beachten</h2>
+                {detail.error && <LoadError message={detail.error} onRetry={detail.reload} />}
+
+                <section className="care-record-status" aria-label={`Status der Pflegeakte von ${selected.name}`}>
+                  <div>
+                    <span>
+                      <ModuleIcon name="check" />
+                    </span>
+                    <p>
+                      <small>Aktive Pflegeziele</small>
+                      <strong>
+                        {selected.activeGoals} in {domains.length} Bereich{domains.length === 1 ? "" : "en"}
+                      </strong>
+                    </p>
+                  </div>
+                  <div>
+                    <span>
+                      <ModuleIcon name="alert" />
+                    </span>
+                    <p>
+                      <small>Offene Risiken</small>
+                      <strong>{selected.risks} in Beobachtung</strong>
+                    </p>
+                  </div>
+                  <div>
+                    <span>
+                      <ModuleIcon name="tasks" />
+                    </span>
+                    <p>
+                      <small>Aktive Massnahmen</small>
+                      <strong>{selected.activeInterventions} geplant</strong>
+                    </p>
+                  </div>
+                  <div>
+                    <span>
+                      <ModuleIcon name="calendar" />
+                    </span>
+                    <p>
+                      <small>Nächste Evaluation</small>
+                      <strong>{evaluation ? formatDate(evaluation) : "Nicht festgelegt"}</strong>
+                    </p>
+                  </div>
+                </section>
+
+                <div className="care-profile-grid">
+                  <div className="care-record-primary">
+                    <section className="card">
+                      <div className="card-header">
+                        <div>
+                          <p className="eyebrow">Pflegeprofil</p>
+                          <h2 className="card-title">Pflegebereiche</h2>
+                          <p className="card-subtitle">
+                            {plan
+                              ? `${domains.length} Bereich${domains.length === 1 ? "" : "e"} der aktuellen Pflegeplanung`
+                              : "Noch keine Pflegeplanung"}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="care-priority-list">
-                      <div className="critical">
-                        <ModuleIcon name="alert" />
-                        <span>
-                          <strong>{selectedResident.focus}</strong>
-                          <small>Im laufenden Dienst beobachten und Veränderungen zeitnah dokumentieren.</small>
-                        </span>
+                      {domains.length > 0 ? (
+                        <div className="care-domain-list">
+                          {domains.map((item) => (
+                            <button
+                              className={domain?.category === item.category ? "active" : ""}
+                              type="button"
+                              key={item.category}
+                              aria-pressed={domain?.category === item.category}
+                              onClick={() => setSelectedCategory(item.category)}
+                            >
+                              <span className="care-domain-icon">
+                                <ModuleIcon name={item.icon} />
+                              </span>
+                              <span>
+                                <strong>{item.category}</strong>
+                                <small>{item.goals[0].problem ?? item.goals[0].statement}</small>
+                              </span>
+                              <span className={`status-badge ${item.due ? "attention" : "stable"}`}>
+                                {item.due ? "Evaluation fällig" : "Aktiv"}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <EmptyState
+                          icon="plan"
+                          title={
+                            detail.loading
+                              ? "Pflegeakte wird geladen …"
+                              : plan
+                                ? "Noch keine aktiven Pflegeziele"
+                                : `Keine Pflegeakte für ${selected.name}`
+                          }
+                          text={
+                            plan
+                              ? "Ziele und Massnahmen werden in der Pflegeplanung erfasst."
+                              : detail.data?.closedPlans
+                                ? `${detail.data.closedPlans} abgeschlossene Planung${detail.data.closedPlans === 1 ? "" : "en"} im Verlauf.`
+                                : "Mit dem Pflegeplan entsteht die Pflegeakte mit Zielen und Massnahmen."
+                          }
+                        />
+                      )}
+                    </section>
+
+                    {domain && (
+                      <section className="card care-domain-detail">
+                        <div className="card-header">
+                          <div>
+                            <p className="eyebrow">Ausgewählter Pflegebereich</p>
+                            <h2 className="card-title">{domain.category}</h2>
+                          </div>
+                          <Link className="quiet-button" href={planningHref}>
+                            Bearbeiten
+                          </Link>
+                        </div>
+                        {domain.goals.map((goal) => (
+                          <div key={goal.id}>
+                            {goal.problem && (
+                              <div className="care-domain-summary">
+                                <span className={`status-badge ${goal.reviewDue ? "attention" : "stable"}`}>
+                                  {goal.reviewDue ? "Evaluation fällig" : "Aktiv"}
+                                </span>
+                                <p>{goal.problem}</p>
+                              </div>
+                            )}
+                            <div className="care-goal-grid">
+                              <section>
+                                <span className="care-detail-icon">
+                                  <ModuleIcon name="check" />
+                                </span>
+                                <div>
+                                  <small>Pflegeziel</small>
+                                  <strong>{goal.statement}</strong>
+                                  <p>
+                                    Evaluation: {goal.targetDate ? formatDate(goal.targetDate) : "nicht festgelegt"}
+                                    {goal.evaluations[0] && ` · zuletzt ${formatDate(goal.evaluations[0].evaluatedAt)}`}
+                                  </p>
+                                </div>
+                              </section>
+                              <section>
+                                <span className="care-detail-icon">
+                                  <ModuleIcon name="tasks" />
+                                </span>
+                                <div>
+                                  <small>Geplante Massnahmen</small>
+                                  {goal.interventions.some((item) => item.status === "active") ? (
+                                    <ul>
+                                      {goal.interventions
+                                        .filter((item) => item.status === "active")
+                                        .map((item) => (
+                                          <li key={item.id}>
+                                            {item.title}
+                                            {item.frequency ? ` · ${item.frequency}` : ""}
+                                          </li>
+                                        ))}
+                                    </ul>
+                                  ) : (
+                                    <p>Noch keine aktiven Massnahmen.</p>
+                                  )}
+                                </div>
+                              </section>
+                            </div>
+                          </div>
+                        ))}
+                      </section>
+                    )}
+                  </div>
+
+                  <aside className="care-record-secondary">
+                    <section className="card">
+                      <div className="card-header">
+                        <div>
+                          <p className="eyebrow">Prioritäten</p>
+                          <h2 className="card-title">Aktuell beachten</h2>
+                        </div>
                       </div>
-                      <div className="attention">
-                        <ModuleIcon name="pulse" />
-                        <span>
-                          <strong>Evaluation im Blick</strong>
-                          <small>Nächster Termin: {selectedResident.evaluation}</small>
-                        </span>
+                      <div className="care-priority-list">
+                        {(detail.data?.flags ?? []).map((flag) => (
+                          <div className={flag.severity === "critical" ? "critical" : "attention"} key={flag.id}>
+                            <ModuleIcon name={flag.severity === "critical" ? "alert" : "pulse"} />
+                            <span>
+                              <strong>{flag.label}</strong>
+                              <small>{flag.details ?? flag.category}</small>
+                            </span>
+                          </div>
+                        ))}
+                        {plan?.focus && (
+                          <div className="attention">
+                            <ModuleIcon name="plan" />
+                            <span>
+                              <strong>Pflegefokus</strong>
+                              <small>{plan.focus}</small>
+                            </span>
+                          </div>
+                        )}
+                        {evaluation && (
+                          <div className="attention">
+                            <ModuleIcon name="calendar" />
+                            <span>
+                              <strong>Evaluation im Blick</strong>
+                              <small>Nächster Termin: {formatDate(evaluation)}</small>
+                            </span>
+                          </div>
+                        )}
+                        {detail.data && !detail.data.flags.length && !plan?.focus && !evaluation && (
+                          <p className="list-hint">Keine aktiven Hinweise.</p>
+                        )}
                       </div>
-                    </div>
-                  </section>
-                  <section className="card">
-                    <div className="card-header">
-                      <div>
-                        <p className="eyebrow">Pflegenetzwerk</p>
-                        <h2 className="card-title">Verantwortliche Personen</h2>
+                    </section>
+                    <section className="card">
+                      <div className="card-header">
+                        <div>
+                          <p className="eyebrow">Pflegenetzwerk</p>
+                          <h2 className="card-title">Verantwortliche Personen</h2>
+                        </div>
                       </div>
-                    </div>
-                    <div className="care-team-list">
-                      <div>
-                        <span className="avatar">
-                          {selectedResident.owner
-                            .split(" ")
-                            .map((part) => part[0])
-                            .join("")}
-                        </span>
-                        <p>
-                          <strong>{selectedResident.owner}</strong>
-                          <small>Bezugspflege · Pflegefachperson</small>
-                        </p>
+                      <div className="care-team-list">
+                        {(detail.data?.team ?? []).map((person) => (
+                          <div key={person.name}>
+                            <span className="avatar">
+                              {person.name
+                                .split(" ")
+                                .map((part) => part[0])
+                                .join("")
+                                .slice(0, 2)}
+                            </span>
+                            <p>
+                              <strong>{person.name}</strong>
+                              <small>{person.role}</small>
+                            </p>
+                          </div>
+                        ))}
+                        {detail.data && !detail.data.team.length && (
+                          <p className="list-hint">Noch keine Bezugspflege oder Kontaktpersonen hinterlegt.</p>
+                        )}
                       </div>
-                      <div>
-                        <span className="avatar">MW</span>
-                        <p>
-                          <strong>Dr. Martin Weber</strong>
-                          <small>Hausarzt</small>
-                        </p>
-                      </div>
-                      <div>
-                        <span className="avatar">LF</span>
-                        <p>
-                          <strong>Lea Frei</strong>
-                          <small>Fachfrau Gesundheit</small>
-                        </p>
-                      </div>
-                    </div>
-                  </section>
-                </aside>
-              </div>
-            </section>
+                    </section>
+                  </aside>
+                </div>
+              </section>
+            )}
           </div>
-          <CareRecordEditor open={recordEditorOpen} onClose={() => setRecordEditorOpen(false)} onSuccess={showToast} />
+          {editorOpen && (
+            <CareRecordEditor
+              residents={records}
+              staff={overview.data?.staff ?? []}
+              initialResidentId={selected?.id ?? null}
+              onClose={() => setEditorOpen(false)}
+              onCreated={(residentId, message) => {
+                setEditorOpen(false);
+                setSelectedId(residentId);
+                setSelectedCategory(null);
+                showToast(message);
+                overview.reload();
+                detail.reload();
+              }}
+            />
+          )}
         </main>
       )}
     </ModulePageShell>
