@@ -35,8 +35,18 @@ import {
   Warning,
   X,
 } from "@phosphor-icons/react";
-import { useWorkContext } from "./care-context";
-import { navigationFor, routeFor, type ModuleIconName } from "./navigation";
+import { useNavigationBadges, useWorkContext, type NavigationBadges } from "./care-context";
+import {
+  badgeFor,
+  moduleLabel,
+  navigationFor,
+  quickLinks,
+  readRecentPages,
+  rememberPage,
+  routeFor,
+  type ModuleIconName,
+  type RecentPage,
+} from "./navigation";
 
 const icons = {
   home: House,
@@ -158,6 +168,14 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
   const [flyoutGroup, setFlyoutGroup] = useState<string | null>(null);
   const context = useWorkContext();
   const visibleNavigation = navigationFor(context?.profile.permissions);
+  const badges = useNavigationBadges();
+  const [recentPages, setRecentPages] = useState<RecentPage[]>([]);
+  const badgeCount = (key?: keyof NavigationBadges) => (key && badges ? badges[key] : 0);
+
+  // Every visited page is remembered for "Zuletzt benutzt".
+  useEffect(() => {
+    if (activeModule && activeChild) rememberPage(activeModule, activeChild);
+  }, [activeModule, activeChild]);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -168,8 +186,19 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
   }, []);
 
   function openGroup(groupId: string) {
+    setRecentPages(readRecentPages());
     setFlyoutGroup((current) => (current === groupId ? null : groupId));
   }
+  const allowedChildren = new Set(
+    visibleNavigation.flatMap((group) =>
+      group.modules.flatMap((module) => module.children.map((child) => `${module.id}:${child}`)),
+    ),
+  );
+  const visibleQuickLinks = quickLinks.filter((link) => allowedChildren.has(`${link.moduleId}:${link.child}`));
+  const recent = recentPages
+    .filter((page) => allowedChildren.has(`${page.moduleId}:${page.child}`))
+    .filter((page) => page.moduleId !== activeModule || page.child !== activeChild)
+    .slice(0, 4);
 
   function selectChild(moduleId: string, child: string) {
     const href = routeFor(moduleId, child);
@@ -183,7 +212,7 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
 
   const activeGroup = visibleNavigation.find((group) => group.modules.some((module) => module.id === activeModule));
   const groupIcons: Record<string, ModuleIconName | "carecoreOne"> = {
-    operations: "shift",
+    operations: "calendar",
     clinical: "residents",
     workforce: "team",
     management: "chart",
@@ -220,9 +249,26 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
             <RailIcon name="home" />
             <SidebarTooltip label="Startseite" />
           </button>
+          {visibleQuickLinks.map((link) => {
+            const count = badgeCount(link.badge);
+            return (
+              <button
+                className={`sidebar-rail-button ${activeModule === link.moduleId && activeChild === link.child ? "active" : ""}`}
+                type="button"
+                key={`${link.moduleId}:${link.child}`}
+                aria-label={count ? `${link.label} (${count})` : link.label}
+                onClick={() => selectChild(link.moduleId, link.child)}
+              >
+                <RailIcon name={link.icon} />
+                {count > 0 && <span className="sidebar-rail-badge">{count > 99 ? "99+" : count}</span>}
+                <SidebarTooltip label={count ? `${link.label} · ${count}` : link.label} />
+              </button>
+            );
+          })}
+          <span className="sidebar-rail-divider" aria-hidden="true" />
           {visibleNavigation.map((group) => (
             <button
-              className={`sidebar-rail-button ${activeGroup?.id === group.id ? "active" : ""}`}
+              className={`sidebar-rail-button ${activeGroup?.id === group.id && !visibleQuickLinks.some((link) => link.moduleId === activeModule && link.child === activeChild) ? "active" : ""}`}
               type="button"
               key={group.id}
               aria-label={group.label}
@@ -278,6 +324,22 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
             </button>
           </div>
           <div className="sidebar-flyout-body">
+            {recent.length > 0 && (
+              <section className="sidebar-flyout-module sidebar-flyout-recent">
+                <strong>Zuletzt benutzt</strong>
+                {recent.map((page) => (
+                  <button
+                    className="sidebar-flyout-link"
+                    type="button"
+                    key={`${page.moduleId}:${page.child}`}
+                    onClick={() => selectChild(page.moduleId, page.child)}
+                  >
+                    <span>{moduleLabel(page.moduleId, page.child)}</span>
+                    <RailIcon name="chevron" />
+                  </button>
+                ))}
+              </section>
+            )}
             {flyout.modules.map((module) => (
               <section className="sidebar-flyout-module" key={module.id}>
                 <strong>{module.label}</strong>
@@ -289,6 +351,9 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
                     onClick={() => selectChild(module.id, child)}
                   >
                     <span>{child}</span>
+                    {badgeCount(badgeFor(module.id, child)) > 0 && (
+                      <em className="sidebar-flyout-badge">{badgeCount(badgeFor(module.id, child))}</em>
+                    )}
                     <RailIcon name="chevron" />
                   </button>
                 ))}

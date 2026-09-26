@@ -129,3 +129,25 @@ export function useResidentNavigation() {
     next: () => step(1),
   };
 }
+
+// Sidebar badge counts; refreshed every minute while the page is open.
+export type NavigationBadges = { tasks: number; handover: number; medRound: number };
+
+export function useNavigationBadges() {
+  const [badges, setBadges] = useState<NavigationBadges | null>(null);
+  useEffect(() => {
+    let live = true;
+    const load = () =>
+      fetch("/api/navigation/badges", { cache: "no-store" })
+        .then((response) => (response.ok ? (response.json() as Promise<NavigationBadges>) : null))
+        .then((data) => live && data && setBadges(data))
+        .catch(() => undefined);
+    void load();
+    const timer = window.setInterval(load, 60_000);
+    return () => {
+      live = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+  return badges;
+}

@@ -144,3 +144,46 @@
     max-width: 100%;
   }
 }
+
+/* Sidebar: quick links with live counts and recently used pages. */
+.sidebar-rail-badge {
+  position: absolute;
+  top: 3px;
+  right: 2px;
+  min-width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
+  border: 2px solid #0b1f3a;
+  border-radius: 999px;
+  color: white;
+  background: var(--critical);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+.sidebar-rail-divider {
+  width: 26px;
+  height: 1px;
+  flex: 0 0 auto;
+  margin: 4px 0;
+  background: rgba(184, 201, 227, 0.22);
+}
+.sidebar-flyout-link span {
+  flex: 1;
+}
+.sidebar-flyout-badge {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: white;
+  background: var(--critical);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  text-align: center;
+}
+.sidebar-flyout-recent > strong {
+  color: #bfdbfe;
+}
