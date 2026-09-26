@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { LeadershipVariant } from "./leadership-variants";
-import { LocationEditor } from "./location-editor";
 import type { AdminUserStats } from "@/lib/admin-users";
+import type { OrganizationStructure } from "@/lib/organization-shared";
+import { useApiData } from "@/app/components/workspace-ui";
 import { meta, boardItems } from "./leadership-data";
 import { LeadershipView, Tone } from "./leadership-data";
 
@@ -31,6 +32,8 @@ export default function LeadershipWorkspace({ view }: { view: LeadershipView }) 
       active = false;
     };
   }, [view]);
+  const organization = useApiData<OrganizationStructure>(view === "organization" ? "/api/organization" : null);
+  const orgTotals = organization.data?.totals;
   const selected = rows.find((row) => row.id === selectedId) ?? rows[0];
   const visibleRows = useMemo(
     () =>
@@ -72,7 +75,31 @@ export default function LeadershipWorkspace({ view }: { view: LeadershipView }) 
             employeeStats.auditEntriesLast30Days > 0 ? ("stable" as Tone) : ("attention" as Tone),
           ],
         ]
-      : page.kpis;
+      : view === "organization" && orgTotals
+        ? [
+            [
+              String(orgTotals.units),
+              orgTotals.units === 1 ? "Wohnbereich" : "Wohnbereiche",
+              `${orgTotals.occupied} von ${orgTotals.places} Plätzen belegt`,
+              orgTotals.places && orgTotals.occupied > orgTotals.places ? ("critical" as Tone) : ("info" as Tone),
+            ],
+            [String(orgTotals.staff), "Mitarbeitende", `in ${orgTotals.roles} Rollen`, "stable" as Tone],
+            [
+              String(orgTotals.sites),
+              orgTotals.sites === 1 ? "Standort" : "Standorte",
+              orgTotals.unassignedStaff
+                ? `${orgTotals.unassignedStaff} Mitarbeitende ohne Bereich`
+                : "alle Mitarbeitenden zugeteilt",
+              orgTotals.unassignedStaff ? ("attention" as Tone) : ("info" as Tone),
+            ],
+            [
+              String(orgTotals.unitsWithoutLead),
+              "Ohne Leitung",
+              orgTotals.unitsWithoutLead ? "Wohnbereiche zuweisen" : "alle Bereiche geführt",
+              orgTotals.unitsWithoutLead ? ("attention" as Tone) : ("stable" as Tone),
+            ],
+          ]
+        : page.kpis;
   return (
     <ModulePageShell
       activeModule={page.module}
@@ -125,11 +152,9 @@ export default function LeadershipWorkspace({ view }: { view: LeadershipView }) 
             showToast={showToast}
             employeeCreatorOpen={employeeCreatorOpen}
             onCloseEmployeeCreator={() => setEmployeeCreatorOpen(false)}
-          />
-          <LocationEditor
-            open={locationEditorOpen}
-            onClose={() => setLocationEditorOpen(false)}
-            showToast={showToast}
+            organization={organization}
+            siteCreatorOpen={locationEditorOpen}
+            onCloseSiteCreator={() => setLocationEditorOpen(false)}
           />
           <div className="leadership-board legacy-leadership-board" aria-hidden="true">
             <section className="card leadership-radar">

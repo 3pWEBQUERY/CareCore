@@ -20,12 +20,12 @@ export const meta: Record<
     eyebrow: "CareCore Admin",
     title: "Organisation",
     description: "Standorte, Wohnbereiche und Verantwortlichkeiten zentral steuern.",
-    action: "Bereich hinzufügen",
+    action: "Standort hinzufügen",
     kpis: [
-      ["4", "Wohnbereiche", "46 Plätze belegt", "info"],
-      ["62", "Mitarbeitende", "in 8 Rollen", "stable"],
-      ["12", "Teams", "hausweit", "info"],
-      ["1", "Änderung offen", "Wohnbereich 3", "attention"],
+      ["—", "Wohnbereiche", "Daten werden geladen", "info"],
+      ["—", "Mitarbeitende", "Daten werden geladen", "info"],
+      ["—", "Standorte", "Daten werden geladen", "info"],
+      ["—", "Ohne Leitung", "Daten werden geladen", "info"],
     ],
   },
   users: {
