@@ -1,10 +1,12 @@
 "use client";
 
+import { useResidentNavigation } from "./care-context";
 import { ModuleIcon } from "./module-icon";
 import type { AppHeaderState } from "./use-app-header";
 
 export function HeaderResidentSelector({ r, compact = false }: { r: AppHeaderState; compact?: boolean }) {
   const { residentOpen, setResidentOpen, selectedResident, closeMenus } = r;
+  const navigation = useResidentNavigation();
   return (
     <div className={`resident-context-wrap ${compact ? "mobile-resident-context-wrap" : ""}`}>
       <button
@@ -29,6 +31,24 @@ export function HeaderResidentSelector({ r, compact = false }: { r: AppHeaderSta
         )}
         <ModuleIcon name="chevron" className="chevron" />
       </button>
+      {!compact && navigation.total > 1 && (
+        <span className="resident-context-nav" aria-label="Zwischen Bewohnern blättern">
+          <button
+            type="button"
+            aria-label="Vorheriger Bewohner"
+            title="Vorheriger Bewohner"
+            onClick={navigation.previous}
+          >
+            <ModuleIcon name="chevron" className="up" />
+          </button>
+          <small>
+            {navigation.position} / {navigation.total}
+          </small>
+          <button type="button" aria-label="Nächster Bewohner" title="Nächster Bewohner" onClick={navigation.next}>
+            <ModuleIcon name="chevron" className="down" />
+          </button>
+        </span>
+      )}
     </div>
   );
 }

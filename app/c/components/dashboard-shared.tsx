@@ -162,10 +162,11 @@ export type ResidentNews = {
   flag_severity: string | null;
 };
 
-export type DashboardWidgetId = "summary" | "critical" | "shift" | "tasks" | "residents";
+export type DashboardWidgetId = "summary" | "worklist" | "critical" | "shift" | "tasks" | "residents";
 
 export const dashboardWidgets: Array<{ id: DashboardWidgetId; label: string; description: string; wide?: boolean }> = [
   { id: "summary", label: "Schichtübersicht", description: "Kennzahlen für den aktuellen Dienst", wide: true },
+  { id: "worklist", label: "Tagesliste", description: "Was heute je Bewohner fällig ist", wide: true },
   { id: "critical", label: "Wichtiger Hinweis", description: "Kritische Informationen", wide: true },
   { id: "tasks", label: "Als Nächstes", description: "Offene Aufgaben" },
   { id: "shift", label: "Meine Schicht", description: "Zeitlicher Dienstplan" },
@@ -173,6 +174,15 @@ export const dashboardWidgets: Array<{ id: DashboardWidgetId; label: string; des
 ];
 
 export const defaultDashboardOrder = dashboardWidgets.map((widget) => widget.id);
+
+// Widgets missing in a saved layout (added later) are inserted at their default position.
+export function completeDashboardOrder(order: DashboardWidgetId[]) {
+  const result = [...order];
+  defaultDashboardOrder.forEach((id, index) => {
+    if (!result.includes(id)) result.splice(Math.min(index, result.length), 0, id);
+  });
+  return result;
+}
 
 export const dashboardLayoutStorageKey = "carecore.dashboard-layout.v1";
 
@@ -185,7 +195,7 @@ export function readStoredDashboardLayout() {
     const allowed = new Set(defaultDashboardOrder);
     const order = (layout.order ?? []).filter((id): id is DashboardWidgetId => allowed.has(id));
     return {
-      order: [...order, ...defaultDashboardOrder.filter((id) => !order.includes(id))],
+      order: completeDashboardOrder(order),
       hidden: (layout.hidden ?? []).filter((id): id is DashboardWidgetId => allowed.has(id)),
     };
   } catch {

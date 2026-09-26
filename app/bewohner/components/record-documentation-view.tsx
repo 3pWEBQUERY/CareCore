@@ -235,6 +235,11 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
             >
               {readOnly ? "Neuer Eintrag" : "Abbrechen"}
             </button>
+            {canWrite && !readOnly && r.navigation && (
+              <button className="secondary-button" type="submit" data-next="true" disabled={documentationSaving}>
+                Speichern &amp; nächster Bewohner
+              </button>
+            )}
             {canWrite && (
               <button className="primary-button" type="submit" disabled={documentationSaving}>
                 <Check aria-hidden="true" />{" "}
@@ -290,7 +295,7 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
                   <time>{entry.time}</time>
                   <span>
                     <strong>{entry.title}</strong>
-                    <small>{entry.category}</small>
+                    <small>{entry.text.length > 70 ? `${entry.text.slice(0, 70)}…` : entry.text}</small>
                   </span>
                 </button>
               ))}

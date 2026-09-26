@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { MobileNavigation } from "@/app/components/mobile-navigation";
 import AppHeader from "../components/app-header";
 import AppSidebar from "../components/app-sidebar";
 import { ResidentRecord } from "./components/resident-record";
+import type { RecordView } from "./components/resident-record-data";
 import { Icon } from "./components/residents-utils";
 import { ResidentIntakeEditor } from "./components/resident-intake-editor";
 import { useResidentsPage } from "./components/use-residents-page";
@@ -25,7 +27,22 @@ export default function ResidentsPage() {
     setToast,
     loadResidents,
     openSearch,
+    residents,
+    filteredResidents,
   } = r;
+  // The open record steps through the residents of the directory as filtered, keeping the tab.
+  const [recordView, setRecordView] = useState<RecordView>("overview");
+  const navigationList =
+    selectedResident && filteredResidents.some((item) => item.id === selectedResident.id)
+      ? filteredResidents
+      : residents;
+  const recordIndex = selectedResident ? navigationList.findIndex((item) => item.id === selectedResident.id) : -1;
+  const stepRecord = (offset: number) => {
+    if (!navigationList.length) return;
+    setSelectedResident(
+      navigationList[(Math.max(recordIndex, 0) + offset + navigationList.length) % navigationList.length],
+    );
+  };
   return (
     <div className="app-shell residents-page">
       <AppSidebar activeModule="residents" activeChild="Übersicht" onToast={setToast} />
@@ -66,7 +83,20 @@ export default function ResidentsPage() {
 
       {selectedResident && (
         <ResidentRecord
+          key={selectedResident.id}
           resident={selectedResident}
+          initialView={recordView}
+          onViewChange={setRecordView}
+          navigation={
+            navigationList.length > 1
+              ? {
+                  position: recordIndex + 1,
+                  total: navigationList.length,
+                  onPrevious: () => stepRecord(-1),
+                  onNext: () => stepRecord(1),
+                }
+              : undefined
+          }
           onClose={() => setSelectedResident(null)}
           onAction={setToast}
           onPhotoChanged={() => {

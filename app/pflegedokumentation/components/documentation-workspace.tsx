@@ -25,7 +25,7 @@ import {
   type EntryDraft,
   type ResidentOption,
 } from "./entry-parts";
-import { useCareResident } from "@/app/components/care-context";
+import { useCareResident, useResidentNavigation } from "@/app/components/care-context";
 
 export type DocumentationView = "quick" | "history";
 type EntriesPayload = { entries: DocEntry[]; canWrite: boolean };
@@ -51,6 +51,7 @@ function QuickView({ showToast }: { showToast: ShowToast }) {
   const [amending, setAmending] = useState<DocEntry | null>(null);
   const canWrite = today.data?.canWrite ?? false;
   const [contextId, setContextId] = useCareResident();
+  const navigation = useResidentNavigation();
   const contextResident = residents.find((r) => r.id === contextId)?.id;
   const effective = { ...draft, residentId: contextResident ?? "" };
   // Choosing a resident for the entry also makes it the working context of the other modules.
@@ -65,12 +66,14 @@ function QuickView({ showToast }: { showToast: ShowToast }) {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const andNext = (event.nativeEvent as SubmitEvent).submitter?.dataset.next === "true";
     setSaving(true);
     setError("");
     try {
       await saveDraft(effective);
-      showToast("Dokumentation gespeichert");
-      setDraft(newDraft(effective.residentId));
+      const next = andNext ? navigation.next() : null;
+      showToast(next ? `Dokumentation gespeichert · weiter mit ${next.name}` : "Dokumentation gespeichert");
+      setDraft(newDraft(next?.id ?? effective.residentId));
       reload();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Speichern fehlgeschlagen.");
@@ -120,6 +123,16 @@ function QuickView({ showToast }: { showToast: ShowToast }) {
                 </p>
               )}
               <footer className="area-editor-actions">
+                {navigation.total > 1 && (
+                  <button
+                    className="secondary-button"
+                    type="submit"
+                    data-next="true"
+                    disabled={saving || !effective.residentId}
+                  >
+                    Speichern &amp; nächster Bewohner
+                  </button>
+                )}
                 <button className="primary-button" type="submit" disabled={saving || !effective.residentId}>
                   <ModuleIcon name="check" /> {saving ? "Speichern…" : "Eintrag speichern"}
                 </button>

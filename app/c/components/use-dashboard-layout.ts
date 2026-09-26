@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   DashboardWidgetId,
   defaultDashboardOrder,
+  completeDashboardOrder,
   dashboardLayoutStorageKey,
   readStoredDashboardLayout,
 } from "./dashboard-shared";
@@ -29,7 +30,7 @@ export function useDashboardLayout() {
         const stored = payload.layout;
         const allowed = new Set(defaultDashboardOrder);
         const order = (stored.order ?? []).filter((id): id is DashboardWidgetId => allowed.has(id));
-        setWidgetOrder([...order, ...defaultDashboardOrder.filter((id) => !order.includes(id))]);
+        setWidgetOrder(completeDashboardOrder(order));
         setHiddenWidgets((stored.hidden ?? []).filter((id): id is DashboardWidgetId => allowed.has(id)));
       })
       .catch(() => undefined);

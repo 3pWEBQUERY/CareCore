@@ -3,7 +3,7 @@
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import ResidentAppointmentEditor from "@/app/components/resident-appointment-editor";
-import { Camera, X } from "@phosphor-icons/react";
+import { Camera, CaretDown, CaretUp, X } from "@phosphor-icons/react";
 import { ResidentRecordProps, recordTabs } from "./resident-record-data";
 import { useResidentRecord } from "./use-resident-record";
 import { RecordOverviewView } from "./record-overview-view";
@@ -39,6 +39,7 @@ export function ResidentRecord(props: ResidentRecordProps) {
     appointmentEditorResidents,
     uploadResidentPhoto,
     selectTab,
+    navigation,
   } = r;
   return (
     <div
@@ -89,6 +90,29 @@ export function ResidentRecord(props: ResidentRecordProps) {
             </div>
           </div>
           <div className="record-header-actions">
+            {navigation && (
+              <span className="record-navigation" aria-label="Zwischen Bewohnerakten blättern">
+                <button
+                  type="button"
+                  aria-label="Vorherige Bewohnerakte"
+                  title="Vorherige Bewohnerakte (Alt + ↑)"
+                  onClick={navigation.onPrevious}
+                >
+                  <CaretUp aria-hidden="true" />
+                </button>
+                <small>
+                  {navigation.position} von {navigation.total}
+                </small>
+                <button
+                  type="button"
+                  aria-label="Nächste Bewohnerakte"
+                  title="Nächste Bewohnerakte (Alt + ↓)"
+                  onClick={navigation.onNext}
+                >
+                  <CaretDown aria-hidden="true" />
+                </button>
+              </span>
+            )}
             <span className={`status-badge ${resident.status}`}>{resident.statusLabel}</span>
             <button
               className="record-close-button"
