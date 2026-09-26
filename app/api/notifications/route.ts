@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { carecoreActor, carecoreDb } from "@/lib/server-data";
+import { createLearningReminders } from "@/lib/learning";
 import { createShiftReminders } from "@/lib/schedule";
 import { createDueReminders } from "@/lib/tasks";
 
@@ -12,8 +13,8 @@ export async function GET() {
     const sql = carecoreDb();
     if (actor.organizationId) {
       const ctx = { actor: { ...actor, organizationId: actor.organizationId }, sql };
-      await Promise.all([createDueReminders(ctx), createShiftReminders(ctx)]).catch((error) =>
-        console.error("Reminders failed", error),
+      await Promise.all([createDueReminders(ctx), createShiftReminders(ctx), createLearningReminders(ctx)]).catch(
+        (error) => console.error("Reminders failed", error),
       );
     }
     const notifications =

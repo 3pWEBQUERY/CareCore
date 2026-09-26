@@ -1,5 +1,5 @@
-import GovernanceWorkspace from "../../verwaltung/components/governance-workspace";
+import LearningWorkspace from "./components/learning-workspace";
 
 export default function LearningPage() {
-  return <GovernanceWorkspace view="learning" />;
+  return <LearningWorkspace compliance={false} />;
 }

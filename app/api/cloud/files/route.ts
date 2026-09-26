@@ -13,7 +13,7 @@ export async function GET() {
     const files = (await sql`
       SELECT id, name, mime_type, size_bytes, uploaded_by, created_at, updated_at
       FROM carecore_cloud_files
-      WHERE organization_id = ${actor.organizationId}
+      WHERE organization_id = ${actor.organizationId} AND purpose = 'cloud'
       ORDER BY created_at DESC
     `) as unknown as Array<{
       id: string;

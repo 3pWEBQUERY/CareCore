@@ -79,7 +79,7 @@ export async function PATCH(request: Request, { params }: Context) {
     const sql = carecoreDb();
     const rows = await sql`
       UPDATE carecore_cloud_files SET name = ${name}, updated_at = NOW()
-      WHERE id = ${fileId} AND organization_id = ${actor.organizationId}
+      WHERE id = ${fileId} AND organization_id = ${actor.organizationId} AND purpose = 'cloud'
       RETURNING id, name, mime_type, size_bytes, uploaded_by, created_at, updated_at
     `;
     if (!rows[0]) return NextResponse.json({ error: "Datei nicht gefunden." }, { status: 404 });
@@ -97,7 +97,7 @@ export async function DELETE(_request: Request, { params }: Context) {
     const { fileId } = await params;
     const sql = carecoreDb();
     const rows =
-      await sql`DELETE FROM carecore_cloud_files WHERE id = ${fileId} AND organization_id = ${actor.organizationId} RETURNING id`;
+      await sql`DELETE FROM carecore_cloud_files WHERE id = ${fileId} AND organization_id = ${actor.organizationId} AND purpose = 'cloud' RETURNING id`;
     if (!rows[0]) return NextResponse.json({ error: "Datei nicht gefunden." }, { status: 404 });
     return NextResponse.json({ ok: true });
   } catch (error) {
