@@ -1,0 +1,118 @@
+/* Additions for the database-backed Personal workspaces. */
+
+/* Team news */
+
+.team-channel-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-bottom: 1px solid var(--line);
+  background: #f8fbff;
+}
+
+.team-channel-bar small {
+  flex: 1;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.team-filter-row .team-read-all {
+  margin-left: auto;
+}
+
+.team-post {
+  flex-wrap: wrap;
+}
+
+.team-post.unread .team-post-main strong::after {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+  background: var(--brand);
+}
+
+.team-post-main small.team-post-body {
+  white-space: pre-wrap;
+}
+
+.team-post-actions {
+  display: flex;
+  flex-basis: 100%;
+  gap: 6px;
+  padding-left: 47px;
+}
+
+.team-channels-card .card-header .quiet-button svg {
+  width: 11px;
+}
+
+.team-channels-card li {
+  grid-template-columns: 9px minmax(0, 1fr) auto;
+}
+
+.team-channels-card li.active {
+  border-radius: 6px;
+  background: var(--brand-soft);
+}
+
+.team-channel-open {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.team-channel-join {
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--brand-dark);
+  background: white;
+  font-size: 8px;
+  font-weight: 740;
+  cursor: pointer;
+}
+
+.team-channel-join:hover {
+  border-color: #93c5fd;
+  background: var(--brand-soft);
+}
+
+.team-channel-dot.purple {
+  background: #7c3aed;
+}
+
+.team-channel-dot.red {
+  background: var(--critical);
+}
+
+.team-channel-dot.gray {
+  background: #94a3b8;
+}
+
+.team-duty-state.planned {
+  color: var(--muted);
+}
+
+.team-duty-empty {
+  padding: 0 15px 16px;
+}
+
+@media (max-width: 720px) {
+  .team-post-actions {
+    padding-left: 0;
+  }
+
+  .team-channel-bar {
+    flex-wrap: wrap;
+  }
+}

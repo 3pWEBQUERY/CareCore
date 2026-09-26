@@ -1,5 +1,5 @@
-import GovernanceWorkspace from "../../verwaltung/components/governance-workspace";
+import NewsWorkspace from "./components/news-workspace";
 
 export default function TeamNewsPage() {
-  return <GovernanceWorkspace view="teamNews" />;
+  return <NewsWorkspace />;
 }
