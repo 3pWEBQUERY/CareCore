@@ -13,6 +13,7 @@ import {
   type HistoryResident,
 } from "@/lib/resident-history-shared";
 import { StayDialog, type StayDialogMode } from "./stay-dialog";
+import { useCareResident } from "@/app/components/care-context";
 
 const ALL_UNITS = "Gesamtes Haus";
 const isArchived = (resident: HistoryResident) => resident.status === "Ausgetreten" || resident.status === "Verstorben";
@@ -59,7 +60,7 @@ export default function ResidentHistoryPage() {
   const [status, setStatus] = useState<HistoryFilter>("Alle");
   const [unit, setUnit] = useState(ALL_UNITS);
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useCareResident();
   const [dialog, setDialog] = useState<StayDialogMode | null>(null);
 
   const overview = useApiData<HistoryOverview>("/api/resident-history");
@@ -93,7 +94,7 @@ export default function ResidentHistoryPage() {
   return (
     <ModulePageShell
       activeModule="residents"
-      activeChild="Verlauf"
+      activeChild="Verlauf & Archiv"
       pageClass="resident-history-page"
       locationSecondary="Gesamtes Haus · alle Wohnbereiche"
     >

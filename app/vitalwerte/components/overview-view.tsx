@@ -24,6 +24,7 @@ import {
 import MeasurementDialog from "./measurement-dialog";
 import TrendChart from "./trend-chart";
 import { History, FILTERS, WEEK, ClinicalNote, MeasurementList } from "./overview-parts";
+import { useCareResident } from "@/app/components/care-context";
 
 export type VitalsOverview = {
   residents: VitalResident[];
@@ -52,7 +53,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
   const [query, setQuery] = useState("");
   const [unit, setUnit] = useState("Gesamtes Haus");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("Alle");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useCareResident();
   const [metric, setMetric] = useState(VITAL_METRICS[0].key);
   const [days, setDays] = useState(7);
   const [dialog, setDialog] = useState<{ residentId: string | null } | null>(null);

@@ -17,6 +17,7 @@ import {
 import type { CarePlan, PlanningResident } from "@/lib/care-planning-shared";
 import GoalCard from "./goal-card";
 import { usePlanningDialogs } from "./use-planning-dialogs";
+import { useCareResident } from "@/app/components/care-context";
 
 export type PlanningOverview = {
   residents: PlanningResident[];
@@ -36,7 +37,11 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const [selectedId, setSelectedId] = useState<string | null>(() => params.get("resident"));
+  const [selectedId, setSelectedId] = useCareResident();
+  const linkedResident = params.get("resident");
+  useEffect(() => {
+    if (linkedResident) setSelectedId(linkedResident);
+  }, [linkedResident, setSelectedId]);
   const [showClosed, setShowClosed] = useState(false);
   const hasParams = params.size > 0;
   useEffect(() => {

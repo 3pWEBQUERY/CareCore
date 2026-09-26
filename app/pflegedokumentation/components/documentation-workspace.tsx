@@ -25,6 +25,7 @@ import {
   type EntryDraft,
   type ResidentOption,
 } from "./entry-parts";
+import { useCareResident } from "@/app/components/care-context";
 
 export type DocumentationView = "quick" | "history";
 type EntriesPayload = { entries: DocEntry[]; canWrite: boolean };
@@ -49,7 +50,14 @@ function QuickView({ showToast }: { showToast: ShowToast }) {
   const [error, setError] = useState("");
   const [amending, setAmending] = useState<DocEntry | null>(null);
   const canWrite = today.data?.canWrite ?? false;
-  const effective = { ...draft, residentId: draft.residentId || residents[0]?.id || "" };
+  const [contextId, setContextId] = useCareResident();
+  const contextResident = residents.find((r) => r.id === contextId)?.id;
+  const effective = { ...draft, residentId: contextResident || draft.residentId || residents[0]?.id || "" };
+  // Choosing a resident for the entry also makes it the working context of the other modules.
+  const changeDraft = (next: EntryDraft) => {
+    if (next.residentId && next.residentId !== effective.residentId) setContextId(next.residentId);
+    setDraft(next);
+  };
   const reload = () => {
     today.reload();
     stats.reload();
@@ -104,7 +112,7 @@ function QuickView({ showToast }: { showToast: ShowToast }) {
           {canWrite ? (
             <form className="area-editor-form doc-inline-form" onSubmit={submit}>
               <div className="area-editor-grid">
-                <EntryFields draft={effective} onChange={setDraft} residents={residents} />
+                <EntryFields draft={effective} onChange={changeDraft} residents={residents} />
               </div>
               {error && (
                 <p className="appointment-editor-error" role="alert">
@@ -147,7 +155,7 @@ function QuickView({ showToast }: { showToast: ShowToast }) {
             <ul>
               {(stats.data?.withoutEntry ?? []).map((resident) => (
                 <li key={resident.id}>
-                  <button type="button" onClick={() => setDraft({ ...effective, residentId: resident.id })}>
+                  <button type="button" onClick={() => changeDraft({ ...effective, residentId: resident.id })}>
                     <strong>{resident.name}</strong>
                     <small>
                       {resident.room ? `${resident.room} · ` : ""}

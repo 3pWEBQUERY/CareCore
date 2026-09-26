@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { setCareResident } from "@/app/components/care-context";
 import type { ResidentRecordData } from "./resident-record-data";
 import { ResidentRow, residentStatusValues, toResident } from "./residents-utils";
 import { ResidentStatusFilter } from "./residents-utils";
@@ -15,6 +16,11 @@ export function useResidentsPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedResident, setSelectedResident] = useState<ResidentRecordData | null>(null);
+  // An opened resident record becomes the working context of all modules.
+  const openedResidentId = selectedResident?.id ?? null;
+  useEffect(() => {
+    if (openedResidentId) setCareResident(openedResidentId);
+  }, [openedResidentId]);
   const [intakeEditorOpen, setIntakeEditorOpen] = useState(false);
   const [toast, setToast] = useState("");
 

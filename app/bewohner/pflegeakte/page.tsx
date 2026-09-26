@@ -14,6 +14,7 @@ import {
   type RecordFilter,
 } from "@/lib/care-records-shared";
 import { CareRecordEditor } from "./care-record-editor";
+import { useCareResident } from "@/app/components/care-context";
 
 const categoryIcons: Record<string, ModuleIconName> = {
   Mobilität: "pulse",
@@ -55,7 +56,7 @@ const nextEvaluation = (reviewOn: string | null, goals: CareGoal[]) =>
 export default function CareRecordsPage() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<RecordFilter>("Alle");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useCareResident();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
 

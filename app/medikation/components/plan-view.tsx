@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { WEEKDAYS, type MedOrder, type MedResident, type StockMovement } from "@/lib/medication-shared";
 import {
@@ -14,6 +13,7 @@ import {
 } from "@/app/components/workspace-ui";
 import { useOrderDialogs } from "./order-dialogs";
 import ResidentList, { AllergyBadge } from "@/app/components/resident-list";
+import { useCareResident } from "@/app/components/care-context";
 
 export type ResidentsPayload = { residents: MedResident[]; canManage: boolean; canEditAllergies: boolean };
 export type ResidentDetail = { orders: MedOrder[]; movements: StockMovement[] };
@@ -38,7 +38,7 @@ export function orderTone(order: MedOrder): { tone: string; label: string } {
 // Resident list plus the selected resident's orders; shared by plan and reserves.
 export function useSelectedResident() {
   const residents = useApiData<ResidentsPayload>("/api/medication/residents");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useCareResident();
   const list = residents.data?.residents ?? [];
   const resident = list.find((item) => item.id === selectedId) ?? list[0] ?? null;
   const detail = useApiData<ResidentDetail>(resident ? `/api/medication/residents/${resident.id}` : null);
