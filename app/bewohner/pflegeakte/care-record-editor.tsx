@@ -3,30 +3,68 @@
 import { useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { CareDatePicker, CareSelect, formatCareDate } from "@/app/components/care-form-controls";
-import { careResidents } from "./care-records-data";
+import { requestJson, todayInZurich } from "@/app/components/workspace-ui";
+import type { CareRecordRow } from "@/lib/care-records-shared";
 
+const CARE_LEVELS = ["Pflegestufe 1", "Pflegestufe 2", "Pflegestufe 3", "Pflegestufe 4", "Pflegestufe 5"];
+const NO_OWNER = "Noch nicht festgelegt";
+
+const plusDays = (day: string, days: number) => {
+  const date = new Date(`${day}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+};
+
+// Creates the resident's care plan, which opens the care record.
 export function CareRecordEditor({
-  open,
+  residents,
+  staff,
+  initialResidentId,
   onClose,
-  onSuccess,
+  onCreated,
 }: {
-  open: boolean;
+  residents: CareRecordRow[];
+  staff: Array<{ id: string; name: string }>;
+  initialResidentId: string | null;
   onClose: () => void;
-  onSuccess: (message: string) => void;
+  onCreated: (residentId: string, message: string) => void;
 }) {
-  const [resident, setResident] = useState("Hans Müller · Zimmer 207");
+  const candidates = residents.filter((resident) => !resident.planId);
+  const label = (resident: CareRecordRow) => `${resident.name} · ${resident.room || "ohne Zimmer"}`;
+  const [residentId, setResidentId] = useState(
+    candidates.find((resident) => resident.id === initialResidentId)?.id ?? candidates[0]?.id ?? "",
+  );
   const [careLevel, setCareLevel] = useState("Pflegestufe 3");
-  const [owner, setOwner] = useState("Anna Meier");
-  const [startDate, setStartDate] = useState("2026-09-15");
-  const [evaluationDate, setEvaluationDate] = useState("2026-09-29");
-  const [template, setTemplate] = useState("Standard Pflegeplanung");
+  const [ownerId, setOwnerId] = useState("");
+  const [startsOn, setStartsOn] = useState(todayInZurich);
+  const [reviewOn, setReviewOn] = useState(() => plusDays(todayInZurich(), 90));
   const [focus, setFocus] = useState("");
-  if (!open) return null;
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const resident = candidates.find((item) => item.id === residentId) ?? null;
+  const ownerName = staff.find((person) => person.id === ownerId)?.name ?? NO_OWNER;
+
+  async function submit() {
+    if (!resident) return;
+    setSaving(true);
+    setError("");
+    try {
+      await requestJson("/api/care-planning/plans", {
+        method: "POST",
+        body: { residentId: resident.id, careLevel, ownerId: ownerId || null, startsOn, reviewOn, focus },
+      });
+      onCreated(resident.id, `Pflegeakte für ${resident.name} wurde erstellt`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Die Pflegeakte konnte nicht erstellt werden.");
+      setSaving(false);
+    }
+  }
+
   return (
     <div
       className="area-editor-overlay"
       role="presentation"
-      onMouseDown={(event) => event.currentTarget === event.target && onClose()}
+      onMouseDown={(event) => event.currentTarget === event.target && !saving && onClose()}
     >
       <section
         className="area-editor-panel care-record-editor-panel"
@@ -39,8 +77,8 @@ export function CareRecordEditor({
             <p className="eyebrow">CareCore Bewohner · Pflegeakte</p>
             <h2 id="care-record-editor-title">Pflegeakte erstellen</h2>
             <p>
-              Lege eine neue Pflegeakte an und definiere direkt die Zuständigkeit, den Pflegeplan und die erste
-              Evaluation.
+              Lege den Pflegeplan an und definiere direkt die Zuständigkeit und die erste Evaluation. Ziele und
+              Massnahmen ergänzt du anschliessend in der Pflegeplanung.
             </p>
           </div>
           <button
@@ -56,116 +94,109 @@ export function CareRecordEditor({
           className="area-editor-form"
           onSubmit={(event) => {
             event.preventDefault();
-            onClose();
-            onSuccess(`Pflegeakte für ${resident.split(" · ")[0]} wurde erstellt`);
+            void submit();
           }}
         >
-          <div className="area-editor-intro">
-            <span className="area-editor-icon">
-              <ModuleIcon name="plan" />
-            </span>
-            <div>
-              <strong>Neue Pflegeakte</strong>
-              <p>Die Akte wird mit dem ausgewählten Bewohner verknüpft und für das Team sichtbar.</p>
+          {candidates.length === 0 ? (
+            <div className="area-editor-intro">
+              <span className="area-editor-icon">
+                <ModuleIcon name="check" />
+              </span>
+              <div>
+                <strong>Alle Bewohner haben eine Pflegeakte</strong>
+                <p>Für jeden aktiven Bewohner besteht bereits ein offener Pflegeplan.</p>
+              </div>
             </div>
-            <span className="duty-assignment-status">
-              <i />
-              Bereit zum Erstellen
-            </span>
-          </div>
-          <div className="area-editor-grid">
-            <label className="area-editor-wide">
-              Bewohner
-              <CareSelect
-                label="Bewohner"
-                value={resident}
-                options={careResidents.map((person) => `${person.name} · ${person.room}`)}
-                onChange={setResident}
-              />
-            </label>
-            <label>
-              Pflegestufe
-              <CareSelect
-                label="Pflegestufe"
-                value={careLevel}
-                options={["Pflegestufe 1", "Pflegestufe 2", "Pflegestufe 3", "Pflegestufe 4", "Pflegestufe 5"]}
-                onChange={setCareLevel}
-              />
-            </label>
-            <label>
-              Pflegebeginn
-              <CareDatePicker label="Pflegebeginn" value={startDate} onChange={setStartDate} />
-            </label>
-            <label>
-              Bezugspflege
-              <CareSelect
-                label="Bezugspflege"
-                value={owner}
-                options={["Anna Meier", "Lea Frei", "Nora Baumann", "Sven Keller"]}
-                onChange={setOwner}
-              />
-            </label>
-            <label>
-              Erste Evaluation
-              <CareDatePicker label="Erste Evaluation" value={evaluationDate} onChange={setEvaluationDate} />
-            </label>
-            <label className="area-editor-wide">
-              Vorlage
-              <CareSelect
-                label="Vorlage"
-                value={template}
-                options={["Standard Pflegeplanung", "Demenz & Orientierung", "Sturzprävention", "Palliative Pflege"]}
-                onChange={setTemplate}
-              />
-            </label>
-            <label className="area-editor-wide">
-              Pflegefokus und erste Ziele
-              <textarea
-                value={focus}
-                onChange={(event) => setFocus(event.target.value)}
-                placeholder="z. B. Mobilität erhalten, Trinkmenge sichern, Schmerzen beobachten …"
-                rows={5}
-              />
-            </label>
-            <fieldset className="area-editor-wide duty-assignment-options">
-              <legend>Pflegeakte aktivieren</legend>
-              <div className="area-service-options">
-                <label>
-                  <input type="checkbox" defaultChecked />
-                  <span>Im Team freigeben</span>
+          ) : (
+            <>
+              <div className="area-editor-intro">
+                <span className="area-editor-icon">
+                  <ModuleIcon name="plan" />
+                </span>
+                <div>
+                  <strong>Neue Pflegeakte</strong>
+                  <p>Die Akte wird mit dem ausgewählten Bewohner verknüpft und für das Team sichtbar.</p>
+                </div>
+                <span className="duty-assignment-status">
+                  <i />
+                  {candidates.length} ohne Pflegeakte
+                </span>
+              </div>
+              <div className="area-editor-grid">
+                <label className="area-editor-wide">
+                  Bewohner
+                  <CareSelect
+                    label="Bewohner"
+                    value={resident ? label(resident) : ""}
+                    options={candidates.map(label)}
+                    onChange={(value) => setResidentId(candidates.find((item) => label(item) === value)?.id ?? "")}
+                  />
                 </label>
                 <label>
-                  <input type="checkbox" defaultChecked />
-                  <span>Evaluation vormerken</span>
+                  Pflegestufe
+                  <CareSelect label="Pflegestufe" value={careLevel} options={CARE_LEVELS} onChange={setCareLevel} />
                 </label>
                 <label>
-                  <input type="checkbox" />
-                  <span>Medikationsplan verknüpfen</span>
+                  Pflegebeginn
+                  <CareDatePicker label="Pflegebeginn" value={startsOn} onChange={setStartsOn} />
+                </label>
+                <label>
+                  Bezugspflege
+                  <CareSelect
+                    label="Bezugspflege"
+                    value={ownerName}
+                    options={[NO_OWNER, ...staff.map((person) => person.name)]}
+                    onChange={(value) => setOwnerId(staff.find((person) => person.name === value)?.id ?? "")}
+                  />
+                </label>
+                <label>
+                  Erste Evaluation
+                  <CareDatePicker label="Erste Evaluation" value={reviewOn} onChange={setReviewOn} />
+                </label>
+                <label className="area-editor-wide">
+                  Pflegefokus
+                  <textarea
+                    required
+                    maxLength={4000}
+                    value={focus}
+                    onChange={(event) => setFocus(event.target.value)}
+                    placeholder="z. B. Mobilität erhalten, Trinkmenge sichern, Schmerzen beobachten …"
+                    rows={5}
+                  />
                 </label>
               </div>
-            </fieldset>
-          </div>
-          <div className="duty-assignment-summary">
-            <span>
-              <strong>{resident.split(" · ")[0]}</strong>
-              <small>
-                {resident.split(" · ")[1]} · {careLevel}
-              </small>
-            </span>
-            <span>
-              <strong>Start {formatCareDate(startDate)}</strong>
-              <small>
-                {owner} · Evaluation {formatCareDate(evaluationDate)}
-              </small>
-            </span>
-          </div>
+              {resident && (
+                <div className="duty-assignment-summary">
+                  <span>
+                    <strong>{resident.name}</strong>
+                    <small>
+                      {resident.room || "ohne Zimmer"} · {careLevel}
+                    </small>
+                  </span>
+                  <span>
+                    <strong>Start {formatCareDate(startsOn)}</strong>
+                    <small>
+                      {ownerName} · Evaluation {formatCareDate(reviewOn)}
+                    </small>
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+          {error && (
+            <p className="appointment-editor-error" role="alert">
+              {error}
+            </p>
+          )}
           <footer className="area-editor-actions">
-            <button className="secondary-button" type="button" onClick={onClose}>
-              Abbrechen
+            <button className="secondary-button" type="button" onClick={onClose} disabled={saving}>
+              {candidates.length === 0 ? "Schliessen" : "Abbrechen"}
             </button>
-            <button className="primary-button" type="submit">
-              <ModuleIcon name="check" /> Pflegeakte erstellen
-            </button>
+            {candidates.length > 0 && (
+              <button className="primary-button" type="submit" disabled={saving || !resident}>
+                <ModuleIcon name="check" /> {saving ? "Speichern…" : "Pflegeakte erstellen"}
+              </button>
+            )}
           </footer>
         </form>
       </section>
