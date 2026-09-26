@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import { EditorDialog, requestJson, todayInZurich } from "@/app/components/workspace-ui";
 import { INSTRUMENTS, bandFor, instrumentByCode, scoreAnswers } from "@/lib/assessment-instruments";
+import { useCareResident } from "@/app/components/care-context";
 
 const plusDays = (days: number) => {
   const date = new Date(`${todayInZurich()}T12:00:00`);
@@ -24,7 +25,10 @@ export default function AssessmentDialog({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
-  const [residentId, setResidentId] = useState(initialResident ?? residents[0]?.id ?? "");
+  const [contextId] = useCareResident();
+  const [residentId, setResidentId] = useState(
+    initialResident ?? residents.find((r) => r.id === contextId)?.id ?? residents[0]?.id ?? "",
+  );
   const [code, setCode] = useState(
     initialInstrument && instrumentByCode(initialInstrument) ? initialInstrument : INSTRUMENTS[0].code,
   );

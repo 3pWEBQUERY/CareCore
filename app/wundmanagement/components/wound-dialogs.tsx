@@ -14,6 +14,7 @@ import {
   type WoundOrigin,
 } from "@/lib/wounds-shared";
 import EntryFields, { emptyEntry, entryPayload, type EntryDraft } from "./entry-fields";
+import { useCareResident } from "@/app/components/care-context";
 
 export type WoundsPayload = {
   wounds: Wound[];
@@ -41,7 +42,14 @@ export function WoundDialog({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
-  const [residentId, setResidentId] = useState(wound?.residentId ?? initialResidentId ?? data.residents[0]?.id ?? "");
+  const [contextId] = useCareResident();
+  const [residentId, setResidentId] = useState(
+    wound?.residentId ??
+      initialResidentId ??
+      data.residents.find((r) => r.id === contextId)?.id ??
+      data.residents[0]?.id ??
+      "",
+  );
   const [form, setForm] = useState({
     woundType: wound?.woundType ?? "Dekubitus",
     category: wound?.category ?? "Kategorie 1",

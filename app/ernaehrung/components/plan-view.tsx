@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import ResidentList from "@/app/components/resident-list";
 import {
   EmptyState,
   LoadError,
@@ -21,7 +20,8 @@ import {
 } from "@/lib/nutrition-shared";
 import DayPanel from "./day-panel";
 import { PlanDialog } from "./nutrition-dialogs";
-import { useCareResident } from "@/app/components/care-context";
+import { useHeaderResident } from "@/app/components/care-context";
+import HeaderResidentHint from "@/app/components/header-resident-hint";
 
 export type NutritionOverview = {
   date: string;
@@ -38,10 +38,9 @@ export function residentFluidStatus(r: NutritionResident, share: number) {
 
 export default function PlanView({ showToast }: { showToast: ShowToast }) {
   const overview = useApiData<NutritionOverview>("/api/nutrition");
-  const [selectedId, setSelectedId] = useCareResident();
   const [editing, setEditing] = useState(false);
   const residents = overview.data?.residents ?? [];
-  const resident = residents.find((r) => r.id === selectedId) ?? residents[0] ?? null;
+  const { resident, missing } = useHeaderResident(residents, overview.loading);
   const detail = useApiData<ResidentNutrition & { date: string }>(
     resident ? `/api/nutrition/residents/${resident.id}` : null,
   );
@@ -70,37 +69,31 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
         tiles={[
           {
             icon: "nutrition",
-            value: `${residents.filter((r) => r.hasPlan).length}/${residents.length}`,
-            caption: "Bewohner mit Ernährungsplan",
+            value: resident ? (resident.hasPlan ? (resident.diet ?? "Plan vorhanden") : "Kein Plan") : "–",
+            caption: resident?.texture ? `Kostform · ${resident.texture}` : "Kostform",
           },
           {
             icon: "alert",
-            value: residents.filter((r) => ["behind", "over_limit"].includes(residentFluidStatus(r, share))).length,
-            caption: "Trinkmenge unter Soll / über Begrenzung",
-            tone: "critical",
+            value: resident ? formatMl(resident.fluidTotalMl) : "–",
+            caption: resident?.fluidTargetMl
+              ? `getrunken · Ziel ${formatMl(resident.fluidTargetMl)}`
+              : "heute getrunken",
+            tone:
+              resident && ["behind", "over_limit"].includes(residentFluidStatus(resident, share))
+                ? "critical"
+                : undefined,
           },
-          {
-            icon: "check",
-            value: residents.reduce((sum, r) => sum + r.mealsLogged, 0),
-            caption: "Mahlzeiten dokumentiert",
-          },
+          { icon: "check", value: resident?.mealsLogged ?? "–", caption: "Mahlzeiten heute dokumentiert" },
           {
             icon: "note",
-            value: residents.reduce((sum, r) => sum + r.lowMeals, 0),
+            value: resident?.lowMeals ?? "–",
             caption: "Mahlzeiten ≤ 25 % gegessen",
             tone: "attention",
           },
         ]}
       />
       {overview.error && <LoadError message={overview.error} onRetry={overview.reload} />}
-      <div className="medication-two-column">
-        <ResidentList
-          residents={residents}
-          selectedId={resident?.id ?? null}
-          onSelect={setSelectedId}
-          loading={overview.loading}
-          countLabel={(r) => (r.hasPlan ? `${r.diet ?? "Plan"} · ${r.texture ?? ""}` : "Kein Ernährungsplan")}
-        />
+      <div className="medication-two-column header-resident-layout">
         <section className="med-main-column">
           {resident && detail.error && <LoadError message={detail.error} onRetry={detail.reload} />}
           {resident && detail.data && (
@@ -173,9 +166,7 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
             </>
           )}
           {resident && detail.loading && !detail.data && <p className="list-hint">Ernährungsdaten werden geladen …</p>}
-          {!resident && !overview.loading && (
-            <EmptyState icon="residents" title="Keine Bewohner" text="Es sind keine aktiven Bewohner erfasst." />
-          )}
+          {!resident && <HeaderResidentHint loading={overview.loading} missing={missing} />}
         </section>
       </div>
       {editing && resident && (

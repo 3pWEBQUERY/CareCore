@@ -13,6 +13,7 @@ import {
   type VitalResident,
   type VitalStatus,
 } from "@/lib/vitals-shared";
+import { useCareResident } from "@/app/components/care-context";
 
 type Draft = Record<string, { value: string; secondary: string }>;
 const parse = (value: string) => (value.trim() ? Number(value.replace(",", ".")) : null);
@@ -28,7 +29,10 @@ export default function MeasurementDialog({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
-  const [residentId, setResidentId] = useState(initialResidentId ?? residents[0]?.id ?? "");
+  const [contextId] = useCareResident();
+  const [residentId, setResidentId] = useState(
+    initialResidentId ?? residents.find((r) => r.id === contextId)?.id ?? residents[0]?.id ?? "",
+  );
   const [date, setDate] = useState(todayInZurich);
   const [time, setTime] = useState(() => timeInZurich());
   const [draft, setDraft] = useState<Draft>(() =>

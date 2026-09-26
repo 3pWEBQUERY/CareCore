@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
-import ResidentList from "@/app/components/resident-list";
 import {
   EmptyState,
   LoadError,
@@ -17,7 +16,8 @@ import {
 import type { CarePlan, PlanningResident } from "@/lib/care-planning-shared";
 import GoalCard from "./goal-card";
 import { usePlanningDialogs } from "./use-planning-dialogs";
-import { useCareResident } from "@/app/components/care-context";
+import { useCareResident, useHeaderResident } from "@/app/components/care-context";
+import HeaderResidentHint from "@/app/components/header-resident-hint";
 
 export type PlanningOverview = {
   residents: PlanningResident[];
@@ -25,19 +25,12 @@ export type PlanningOverview = {
   canWrite: boolean;
 };
 
-const planLabel = (r: PlanningResident) =>
-  !r.planId
-    ? "Kein Pflegeplan"
-    : r.reviewDue || r.goalsDue
-      ? `Überprüfung fällig · ${r.activeGoals} Ziele`
-      : `${r.activeGoals} aktive Ziel${r.activeGoals === 1 ? "" : "e"}`;
-
 export default function PlanView({ showToast }: { showToast: ShowToast }) {
   // ?resident=<id> (from the goal list or the evaluation) preselects a resident.
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const [selectedId, setSelectedId] = useCareResident();
+  const [, setSelectedId] = useCareResident();
   const linkedResident = params.get("resident");
   useEffect(() => {
     if (linkedResident) setSelectedId(linkedResident);
@@ -50,7 +43,7 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
 
   const overview = useApiData<PlanningOverview>("/api/care-planning");
   const residents = overview.data?.residents ?? [];
-  const resident = residents.find((r) => r.id === selectedId) ?? residents[0] ?? null;
+  const { resident, missing } = useHeaderResident(residents, overview.loading);
   const detail = useApiData<{ plan: CarePlan | null; closedPlans: number }>(
     resident ? `/api/care-planning/residents/${resident.id}` : null,
   );
@@ -67,7 +60,6 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
     residentNameOf: () => resident?.name ?? "",
   });
   const goals = (plan?.goals ?? []).filter((g) => (showClosed ? g.status !== "active" : g.status === "active"));
-  const withPlan = residents.filter((r) => r.planId);
 
   return (
     <>
@@ -86,26 +78,29 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
       <SummaryTiles
         label="Stand der Pflegeplanung"
         tiles={[
-          { icon: "plan", value: `${withPlan.length}/${residents.length}`, caption: "Bewohner mit Pflegeplan" },
-          { icon: "check", value: withPlan.reduce((sum, r) => sum + r.activeGoals, 0), caption: "aktive Pflegeziele" },
+          {
+            icon: "plan",
+            value: resident ? (resident.planId ? "Vorhanden" : "Fehlt") : "–",
+            caption: "Pflegeplan",
+            tone: resident && !resident.planId ? "info" : undefined,
+          },
+          { icon: "check", value: resident?.activeGoals ?? "–", caption: "aktive Pflegeziele" },
           {
             icon: "calendar",
-            value: residents.filter((r) => r.reviewDue || r.goalsDue > 0).length,
+            value: resident ? resident.goalsDue + (resident.reviewDue ? 1 : 0) : "–",
             caption: "Überprüfungen fällig",
             tone: "attention",
           },
-          { icon: "alert", value: residents.length - withPlan.length, caption: "ohne Pflegeplan", tone: "info" },
+          {
+            icon: "alert",
+            value: resident?.ownerName ?? "–",
+            caption: "Bezugspflege",
+            tone: "info",
+          },
         ]}
       />
       {overview.error && <LoadError message={overview.error} onRetry={overview.reload} />}
-      <div className="medication-two-column">
-        <ResidentList
-          residents={residents}
-          selectedId={resident?.id ?? null}
-          onSelect={setSelectedId}
-          loading={overview.loading}
-          countLabel={planLabel}
-        />
+      <div className="medication-two-column header-resident-layout">
         <section className="med-main-column">
           {resident && detail.error && <LoadError message={detail.error} onRetry={detail.reload} />}
           {resident && detail.data && !plan && (
@@ -222,9 +217,7 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
             </>
           )}
           {detail.loading && !detail.data && <p className="list-hint">Pflegeplan wird geladen …</p>}
-          {!resident && !overview.loading && (
-            <EmptyState icon="residents" title="Keine Bewohner" text="Es sind keine aktiven Bewohner erfasst." />
-          )}
+          {!resident && <HeaderResidentHint loading={overview.loading} missing={missing} />}
         </section>
       </div>
       {planning.dialogs}

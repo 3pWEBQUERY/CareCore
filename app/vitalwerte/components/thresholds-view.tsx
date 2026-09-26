@@ -15,6 +15,7 @@ import {
 } from "@/app/components/workspace-ui";
 import { VITAL_METRICS, formatRange, metricByKey, type ThresholdRow, formatDecimal } from "@/lib/vitals-shared";
 import type { VitalsOverview } from "./overview-view";
+import { useCareResident } from "@/app/components/care-context";
 
 type ThresholdPayload = { house: ThresholdRow[]; personal: ThresholdRow[] };
 type Editing = { scope: "organization" | "resident"; row: ThresholdRow | null };
@@ -225,7 +226,10 @@ function ThresholdDialog({
 }) {
   const row = editing.row;
   const [metric, setMetric] = useState(row?.metric ?? VITAL_METRICS[0].key);
-  const [residentId, setResidentId] = useState(row?.residentId ?? residents[0]?.id ?? "");
+  const [contextId] = useCareResident();
+  const [residentId, setResidentId] = useState(
+    row?.residentId ?? residents.find((r) => r.id === contextId)?.id ?? residents[0]?.id ?? "",
+  );
   const show = (value: number | null | undefined) => (value === null || value === undefined ? "" : String(value));
   const [values, setValues] = useState({
     targetLower: show(row?.targetLower),
