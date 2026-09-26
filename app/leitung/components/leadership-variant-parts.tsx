@@ -1,54 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
-import type { BoardItem, LeadershipView } from "./leadership-data";
+import type { SettingKey } from "@/lib/settings-shared";
+import type { ConfigurationData } from "./configuration-view";
+import type { LeadershipView } from "./leadership-data";
 import type { OrganizationData } from "./organization-view";
 
 export type Props = {
   view: LeadershipView;
-  rows: BoardItem[];
-  visibleRows: BoardItem[];
-  selected: BoardItem;
-  query: string;
-  setQuery: Dispatch<SetStateAction<string>>;
-  setSelectedId: Dispatch<SetStateAction<string>>;
-  completed: string[];
-  setCompleted: Dispatch<SetStateAction<string[]>>;
   showToast: (message: string) => void;
-  employeeCreatorOpen?: boolean;
-  onCloseEmployeeCreator?: () => void;
-  organization?: OrganizationData;
-  siteCreatorOpen?: boolean;
-  onCloseSiteCreator?: () => void;
+  employeeCreatorOpen: boolean;
+  onCloseEmployeeCreator: () => void;
+  organization: OrganizationData;
+  siteCreatorOpen: boolean;
+  onCloseSiteCreator: () => void;
+  configuration: ConfigurationData;
+  settingKey: SettingKey;
+  onSelectSetting: (key: SettingKey) => void;
+  settingEditorOpen: boolean;
+  onCloseSettingEditor: () => void;
 };
-
-export function RowButton({
-  row,
-  selected,
-  setSelectedId,
-}: {
-  row: BoardItem;
-  selected: BoardItem;
-  setSelectedId: Props["setSelectedId"];
-}) {
-  return (
-    <button className={selected.id === row.id ? "selected" : ""} type="button" onClick={() => setSelectedId(row.id)}>
-      <span className={`governance-icon ${row.tone}`}>
-        <ModuleIcon name={row.icon} />
-      </span>
-      <span>
-        <strong>{row.title}</strong>
-        <small>{row.detail}</small>
-      </span>
-      <span>
-        <strong>{row.metric}</strong>
-        <small>{row.status}</small>
-      </span>
-      <ModuleIcon name="chevron" className="chevron" />
-    </button>
-  );
-}
 
 export function AreaSelect({
   label,
@@ -122,19 +94,5 @@ export function AreaSelect({
         </div>
       )}
     </div>
-  );
-}
-
-export function SearchField({ title, query, setQuery }: { title: string; query: string; setQuery: Props["setQuery"] }) {
-  return (
-    <label className="resident-search">
-      <ModuleIcon name="search" />
-      <input
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="Suchen…"
-        aria-label={`${title} durchsuchen`}
-      />
-    </label>
   );
 }

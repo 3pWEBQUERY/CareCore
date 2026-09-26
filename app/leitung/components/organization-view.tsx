@@ -12,6 +12,7 @@ import {
   type OrgUnit,
 } from "@/lib/organization-shared";
 import type { Tone } from "./leadership-data";
+import { notifyAdminChanged } from "./admin-board";
 import { LocationEditor } from "./location-editor";
 import { UnitEditor } from "./unit-editor";
 
@@ -250,6 +251,7 @@ export function OrganizationView({
           onSaved={(id) => {
             setSelection({ kind: "unit", id });
             reload();
+            notifyAdminChanged();
           }}
           showToast={showToast}
         />
@@ -262,7 +264,10 @@ export function OrganizationView({
             setSiteEditor(null);
             onCloseSiteCreator();
           }}
-          onSaved={reload}
+          onSaved={() => {
+            reload();
+            notifyAdminChanged();
+          }}
           showToast={showToast}
         />
       )}

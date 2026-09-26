@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useWorkContext } from "@/app/components/care-context";
 import { isTyping } from "@/app/components/keyboard-shortcuts";
 import { requestJson, timeInZurich, todayInZurich } from "@/app/components/workspace-ui";
 import { zurichTimeToIso } from "@/lib/resident-appointments";
@@ -145,13 +146,19 @@ export function useResidentRecord({
     onViewChange?.(activeView);
   }, [activeView, onViewChange]);
   // Alt + arrow up/down or J/K steps to the previous or next resident.
+  const letterKeys = useWorkContext()?.settings.keyboardShortcuts.enabled ?? true;
   useEffect(() => {
     if (!navigation) return;
     const onKey = (event: KeyboardEvent) => {
       const typing = isTyping(event.target);
       const arrows = event.altKey && (event.key === "ArrowUp" || event.key === "ArrowDown");
       const letters =
-        !typing && !event.altKey && !event.metaKey && !event.ctrlKey && ["j", "k"].includes(event.key.toLowerCase());
+        letterKeys &&
+        !typing &&
+        !event.altKey &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        ["j", "k"].includes(event.key.toLowerCase());
       if (!arrows && !letters) return;
       event.preventDefault();
       if (event.key === "ArrowUp" || event.key.toLowerCase() === "k") navigation.onPrevious();
@@ -159,7 +166,7 @@ export function useResidentRecord({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [navigation]);
+  }, [letterKeys, navigation]);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [documentationText, setDocumentationText] = useState("");
   const [documentationDate, setDocumentationDate] = useState(todayInZurich);

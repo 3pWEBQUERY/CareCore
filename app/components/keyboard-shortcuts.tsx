@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Keyboard } from "@phosphor-icons/react";
-import { useCareResident, useResidentNavigation } from "./care-context";
+import { useCareResident, useResidentNavigation, useWorkContext } from "./care-context";
 
 // Keyboard shortcuts of the whole app. They apply when no text field is focused;
 // with a dialog open only J/K (inside the resident record) and "?" are active.
@@ -72,6 +72,8 @@ export function KeyboardShortcutsMenu() {
   const router = useRouter();
   const navigation = useResidentNavigation();
   const [residentId] = useCareResident();
+  // Single-key shortcuts can be switched off in "Leitung · Konfiguration".
+  const enabled = useWorkContext()?.settings.keyboardShortcuts.enabled ?? true;
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const toggle = useCallback(() => setOpen((value) => !value), []);
@@ -86,7 +88,7 @@ export function KeyboardShortcutsMenu() {
         return;
       }
       // Dialogs (e.g. the resident record) handle their own keys.
-      if (document.querySelector('[aria-modal="true"]')) return;
+      if (!enabled || document.querySelector('[aria-modal="true"]')) return;
       const key = event.key.toLowerCase();
       if (key === "j") navigation.next();
       else if (key === "k") navigation.previous();
@@ -98,7 +100,7 @@ export function KeyboardShortcutsMenu() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [navigation, residentId, router, toggle]);
+  }, [enabled, navigation, residentId, router, toggle]);
 
   useEffect(() => {
     if (!open) return;
@@ -126,7 +128,11 @@ export function KeyboardShortcutsMenu() {
         <section className="shortcut-dropdown" role="dialog" aria-label="Tastaturkürzel">
           <header>
             <strong>Tastaturkürzel</strong>
-            <small>Funktionieren überall, solange kein Eingabefeld aktiv ist.</small>
+            <small>
+              {enabled
+                ? "Funktionieren überall, solange kein Eingabefeld aktiv ist."
+                : "Einzeltasten-Kürzel sind in der Konfiguration ausgeschaltet."}
+            </small>
           </header>
           <div className="shortcut-groups">
             {SHORTCUT_GROUPS.map((group) => (

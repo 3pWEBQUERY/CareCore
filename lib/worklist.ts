@@ -2,6 +2,7 @@ import { assertUuid, iso, type ApiContext, type Row } from "@/lib/api-context";
 import { dueAssessments } from "@/lib/assessments";
 import { listRound } from "@/lib/medication-round";
 import { ROUNDS, initials, type RoundKey } from "@/lib/medication-shared";
+import { readSettings } from "@/lib/settings";
 
 // "Mein Dienst": what is due today per resident of a care unit, gathered from the
 // modules (medication, vital signs, wounds, assessments, care plan, documentation, tasks).
@@ -37,7 +38,7 @@ const TONE_WEIGHT = { critical: 0, attention: 1, info: 2 };
 export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | null): Promise<Worklist> {
   const careUnitId = careUnitIdInput ? assertUuid(careUnitIdInput, "Wohnbereich") : null;
   const org = ctx.actor.organizationId;
-  const [residents, vitals, wounds, plans, docs, tasks, rounds, assessments] = await Promise.all([
+  const [residents, vitals, wounds, plans, docs, tasks, rounds, assessments, settings] = await Promise.all([
     ctx.sql`
       SELECT r.id, r.first_name, r.last_name, COALESCE(ro.name, '') AS room, COALESCE(cu.name, '') AS care_unit, cu.id AS care_unit_id
       FROM carecore_residents r
@@ -80,7 +81,12 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
       ORDER BY t.due_at` as Promise<Row[]>,
     Promise.all((Object.keys(ROUNDS) as RoundKey[]).map((round) => listRound(ctx, round, null))),
     dueAssessments(ctx),
+    readSettings(ctx),
   ]);
+  // Reminder thresholds of "Leitung · Konfiguration".
+  const overdueMs = settings.medicationOverdue.enabled ? (settings.medicationOverdue.value ?? 30) * 60_000 : Infinity;
+  const vitalsMs = (settings.vitalsReminder.value ?? 7) * 86_400_000;
+  const docMs = (settings.documentationReminder.value ?? 24) * 3_600_000;
   const now = Date.now();
   const doses = rounds.flatMap((round) => round.doses).filter((dose) => dose.status === "scheduled");
   const by = <T extends { resident_id?: unknown }>(rows: T[], id: string) =>
@@ -92,10 +98,9 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
     const items: WorkItem[] = [];
 
     const own = doses.filter((dose) => dose.residentId === id);
-    const overdue = own.filter((dose) => Date.parse(dose.scheduledAt) < now - 30 * 60_000);
+    const overdue = own.filter((dose) => Date.parse(dose.scheduledAt) < now - overdueMs);
     const soon = own.filter(
-      (dose) =>
-        Date.parse(dose.scheduledAt) >= now - 30 * 60_000 && Date.parse(dose.scheduledAt) <= now + 2 * 3_600_000,
+      (dose) => Date.parse(dose.scheduledAt) >= now - overdueMs && Date.parse(dose.scheduledAt) <= now + 2 * 3_600_000,
     );
     if (overdue.length)
       items.push({
@@ -124,11 +129,13 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
         tone: "critical",
         href: "/c/vitalwerte/entwicklung",
       });
-    else if (!lastVital || now - lastVital > 7 * 86_400_000)
+    else if (settings.vitalsReminder.enabled && (!lastVital || now - lastVital > vitalsMs))
       items.push({
         kind: "vitals",
         label: "Vitalwerte messen",
-        detail: lastVital ? "letzte Messung vor über 7 Tagen" : "noch nie gemessen",
+        detail: lastVital
+          ? `letzte Messung vor über ${settings.vitalsReminder.value} Tag${settings.vitalsReminder.value === 1 ? "" : "en"}`
+          : "noch nie gemessen",
         tone: "info",
         href: "/c/vitalwerte/entwicklung",
       });
@@ -172,11 +179,11 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
 
     const doc = docs.find((item) => item.resident_id === id);
     const lastDoc = doc?.last_at ? Date.parse(iso(doc.last_at) ?? "") : null;
-    if (!lastDoc || now - lastDoc > 24 * 3_600_000)
+    if (settings.documentationReminder.enabled && (!lastDoc || now - lastDoc > docMs))
       items.push({
         kind: "documentation",
         label: "Dokumentation fehlt",
-        detail: lastDoc ? "kein Eintrag seit 24 Stunden" : "noch nie dokumentiert",
+        detail: lastDoc ? `kein Eintrag seit ${settings.documentationReminder.value} Stunden` : "noch nie dokumentiert",
         tone: "attention",
         href: "/c/pflegedokumentation",
       });

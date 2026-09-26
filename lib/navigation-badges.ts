@@ -1,12 +1,16 @@
 import type { ApiContext, Row } from "@/lib/api-context";
 import { listRound } from "@/lib/medication-round";
 import { ROUNDS, type RoundKey } from "@/lib/medication-shared";
+import { readSettings } from "@/lib/settings";
 
 // Counts shown as badges in the sidebar: my open tasks due today, unread handover
-// notes of the last 72 hours and scheduled doses overdue by more than 30 minutes.
+// notes of the last 72 hours and overdue scheduled doses. Switched off in
+// "Leitung · Konfiguration", all counts are zero.
 export type NavigationBadges = { tasks: number; handover: number; medRound: number };
 
 export async function navigationBadges(ctx: ApiContext): Promise<NavigationBadges> {
+  const settings = await readSettings(ctx);
+  if (!settings.navigationBadges.enabled) return { tasks: 0, handover: 0, medRound: 0 };
   const [counts, rounds] = await Promise.all([
     ctx.sql`
       SELECT
@@ -22,7 +26,8 @@ export async function navigationBadges(ctx: ApiContext): Promise<NavigationBadge
     >,
     Promise.all((Object.keys(ROUNDS) as RoundKey[]).map((round) => listRound(ctx, round, null))),
   ]);
-  const limit = Date.now() - 30 * 60_000;
+  const overdue = settings.medicationOverdue;
+  const limit = overdue.enabled ? Date.now() - (overdue.value ?? 30) * 60_000 : -Infinity;
   return {
     tasks: Number(counts[0]?.tasks ?? 0),
     handover: Number(counts[0]?.handover ?? 0),
