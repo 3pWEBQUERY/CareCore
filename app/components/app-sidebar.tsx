@@ -247,7 +247,7 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
             }}
           >
             <RailIcon name="home" />
-            <SidebarTooltip label="Startseite" />
+            <SidebarTooltip label="Startseite · Taste H" />
           </button>
           {visibleQuickLinks.map((link) => {
             const count = badgeCount(link.badge);
@@ -261,7 +261,7 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
               >
                 <RailIcon name={link.icon} />
                 {count > 0 && <span className="sidebar-rail-badge">{count > 99 ? "99+" : count}</span>}
-                <SidebarTooltip label={count ? `${link.label} · ${count}` : link.label} />
+                <SidebarTooltip label={`${link.label}${count ? ` · ${count}` : ""} · Taste ${link.shortcut}`} />
               </button>
             );
           })}

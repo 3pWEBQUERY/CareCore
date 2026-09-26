@@ -253,14 +253,36 @@ export type QuickLink = {
   label: string;
   icon: ModuleIconName;
   badge?: "tasks" | "handover" | "medRound";
+  shortcut: string;
 };
 
 export const quickLinks: QuickLink[] = [
-  { moduleId: "shift", child: "Mein Dienst", label: "Mein Dienst", icon: "shift" },
-  { moduleId: "handover", child: "Meine Übergabe", label: "Übergabe", icon: "handover", badge: "handover" },
-  { moduleId: "tasks", child: "Meine Aufgaben", label: "Meine Aufgaben", icon: "tasks", badge: "tasks" },
-  { moduleId: "chart", child: "Schnelldokumentation", label: "Dokumentieren", icon: "note" },
-  { moduleId: "med", child: "Medikamentenrunde", label: "Medikamentenrunde", icon: "med", badge: "medRound" },
+  { moduleId: "shift", child: "Mein Dienst", label: "Mein Dienst", icon: "shift", shortcut: "S" },
+  {
+    moduleId: "handover",
+    child: "Meine Übergabe",
+    label: "Übergabe",
+    icon: "handover",
+    badge: "handover",
+    shortcut: "Ü",
+  },
+  {
+    moduleId: "tasks",
+    child: "Meine Aufgaben",
+    label: "Meine Aufgaben",
+    icon: "tasks",
+    badge: "tasks",
+    shortcut: "A",
+  },
+  { moduleId: "chart", child: "Schnelldokumentation", label: "Dokumentieren", icon: "note", shortcut: "D" },
+  {
+    moduleId: "med",
+    child: "Medikamentenrunde",
+    label: "Medikamentenrunde",
+    icon: "med",
+    badge: "medRound",
+    shortcut: "R",
+  },
 ];
 
 // Badge per module child (flyout links) derived from the quick links.
