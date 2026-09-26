@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { requestJson, timeInZurich, todayInZurich } from "@/app/components/workspace-ui";
+import { zurichTimeToIso } from "@/lib/resident-appointments";
+import type { Importance } from "@/lib/documentation-shared";
 import {
   ResidentRecordProps,
   RecordView,
   DocumentationFlag,
   HistoryFilter,
   DocumentationEntry,
-  careDomains,
-  historyEntries,
-  residentDocuments,
-  getDocumentationEntries,
 } from "./resident-record-data";
+import { useRecordLive } from "./use-record-live";
 import { useRecordBody } from "./use-record-body";
 import { useRecordContacts } from "./use-record-contacts";
 import { useRecordBiography } from "./use-record-biography";
@@ -134,26 +134,39 @@ export function useResidentRecord({
     uploadResidentPhoto,
   } = useRecordMasterData({ resident, setBodyError, onGenderChanged, onAction, onPhotoChanged, residentPhotoInputRef });
   const contentRef = useRef<HTMLElement>(null);
-  const entries = getDocumentationEntries(resident);
+  const live = useRecordLive(resident);
+  const { entries, docEntries, careDomains, historyEntries } = live;
   const [activeView, setActiveView] = useState<RecordView>("overview");
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [documentationText, setDocumentationText] = useState("");
-  const [documentationDate, setDocumentationDate] = useState("2026-09-09");
-  const [documentationCategory, setDocumentationCategory] = useState("Pflegebeobachtung");
+  const [documentationDate, setDocumentationDate] = useState(todayInZurich);
+  const [documentationTime, setDocumentationTime] = useState(timeInZurich);
+  const [documentationCategory, setDocumentationCategory] = useState("Pflege");
   const [documentationFlags, setDocumentationFlags] = useState<DocumentationFlag[]>([]);
-  const [activeCareDomainId, setActiveCareDomainId] = useState("mobility");
+  const [documentationGoals, setDocumentationGoals] = useState<string[]>([]);
+  const [documentationSaving, setDocumentationSaving] = useState(false);
+  const [documentationError, setDocumentationError] = useState("");
+  const [amendingEntryId, setAmendingEntryId] = useState<string | null>(null);
+  const [activeCareDomainId, setActiveCareDomainId] = useState<string | null>(null);
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("Alle");
   const [documentSearch, setDocumentSearch] = useState("");
   const [documentCategory, setDocumentCategory] = useState("Alle");
+  const [uploadOpen, setUploadOpen] = useState(false);
   const selectedEntry = entries.find((entry) => entry.id === selectedEntryId) ?? null;
-  const activeCareDomain = careDomains.find((domain) => domain.id === activeCareDomainId) ?? careDomains[0];
+  const selectedDocEntry = docEntries.find((entry) => entry.id === selectedEntryId) ?? null;
+  const amendingEntry = docEntries.find((entry) => entry.id === amendingEntryId) ?? null;
+  const activeCareDomain = careDomains.find((domain) => domain.id === activeCareDomainId) ?? careDomains[0] ?? null;
   const visibleHistoryEntries = historyEntries.filter(
     (entry) => historyFilter === "Alle" || entry.category === historyFilter,
   );
-  const visibleDocuments = residentDocuments.filter((document) => {
+  const residentFiles = live.files.data?.documents ?? [];
+  const visibleDocuments = residentFiles.filter((document) => {
     const query = documentSearch.trim().toLocaleLowerCase("de-CH");
     const queryStem = query.endsWith("e") ? query.slice(0, -1) : query;
-    const searchableText = `${document.title} ${document.category} ${document.owner}`.toLocaleLowerCase("de-CH");
+    const searchableText =
+      `${document.title} ${document.category} ${document.uploadedBy ?? ""} ${document.description ?? ""}`.toLocaleLowerCase(
+        "de-CH",
+      );
     return (
       (documentCategory === "Alle" || document.category === documentCategory) &&
       (!query || searchableText.includes(query) || searchableText.includes(queryStem))
@@ -173,26 +186,38 @@ export function useResidentRecord({
     contentRef.current?.scrollTo({ top: 0, behavior: "auto" });
   }, [activeView, selectedEntryId]);
 
+  // Opening an existing entry shows it read-only; corrections are saved as a Nachtrag.
   function openDocumentation(entry?: DocumentationEntry) {
+    const source = entry ? docEntries.find((item) => item.id === entry.id) : null;
     setSelectedEntryId(entry?.id ?? null);
     setDocumentationText(entry?.text ?? "");
-    setDocumentationDate("2026-09-09");
-    setDocumentationCategory(entry?.category ?? "Pflegebeobachtung");
+    setDocumentationDate(source ? source.occurredAt.slice(0, 10) : todayInZurich());
+    setDocumentationTime(source ? timeInZurich(new Date(source.occurredAt)) : timeInZurich());
+    setDocumentationCategory(entry?.category ?? "Pflege");
     setDocumentationFlags(
-      entry?.id === "observation"
-        ? ["important", "observation"]
-        : entry?.id === "vitals"
+      source?.importance === "critical"
+        ? ["important"]
+        : source?.importance === "visit"
           ? ["visit"]
-          : entry?.id === "handover"
-            ? ["handover"]
-            : [],
+          : source?.importance === "observation"
+            ? ["observation"]
+            : source?.importance === "important"
+              ? ["handover"]
+              : [],
     );
+    setDocumentationGoals([]);
+    setDocumentationError("");
     setActiveView("documentation");
   }
 
+  // One marking per entry: it becomes the entry's importance in handover, visit and shift overview.
   function toggleDocumentationFlag(flag: DocumentationFlag) {
-    setDocumentationFlags((current) =>
-      current.includes(flag) ? current.filter((item) => item !== flag) : [...current, flag],
+    setDocumentationFlags((current) => (current.includes(flag) ? [] : [flag]));
+  }
+
+  function toggleDocumentationGoal(category: string) {
+    setDocumentationGoals((current) =>
+      current.includes(category) ? current.filter((item) => item !== category) : [...current, category],
     );
   }
 
@@ -208,11 +233,58 @@ export function useResidentRecord({
     else if (tab === "Biografie") setActiveView("biography");
   }
 
-  function saveDocumentation(event: FormEvent<HTMLFormElement>) {
+  async function saveDocumentation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onAction(selectedEntry ? "Dokumentation aktualisiert" : "Dokumentation gespeichert");
+    if (selectedDocEntry) {
+      setAmendingEntryId(selectedDocEntry.id);
+      return;
+    }
+    const flag = documentationFlags[0];
+    const importance: Importance =
+      flag === "important" ? "critical" : flag === "handover" ? "important" : (flag ?? "standard");
+    setDocumentationSaving(true);
+    setDocumentationError("");
+    try {
+      await requestJson("/api/documentation", {
+        method: "POST",
+        body: {
+          residentId: resident.id,
+          category: documentationCategory,
+          importance,
+          body: documentationGoals.length
+            ? `${documentationText.trim()}\n\nBezug Pflegeplanung: ${documentationGoals.join(", ")}`
+            : documentationText,
+          occurredAt: zurichTimeToIso(documentationDate, documentationTime),
+        },
+      });
+      live.reloadDocumentation();
+      onAction("Dokumentation gespeichert");
+      setDocumentationText("");
+      setDocumentationFlags([]);
+      setDocumentationGoals([]);
+      setDocumentationTime(timeInZurich());
+    } catch (error) {
+      setDocumentationError(error instanceof Error ? error.message : "Dokumentation konnte nicht gespeichert werden.");
+    } finally {
+      setDocumentationSaving(false);
+    }
   }
   return {
+    historyEntries,
+    live,
+    latestAssessments: live.latestAssessments,
+    documentationTime,
+    setDocumentationTime,
+    documentationGoals,
+    toggleDocumentationGoal,
+    documentationSaving,
+    documentationError,
+    amendingEntry,
+    setAmendingEntryId,
+    selectedDocEntry,
+    uploadOpen,
+    setUploadOpen,
+    careDomains,
     resident,
     onClose,
     onAction,

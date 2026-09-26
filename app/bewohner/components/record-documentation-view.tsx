@@ -2,6 +2,9 @@
 
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import { ArrowsLeftRight, Check, Pulse, Stethoscope, Warning } from "@phosphor-icons/react";
+import { useWorkContext } from "@/app/components/care-context";
+import { DOC_CATEGORIES } from "@/lib/documentation-shared";
+import { AmendDialog } from "@/app/pflegedokumentation/components/entry-parts";
 import type { ResidentRecordState } from "./use-resident-record";
 
 export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
@@ -22,14 +25,33 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
     openDocumentation,
     toggleDocumentationFlag,
     saveDocumentation,
+    documentationTime,
+    setDocumentationTime,
+    documentationGoals,
+    toggleDocumentationGoal,
+    documentationSaving,
+    documentationError,
+    amendingEntry,
+    setAmendingEntryId,
+    selectedDocEntry,
+    careDomains,
+    live,
+    onAction,
   } = r;
+  const profile = useWorkContext()?.profile;
+  const readOnly = Boolean(selectedDocEntry);
+  const canWrite = live.documentation.data?.canWrite ?? false;
   return (
     <main className="resident-record-content record-documentation-view" ref={contentRef} key="documentation">
       <div className="documentation-page-heading">
         <div>
           <span className="record-section-label">Dokumentation</span>
           <h3>{selectedEntry ? selectedEntry.title : "Neuer Pflegeeintrag"}</h3>
-          <p>Die Erfassung bleibt vollständig innerhalb der geöffneten Bewohnerakte.</p>
+          <p>
+            {readOnly
+              ? `Erfasst ${selectedEntry?.time} von ${selectedEntry?.author}. Einträge bleiben unverändert; Korrekturen werden als Nachtrag gespeichert.`
+              : "Die Erfassung bleibt vollständig innerhalb der geöffneten Bewohnerakte."}
+          </p>
         </div>
         <button type="button" onClick={() => setActiveView("overview")}>
           <span aria-hidden="true">←</span> Zur Übersicht
@@ -41,30 +63,57 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
           <div className="documentation-form-grid">
             <label>
               <span>Datum</span>
-              <CareDatePicker label="Datum" value={documentationDate} onChange={setDocumentationDate} />
+              {readOnly ? (
+                <input value={documentationDate.split("-").reverse().join(".")} readOnly />
+              ) : (
+                <CareDatePicker label="Datum" value={documentationDate} onChange={setDocumentationDate} />
+              )}
             </label>
             <label>
               <span>Uhrzeit</span>
-              <input type="time" defaultValue={selectedEntry?.time ?? "08:15"} />
-            </label>
-            <label>
-              <span>Kategorie</span>
-              <CareSelect
-                label="Kategorie"
-                value={documentationCategory}
-                options={["Pflegebeobachtung", "Vitalwerte", "Medikation", "Mobilität", "Ernährung", "Übergabe"]}
-                onChange={setDocumentationCategory}
+              <input
+                type="time"
+                required
+                value={documentationTime}
+                readOnly={readOnly}
+                onChange={(event) => setDocumentationTime(event.target.value)}
               />
             </label>
             <label>
+              <span>Kategorie</span>
+              {readOnly ? (
+                <input value={documentationCategory} readOnly />
+              ) : (
+                <CareSelect
+                  label="Kategorie"
+                  value={documentationCategory}
+                  options={[...DOC_CATEGORIES]}
+                  onChange={setDocumentationCategory}
+                />
+              )}
+            </label>
+            <label>
               <span>Dokumentiert von</span>
-              <input type="text" value="Anna Meier · Pflegefachfrau HF" readOnly />
+              <input
+                type="text"
+                value={
+                  readOnly
+                    ? (selectedEntry?.author ?? "Unbekannt")
+                    : profile
+                      ? [profile.displayName, profile.jobTitle].filter(Boolean).join(" · ")
+                      : "…"
+                }
+                readOnly
+              />
             </label>
           </div>
 
           <label className="documentation-text-field">
             <span>Pflegeeintrag</span>
             <textarea
+              required
+              minLength={3}
+              readOnly={readOnly}
               value={documentationText}
               onChange={(event) => setDocumentationText(event.target.value)}
               placeholder="Beobachtung, Massnahme und Wirkung dokumentieren …"
@@ -73,11 +122,12 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
 
           <fieldset className="documentation-flags">
             <legend>Kennzeichnung &amp; Weitergabe</legend>
-            <p>Markierungen machen den Eintrag in Übergabe, Visite und Schichtübersicht sichtbar.</p>
+            <p>Eine Markierung pro Eintrag macht ihn in Übergabe, Visite und Schichtübersicht sichtbar.</p>
             <div>
               <button
                 className={documentationFlags.includes("important") ? "active important" : ""}
                 type="button"
+                disabled={readOnly}
                 role="checkbox"
                 aria-checked={documentationFlags.includes("important")}
                 onClick={() => toggleDocumentationFlag("important")}
@@ -85,7 +135,7 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
                 <Warning aria-hidden="true" />
                 <span>
                   <strong>Wichtig</strong>
-                  <small>Mit erhöhter Priorität anzeigen</small>
+                  <small>Als kritisch mit höchster Priorität anzeigen</small>
                 </span>
                 <i aria-hidden="true">
                   <Check />
@@ -94,6 +144,7 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
               <button
                 className={documentationFlags.includes("visit") ? "active visit" : ""}
                 type="button"
+                disabled={readOnly}
                 role="checkbox"
                 aria-checked={documentationFlags.includes("visit")}
                 onClick={() => toggleDocumentationFlag("visit")}
@@ -110,6 +161,7 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
               <button
                 className={documentationFlags.includes("observation") ? "active observation" : ""}
                 type="button"
+                disabled={readOnly}
                 role="checkbox"
                 aria-checked={documentationFlags.includes("observation")}
                 onClick={() => toggleDocumentationFlag("observation")}
@@ -126,6 +178,7 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
               <button
                 className={documentationFlags.includes("handover") ? "active handover" : ""}
                 type="button"
+                disabled={readOnly}
                 role="checkbox"
                 aria-checked={documentationFlags.includes("handover")}
                 onClick={() => toggleDocumentationFlag("handover")}
@@ -142,18 +195,24 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
             </div>
           </fieldset>
 
-          <fieldset className="documentation-tags">
-            <legend>Bezug zur Pflegeplanung</legend>
-            <div>
-              <button className="active" type="button">
-                Mobilität
-              </button>
-              <button type="button">Schmerz</button>
-              <button type="button">Medikation</button>
-              <button type="button">Ernährung</button>
-              <button type="button">Psychosozial</button>
-            </div>
-          </fieldset>
+          {!readOnly && careDomains.length > 0 && (
+            <fieldset className="documentation-tags">
+              <legend>Bezug zur Pflegeplanung</legend>
+              <div>
+                {careDomains.map((domain) => (
+                  <button
+                    className={documentationGoals.includes(domain.label) ? "active" : ""}
+                    type="button"
+                    key={domain.id}
+                    aria-pressed={documentationGoals.includes(domain.label)}
+                    onClick={() => toggleDocumentationGoal(domain.label)}
+                  >
+                    {domain.label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          )}
 
           <div className="documentation-quality-note">
             <Check aria-hidden="true" />
@@ -163,13 +222,25 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
             </span>
           </div>
 
+          {documentationError && (
+            <p className="appointment-editor-error" role="alert">
+              {documentationError}
+            </p>
+          )}
           <footer className="documentation-form-actions">
-            <button className="secondary-button" type="button" onClick={() => setActiveView("overview")}>
-              Abbrechen
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => (readOnly ? openDocumentation() : setActiveView("overview"))}
+            >
+              {readOnly ? "Neuer Eintrag" : "Abbrechen"}
             </button>
-            <button className="primary-button" type="submit">
-              <Check aria-hidden="true" /> {selectedEntry ? "Änderungen speichern" : "Dokumentation speichern"}
-            </button>
+            {canWrite && (
+              <button className="primary-button" type="submit" disabled={documentationSaving}>
+                <Check aria-hidden="true" />{" "}
+                {readOnly ? "Nachtrag erfassen" : documentationSaving ? "Speichern…" : "Dokumentation speichern"}
+              </button>
+            )}
           </footer>
         </form>
 
@@ -204,7 +275,7 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
           <section className="record-card documentation-recent">
             <div className="record-card-heading">
               <div>
-                <span className="record-section-label">Heute</span>
+                <span className="record-section-label">Letzte 30 Tage</span>
                 <h3>Dokumentationspunkte</h3>
               </div>
             </div>
@@ -224,9 +295,24 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
                 </button>
               ))}
             </div>
+            {!live.documentation.loading && entries.length === 0 && (
+              <p className="body-observation-empty">Noch keine Einträge.</p>
+            )}
           </section>
         </aside>
       </div>
+      {amendingEntry && (
+        <AmendDialog
+          entry={amendingEntry}
+          onClose={() => setAmendingEntryId(null)}
+          onSaved={(message) => {
+            setAmendingEntryId(null);
+            live.reloadDocumentation();
+            openDocumentation();
+            onAction(message);
+          }}
+        />
+      )}
     </main>
   );
 }

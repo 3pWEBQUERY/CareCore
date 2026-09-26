@@ -1,7 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { CalendarDots, Check, ClipboardText, PencilSimple, Plus, Trash, User } from "@phosphor-icons/react";
+import { formatDate, formatDateTime, requestJson } from "@/app/components/workspace-ui";
+import { LANGUAGES, MARITAL_STATUSES, type MasterData, type RecordSummary } from "@/lib/resident-record-shared";
 import type { ResidentRecordState } from "./use-resident-record";
+
+const GENDERS: Record<string, string> = {
+  female: "Weiblich",
+  male: "Männlich",
+  diverse: "Divers",
+  unspecified: "Keine Angabe",
+};
 
 export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
   const {
@@ -9,19 +19,53 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
     contentRef,
     masterDataEditing,
     setMasterDataEditing,
-    residentGender,
-    genderDraft,
-    setGenderDraft,
-    masterDataSaving,
     contacts,
     contactsLoading,
     contactsError,
-    firstName,
-    lastName,
-    saveGender,
     openContactEditor,
     deleteContact,
+    live,
+    onAction,
+    onGenderChanged,
+    setResidentGender,
   } = r;
+  const summary = live.summary.data;
+  const [draft, setDraft] = useState<MasterData | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const values: Partial<MasterData> = (masterDataEditing ? draft : summary?.master) ?? {};
+  const editable = masterDataEditing && Boolean(draft);
+  const set = <K extends keyof MasterData>(key: K, value: MasterData[K]) =>
+    setDraft((current) => (current ? { ...current, [key]: value } : current));
+  const field = (key: keyof MasterData) => ({
+    value: (values[key] as string | null | undefined) ?? "",
+    readOnly: !editable,
+    onChange: (event: { target: { value: string } }) => set(key, event.target.value as never),
+  });
+  const canWrite = summary?.canWrite ?? false;
+
+  async function save() {
+    if (!draft || !resident.id) return;
+    setSaving(true);
+    setError("");
+    try {
+      const next = await requestJson<RecordSummary>(`/api/residents/${resident.id}/record`, {
+        method: "PATCH",
+        body: draft,
+      });
+      live.summary.reload();
+      live.care.reload();
+      setResidentGender(next.master.gender);
+      onGenderChanged?.(resident.id, next.master.gender);
+      setMasterDataEditing(false);
+      onAction("Stammdaten gespeichert");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Stammdaten konnten nicht gespeichert werden.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <main className="resident-record-content record-master-data-view" ref={contentRef} key="master-data">
       <div className="master-data-page-heading">
@@ -36,32 +80,43 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
               className="secondary-button"
               type="button"
               onClick={() => {
-                setGenderDraft(residentGender);
+                setDraft(null);
+                setError("");
                 setMasterDataEditing(false);
               }}
             >
               Abbrechen
             </button>
           )}
-          <button
-            className="primary-button"
-            type="button"
-            disabled={masterDataSaving}
-            onClick={() => {
-              if (masterDataEditing) void saveGender();
-              else setMasterDataEditing(true);
-            }}
-          >
-            {masterDataEditing ? (
-              <>
-                <Check aria-hidden="true" /> {masterDataSaving ? "Speichern…" : "Geschlecht speichern"}
-              </>
-            ) : (
-              "Stammdaten bearbeiten"
-            )}
-          </button>
+          {canWrite && (
+            <button
+              className="primary-button"
+              type="button"
+              disabled={saving || !summary}
+              onClick={() => {
+                if (masterDataEditing) void save();
+                else if (summary) {
+                  setDraft(summary.master);
+                  setMasterDataEditing(true);
+                }
+              }}
+            >
+              {masterDataEditing ? (
+                <>
+                  <Check aria-hidden="true" /> {saving ? "Speichern…" : "Stammdaten speichern"}
+                </>
+              ) : (
+                "Stammdaten bearbeiten"
+              )}
+            </button>
+          )}
         </div>
       </div>
+      {error && (
+        <p className="appointment-editor-error" role="alert">
+          {error}
+        </p>
+      )}
 
       <section className="master-data-status" aria-label="Status der Stammdaten">
         <div>
@@ -70,7 +125,9 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
           </span>
           <p>
             <small>Aktenstatus</small>
-            <strong>Vollständig</strong>
+            <strong title={summary?.missing.join(", ")}>
+              {!summary ? "–" : summary.missing.length ? `Es fehlen: ${summary.missing.join(", ")}` : "Vollständig"}
+            </strong>
           </p>
         </div>
         <div>
@@ -79,7 +136,7 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
           </span>
           <p>
             <small>Bewohnernummer</small>
-            <strong>CC-2024-0207</strong>
+            <strong>{summary?.master.externalNumber ?? "Nicht vergeben"}</strong>
           </p>
         </div>
         <div>
@@ -88,7 +145,7 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
           </span>
           <p>
             <small>Eintritt</small>
-            <strong>12. Februar 2024</strong>
+            <strong>{summary?.master.admittedOn ? formatDate(summary.master.admittedOn) : "Nicht erfasst"}</strong>
           </p>
         </div>
         <div>
@@ -97,7 +154,11 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
           </span>
           <p>
             <small>Letzte Prüfung</small>
-            <strong>Heute, 08:05</strong>
+            <strong>
+              {summary?.checkedAt
+                ? `${formatDateTime(summary.checkedAt)}${summary.checkedBy ? ` · ${summary.checkedBy}` : ""}`
+                : "Noch nicht geprüft"}
+            </strong>
           </p>
         </div>
       </section>
@@ -114,54 +175,64 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
             <div className="master-data-form-grid">
               <label>
                 <span>Vorname</span>
-                <input defaultValue={firstName} readOnly={!masterDataEditing} />
+                <input required {...field("firstName")} />
               </label>
               <label>
                 <span>Nachname</span>
-                <input defaultValue={lastName} readOnly={!masterDataEditing} />
+                <input required {...field("lastName")} />
               </label>
               <label>
                 <span>Geburtsdatum</span>
-                <input type="date" defaultValue="1940-06-14" readOnly={!masterDataEditing} />
+                <input type="date" {...field("dateOfBirth")} />
               </label>
               <label>
                 <span>Geschlecht</span>
                 <select
-                  value={genderDraft}
-                  onChange={(event) => setGenderDraft(event.target.value)}
-                  disabled={!masterDataEditing}
+                  value={values.gender ?? "unspecified"}
+                  onChange={(event) => set("gender", event.target.value)}
+                  disabled={!editable}
                 >
-                  <option value="female">Weiblich</option>
-                  <option value="male">Männlich</option>
-                  <option value="diverse">Divers</option>
-                  <option value="unspecified">Keine Angabe</option>
+                  {Object.entries(GENDERS).map(([value, label]) => (
+                    <option value={value} key={value}>
+                      {label}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label>
                 <span>Zivilstand</span>
-                <select defaultValue="Verwitwet" disabled={!masterDataEditing}>
-                  <option>Ledig</option>
-                  <option>Verheiratet</option>
-                  <option>Verwitwet</option>
-                  <option>Geschieden</option>
+                <select
+                  value={values.maritalStatus ?? ""}
+                  onChange={(event) => set("maritalStatus", event.target.value || null)}
+                  disabled={!editable}
+                >
+                  <option value="">Nicht erfasst</option>
+                  {MARITAL_STATUSES.map((status) => (
+                    <option key={status}>{status}</option>
+                  ))}
                 </select>
               </label>
               <label>
                 <span>Bevorzugte Sprache</span>
-                <select defaultValue="Deutsch" disabled={!masterDataEditing}>
-                  <option>Deutsch</option>
-                  <option>Französisch</option>
-                  <option>Italienisch</option>
-                  <option>Englisch</option>
+                <select
+                  value={values.language ?? "de-CH"}
+                  onChange={(event) => set("language", event.target.value)}
+                  disabled={!editable}
+                >
+                  {Object.entries(LANGUAGES).map(([value, label]) => (
+                    <option value={value} key={value}>
+                      {label}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label>
                 <span>AHV-Nummer</span>
-                <input defaultValue="756.1234.5678.97" readOnly={!masterDataEditing} />
+                <input placeholder="756.XXXX.XXXX.XX" {...field("socialSecurityNumber")} />
               </label>
               <label>
                 <span>Konfession</span>
-                <input defaultValue="Reformiert" readOnly={!masterDataEditing} />
+                <input {...field("religion")} />
               </label>
             </div>
           </section>
@@ -176,27 +247,42 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
             <div className="master-data-form-grid">
               <label>
                 <span>Wohnbereich</span>
-                <input defaultValue={resident.unit} readOnly={!masterDataEditing} />
+                <input value={resident.unit} readOnly title="Wird über Verlegung im Bewohnerverlauf geändert" />
               </label>
               <label>
                 <span>Zimmer</span>
-                <input defaultValue={resident.room} readOnly={!masterDataEditing} />
+                <input value={resident.room} readOnly title="Wird über Verlegung im Bewohnerverlauf geändert" />
               </label>
               <label>
                 <span>Pflegebedarf</span>
-                <input defaultValue={resident.careLevel} readOnly={!masterDataEditing} />
+                <input
+                  value={summary?.careLevel ?? resident.careLevel}
+                  readOnly
+                  title="Wird in der Pflegeplanung gepflegt"
+                />
               </label>
               <label>
                 <span>Bezugspflege</span>
-                <input defaultValue="Anna Meier" readOnly={!masterDataEditing} />
+                <select
+                  value={values.primaryNurseId ?? ""}
+                  onChange={(event) => set("primaryNurseId", event.target.value || null)}
+                  disabled={!editable}
+                >
+                  <option value="">Nicht festgelegt</option>
+                  {(summary?.staff ?? []).map((person) => (
+                    <option value={person.id} key={person.id}>
+                      {person.name}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
                 <span>Eintrittsdatum</span>
-                <input type="date" defaultValue="2024-02-12" readOnly={!masterDataEditing} />
+                <input type="date" {...field("admittedOn")} />
               </label>
               <label>
                 <span>Eintrittsgrund</span>
-                <input defaultValue="Langzeitpflege" readOnly={!masterDataEditing} />
+                <input placeholder="z. B. Langzeitpflege" {...field("admissionReason")} />
               </label>
             </div>
           </section>
@@ -213,15 +299,15 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
             <div className="master-data-form-grid single-column">
               <label>
                 <span>Hausarzt</span>
-                <input defaultValue="Dr. med. Martin Weber" readOnly={!masterDataEditing} />
+                <input {...field("gpName")} />
               </label>
               <label>
                 <span>Hausarztpraxis</span>
-                <input defaultValue="Praxis am Stadtpark, Zürich" readOnly={!masterDataEditing} />
+                <input {...field("gpPractice")} />
               </label>
               <label>
                 <span>Stammapotheke</span>
-                <input defaultValue="Apotheke Sonnengarten" readOnly={!masterDataEditing} />
+                <input {...field("pharmacy")} />
               </label>
             </div>
           </section>
@@ -319,11 +405,11 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
             <div className="master-data-form-grid single-column">
               <label>
                 <span>Krankenversicherung</span>
-                <input defaultValue="CSS Versicherung" readOnly={!masterDataEditing} />
+                <input {...field("insurer")} />
               </label>
               <label>
                 <span>Versichertennummer</span>
-                <input defaultValue="80756012345678901234" readOnly={!masterDataEditing} />
+                <input {...field("insuranceNumber")} />
               </label>
             </div>
           </section>
