@@ -1,0 +1,96 @@
+/* Resident record: care process as a stage bar (admission → evaluation). */
+.care-process {
+  margin-bottom: 18px;
+  padding: 14px 16px 16px;
+}
+.care-process-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.care-process-head small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+.care-process-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.care-process-step {
+  width: 100%;
+  min-height: 52px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 7px 22px 7px 26px;
+  border: 0;
+  color: #475569;
+  background: #e9eef5;
+  text-align: center;
+  cursor: pointer;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 14px 50%);
+  transition: filter 140ms ease;
+}
+.care-process-steps li:first-child .care-process-step {
+  padding-left: 16px;
+  border-radius: 8px 0 0 8px;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
+}
+.care-process-steps li:last-child .care-process-step {
+  padding-right: 16px;
+  border-radius: 0 8px 8px 0;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 14px 50%);
+}
+.care-process-steps li + li {
+  margin-left: -8px;
+}
+.care-process-step:hover {
+  filter: brightness(0.96);
+}
+.care-process-step strong {
+  font-size: 12px;
+  font-weight: 760;
+}
+.care-process-step small {
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+.care-process-step.done {
+  color: #14532d;
+  background: #bdebd9;
+}
+.care-process-step.current {
+  color: white;
+  background: var(--brand);
+}
+.care-process-step.attention {
+  color: #7c4a03;
+  background: #fde7b0;
+}
+@media (max-width: 760px) {
+  .care-process-steps {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+  .care-process-steps li + li {
+    margin-left: 0;
+  }
+  .care-process-step,
+  .care-process-steps li:first-child .care-process-step,
+  .care-process-steps li:last-child .care-process-step {
+    padding: 8px 12px;
+    border-radius: 8px;
+    text-align: left;
+    clip-path: none;
+  }
+}
