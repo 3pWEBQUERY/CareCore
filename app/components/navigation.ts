@@ -245,3 +245,56 @@ export function navigationFor(permissions?: string[] | null): NavGroup[] {
     }))
     .filter((group) => group.modules.length);
 }
+
+// Most used functions of a shift: one click from the sidebar, with live counts.
+export type QuickLink = {
+  moduleId: string;
+  child: string;
+  label: string;
+  icon: ModuleIconName;
+  badge?: "tasks" | "handover" | "medRound";
+};
+
+export const quickLinks: QuickLink[] = [
+  { moduleId: "shift", child: "Mein Dienst", label: "Mein Dienst", icon: "shift" },
+  { moduleId: "handover", child: "Meine Übergabe", label: "Übergabe", icon: "handover", badge: "handover" },
+  { moduleId: "tasks", child: "Meine Aufgaben", label: "Meine Aufgaben", icon: "tasks", badge: "tasks" },
+  { moduleId: "chart", child: "Schnelldokumentation", label: "Dokumentieren", icon: "note" },
+  { moduleId: "med", child: "Medikamentenrunde", label: "Medikamentenrunde", icon: "med", badge: "medRound" },
+];
+
+// Badge per module child (flyout links) derived from the quick links.
+export const badgeFor = (moduleId: string, child: string) =>
+  quickLinks.find((link) => link.moduleId === moduleId && link.child === child)?.badge;
+
+// Recently used pages of this browser, most recent first.
+const RECENT_KEY = "carecore.recent-pages";
+export type RecentPage = { moduleId: string; child: string };
+
+export function readRecentPages(): RecentPage[] {
+  try {
+    const value = JSON.parse(window.localStorage.getItem(RECENT_KEY) ?? "[]");
+    return Array.isArray(value) ? (value as RecentPage[]).filter((item) => routeFor(item.moduleId, item.child)) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function rememberPage(moduleId: string, child: string) {
+  if (!routeFor(moduleId, child)) return;
+  try {
+    const next = [
+      { moduleId, child },
+      ...readRecentPages().filter((item) => item.moduleId !== moduleId || item.child !== child),
+    ].slice(0, 6);
+    window.localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  } catch {
+    // Without storage there is simply no history.
+  }
+}
+
+export function moduleLabel(moduleId: string, child: string) {
+  const entry = navigation.flatMap((group) => group.modules).find((item) => item.id === moduleId);
+  if (!entry) return child;
+  return entry.children.length === 1 || entry.label === child ? entry.label : `${entry.label} · ${child}`;
+}
