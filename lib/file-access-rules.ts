@@ -9,6 +9,8 @@ export type StoredFileOwner = {
 export function mayReadFile(file: StoredFileOwner, actor: { id: string; permissions: string[] }) {
   const own = file.uploadedBy === actor.id;
   if (file.purpose === "cloud") return own;
+  // The shared house storage is open to all staff of the organisation (checked by the caller).
+  if (file.purpose === "shared") return true;
   if (file.purpose === "certificate")
     return own || file.certificateUserId === actor.id || actor.permissions.includes("team.manage");
   if (file.purpose === "document" && file.documentId) return actor.permissions.includes("residents.read");

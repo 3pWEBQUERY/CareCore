@@ -9,6 +9,9 @@ export type CloudFile = {
   mime_type: string;
   size_bytes: number;
   uploaded_by: string | null;
+  uploaded_by_name?: string | null;
+  folder_id?: string | null;
+  can_edit?: boolean;
   created_at: string;
   updated_at: string;
 };

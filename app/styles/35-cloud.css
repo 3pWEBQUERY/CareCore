@@ -479,6 +479,66 @@
   color: var(--muted);
   font-size: 11px;
 }
+.cloud-folders {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  padding: 13px 21px;
+  border-bottom: 1px solid var(--line);
+}
+.cloud-folders button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: #4d6680;
+  background: white;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.cloud-folders button svg {
+  width: 15px;
+  height: 15px;
+}
+.cloud-folders button em {
+  color: #8aa0b6;
+  font-style: normal;
+  font-weight: 600;
+}
+.cloud-folders button.active {
+  border-color: #bfdbfe;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+}
+.cloud-folders .cloud-folder-add {
+  border-style: dashed;
+  color: var(--brand);
+}
+.cloud-folder-tools {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.cloud-folder-tools button.danger {
+  color: #a23b2f;
+}
+.cloud-move {
+  height: 34px;
+  max-width: 130px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: #4d6680;
+  background: white;
+  font: inherit;
+  font-size: 12px;
+}
 .cloud-search {
   width: min(290px, 42%);
   min-height: 42px;
@@ -808,9 +868,19 @@
     padding-inline: 13px;
   }
   .cloud-file-row {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     gap: 7px;
     padding: 11px 0;
+  }
+  .cloud-file-row .cloud-actions {
+    justify-content: flex-end;
+  }
+  .cloud-move {
+    flex: 1 1 auto;
+    max-width: none;
+  }
+  .cloud-folder-tools {
+    margin-left: 0;
   }
   .cloud-file-row time {
     display: none;
