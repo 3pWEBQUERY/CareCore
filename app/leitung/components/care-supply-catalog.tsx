@@ -50,7 +50,7 @@ export default function CareSupplyCatalog() {
               </label>
             </header>
             <div className="care-supply-filters" role="group" aria-label="Produkte filtern">
-              {["Alle", "Aktiv", "Gesperrt", "Archiviert"].map((label) => (
+              {["Alle", "Aktiv", "Nachbestellen", "Gesperrt", "Archiviert"].map((label) => (
                 <button
                   type="button"
                   key={label}

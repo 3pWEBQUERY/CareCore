@@ -124,6 +124,31 @@ export function CatalogEditorDialog({ r }: { r: CareSupplyCatalogState }) {
                 Aktuell verfügbare Menge im Haus, gemessen in {editor.draft.unit.toLocaleLowerCase("de-CH")}.
               </small>
             </label>
+            <label>
+              <span>Mindestbestand</span>
+              <input
+                type="number"
+                min="0"
+                max="100000"
+                step="1"
+                value={editor.draft.minStockQuantity}
+                onChange={(event) =>
+                  setEditor((current) =>
+                    current
+                      ? {
+                          ...current,
+                          draft: { ...current.draft, minStockQuantity: Number(event.target.value) || 0 },
+                        }
+                      : current,
+                  )
+                }
+                aria-describedby="care-supply-min-help"
+              />
+              <small id="care-supply-min-help">
+                Erreicht der Bestand diese Menge, wird die Administration zum Nachbestellen benachrichtigt. 0 = keine
+                Überwachung.
+              </small>
+            </label>
             {editor.id && (
               <label>
                 <span>Katalogstatus</span>

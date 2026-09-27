@@ -547,3 +547,26 @@
 }
 
 /* Resident appointments: one calendar shared by operations and resident records. */
+.care-supply-product-stock small {
+  display: block;
+  margin-top: 2px;
+  color: #8193a8;
+  font-size: 8px;
+  font-weight: 600;
+}
+.care-supply-product-stock.low {
+  color: var(--critical);
+}
+.care-supply-product-stock.low small {
+  color: var(--critical);
+  font-weight: 800;
+}
+.leadership-kpi .link-button {
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: none;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
