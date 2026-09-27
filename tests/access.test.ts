@@ -19,6 +19,11 @@ test("personal files are only readable by their uploader", () => {
   assert.equal(mayReadFile(file("cloud", { uploadedBy: "nurse" }), nurse), true);
 });
 
+test("shared house files are readable by all staff", () => {
+  assert.equal(mayReadFile(file("shared"), nurse), true);
+  assert.equal(mayReadFile(file("shared", { uploadedBy: null }), guest), true);
+});
+
 test("documents need the right to read resident records", () => {
   const document = file("document", { documentId: "doc" });
   assert.equal(mayReadFile(document, nurse), true);

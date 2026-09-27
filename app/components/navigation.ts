@@ -119,7 +119,7 @@ export const navigation: NavGroup[] = [
         id: "docs",
         label: "Dokumente",
         icon: "docs",
-        children: ["Standards & Weisungen", "Dokumente", "Meine Dateien"],
+        children: ["Standards & Weisungen", "Dokumente", "Gemeinsame Ablage", "Meine Dateien"],
       },
     ],
   },
@@ -224,6 +224,7 @@ const routes: Record<string, Record<string, string>> = {
   docs: {
     "Standards & Weisungen": "/personal/dokumente/standards",
     Dokumente: "/personal/dokumente",
+    "Gemeinsame Ablage": "/carecore-one/ablage",
     "Meine Dateien": "/carecore-one/cloud",
   },
   quality: {

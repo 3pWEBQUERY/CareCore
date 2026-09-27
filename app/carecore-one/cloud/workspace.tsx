@@ -7,7 +7,10 @@ import {
   DownloadSimple,
   CloudArrowUp,
   File,
+  FolderPlus,
+  FolderSimple,
   MagnifyingGlass,
+  ShareNetwork,
   PencilSimple,
   Trash,
   UploadSimple,
@@ -16,9 +19,43 @@ import {
 import ModulePageShell from "@/app/components/module-page-shell";
 import { CloudFile, prettySize, prettyDate, canPreview, FileVisual } from "./file-visual";
 
-export default function CloudWorkspace() {
+type Folder = { id: string; name: string; files: number };
+type Scope = "personal" | "shared";
+
+// Texts per scope: "Meine Dateien" (only the uploader) and the house's "Gemeinsame Ablage".
+const COPY = {
+  personal: {
+    child: "Meine Dateien",
+    title: "Meine Dateien",
+    lead: "Persönliche Dateien – nur für dich sichtbar.",
+    note: "Nur für dich sichtbar · bis 4 MB je Datei",
+    listTitle: "Alle Dateien",
+    count: "in deiner persönlichen Ablage",
+    empty: "Lade eine Datei hoch, um sie hier abzulegen.",
+  },
+  shared: {
+    child: "Gemeinsame Ablage",
+    title: "Gemeinsame Ablage",
+    lead: "Dateien für das ganze Haus – für alle Mitarbeitenden sichtbar.",
+    note: "Für das ganze Haus sichtbar · bis 4 MB je Datei",
+    listTitle: "Alle Dateien",
+    count: "in der gemeinsamen Ablage",
+    empty: "Lade eine Datei hoch, damit das ganze Team sie hier findet.",
+  },
+} as const;
+
+const GENERAL = "general";
+
+export default function CloudWorkspace({ scope = "personal" }: { scope?: Scope }) {
+  const copy = COPY[scope];
+  const shared = scope === "shared";
+  const endpoint = `/api/cloud/files${shared ? "?scope=shared" : ""}`;
   const inputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<CloudFile[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [canManage, setCanManage] = useState(false);
+  // "" = all files, GENERAL = files without folder, otherwise a folder id.
+  const [folder, setFolder] = useState("");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -27,26 +64,30 @@ export default function CloudWorkspace() {
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch("/api/cloud/files", { cache: "no-store" });
+      const response = await fetch(endpoint, { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Dateien konnten nicht geladen werden.");
       setFiles(data.files ?? []);
+      setFolders(data.folders ?? []);
+      setCanManage(Boolean(data.canManage));
       setError("");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Dateien konnten nicht geladen werden.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [endpoint]);
 
   useEffect(() => {
     let active = true;
-    fetch("/api/cloud/files", { cache: "no-store" })
+    fetch(endpoint, { cache: "no-store" })
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Dateien konnten nicht geladen werden.");
         if (active) {
           setFiles(data.files ?? []);
+          setFolders(data.folders ?? []);
+          setCanManage(Boolean(data.canManage));
           setError("");
         }
       })
@@ -59,7 +100,7 @@ export default function CloudWorkspace() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [endpoint]);
   useEffect(() => {
     if (!preview) return;
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -70,9 +111,15 @@ export default function CloudWorkspace() {
   }, [preview]);
   const visibleFiles = useMemo(
     () =>
-      files.filter((file) => file.name.toLocaleLowerCase("de-CH").includes(query.trim().toLocaleLowerCase("de-CH"))),
-    [files, query],
+      files.filter(
+        (file) =>
+          (!folder || (folder === GENERAL ? !file.folder_id : file.folder_id === folder)) &&
+          file.name.toLocaleLowerCase("de-CH").includes(query.trim().toLocaleLowerCase("de-CH")),
+      ),
+    [files, query, folder],
   );
+  const activeFolder = folders.find((item) => item.id === folder);
+  const folderName = (id: string | null | undefined) => folders.find((item) => item.id === id)?.name ?? "Allgemein";
   const totalBytes = files.reduce((total, file) => total + Number(file.size_bytes), 0);
 
   async function upload(selected: FileList | null) {
@@ -83,6 +130,8 @@ export default function CloudWorkspace() {
       for (const file of Array.from(selected)) {
         const form = new FormData();
         form.append("file", file);
+        form.append("scope", scope);
+        if (shared && activeFolder) form.append("folderId", activeFolder.id);
         const response = await fetch("/api/cloud/files", { method: "POST", body: form });
         const data = await response.json();
         if (!response.ok) throw new Error(`${file.name}: ${data.error || "Upload fehlgeschlagen."}`);
@@ -113,7 +162,7 @@ export default function CloudWorkspace() {
   }
 
   async function remove(file: CloudFile) {
-    if (!window.confirm(`„${file.name}“ endgültig aus der Cloud löschen?`)) return;
+    if (!window.confirm(`„${file.name}“ endgültig löschen?`)) return;
     const response = await fetch(`/api/cloud/files/${file.id}`, { method: "DELETE" });
     const data = await response.json();
     if (!response.ok) {
@@ -121,17 +170,81 @@ export default function CloudWorkspace() {
       return;
     }
     setFiles((current) => current.filter((item) => item.id !== file.id));
+    if (shared) void load();
+  }
+
+  async function send(url: string, method: string, body: unknown, fallback: string) {
+    setError("");
+    const response = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setError(data.error || fallback);
+      return null;
+    }
+    return data;
+  }
+
+  // Moves a personal file into the house's shared storage.
+  async function share(file: CloudFile) {
+    if (!window.confirm(`„${file.name}“ in die gemeinsame Ablage verschieben? Danach sehen sie alle Mitarbeitenden.`))
+      return;
+    const data = await send(
+      `/api/cloud/files/${file.id}`,
+      "PATCH",
+      { share: true },
+      "Datei konnte nicht geteilt werden.",
+    );
+    if (data) setFiles((current) => current.filter((item) => item.id !== file.id));
+  }
+
+  async function move(file: CloudFile, folderId: string) {
+    const data = await send(
+      `/api/cloud/files/${file.id}`,
+      "PATCH",
+      { folderId: folderId === GENERAL ? null : folderId },
+      "Datei konnte nicht verschoben werden.",
+    );
+    if (data) await load();
+  }
+
+  async function createFolder() {
+    const name = window.prompt("Neuer Ordner")?.trim();
+    if (!name) return;
+    const data = await send("/api/cloud/folders", "POST", { name }, "Ordner konnte nicht angelegt werden.");
+    if (data) {
+      await load();
+      setFolder(data.id);
+    }
+  }
+
+  async function renameFolder(item: Folder) {
+    const name = window.prompt("Ordner umbenennen", item.name)?.trim();
+    if (!name || name === item.name) return;
+    if (await send(`/api/cloud/folders/${item.id}`, "PATCH", { name }, "Ordner konnte nicht umbenannt werden."))
+      await load();
+  }
+
+  async function removeFolder(item: Folder) {
+    if (!window.confirm(`Ordner „${item.name}“ löschen? Die Dateien bleiben unter „Allgemein“ erhalten.`)) return;
+    if (await send(`/api/cloud/folders/${item.id}`, "DELETE", undefined, "Ordner konnte nicht gelöscht werden.")) {
+      setFolder("");
+      await load();
+    }
   }
 
   return (
-    <ModulePageShell activeModule="cloud" activeChild="Dateien" pageClass="cloud-page">
+    <ModulePageShell activeModule="docs" activeChild={copy.child} pageClass="cloud-page">
       {() => (
         <main className="workspace cloud-workspace">
           <header className="page-heading cloud-hero">
             <div className="heading-copy">
-              <p className="eyebrow">CareCore One · Dateien</p>
-              <h1>Cloud</h1>
-              <p>Gemeinsame Dateien sicher an einem Ort organisieren.</p>
+              <p className="eyebrow">Dokumente · Dateien</p>
+              <h1>{copy.title}</h1>
+              <p>{copy.lead}</p>
             </div>
             <button className="primary-button" type="button" onClick={() => inputRef.current?.click()} disabled={busy}>
               <UploadSimple aria-hidden="true" />
@@ -168,7 +281,7 @@ export default function CloudWorkspace() {
             </article>
             <div className="cloud-summary-note">
               <CloudArrowUp aria-hidden="true" />
-              <span>Organisationsweite Ablage · bis 4 MB je Datei</span>
+              <span>{copy.note}</span>
             </div>
           </section>
 
@@ -176,9 +289,9 @@ export default function CloudWorkspace() {
             <header className="cloud-panel-head">
               <div>
                 <p className="eyebrow">DATEIABLAGE</p>
-                <h2>Alle Dateien</h2>
+                <h2>{activeFolder ? activeFolder.name : folder === GENERAL ? "Allgemein" : copy.listTitle}</h2>
                 <span>
-                  {files.length} {files.length === 1 ? "Datei" : "Dateien"} in der gemeinsamen Cloud
+                  {visibleFiles.length} {visibleFiles.length === 1 ? "Datei" : "Dateien"} {copy.count}
                 </span>
               </div>
               <label className="cloud-search">
@@ -191,6 +304,43 @@ export default function CloudWorkspace() {
                 />
               </label>
             </header>
+            {shared && (
+              <div className="cloud-folders" role="group" aria-label="Ordner">
+                {[
+                  { id: "", name: "Alle", files: files.length },
+                  { id: GENERAL, name: "Allgemein", files: files.filter((file) => !file.folder_id).length },
+                  ...folders,
+                ].map((item) => (
+                  <button
+                    className={folder === item.id ? "active" : ""}
+                    type="button"
+                    key={item.id || "all"}
+                    aria-pressed={folder === item.id}
+                    onClick={() => setFolder(item.id)}
+                  >
+                    <FolderSimple aria-hidden="true" />
+                    {item.name}
+                    <em>{item.files}</em>
+                  </button>
+                ))}
+                {canManage && (
+                  <button className="cloud-folder-add" type="button" onClick={() => void createFolder()}>
+                    <FolderPlus aria-hidden="true" />
+                    Ordner
+                  </button>
+                )}
+                {canManage && activeFolder && (
+                  <span className="cloud-folder-tools">
+                    <button type="button" onClick={() => void renameFolder(activeFolder)}>
+                      Umbenennen
+                    </button>
+                    <button type="button" className="danger" onClick={() => void removeFolder(activeFolder)}>
+                      Löschen
+                    </button>
+                  </span>
+                )}
+              </div>
+            )}
             {error && (
               <p className="cloud-error" role="alert">
                 {error}
@@ -213,7 +363,9 @@ export default function CloudWorkspace() {
                         <span className="cloud-file-name">
                           <strong title={file.name}>{file.name}</strong>
                           <small>
-                            {file.mime_type} · {prettySize(Number(file.size_bytes))}
+                            {shared
+                              ? `${file.uploaded_by_name ?? "Unbekannt"} · ${folder ? "" : `${folderName(file.folder_id)} · `}${prettySize(Number(file.size_bytes))}`
+                              : `${file.mime_type} · ${prettySize(Number(file.size_bytes))}`}
                           </small>
                         </span>
                       </button>
@@ -223,7 +375,9 @@ export default function CloudWorkspace() {
                         <span className="cloud-file-name">
                           <strong title={file.name}>{file.name}</strong>
                           <small>
-                            {file.mime_type} · {prettySize(Number(file.size_bytes))}
+                            {shared
+                              ? `${file.uploaded_by_name ?? "Unbekannt"} · ${folder ? "" : `${folderName(file.folder_id)} · `}${prettySize(Number(file.size_bytes))}`
+                              : `${file.mime_type} · ${prettySize(Number(file.size_bytes))}`}
                           </small>
                         </span>
                       </div>
@@ -238,24 +392,55 @@ export default function CloudWorkspace() {
                       >
                         <DownloadSimple aria-hidden="true" />
                       </a>
-                      <button
-                        className="icon-button"
-                        type="button"
-                        onClick={() => void rename(file)}
-                        aria-label={`${file.name} umbenennen`}
-                        title="Umbenennen"
-                      >
-                        <PencilSimple aria-hidden="true" />
-                      </button>
-                      <button
-                        className="icon-button danger"
-                        type="button"
-                        onClick={() => void remove(file)}
-                        aria-label={`${file.name} löschen`}
-                        title="Löschen"
-                      >
-                        <Trash aria-hidden="true" />
-                      </button>
+                      {shared && file.can_edit && folders.length > 0 && (
+                        <select
+                          className="cloud-move"
+                          value={file.folder_id ?? GENERAL}
+                          onChange={(event) => void move(file, event.target.value)}
+                          aria-label={`${file.name} in Ordner verschieben`}
+                          title="In Ordner verschieben"
+                        >
+                          <option value={GENERAL}>Allgemein</option>
+                          {folders.map((item) => (
+                            <option value={item.id} key={item.id}>
+                              {item.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {!shared && (
+                        <button
+                          className="icon-button"
+                          type="button"
+                          onClick={() => void share(file)}
+                          aria-label={`${file.name} in die gemeinsame Ablage verschieben`}
+                          title="In gemeinsame Ablage verschieben"
+                        >
+                          <ShareNetwork aria-hidden="true" />
+                        </button>
+                      )}
+                      {file.can_edit !== false && (
+                        <>
+                          <button
+                            className="icon-button"
+                            type="button"
+                            onClick={() => void rename(file)}
+                            aria-label={`${file.name} umbenennen`}
+                            title="Umbenennen"
+                          >
+                            <PencilSimple aria-hidden="true" />
+                          </button>
+                          <button
+                            className="icon-button danger"
+                            type="button"
+                            onClick={() => void remove(file)}
+                            aria-label={`${file.name} löschen`}
+                            title="Löschen"
+                          >
+                            <Trash aria-hidden="true" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </article>
                 ))}
@@ -266,7 +451,7 @@ export default function CloudWorkspace() {
                   <CloudArrowUp aria-hidden="true" />
                 </span>
                 <strong>{query ? "Keine passenden Dateien" : "Noch keine Dateien gespeichert"}</strong>
-                <p>{query ? "Passe den Suchbegriff an." : "Lade eine Datei hoch, damit dein Team sie hier findet."}</p>
+                <p>{query ? "Passe den Suchbegriff an." : copy.empty}</p>
                 {!query && (
                   <button className="secondary-button" type="button" onClick={() => inputRef.current?.click()}>
                     <UploadSimple aria-hidden="true" />
