@@ -60,7 +60,8 @@ export async function POST(request: Request) {
           string
         >
       )[value("gender", 40)] ?? "unspecified";
-    const ownerName = value("owner", 120);
+    const unitIdInput = value("careUnitId", 40);
+    const nurseIdInput = value("primaryNurseId", 40);
     const status =
       ({ Aktiv: "active", "Eintritt geplant": "planned", Vorläufig: "planned" } as Record<string, string>)[
         value("status", 40)
@@ -68,28 +69,39 @@ export async function POST(request: Request) {
     if (
       !firstName ||
       !lastName ||
-      !unitName ||
+      (!unitIdInput && !unitName) ||
       !roomName ||
       !/^\d{4}-\d{2}-\d{2}$/.test(birthDate) ||
       !/^\d{4}-\d{2}-\d{2}$/.test(admissionDate)
     )
       return NextResponse.json({ error: "Bitte alle Pflichtfelder vollständig ausfüllen." }, { status: 400 });
+    if (birthDate > admissionDate)
+      return NextResponse.json({ error: "Das Geburtsdatum liegt nach dem Eintritt." }, { status: 400 });
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if ((unitIdInput && !uuid.test(unitIdInput)) || (nurseIdInput && !uuid.test(nurseIdInput)))
+      return NextResponse.json({ error: "Wohnbereich oder Bezugspflege ist ungültig." }, { status: 400 });
     const sql = carecoreDb();
-    const units =
-      await sql`SELECT cu.id FROM carecore_care_units cu JOIN carecore_sites s ON s.id = cu.site_id WHERE s.organization_id = ${actor.organizationId} AND cu.name = ${unitName} AND cu.active = TRUE LIMIT 1`;
+    const units = unitIdInput
+      ? await sql`SELECT cu.id FROM carecore_care_units cu JOIN carecore_sites s ON s.id = cu.site_id WHERE s.organization_id = ${actor.organizationId} AND cu.id = ${unitIdInput} AND cu.active = TRUE LIMIT 1`
+      : await sql`SELECT cu.id FROM carecore_care_units cu JOIN carecore_sites s ON s.id = cu.site_id WHERE s.organization_id = ${actor.organizationId} AND cu.name = ${unitName} AND cu.active = TRUE LIMIT 1`;
     if (!units[0]) return NextResponse.json({ error: "Wohnbereich nicht gefunden." }, { status: 400 });
     const unitId = units[0].id as string;
-    const owners = ownerName
-      ? await sql`SELECT u.id FROM carecore_users u JOIN carecore_user_profiles p ON p.user_id = u.id WHERE p.organization_id = ${actor.organizationId} AND u.display_name = ${ownerName} AND u.active = TRUE LIMIT 1`
-      : [];
-    const ownerId = (owners[0]?.id as string | undefined) ?? actor.id;
+    // Without a chosen primary nurse the resident has none; the record then asks for one.
+    let ownerId: string | null = null;
+    if (nurseIdInput) {
+      const owners =
+        await sql`SELECT u.id FROM carecore_users u JOIN carecore_user_profiles p ON p.user_id = u.id WHERE p.organization_id = ${actor.organizationId} AND u.id = ${nurseIdInput} AND u.active = TRUE AND u.archived_at IS NULL LIMIT 1`;
+      if (!owners[0]) return NextResponse.json({ error: "Die Bezugspflege ist nicht aktiv." }, { status: 400 });
+      ownerId = String(owners[0].id);
+    }
     const rooms =
       await sql`INSERT INTO carecore_rooms (id, care_unit_id, name, room_number) VALUES (${randomUUID()}, ${unitId}, ${roomName}, ${roomName.replace(/\D/g, "") || null}) ON CONFLICT (care_unit_id, name) DO UPDATE SET active = TRUE RETURNING id`;
     const residentId = randomUUID();
     await sql`INSERT INTO carecore_residents (id, organization_id, first_name, last_name, date_of_birth, gender, status, admitted_on, notes, primary_care_user_id) VALUES (${residentId}, ${actor.organizationId}, ${firstName}, ${lastName}, ${birthDate}, ${gender}, ${status}, ${admissionDate}, ${note || null}, ${ownerId})`;
     await sql`INSERT INTO carecore_resident_stays (id, resident_id, care_unit_id, room_id, started_at, created_by) VALUES (${randomUUID()}, ${residentId}, ${unitId}, ${rooms[0].id}, ${new Date(`${admissionDate}T12:00:00Z`).toISOString()}, ${actor.id})`;
-    if (careLevel)
+    if (careLevel && careLevel !== "Noch nicht eingestuft")
       await sql`INSERT INTO carecore_care_plans (id, resident_id, owner_user_id, care_level, focus) VALUES (${randomUUID()}, ${residentId}, ${ownerId}, ${careLevel}, ${note || "Aufnahme und Pflegebedarf prüfen."})`;
+    await sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data) VALUES (${randomUUID()}, ${actor.organizationId}, ${actor.id}, 'resident', ${residentId}, 'admitted', ${JSON.stringify({ name: `${firstName} ${lastName}`, careUnitId: unitId, room: roomName, primaryNurseId: ownerId })}::jsonb)`;
     return NextResponse.json({ id: residentId }, { status: 201 });
   } catch (error) {
     console.error("Residents POST failed", error);
