@@ -11,6 +11,7 @@ import { HeaderProfileMenu } from "./header-profile-menu";
 import { HeaderNotificationMenu } from "./header-notification-menu";
 import { KeyboardShortcutsMenu } from "./keyboard-shortcuts";
 import { HeaderAiButton } from "./header-ai-panel";
+import { PersonalAppearance } from "./appearance";
 
 export default function AppHeader(props: {
   locationPrimary?: string;
@@ -44,6 +45,7 @@ export default function AppHeader(props: {
   } = r;
   return (
     <>
+      <PersonalAppearance />
       <header className="topbar">
         <div className="header-context">
           <HeaderLocationControl r={r} ref={locationMenuRef} />

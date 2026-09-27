@@ -7,6 +7,8 @@ import {
   recordFailedLogin,
   SESSION_COOKIE,
 } from "@/lib/auth";
+import { readPreferences } from "@/lib/user-settings";
+import { START_PAGES } from "@/lib/user-settings-shared";
 
 export const runtime = "nodejs";
 
@@ -35,9 +37,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Benutzername oder Passwort ist nicht korrekt." }, { status: 401 });
     }
     await clearFailedLogins(username);
-    const session = await createSession(user.id);
+    const session = await createSession(user.id, request.headers.get("user-agent"));
+    // The start page chosen in the personal settings.
+    const startPath = START_PAGES[(await readPreferences(user.id)).startPage].path;
     const response = NextResponse.json({
       user: { username: user.username, displayName: user.display_name, role: user.role },
+      startPath,
     });
     response.cookies.set(SESSION_COOKIE, session.token, {
       httpOnly: true,

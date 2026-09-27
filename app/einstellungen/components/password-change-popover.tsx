@@ -1,5 +1,6 @@
 "use client";
 
+import { requestJson } from "@/app/components/workspace-ui";
 import { useEffect, useState, type FormEvent } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 
@@ -11,6 +12,7 @@ type PasswordChangePopoverProps = {
 
 export default function PasswordChangePopover({ open, onClose, onSuccess }: PasswordChangePopoverProps) {
   const [currentPassword, setCurrentPassword] = useState("");
+  const [saving, setSaving] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [showCurrent, setShowCurrent] = useState(false);
@@ -29,22 +31,31 @@ export default function PasswordChangePopover({ open, onClose, onSuccess }: Pass
 
   if (!open) return null;
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!currentPassword || !newPassword || !confirmation) {
       setError("Bitte fülle alle Felder aus.");
       return;
     }
-    if (newPassword.length < 8) {
-      setError("Das neue Passwort muss mindestens 8 Zeichen lang sein.");
+    if (newPassword.length < 10) {
+      setError("Das neue Passwort muss mindestens 10 Zeichen lang sein.");
       return;
     }
     if (newPassword !== confirmation) {
       setError("Die neuen Passwörter stimmen nicht überein.");
       return;
     }
-    onSuccess();
-    onClose();
+    setSaving(true);
+    setError("");
+    try {
+      await requestJson("/api/me/password", { method: "POST", body: { currentPassword, newPassword } });
+      onSuccess();
+      onClose();
+    } catch (reason) {
+      setError((reason as Error).message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -79,7 +90,7 @@ export default function PasswordChangePopover({ open, onClose, onSuccess }: Pass
             ×
           </button>
         </header>
-        <form className="settings-password-form" onSubmit={submit}>
+        <form className="settings-password-form" onSubmit={(event) => void submit(event)}>
           <p className="settings-password-note">
             <ModuleIcon name="alert" /> Verwende ein Passwort, das du nur für CareCore nutzt.
           </p>
@@ -119,9 +130,9 @@ export default function PasswordChangePopover({ open, onClose, onSuccess }: Pass
             <button className="secondary-button" type="button" onClick={onClose}>
               Abbrechen
             </button>
-            <button className="primary-button" type="submit">
+            <button className="primary-button" type="submit" disabled={saving}>
               <ModuleIcon name="check" />
-              Passwort speichern
+              {saving ? "Wird gespeichert …" : "Passwort speichern"}
             </button>
           </footer>
         </form>

@@ -7,12 +7,14 @@ export default function SettingsSelect({
   label,
   value,
   options,
+  onChange,
 }: {
   label: string;
   value?: string;
   options?: string[];
+  onChange?: (value: string) => void;
 }) {
-  const [selected, setSelected] = useState(value ?? options?.[0] ?? "");
+  const selected = value ?? options?.[0] ?? "";
   const [open, setOpen] = useState(false);
   const [openUp, setOpenUp] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -54,8 +56,10 @@ export default function SettingsSelect({
               role="option"
               aria-selected={selected === option}
               key={option}
-              onClick={() => {
-                setSelected(option);
+              onClick={(event) => {
+                // Inside a <label> the click would otherwise re-activate the trigger and reopen the menu.
+                event.preventDefault();
+                onChange?.(option);
                 setOpen(false);
                 setOpenUp(false);
               }}

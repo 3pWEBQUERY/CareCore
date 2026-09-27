@@ -121,14 +121,14 @@ export async function authenticate(username: string, password: string): Promise<
   return safeUser;
 }
 
-export async function createSession(userId: string) {
+export async function createSession(userId: string, userAgent?: string | null) {
   const sql = database();
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
   await sql`DELETE FROM carecore_sessions WHERE expires_at <= NOW()`;
   await sql`
-    INSERT INTO carecore_sessions (id, token_hash, user_id, expires_at)
-    VALUES (${randomUUID()}, ${hashSessionToken(token)}, ${userId}, ${expiresAt.toISOString()})
+    INSERT INTO carecore_sessions (id, token_hash, user_id, expires_at, user_agent)
+    VALUES (${randomUUID()}, ${hashSessionToken(token)}, ${userId}, ${expiresAt.toISOString()}, ${userAgent?.slice(0, 300) ?? null})
   `;
   return { token, expiresAt };
 }
