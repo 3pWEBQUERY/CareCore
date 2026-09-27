@@ -142,7 +142,7 @@ export function HomeHero({ r }: { r: DashboardState }) {
         <section className="home-desk-card home-day-card" aria-labelledby="home-day-title">
           <div className="home-card-head">
             <div>
-              <p className="eyebrow">Im Dienst</p>
+              <p className="eyebrow">Auf einen Blick</p>
               <h2 id="home-day-title">Heute wichtig</h2>
             </div>
             <span className="home-count">{openTasks.length} offen</span>

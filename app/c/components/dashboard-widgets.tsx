@@ -74,12 +74,12 @@ export function DashboardTimelineCard({ r }: { r: DashboardState }) {
       <div className="card-header">
         <div>
           <h2 className="card-title" id="timeline-title">
-            Mein Dienst
+            Zeitplan
           </h2>
           <p className="card-subtitle">Deine nächsten terminierten Aufgaben</p>
         </div>
-        <button className="quiet-button" type="button" onClick={() => router.push("/c/betrieb/dienstplanung")}>
-          Dienste ansehen
+        <button className="quiet-button" type="button" onClick={() => router.push("/c/betrieb/aufgaben")}>
+          Aufgaben ansehen
         </button>
       </div>
       <div className="timeline-list">
