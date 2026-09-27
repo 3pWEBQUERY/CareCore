@@ -108,3 +108,192 @@ html.contrast-high small,
 html.contrast-high .card-subtitle {
   color: #1e293b;
 }
+
+/* 404 and error pages. */
+.status-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: #f3f7fc;
+}
+.status-page-card {
+  width: min(100%, 520px);
+  padding: 36px 32px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 18px 40px rgba(15, 42, 82, 0.08);
+  text-align: center;
+}
+.status-page-code {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.status-page-card h1 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+.status-page-card p {
+  margin: 0 0 22px;
+  color: #475569;
+  font-size: 15px;
+  line-height: 1.55;
+}
+.status-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.status-page-actions a {
+  text-decoration: none;
+}
+
+/* Hilfe & Support side panel. */
+.help-panel-body {
+  display: grid;
+  gap: 18px;
+  padding: 24px 28px 36px;
+  overflow-y: auto;
+}
+.help-section {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+}
+.help-section h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+}
+.help-section p {
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.help-guide-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.help-guide-tabs button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: white;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.help-guide-tabs button.active {
+  color: var(--brand-dark);
+  border-color: #93c5fd;
+  background: var(--brand-soft);
+}
+.help-guide-tabs svg {
+  width: 16px;
+}
+.help-steps {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding-left: 22px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.help-section textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+.help-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.help-report-actions small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.help-contacts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.help-contacts li {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f5f8fc;
+  font-size: 13px;
+}
+.help-contacts small {
+  color: var(--muted);
+}
+.help-contacts a {
+  color: var(--brand-dark);
+  font-weight: 700;
+}
+.help-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+.help-shortcuts > div {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  font-size: 13px;
+}
+.help-shortcuts > div > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+}
+.help-shortcuts kbd {
+  min-width: 22px;
+  margin-right: 3px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #f8fafc;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+@media (max-width: 960px) {
+  .help-panel-body {
+    padding: 16px;
+  }
+}

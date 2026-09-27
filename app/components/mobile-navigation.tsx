@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ModuleIcon } from "./module-icon";
+import { openHelp } from "./help-panel";
 import { useNavigationBadges, useWorkContext, type NavigationBadges } from "./care-context";
 import { moduleBadges, quickLinks, routeFor, sidebarNavigation, type ModuleIconName } from "./navigation";
 
@@ -125,6 +126,21 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
                   </span>
                   <span>
                     <strong>Einstellungen</strong>
+                  </span>
+                  <ModuleIcon name="chevron" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    openHelp();
+                  }}
+                >
+                  <span className="mobile-nav-group-icon">
+                    <ModuleIcon name="docs" />
+                  </span>
+                  <span>
+                    <strong>Hilfe & Support</strong>
                   </span>
                   <ModuleIcon name="chevron" />
                 </button>
