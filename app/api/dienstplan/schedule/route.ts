@@ -13,6 +13,10 @@ export async function GET(request: Request) {
     const selected = params.get("monat")
       ? month(params.get("monat"))
       : month(localDate(new Date(), "Europe/Zurich").slice(0, 7));
-    return getSchedule(ctx, { unitId: optionalUuid(params.get("einheit"), "Wohnbereich"), ...selected });
+    return getSchedule(ctx, {
+      unitId: optionalUuid(params.get("einheit"), "Wohnbereich"),
+      ...selected,
+      team: params.get("ansicht") === "team",
+    });
   }, "Der Dienstplan konnte nicht geladen werden.");
 }

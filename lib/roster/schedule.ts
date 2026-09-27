@@ -159,11 +159,13 @@ function gridShift(
 
 export async function getSchedule(
   ctx: RosterContext,
-  params: { unitId: string | null; year: number; month: number },
+  params: { unitId: string | null; year: number; month: number; team?: boolean },
 ): Promise<SchedulePayload> {
-  const unitId = resolveUnit(ctx, params.unitId);
-  const lead = isLeadOf(ctx.access, unitId);
-  if (!lead && !isMemberOf(ctx.access, unitId)) throw notFound("Wohnbereich");
+  // team: Teamplan (Spec 8.5) – auch die Leitung sieht dort nur den veröffentlichten Plan ohne Planungsdaten.
+  const unitId = resolveUnit(ctx, params.unitId, params.team ? "member" : "lead");
+  const leadOfUnit = isLeadOf(ctx.access, unitId);
+  const lead = leadOfUnit && !params.team;
+  if (!leadOfUnit && !isMemberOf(ctx.access, unitId)) throw notFound("Wohnbereich");
   const { year, month } = params;
   const { from, to } = monthRange(year, month);
   const period = lead ? await ensurePeriod(ctx, unitId, year, month) : await findPeriod(ctx, unitId, year, month);

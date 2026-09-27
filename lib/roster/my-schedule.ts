@@ -25,6 +25,8 @@ export type MyShift = {
   breakMinutes: number;
   version: number;
   swapped: boolean;
+  // Tausch anfragen möglich: Arbeitsdienst in der Zukunft, ohne Zeiterfassung und ohne laufenden Tausch.
+  tradable: boolean;
   entry: {
     id: string;
     clockIn: string;
@@ -192,6 +194,11 @@ export async function getMySchedule(
         breakMinutes: shift.breakMinutes,
         version: shift.version,
         swapped: !!shift.lastSwapId,
+        tradable:
+          shift.category !== "ABSENCE" &&
+          !entry &&
+          Date.parse(shift.plannedStart) > now &&
+          !(swap && ["PENDING_TARGET", "PENDING_APPROVAL"].includes(String(swap.status))),
         entry: entry
           ? {
               id: entry.id,
@@ -238,6 +245,22 @@ export async function getMySchedule(
       clockInEarliestMinutes: rules.clockInEarliestMinutes,
       deviationThresholdMinutes: rules.deviationThresholdMinutes,
     },
-    changeToken: `${shifts.map((s) => `${s.id}:${s.version}`).join(",")}|${entries.map((e) => `${e.id}:${e.status}:${e.clockOut ?? ""}`).join(",")}|${swapRows.map((r) => `${r.id}:${r.status}`).join(",")}`,
+    changeToken: await myChangeToken(ctx, year, month),
   };
+}
+
+// Vergleichswert fürs Polling: eigene veröffentlichte Dienste, Zeiteinträge und Tauschanfragen des Monats.
+export async function myChangeToken(ctx: RosterContext, year: number, month: number) {
+  const { from, to } = monthRange(year, month);
+  const rows = (await ctx.sql`
+    SELECT md5(
+      COALESCE((SELECT string_agg(s.id::text || ':' || s.version, ',' ORDER BY s.id) FROM carecore_roster_shifts s
+        JOIN carecore_schedule_periods p ON p.id = s.period_id
+        WHERE s.employee_id = ${ctx.actor.id} AND p.status = 'PUBLISHED' AND s.date BETWEEN (${from}::date - 1) AND (${to}::date + 1)), '') || '|' ||
+      COALESCE((SELECT string_agg(e.id::text || ':' || e.version, ',' ORDER BY e.id) FROM carecore_time_entries e
+        WHERE e.employee_id = ${ctx.actor.id} AND (e.date BETWEEN ${from}::date AND ${to}::date OR e.status = 'OPEN')), '') || '|' ||
+      COALESCE((SELECT string_agg(w.id::text || ':' || w.status, ',' ORDER BY w.id) FROM carecore_shift_swaps w
+        WHERE (w.requester_id = ${ctx.actor.id} OR w.target_employee_id = ${ctx.actor.id}) AND w.updated_at > NOW() - INTERVAL '60 days'), '')
+    ) AS token`) as Row[];
+  return String(rows[0].token);
 }

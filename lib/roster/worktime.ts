@@ -87,6 +87,8 @@ export function clockOutMissing(
 export type WorkTimeSummary = {
   employeeId: string;
   targetMinutes: number;
+  // Soll bis einschliesslich "today" (laufender Monat); Grundlage für den Saldo.
+  targetToDateMinutes: number;
   plannedMinutes: number;
   actualMinutes: number;
   balanceMinutes: number;
@@ -157,13 +159,18 @@ export function summarizeMonth(input: {
       shift.category !== "ABSENCE" && Date.parse(shift.plannedEnd) < Date.parse(now) && !recorded.has(shift.id),
   ).length;
   const target = targetMinutesForMonth(rules, employee, year, month, holidays);
+  const targetToDate =
+    dailyTargetMinutes(rules.weeklyNormMinutes, employee) *
+    targetWorkdays(employee, year, month, holidays).filter((date) => date <= today).length;
 
   return {
     employeeId: employee.id,
     targetMinutes: target,
+    targetToDateMinutes: targetToDate,
     plannedMinutes: planned,
     actualMinutes: actual,
-    balanceMinutes: actual - target,
+    // Über-/Minusstunden bis heute; in vergangenen Monaten entspricht das dem vollen Soll.
+    balanceMinutes: actual - targetToDate,
     nightMinutes: night,
     weekendMinutes: weekend,
     holidayMinutes: holiday,

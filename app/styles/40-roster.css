@@ -916,6 +916,32 @@ tr.self .roster-name {
   font-weight: 650;
 }
 
+/* Tauschpartner-Auswahl im Seitenpanel */
+.roster-swap-options {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.roster-swap-options legend {
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+.roster-swap-options .roster-checkbox {
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-weight: 500;
+}
+.roster-swap-options em {
+  color: #7c4a03;
+  font-style: normal;
+}
+
 @media (max-width: 1100px) {
   .roster-tiles {
     grid-template-columns: repeat(4, minmax(0, 1fr));

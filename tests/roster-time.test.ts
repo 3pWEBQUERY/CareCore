@@ -136,6 +136,24 @@ test("Monatssoll mit Pensum 80 %, Feiertag und Urlaubstag", () => {
   assert.equal(summary.targetMinutes, 403 * 21);
   assert.equal(summary.actualMinutes, 403);
   assert.equal(summary.absenceDays.VACATION, 1);
+  assert.equal(summary.balanceMinutes, 403 - 403 * 21);
+
+  // Laufender Monat: Saldo gegen das Soll bis heute (Do 01.–Fr 09.10. = 7 Soll-Tage).
+  const running = summarizeMonth({
+    rules,
+    employee: person,
+    year: 2026,
+    month: 10,
+    holidays: ["2026-10-15"],
+    shifts: [vacation],
+    entries: [],
+    types,
+    now: "2026-10-09T18:00:00.000Z",
+    today: "2026-10-09",
+  });
+  assert.equal(running.targetMinutes, 403 * 21);
+  assert.equal(running.targetToDateMinutes, 403 * 7);
+  assert.equal(running.balanceMinutes, 403 - 403 * 7);
 });
 
 test("Kalenderwochen und Feiertage Zürich", () => {
