@@ -56,6 +56,7 @@ export type TimeEntryInfo = {
   breakMinutes: number;
   actualMinutes: number | null;
   status: TimeEntryStatus;
+  version?: number;
 };
 
 // Server-side only: never trust a value sent by the client.

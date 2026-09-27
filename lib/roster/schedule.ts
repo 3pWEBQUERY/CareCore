@@ -43,7 +43,7 @@ export async function loadEntries(
 ): Promise<TimeEntryInfo[]> {
   if (!employeeIds.length) return [];
   const rows = (await ctx.sql`
-    SELECT id, employee_id, shift_id, to_char(date, 'YYYY-MM-DD') AS date, clock_in, clock_out, break_minutes, actual_minutes, status
+    SELECT id, employee_id, shift_id, to_char(date, 'YYYY-MM-DD') AS date, clock_in, clock_out, break_minutes, actual_minutes, status, version
     FROM carecore_time_entries
     WHERE organization_id = ${ctx.actor.organizationId} AND employee_id = ANY(${employeeIds}::uuid[])
       AND date BETWEEN ${from}::date AND ${to}::date`) as Row[];
@@ -57,6 +57,7 @@ export async function loadEntries(
     breakMinutes: Number(row.break_minutes),
     actualMinutes: row.actual_minutes === null ? null : Number(row.actual_minutes),
     status: row.status as TimeEntryInfo["status"],
+    version: Number(row.version),
   }));
 }
 

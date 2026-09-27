@@ -104,11 +104,10 @@ export async function commitChanges(ctx: RosterContext, options: CommitOptions):
         : [change.shiftId],
   );
   const existing = await Promise.all(existingIds.map((id) => loadShift(ctx, id)));
+  // Shifts of other units (e.g. a Springer's) are allowed; the rule engine checks the scope.
   for (const shift of existing) {
     dates.push(shift.date);
     employees.add(shift.employeeId);
-    if (shift.unitId !== unitId)
-      throw new RosterError("OUT_OF_SCOPE", "Der Dienst gehört zu einem anderen Wohnbereich.", 403);
   }
   if (!dates.length) throw invalid("Keine Änderung angegeben.");
   const from = [...dates].sort()[0];
@@ -162,7 +161,7 @@ export async function commitChanges(ctx: RosterContext, options: CommitOptions):
       action,
       entityType: "shift",
       entityId,
-      unitId,
+      unitId: after?.unitId ?? previous?.unitId ?? unitId,
       before: auditShape(previous),
       after: auditShape(after),
       reason,
