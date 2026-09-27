@@ -81,7 +81,8 @@ export function KeyboardShortcutsMenu() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
-      if (event.metaKey || event.ctrlKey || event.altKey || isTyping(event.target)) return;
+      // Keys already handled by a component (e.g. typing a shift code in the roster grid) stay there.
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || isTyping(event.target)) return;
       if (event.key === "?") {
         event.preventDefault();
         toggle();

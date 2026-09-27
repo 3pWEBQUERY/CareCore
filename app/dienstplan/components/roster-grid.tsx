@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -58,12 +58,14 @@ function ShiftChip({
   data,
   draggable,
   onOpen,
+  onSelect,
   overlay,
 }: {
   shift: GridShift;
   data: SchedulePayload;
   draggable: boolean;
   onOpen?: () => void;
+  onSelect?: () => void;
   overlay?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -81,7 +83,9 @@ function ShiftChip({
       style={{ "--chip-color": shift.color } as React.CSSProperties}
       title={shiftTooltip(shift, data)}
       aria-label={`${shift.masked ? "Abwesend" : `${shift.name} ${localTime(shift.plannedStart, data.timezone)} bis ${localTime(shift.plannedEnd, data.timezone)}`}${warn ? ", mit Warnung" : ""}`}
-      onClick={onOpen}
+      // PEP-Arbeitsweise: Klick markiert die Zelle, Doppelklick (oder Enter) öffnet den Dienst.
+      onClick={onSelect ?? onOpen}
+      onDoubleClick={onSelect ? onOpen : undefined}
       {...(draggable ? listeners : {})}
       {...(draggable ? attributes : {})}
     >
@@ -108,11 +112,16 @@ function Cell({
   shifts,
   data,
   canEdit,
+  draggable,
   focused,
+  selected,
+  previewed,
   highlight,
   onFocusCell,
   onCreate,
   onOpen,
+  onSelect,
+  onPointerDown,
   onKeyDown,
   children,
 }: {
@@ -121,11 +130,16 @@ function Cell({
   shifts: GridShift[];
   data: SchedulePayload;
   canEdit: boolean;
+  draggable: boolean;
   focused: boolean;
+  selected: boolean;
+  previewed: boolean;
   highlight: boolean;
   onFocusCell: () => void;
   onCreate: () => void;
   onOpen: (shift: GridShift) => void;
+  onSelect?: () => void;
+  onPointerDown: (event: PointerEvent<HTMLDivElement>) => void;
   onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   children?: ReactNode;
 }) {
@@ -135,26 +149,31 @@ function Cell({
   );
   return (
     <td
-      className={`roster-cell ${day.weekend ? "weekend" : ""} ${day.holiday ? "holiday" : ""} ${day.today ? "today" : ""} ${highlight ? "highlight" : ""}`}
+      className={`roster-cell ${day.weekend ? "weekend" : ""} ${day.holiday ? "holiday" : ""} ${day.today ? "today" : ""} ${highlight ? "highlight" : ""} ${selected ? "selected" : ""} ${previewed ? "previewed" : ""}`}
     >
       <div
         ref={setNodeRef}
         className={`roster-cell-inner ${isOver ? "drop-over" : ""}`}
         role="gridcell"
+        aria-selected={selected}
         tabIndex={focused ? 0 : -1}
         data-cell={cellId(employee.id, day.date)}
         aria-label={`${employee.name}, ${WEEKDAY_SHORT[day.weekday - 1]} ${day.date.slice(8)}.${day.date.slice(5, 7)}.${shifts.length ? "" : ", frei"}${timeOff ? `, Wunschfrei ${timeOff.status === "APPROVED" ? "genehmigt" : "beantragt"}` : ""}`}
         onFocus={onFocusCell}
         onKeyDown={onKeyDown}
-        onDoubleClick={() => canEdit && !shifts.length && onCreate()}
+        onPointerDown={onPointerDown}
+        onDoubleClick={(event) =>
+          canEdit && !shifts.length && !(event.target as HTMLElement).closest("input") && onCreate()
+        }
       >
         {shifts.map((shift) => (
           <ShiftChip
             key={shift.id}
             shift={shift}
             data={data}
-            draggable={canEdit && !shift.masked && !shift.entry}
+            draggable={draggable && !shift.masked && !shift.entry}
             onOpen={() => onOpen(shift)}
+            onSelect={onSelect}
           />
         ))}
         {timeOff && (
@@ -176,6 +195,10 @@ function Cell({
   );
 }
 
+export type CellValue = { employeeId: string; date: string; shiftTypeId: string | null };
+// Stempel der Dienst-Palette: Diensttyp-ID, "clear" (leeren) oder null (aus).
+export type PaintTool = string | "clear" | null;
+
 export type GridProps = {
   data: SchedulePayload;
   days: GridDay[];
@@ -185,12 +208,37 @@ export type GridProps = {
   onCreate: (employeeId: string, date: string) => void;
   onOpen: (shift: GridShift) => void;
   onDrop: (shift: GridShift, employeeId: string, date: string) => void;
+  // PEP-Arbeitsweise (nur Leitung): Zellen setzen/leeren, Stempel und Hinweise.
+  onApplyCells?: (cells: CellValue[], label: string) => void;
+  paintTool?: PaintTool;
+  onNotice?: (message: string) => void;
 };
 
-export function RosterGrid({ data, days, employees, shifts, highlightShiftIds, onCreate, onOpen, onDrop }: GridProps) {
+type Pos = { row: number; col: number };
+
+export function RosterGrid({
+  data,
+  days,
+  employees,
+  shifts,
+  highlightShiftIds,
+  onCreate,
+  onOpen,
+  onDrop,
+  onApplyCells,
+  paintTool = null,
+  onNotice,
+}: GridProps) {
   const [active, setActive] = useState<GridShift | null>(null);
-  const [focus, setFocus] = useState<{ row: number; col: number }>({ row: 0, col: 0 });
+  const [focus, setFocus] = useState<Pos>({ row: 0, col: 0 });
+  const [anchor, setAnchor] = useState<Pos>({ row: 0, col: 0 });
+  const [editing, setEditing] = useState<string | null>(null);
+  const [preview, setPreview] = useState<Set<string>>(new Set());
+  const clipboard = useRef<Array<Array<string | null>> | null>(null);
+  const gesture = useRef<{ kind: "select" | "paint"; cells: Map<string, CellValue> } | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
+  const pep = !!onApplyCells && data.canEdit;
+  const painting = pep && paintTool !== null;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     // Long press on touch devices so horizontal scrolling keeps working.
@@ -206,6 +254,12 @@ export function RosterGrid({ data, days, employees, shifts, highlightShiftIds, o
     return map;
   }, [shifts]);
   const names = useMemo(() => new Map(employees.map((e) => [e.id, e.name])), [employees]);
+  const typeByCode = useMemo(
+    () => new Map(data.shiftTypes.filter((t) => t.active).map((t) => [t.code.toUpperCase(), t])),
+    [data.shiftTypes],
+  );
+  const rowOf = useMemo(() => new Map(employees.map((e, i) => [e.id, i])), [employees]);
+  const colOf = useMemo(() => new Map(days.map((d, i) => [d.date, i])), [days]);
   const shiftLabel = (id: string) => {
     const shift = shifts.find((s) => s.id === id);
     return shift
@@ -217,17 +271,106 @@ export function RosterGrid({ data, days, employees, shifts, highlightShiftIds, o
     return `${names.get(employeeId) ?? ""}, ${date?.slice(8)}.${date?.slice(5, 7)}.`;
   };
 
-  const moveFocus = (row: number, col: number) => {
+  // Markierter Bereich (Rechteck zwischen Anker und Fokus).
+  const range = {
+    r0: Math.min(anchor.row, focus.row),
+    r1: Math.max(anchor.row, focus.row),
+    c0: Math.min(anchor.col, focus.col),
+    c1: Math.max(anchor.col, focus.col),
+  };
+  const inRange = (row: number, col: number) =>
+    row >= range.r0 && row <= range.r1 && col >= range.c0 && col <= range.c1;
+  const rangeCells = (shiftTypeId: string | null): CellValue[] => {
+    const cells: CellValue[] = [];
+    for (let row = range.r0; row <= range.r1; row += 1)
+      for (let col = range.c0; col <= range.c1; col += 1)
+        if (employees[row] && days[col])
+          cells.push({ employeeId: employees[row].id, date: days[col].date, shiftTypeId });
+    return cells;
+  };
+  const typeAt = (row: number, col: number) => {
+    const cell = employees[row] && days[col] ? byCell.get(cellId(employees[row].id, days[col].date)) : undefined;
+    const shift = cell?.find((s) => !s.masked);
+    return shift?.shiftTypeId ?? null;
+  };
+
+  const focusCell = (next: Pos) =>
+    requestAnimationFrame(() => {
+      const employee = employees[next.row];
+      const day = days[next.col];
+      if (employee && day)
+        tableRef.current?.querySelector<HTMLElement>(`[data-cell="${cellId(employee.id, day.date)}"]`)?.focus();
+    });
+  const moveFocus = (row: number, col: number, extend = false) => {
     const next = {
       row: Math.max(0, Math.min(employees.length - 1, row)),
       col: Math.max(0, Math.min(days.length - 1, col)),
     };
     setFocus(next);
-    const employee = employees[next.row];
-    const day = days[next.col];
-    if (employee && day)
-      tableRef.current?.querySelector<HTMLElement>(`[data-cell="${cellId(employee.id, day.date)}"]`)?.focus();
+    if (!extend) setAnchor(next);
+    focusCell(next);
   };
+  const apply = (cells: CellValue[], label: string) => {
+    if (!onApplyCells || !cells.length) return;
+    onApplyCells(cells, label);
+  };
+
+  // Kürzel übernehmen: gilt für den markierten Bereich (oder die Zelle), danach eine Zeile tiefer.
+  const commitCode = (text: string, move: [number, number]) => {
+    const code = text.trim().toUpperCase();
+    const type = code ? typeByCode.get(code) : null;
+    if (code && !type) {
+      onNotice?.(`Unbekanntes Kürzel „${code}“. Verfügbar: ${[...typeByCode.keys()].join(", ")}`);
+      return;
+    }
+    setEditing(null);
+    const cells = rangeCells(type?.id ?? null);
+    apply(cells, type ? `${type.code} gesetzt` : "Zellen geleert");
+    moveFocus(
+      range.r1 === range.r0 ? focus.row + move[0] : range.r0,
+      range.c1 === range.c0 ? focus.col + move[1] : range.c0,
+    );
+  };
+
+  const copy = () => {
+    const rows: Array<Array<string | null>> = [];
+    for (let row = range.r0; row <= range.r1; row += 1) {
+      const line: Array<string | null> = [];
+      for (let col = range.c0; col <= range.c1; col += 1) line.push(typeAt(row, col));
+      rows.push(line);
+    }
+    clipboard.current = rows;
+    const code = (id: string | null) => (id ? (data.shiftTypes.find((t) => t.id === id)?.code ?? "") : "");
+    void navigator.clipboard
+      ?.writeText(rows.map((line) => line.map(code).join("\t")).join("\n"))
+      .catch(() => undefined);
+    onNotice?.(`${rows.length * (rows[0]?.length ?? 0)} Zellen kopiert`);
+  };
+  const pasteRows = (rows: Array<Array<string | null>>) => {
+    const cells: CellValue[] = [];
+    rows.forEach((line, dr) =>
+      line.forEach((shiftTypeId, dc) => {
+        const employee = employees[range.r0 + dr];
+        const day = days[range.c0 + dc];
+        if (employee && day) cells.push({ employeeId: employee.id, date: day.date, shiftTypeId });
+      }),
+    );
+    apply(cells, "Eingefügt");
+  };
+  const pasteText = (text: string) => {
+    const rows = text
+      .replace(/\r/g, "")
+      .split("\n")
+      .filter((line, index, all) => line.length || index < all.length - 1)
+      .map((line) => line.split("\t").map((code) => code.trim().toUpperCase()));
+    const unknown = [...new Set(rows.flat().filter((code) => code && !typeByCode.has(code)))];
+    if (unknown.length) {
+      onNotice?.(`Unbekannte Kürzel: ${unknown.join(", ")}`);
+      return;
+    }
+    pasteRows(rows.map((line) => line.map((code) => (code ? typeByCode.get(code)!.id : null))));
+  };
+
   const keyHandler =
     (row: number, col: number, employee: GridEmployee, day: GridDay) => (event: KeyboardEvent<HTMLDivElement>) => {
       if (event.target !== event.currentTarget) return;
@@ -237,12 +380,35 @@ export function RosterGrid({ data, days, employees, shifts, highlightShiftIds, o
         ArrowDown: [1, 0],
         ArrowUp: [-1, 0],
       };
+      const mod = event.ctrlKey || event.metaKey;
       if (moves[event.key]) {
         event.preventDefault();
-        moveFocus(row + moves[event.key][0], col + moves[event.key][1]);
-      } else if (event.key === "Home") moveFocus(row, 0);
-      else if (event.key === "End") moveFocus(row, days.length - 1);
-      else if (
+        moveFocus(row + moves[event.key][0], col + moves[event.key][1], pep && event.shiftKey);
+      } else if (event.key === "Home") moveFocus(row, 0, pep && event.shiftKey);
+      else if (event.key === "End") moveFocus(row, days.length - 1, pep && event.shiftKey);
+      else if (pep && mod && event.key.toLowerCase() === "c") {
+        event.preventDefault();
+        copy();
+      } else if (pep && mod && event.key.toLowerCase() === "v" && clipboard.current) {
+        event.preventDefault();
+        pasteRows(clipboard.current);
+      } else if (pep && mod && event.key.toLowerCase() === "x") {
+        event.preventDefault();
+        copy();
+        apply(rangeCells(null), "Ausgeschnitten");
+      } else if (pep && (event.key === "Delete" || event.key === "Backspace")) {
+        event.preventDefault();
+        apply(rangeCells(null), "Zellen geleert");
+      } else if (pep && event.key === "F2") {
+        event.preventDefault();
+        const current = typeAt(row, col);
+        setEditing(current ? (data.shiftTypes.find((t) => t.id === current)?.code ?? "") : "");
+      } else if (pep && !mod && !event.altKey && event.key.length === 1 && /[\p{L}\p{N}]/u.test(event.key)) {
+        event.preventDefault();
+        setEditing(event.key.toUpperCase());
+      } else if (event.key === "Escape") {
+        moveFocus(row, col);
+      } else if (
         event.key === "Enter" ||
         event.key === " " ||
         event.key === "ContextMenu" ||
@@ -254,6 +420,77 @@ export function RosterGrid({ data, days, employees, shifts, highlightShiftIds, o
         else if (data.canEdit) onCreate(employee.id, day.date);
       }
     };
+
+  // Maus/Touch: Klick markiert, Shift+Klick erweitert, Ziehen markiert einen Bereich; mit Stempel
+  // werden alle überstrichenen Zellen gesetzt.
+  const cellFromPoint = (x: number, y: number) => {
+    const element = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-cell]");
+    const [employeeId, date] = element?.dataset.cell?.split("|") ?? [];
+    const row = rowOf.get(employeeId);
+    const col = colOf.get(date);
+    return row === undefined || col === undefined ? null : { row, col, employeeId, date };
+  };
+  const pointerDown = (row: number, col: number) => (event: PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || (event.target as HTMLElement).closest("input, .roster-cell-add")) return;
+    if (painting) {
+      event.preventDefault();
+      const employee = employees[row];
+      const day = days[col];
+      const cells = new Map([
+        [cellId(employee.id, day.date), { employeeId: employee.id, date: day.date, shiftTypeId: null }],
+      ]);
+      gesture.current = { kind: "paint", cells };
+      setPreview(new Set(cells.keys()));
+      return;
+    }
+    const onChip = !!(event.target as HTMLElement).closest(".roster-chip");
+    if (pep && event.shiftKey) {
+      event.preventDefault();
+      setFocus({ row, col });
+      focusCell({ row, col });
+      return;
+    }
+    setFocus({ row, col });
+    setAnchor({ row, col });
+    if (pep && !onChip && event.pointerType === "mouse") gesture.current = { kind: "select", cells: new Map() };
+  };
+  useEffect(() => {
+    const move = (event: globalThis.PointerEvent) => {
+      const current = gesture.current;
+      if (!current) return;
+      const hit = cellFromPoint(event.clientX, event.clientY);
+      if (!hit) return;
+      if (current.kind === "select") setFocus({ row: hit.row, col: hit.col });
+      else if (!current.cells.has(cellId(hit.employeeId, hit.date))) {
+        current.cells.set(cellId(hit.employeeId, hit.date), {
+          employeeId: hit.employeeId,
+          date: hit.date,
+          shiftTypeId: null,
+        });
+        setPreview(new Set(current.cells.keys()));
+      }
+    };
+    const up = () => {
+      const current = gesture.current;
+      gesture.current = null;
+      if (current?.kind !== "paint") return;
+      setPreview(new Set());
+      const shiftTypeId = paintTool === "clear" ? null : paintTool;
+      const type = data.shiftTypes.find((t) => t.id === shiftTypeId);
+      apply(
+        [...current.cells.values()].map((cell) => ({ ...cell, shiftTypeId })),
+        type ? `${type.code} gestempelt` : "Zellen geleert",
+      );
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+  });
 
   const dragStart = (event: DragStartEvent) => setActive(shifts.find((s) => s.id === event.active.id) ?? null);
   const dragEnd = (event: DragEndEvent) => {
@@ -282,7 +519,20 @@ export function RosterGrid({ data, days, employees, shifts, highlightShiftIds, o
       }}
     >
       <div className="roster-grid-scroll">
-        <table className="roster-grid" ref={tableRef} role="grid" aria-label={`Dienstplan ${data.unit.name}`}>
+        <table
+          className={`roster-grid${painting ? " painting" : ""}${pep ? " pep" : ""}`}
+          ref={tableRef}
+          role="grid"
+          aria-multiselectable={pep}
+          aria-label={`Dienstplan ${data.unit.name}`}
+          onPaste={(event) => {
+            if (!pep || editing !== null) return;
+            const text = event.clipboardData.getData("text/plain");
+            if (!text) return;
+            event.preventDefault();
+            pasteText(text);
+          }}
+        >
           <thead>
             <tr>
               <th className="roster-name-head" scope="col">
@@ -300,6 +550,12 @@ export function RosterGrid({ data, days, employees, shifts, highlightShiftIds, o
                   {day.holiday && <Star aria-label={day.holiday} weight="fill" />}
                 </th>
               ))}
+              {data.lead && (
+                <th scope="col" className="roster-total-head" title="Geplante Stunden im Monat gegenüber dem Soll">
+                  <span>Plan</span>
+                  <strong>Soll</strong>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -347,7 +603,10 @@ export function RosterGrid({ data, days, employees, shifts, highlightShiftIds, o
                     data={data}
                     shifts={byCell.get(cellId(employee.id, day.date)) ?? []}
                     canEdit={data.canEdit}
+                    draggable={data.canEdit && !painting}
                     focused={focus.row === row && focus.col === col}
+                    selected={pep && inRange(row, col) && (range.r0 !== range.r1 || range.c0 !== range.c1)}
+                    previewed={preview.has(cellId(employee.id, day.date))}
                     highlight={
                       !!highlightShiftIds &&
                       (byCell.get(cellId(employee.id, day.date)) ?? []).some((s) => highlightShiftIds.has(s.id))
@@ -355,9 +614,51 @@ export function RosterGrid({ data, days, employees, shifts, highlightShiftIds, o
                     onFocusCell={() => setFocus({ row, col })}
                     onCreate={() => onCreate(employee.id, day.date)}
                     onOpen={onOpen}
+                    onSelect={pep ? () => moveFocus(row, col) : undefined}
+                    onPointerDown={pointerDown(row, col)}
                     onKeyDown={keyHandler(row, col, employee, day)}
-                  />
+                  >
+                    {editing !== null && focus.row === row && focus.col === col && (
+                      <input
+                        className="roster-code-input"
+                        autoFocus
+                        value={editing}
+                        maxLength={8}
+                        aria-label={`Kürzel für ${employee.name}, ${day.date.slice(8)}.${day.date.slice(5, 7)}. (Enter übernimmt, Escape bricht ab)`}
+                        list="roster-codes"
+                        onChange={(event) => setEditing(event.target.value.toUpperCase())}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === "Tab") {
+                            event.preventDefault();
+                            commitCode(editing, event.key === "Tab" ? [0, event.shiftKey ? -1 : 1] : [1, 0]);
+                          } else if (event.key === "Escape") {
+                            event.preventDefault();
+                            setEditing(null);
+                            focusCell(focus);
+                          }
+                        }}
+                        onBlur={() => setEditing(null)}
+                      />
+                    )}
+                  </Cell>
                 ))}
+                {data.lead && (
+                  <td className="roster-total">
+                    {employee.plannedMinutes !== null && employee.targetMinutes !== null && (
+                      <>
+                        <span
+                          className={
+                            Math.abs(employee.plannedMinutes - employee.targetMinutes) >= 60 ? "roster-off-target" : ""
+                          }
+                        >
+                          {formatHours(employee.plannedMinutes).replace(" h", "")}
+                        </span>
+                        <small>{formatHours(employee.targetMinutes).replace(" h", "")}</small>
+                        <em>{formatHours(employee.plannedMinutes - employee.targetMinutes, true).replace(" h", "")}</em>
+                      </>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -393,12 +694,24 @@ export function RosterGrid({ data, days, employees, shifts, highlightShiftIds, o
                       </td>
                     );
                   })}
+                  {data.lead && <td className="roster-total" />}
                 </tr>
               ))}
             </tfoot>
           )}
         </table>
       </div>
+      {pep && (
+        <datalist id="roster-codes">
+          {data.shiftTypes
+            .filter((t) => t.active)
+            .map((t) => (
+              <option key={t.id} value={t.code}>
+                {t.name}
+              </option>
+            ))}
+        </datalist>
+      )}
       <DragOverlay dropAnimation={null}>
         {active ? <ShiftChip shift={active} data={data} draggable={false} overlay /> : null}
       </DragOverlay>
