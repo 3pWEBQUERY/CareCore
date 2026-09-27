@@ -10,7 +10,7 @@ import {
   type Row,
 } from "@/lib/api-context";
 import { staffOf } from "@/lib/care-planning";
-import { notify } from "@/lib/schedule";
+import { notify } from "@/lib/notify";
 import { hasPermission } from "@/lib/server-data";
 import {
   ACTION_STATUS,

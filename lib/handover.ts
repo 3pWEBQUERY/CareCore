@@ -45,8 +45,11 @@ async function windowStart(ctx: ApiContext, period: string | null) {
   if (period === "8" || period === "12" || period === "24" || period === "48")
     return { since: new Date(Date.now() - Number(period) * 3_600_000).toISOString(), basis: `${period} Stunden` };
   const rows = (await ctx.sql`
-    SELECT MAX(COALESCE(a.checked_out_at, s.ends_at)) AS ended FROM carecore_shift_assignments a JOIN carecore_shifts s ON s.id = a.shift_id
-    WHERE a.user_id = ${ctx.actor.id} AND COALESCE(a.checked_out_at, s.ends_at) < NOW() AND s.status <> 'cancelled' AND a.status <> 'absent'`) as Row[];
+    SELECT GREATEST(
+      (SELECT MAX(clock_out) FROM carecore_time_entries WHERE employee_id = ${ctx.actor.id} AND clock_out < NOW()),
+      (SELECT MAX(s.planned_end) FROM carecore_roster_shifts s JOIN carecore_schedule_periods p ON p.id = s.period_id AND p.status = 'PUBLISHED'
+        WHERE s.employee_id = ${ctx.actor.id} AND s.category <> 'ABSENCE' AND s.planned_end < NOW()
+          AND NOT EXISTS (SELECT 1 FROM carecore_time_entries te WHERE te.shift_id = s.id))) AS ended`) as Row[];
   const ended = iso(rows[0]?.ended);
   return ended
     ? { since: ended, basis: "Ende deines letzten Dienstes" }

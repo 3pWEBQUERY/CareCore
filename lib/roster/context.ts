@@ -35,6 +35,11 @@ export async function rosterContext(): Promise<RosterContext> {
   return { actor: scoped, sql, access: await accessFor(sql, scoped), correlationId: randomUUID() };
 }
 
+// Für bestehende Endpunkte mit ApiContext (z. B. „Mein Dienst“), die Dienstplan-Services nutzen.
+export async function rosterContextFrom(ctx: ApiContext): Promise<RosterContext> {
+  return { ...ctx, access: await accessFor(ctx.sql, ctx.actor), correlationId: randomUUID() };
+}
+
 // Fremde Wohnbereiche verraten ihre Existenz nicht (NOT_FOUND); im eigenen Bereich fehlt das Recht (FORBIDDEN).
 export function requirePermission(ctx: RosterContext, permission: RosterPermission, unitId?: string | null) {
   if (rosterCan(ctx.access, permission, unitId)) return;

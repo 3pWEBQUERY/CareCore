@@ -1,6 +1,6 @@
 "use client";
 
-export type View = "employees" | "shifts" | "tasks";
+export type View = "employees" | "tasks";
 
 export type Employee = {
   id: string;
@@ -18,10 +18,7 @@ export type Employee = {
 export type TeamleadRow = Employee & {
   name?: string;
   title?: string;
-  starts_at?: string;
-  ends_at?: string;
   assignee?: string;
-  assignees?: string;
   description?: string;
   status?: string;
   priority?: string;
@@ -38,12 +35,6 @@ export const config = {
     subtitle: "Dein Team im Blick – Zuständigkeiten, Rollen und Verfügbarkeit an einem Ort.",
     action: "Mitarbeiter erstellen",
   },
-  shifts: {
-    title: "Dienste",
-    eyebrow: "TEAMLEITUNG · EINSATZPLANUNG",
-    subtitle: "Dienste planen, besetzen und zuverlässig mit dem Team abstimmen.",
-    action: "Dienst erstellen",
-  },
   tasks: {
     title: "Aufgaben",
     eyebrow: "TEAMLEITUNG · ARBEITSSTEUERUNG",
@@ -52,8 +43,7 @@ export const config = {
   },
 } as const;
 
-export const endpointFor = (view: View) =>
-  `/api/teamlead/${view === "employees" ? "employees" : view === "shifts" ? "shifts" : "tasks"}`;
+export const endpointFor = (view: View) => `/api/teamlead/${view === "employees" ? "employees" : "tasks"}`;
 
 export const initials = (value: string) =>
   value

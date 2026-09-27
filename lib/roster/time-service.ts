@@ -61,7 +61,11 @@ export async function clockIn(ctx: RosterContext, body: Body) {
     throw invalid(
       `Für diesen Dienst ist Einstempeln nur ab ${rules.clockInEarliestMinutes} Minuten vor Beginn bis Dienstende möglich.`,
     );
-  const unitId = shift?.unitId ?? home;
+  // Ohne Dienst: gewählter Wohnbereich (nur einer, in dem die Person planbar ist), sonst der Stammwohnbereich.
+  const chosen = optionalUuid(body.careUnitId, "Wohnbereich");
+  if (chosen && !shift && !ctx.access.memberUnitIds.includes(chosen))
+    throw invalid("Ungeplante Einsätze sind nur in deinen eigenen Wohnbereichen möglich.");
+  const unitId = shift?.unitId ?? chosen ?? home;
   const checklist = Array.isArray(body.checklist)
     ? [...new Set(body.checklist.filter((key) => CHECKLIST_KEYS.includes(key as never)))]
     : [];
