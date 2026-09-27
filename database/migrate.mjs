@@ -22,12 +22,38 @@ const connectionString = process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
 if (!connectionString) throw new Error("DATABASE_URL or POSTGRES_URL is required.");
 const sql = neon(connectionString);
 
+// Splits a migration at semicolons that end a line, but not inside quoted text or
+// dollar-quoted bodies ($$ ... $$), so PL/pgSQL functions stay in one statement.
 function splitStatements(source) {
-  return source
-    .replace(/^--.*$/gm, "")
-    .split(/;\s*(?:\r?\n|$)/)
-    .map((statement) => statement.trim())
-    .filter(Boolean);
+  const text = source.replace(/^--.*$/gm, "");
+  const statements = [];
+  let current = "";
+  let quote = null;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (quote) {
+      if (text.startsWith(quote, index)) {
+        current += quote;
+        index += quote.length - 1;
+        quote = null;
+      } else current += char;
+      continue;
+    }
+    const dollar = char === "$" ? /^\$[A-Za-z_]*\$/.exec(text.slice(index)) : null;
+    if (dollar) {
+      quote = dollar[0];
+      current += quote;
+      index += quote.length - 1;
+    } else if (char === "'") {
+      quote = "'";
+      current += char;
+    } else if (char === ";" && /^[ \t]*(\r?\n|$)/.test(text.slice(index + 1))) {
+      statements.push(current);
+      current = "";
+    } else current += char;
+  }
+  statements.push(current);
+  return statements.map((statement) => statement.trim()).filter(Boolean);
 }
 
 await sql`
