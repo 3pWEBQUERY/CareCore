@@ -32,6 +32,7 @@ const ENTITY: Record<string, { area: string; href: string | null }> = {
   user: { area: "Mitarbeiter", href: "/leitung/administration/mitarbeiter" },
   role: { area: "Rolle", href: "/leitung/administration/mitarbeiter" },
   setting: { area: "Einstellung", href: "/leitung/administration/konfiguration" },
+  support_request: { area: "Problemmeldung", href: null },
   care_supply_product: { area: "Pflegeprodukt", href: "/leitung/administration/pflegebedarf" },
   resident: { area: "Bewohner", href: "/bewohner" },
   resident_document: { area: "Dokument", href: "/bewohner" },

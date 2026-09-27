@@ -36,6 +36,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { useNavigationBadges, useWorkContext, type NavigationBadges } from "./care-context";
+import { openHelp } from "./help-panel";
 import {
   moduleBadges,
   moduleLabel,
@@ -293,12 +294,7 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
             <RailIcon name="settings" />
             <SidebarTooltip label="Einstellungen" />
           </button>
-          <button
-            className="sidebar-rail-button"
-            type="button"
-            aria-label="Hilfe & Support"
-            onClick={() => onToast?.("Hilfe & Support geöffnet")}
-          >
+          <button className="sidebar-rail-button" type="button" aria-label="Hilfe & Support" onClick={openHelp}>
             <RailIcon name="docs" />
             <SidebarTooltip label="Hilfe & Support" />
           </button>
