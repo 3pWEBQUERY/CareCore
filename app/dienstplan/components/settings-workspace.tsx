@@ -17,6 +17,7 @@ import {
   type ShiftTypeInfo,
 } from "@/lib/roster/types";
 import { rosterRequest, useRosterData } from "./roster-api";
+import { CareOptionSelect } from "@/app/components/care-form-controls";
 
 const TABS = ["Diensttypen", "Mindestbesetzung", "Regelwerk", "Feiertage", "Personal"] as const;
 type Tab = (typeof TABS)[number];
@@ -63,17 +64,12 @@ export default function SettingsWorkspace() {
               ))}
             </div>
             {data && data.units.length > 1 && (
-              <select
-                aria-label="Wohnbereich"
+              <CareOptionSelect
+                label="Wohnbereich"
                 value={data.unitId ?? ""}
-                onChange={(event) => go({ einheit: event.target.value })}
-              >
-                {data.units.map((unit) => (
-                  <option key={unit.id} value={unit.id}>
-                    {unit.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => go({ einheit: value })}
+                options={[...data.units.map((unit) => ({ value: String(unit.id), label: String(unit.name) }))]}
+              />
             )}
           </section>
           {error && !data && (
@@ -314,24 +310,32 @@ function ShiftTypeEditor({
       </label>
       <label>
         <span>Kategorie</span>
-        <select value={form.category} onChange={(e) => set("category", e.target.value as ShiftCategory)}>
-          {(Object.keys(CATEGORY_LABELS) as ShiftCategory[]).map((key) => (
-            <option key={key} value={key}>
-              {CATEGORY_LABELS[key]}
-            </option>
-          ))}
-        </select>
+        <CareOptionSelect
+          label="Kategorie"
+          value={form.category}
+          onChange={(value) => set("category", value as ShiftCategory)}
+          options={[
+            ...(Object.keys(CATEGORY_LABELS) as ShiftCategory[]).map((key) => ({
+              value: String(key),
+              label: String(CATEGORY_LABELS[key]),
+            })),
+          ]}
+        />
       </label>
       {form.category === "ABSENCE" ? (
         <label>
           <span>Art der Abwesenheit</span>
-          <select value={form.absenceKind} onChange={(e) => set("absenceKind", e.target.value as AbsenceKind)}>
-            {(Object.keys(ABSENCE_LABELS) as AbsenceKind[]).map((key) => (
-              <option key={key} value={key}>
-                {ABSENCE_LABELS[key]}
-              </option>
-            ))}
-          </select>
+          <CareOptionSelect
+            label="Art der Abwesenheit"
+            value={form.absenceKind}
+            onChange={(value) => set("absenceKind", value as AbsenceKind)}
+            options={[
+              ...(Object.keys(ABSENCE_LABELS) as AbsenceKind[]).map((key) => ({
+                value: String(key),
+                label: String(ABSENCE_LABELS[key]),
+              })),
+            ]}
+          />
         </label>
       ) : (
         <label>
@@ -404,14 +408,15 @@ function ShiftTypeEditor({
       {!type && (
         <label>
           <span>Gültig für</span>
-          <select value={form.scope} onChange={(e) => set("scope", e.target.value)}>
-            {data.isAdmin && <option value="org">Ganze Organisation</option>}
-            {data.units.map((unit) => (
-              <option key={unit.id} value={unit.id}>
-                Nur {unit.name}
-              </option>
-            ))}
-          </select>
+          <CareOptionSelect
+            label="Gültig für"
+            value={form.scope}
+            onChange={(value) => set("scope", value)}
+            options={[
+              ...(data.isAdmin ? [{ value: "org", label: "Ganze Organisation" }] : []),
+              ...data.units.map((unit) => ({ value: String(unit.id), label: `Nur ${unit.name}` })),
+            ]}
+          />
         </label>
       )}
       <label>
@@ -516,16 +521,12 @@ function StaffingTab({ data, reload, showToast }: TabProps) {
           </label>
           <label>
             Diensttyp
-            <select
+            <CareOptionSelect
+              label="Diensttyp"
               value={exception.shiftTypeId}
-              onChange={(e) => setException({ ...exception, shiftTypeId: e.target.value })}
-            >
-              {types.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.code} · {t.name}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setException({ ...exception, shiftTypeId: value })}
+              options={[...types.map((t) => ({ value: String(t.id), label: `${t.code} · ${t.name}` }))]}
+            />
           </label>
           <label>
             Mindestens
@@ -719,14 +720,15 @@ function StaffingEditor({
       ))}
       <label>
         <span>Mindestens qualifiziert (optional)</span>
-        <select value={qualificationId} onChange={(e) => setQualificationId(e.target.value)}>
-          <option value="">keine Vorgabe</option>
-          {data.qualifications.map((q) => (
-            <option key={q.id} value={q.id}>
-              {q.name}
-            </option>
-          ))}
-        </select>
+        <CareOptionSelect
+          label="Mindestens qualifiziert"
+          value={qualificationId}
+          onChange={(value) => setQualificationId(value)}
+          options={[
+            { value: "", label: "keine Vorgabe" },
+            ...data.qualifications.map((q) => ({ value: String(q.id), label: String(q.name) })),
+          ]}
+        />
       </label>
       {qualificationId && (
         <label>
@@ -784,12 +786,17 @@ function RulesTab({ data, reload, showToast }: TabProps) {
             protokolliert.
           </p>
         </div>
-        <select aria-label="Gültigkeit" value={scope} onChange={(e) => setScope(e.target.value as "unit" | "org")}>
-          {data.isAdmin && <option value="org">Ganze Organisation</option>}
-          {data.unitId && (
-            <option value="unit">Nur {data.units.find((u) => u.id === data.unitId)?.name} (Überschreibung)</option>
-          )}
-        </select>
+        <CareOptionSelect
+          label="Gültigkeit"
+          value={scope}
+          onChange={(value) => setScope(value as "unit" | "org")}
+          options={[
+            ...(data.isAdmin ? [{ value: "org", label: "Ganze Organisation" }] : []),
+            ...(data.unitId
+              ? [{ value: "unit", label: `Nur ${data.units.find((u) => u.id === data.unitId)?.name} (Überschreibung)` }]
+              : []),
+          ]}
+        />
       </div>
       {!data.ruleSet.valuesConfirmed && (
         <p className="roster-alert" style={{ margin: 16 }}>

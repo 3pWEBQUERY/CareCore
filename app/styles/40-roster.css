@@ -942,6 +942,25 @@ tr.self .roster-name {
   font-style: normal;
 }
 
+/* Eigene Auswahlfelder (CareOptionSelect) in Filterleisten: so kompakt wie die übrigen Filter */
+.roster-toolbar .area-custom-select,
+.roster-section-head .area-custom-select {
+  min-width: 170px;
+}
+.roster-toolbar .area-select-trigger,
+.roster-section-head .area-select-trigger {
+  min-height: 34px;
+  gap: 8px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.roster-toolbar .area-select-trigger span,
+.roster-section-head .area-select-trigger span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 @media (max-width: 1100px) {
   .roster-tiles {
     grid-template-columns: repeat(4, minmax(0, 1fr));

@@ -9,6 +9,7 @@ import type { TimesheetEntry, TimesheetRow } from "@/lib/roster/time-service";
 import { formatDate, formatHours, formatSignedMinutes, localTime, monthLabel, shiftMonth } from "@/lib/roster/time";
 import { ABSENCE_LABELS, TIME_ENTRY_STATUS_LABELS, type AbsenceKind } from "@/lib/roster/types";
 import { rosterRequest, useRosterData } from "./roster-api";
+import { CareOptionSelect } from "@/app/components/care-form-controls";
 
 type Payload = {
   year: number;
@@ -158,44 +159,35 @@ export default function TimesheetWorkspace({ own }: { own?: boolean }) {
               {!own && data && (
                 <div className="roster-filters">
                   {(units.data?.units.filter((u) => u.lead).length ?? 0) > 1 && (
-                    <select
-                      aria-label="Wohnbereich"
+                    <CareOptionSelect
+                      label="Wohnbereich"
                       value={data.unitId ?? ""}
-                      onChange={(e) => navigate({ einheit: e.target.value, person: null })}
-                    >
-                      {units
-                        .data!.units.filter((u) => u.lead)
-                        .map((unit) => (
-                          <option key={unit.id} value={unit.id}>
-                            {unit.name}
-                          </option>
-                        ))}
-                    </select>
+                      onChange={(value) => navigate({ einheit: value, person: null })}
+                      options={[
+                        ...units
+                          .data!.units.filter((u) => u.lead)
+                          .map((unit) => ({ value: String(unit.id), label: String(unit.name) })),
+                      ]}
+                    />
                   )}
-                  <select
-                    aria-label="Person"
+                  <CareOptionSelect
+                    label="Person"
                     value={params.get("person") ?? ""}
-                    onChange={(e) => navigate({ person: e.target.value })}
-                  >
-                    <option value="">Alle Personen</option>
-                    {data.people.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    aria-label="Diensttyp"
+                    onChange={(value) => navigate({ person: value })}
+                    options={[
+                      { value: "", label: "Alle Personen" },
+                      ...data.people.map((p) => ({ value: String(p.id), label: String(p.name) })),
+                    ]}
+                  />
+                  <CareOptionSelect
+                    label="Diensttyp"
                     value={params.get("diensttyp") ?? ""}
-                    onChange={(e) => navigate({ diensttyp: e.target.value })}
-                  >
-                    <option value="">Alle Diensttypen</option>
-                    {data.shiftTypes.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.code} · {t.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => navigate({ diensttyp: value })}
+                    options={[
+                      { value: "", label: "Alle Diensttypen" },
+                      ...data.shiftTypes.map((t) => ({ value: String(t.id), label: `${t.code} · ${t.name}` })),
+                    ]}
+                  />
                 </div>
               )}
             </section>
