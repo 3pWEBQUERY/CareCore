@@ -16,6 +16,7 @@ import {
   type Priority,
   type Violation,
 } from "@/lib/roster/types";
+import { CareOptionSelect } from "@/app/components/care-form-controls";
 
 // Formulare für Mitarbeitende: Wunschfrei, Abwesenheit, Dienstwunsch, Zeitkorrektur, Tausch.
 
@@ -87,13 +88,17 @@ export function TimeOffDialog({ today, onClose, onDone }: { today: string; onClo
       </label>
       <label>
         <span>Priorität</span>
-        <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as Priority })}>
-          {(Object.keys(PRIORITY_LABELS) as Priority[]).map((key) => (
-            <option key={key} value={key}>
-              {PRIORITY_LABELS[key]}
-            </option>
-          ))}
-        </select>
+        <CareOptionSelect
+          label="Priorität"
+          value={form.priority}
+          onChange={(value) => setForm({ ...form, priority: value as Priority })}
+          options={[
+            ...(Object.keys(PRIORITY_LABELS) as Priority[]).map((key) => ({
+              value: String(key),
+              label: String(PRIORITY_LABELS[key]),
+            })),
+          ]}
+        />
       </label>
       <label>
         <span>Grund (optional)</span>
@@ -149,13 +154,12 @@ export function AbsenceDialog({ today, onClose, onDone }: { today: string; onClo
     >
       <label className="area-editor-wide">
         <span>Art</span>
-        <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
-          {ABSENCE_KINDS.map(([key, label]) => (
-            <option key={key} value={key}>
-              {label}
-            </option>
-          ))}
-        </select>
+        <CareOptionSelect
+          label="Art"
+          value={form.kind}
+          onChange={(value) => setForm({ ...form, kind: value })}
+          options={[...ABSENCE_KINDS.map(([key, label]) => ({ value: String(key), label: String(label) }))]}
+        />
       </label>
       <label>
         <span>Von</span>
@@ -251,48 +255,54 @@ export function PreferenceDialog({
     >
       <label className="area-editor-wide">
         <span>Art des Wunsches</span>
-        <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as PreferenceKind })}>
-          {(Object.keys(PREFERENCE_LABELS) as PreferenceKind[]).map((key) => (
-            <option key={key} value={key}>
-              {PREFERENCE_LABELS[key]}
-            </option>
-          ))}
-        </select>
+        <CareOptionSelect
+          label="Art des Wunsches"
+          value={form.kind}
+          onChange={(value) => setForm({ ...form, kind: value as PreferenceKind })}
+          options={[
+            ...(Object.keys(PREFERENCE_LABELS) as PreferenceKind[]).map((key) => ({
+              value: String(key),
+              label: String(PREFERENCE_LABELS[key]),
+            })),
+          ]}
+        />
       </label>
       {byType && (
         <label className="area-editor-wide">
           <span>Diensttyp</span>
-          <select value={form.shiftTypeId} onChange={(e) => setForm({ ...form, shiftTypeId: e.target.value })}>
-            {shiftTypes.map((type) => (
-              <option key={type.id} value={type.id}>
-                {type.code} · {type.name}
-              </option>
-            ))}
-          </select>
+          <CareOptionSelect
+            label="Diensttyp"
+            value={form.shiftTypeId}
+            onChange={(value) => setForm({ ...form, shiftTypeId: value })}
+            options={[...shiftTypes.map((type) => ({ value: String(type.id), label: `${type.code} · ${type.name}` }))]}
+          />
         </label>
       )}
       {byWeekday && (
         <label className="area-editor-wide">
           <span>Wochentag</span>
-          <select value={form.weekday} onChange={(e) => setForm({ ...form, weekday: e.target.value })}>
-            {WEEKDAY_LABELS.map((label, index) => (
-              <option key={label} value={index + 1}>
-                {label}
-              </option>
-            ))}
-          </select>
+          <CareOptionSelect
+            label="Wochentag"
+            value={form.weekday}
+            onChange={(value) => setForm({ ...form, weekday: value })}
+            options={[...WEEKDAY_LABELS.map((label, index) => ({ value: String(index + 1), label: String(label) }))]}
+          />
         </label>
       )}
       {form.kind === "AVOID_CATEGORY" && (
         <label className="area-editor-wide">
           <span>Dienstart</span>
-          <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-            {(Object.keys(EXCLUSION_LABELS) as ExclusionCategory[]).map((key) => (
-              <option key={key} value={key}>
-                {EXCLUSION_LABELS[key]}
-              </option>
-            ))}
-          </select>
+          <CareOptionSelect
+            label="Dienstart"
+            value={form.category}
+            onChange={(value) => setForm({ ...form, category: value })}
+            options={[
+              ...(Object.keys(EXCLUSION_LABELS) as ExclusionCategory[]).map((key) => ({
+                value: String(key),
+                label: String(EXCLUSION_LABELS[key]),
+              })),
+            ]}
+          />
         </label>
       )}
       <label>

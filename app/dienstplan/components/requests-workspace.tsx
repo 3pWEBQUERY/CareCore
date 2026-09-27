@@ -10,6 +10,7 @@ import type { SwapView } from "@/lib/roster/swap-service";
 import { formatDate, localTime } from "@/lib/roster/time";
 import { PRIORITY_LABELS, SWAP_STATUS_LABELS, type Priority, type RuleCode, type Violation } from "@/lib/roster/types";
 import { RosterRequestError, rosterRequest, useRosterData } from "./roster-api";
+import { CareOptionSelect } from "@/app/components/care-form-controls";
 
 type Payload = {
   timeOff: RequestItem[];
@@ -133,23 +134,20 @@ export default function RequestsWorkspace() {
             {leadUnits.length > 1 && (
               <section className="roster-toolbar">
                 <div className="roster-filters">
-                  <select
-                    aria-label="Wohnbereich"
+                  <CareOptionSelect
+                    label="Wohnbereich"
                     value={unitParam ?? ""}
-                    onChange={(e) => {
+                    onChange={(value) => {
                       const next = new URLSearchParams(params.toString());
-                      if (e.target.value) next.set("einheit", e.target.value);
+                      if (value) next.set("einheit", value);
                       else next.delete("einheit");
                       router.replace(`${pathname}?${next}`, { scroll: false });
                     }}
-                  >
-                    <option value="">Alle meine Wohnbereiche</option>
-                    {leadUnits.map((unit) => (
-                      <option key={unit.id} value={unit.id}>
-                        {unit.name}
-                      </option>
-                    ))}
-                  </select>
+                    options={[
+                      { value: "", label: "Alle meine Wohnbereiche" },
+                      ...leadUnits.map((unit) => ({ value: String(unit.id), label: String(unit.name) })),
+                    ]}
+                  />
                 </div>
               </section>
             )}

@@ -6,6 +6,7 @@ import type { AuditEntry } from "@/lib/roster/audit-service";
 import type { SettingsPayload } from "@/lib/roster/settings-service";
 import { formatDate } from "@/lib/roster/time";
 import { useRosterData } from "./roster-api";
+import { CareOptionSelect } from "@/app/components/care-form-controls";
 
 const ACTIONS: Record<string, string> = {
   created: "angelegt",
@@ -124,14 +125,15 @@ export default function AuditWorkspace() {
           </header>
           <section className="roster-toolbar">
             <div className="roster-filters">
-              <select aria-label="Person" value={person} onChange={(e) => setPerson(e.target.value)}>
-                <option value="">Alle Personen</option>
-                {(settings.data?.employees ?? []).map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.name}
-                  </option>
-                ))}
-              </select>
+              <CareOptionSelect
+                label="Person"
+                value={person}
+                onChange={(value) => setPerson(value)}
+                options={[
+                  { value: "", label: "Alle Personen" },
+                  ...(settings.data?.employees ?? []).map((e) => ({ value: String(e.id), label: String(e.name) })),
+                ]}
+              />
               <label className="roster-month">
                 <span className="sr-only">Von</span>
                 <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} aria-label="Von" />
@@ -140,14 +142,15 @@ export default function AuditWorkspace() {
                 <span className="sr-only">Bis</span>
                 <input type="date" value={to} onChange={(e) => setTo(e.target.value)} aria-label="Bis" />
               </label>
-              <select aria-label="Aktion" value={action} onChange={(e) => setAction(e.target.value)}>
-                <option value="">Alle Aktionen</option>
-                {Object.entries(ACTIONS).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+              <CareOptionSelect
+                label="Aktion"
+                value={action}
+                onChange={(value) => setAction(value)}
+                options={[
+                  { value: "", label: "Alle Aktionen" },
+                  ...Object.entries(ACTIONS).map(([key, label]) => ({ value: String(key), label: String(label) })),
+                ]}
+              />
             </div>
           </section>
           <section className="card roster-card">

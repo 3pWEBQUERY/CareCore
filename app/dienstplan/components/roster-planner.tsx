@@ -28,6 +28,7 @@ import { MoveDialog, ShiftEditor, type ShiftDraft } from "./shift-editor";
 import { ShiftDetail } from "./shift-detail";
 import { SidePanel } from "./side-panel";
 import { ViolationDialog, type ViolationPrompt } from "./violation-dialog";
+import { CareOptionSelect } from "@/app/components/care-form-controls";
 
 type Ack = { acknowledgedWarnings?: RuleCode[]; overrideReason?: string };
 type Dialog =
@@ -375,19 +376,16 @@ export default function RosterPlanner() {
                   </button>
                 </div>
                 {data && data.units.filter((u) => u.lead).length > 1 && (
-                  <select
-                    aria-label="Wohnbereich"
+                  <CareOptionSelect
+                    label="Wohnbereich"
                     value={data.unit.id}
-                    onChange={(event) => navigate({ einheit: event.target.value })}
-                  >
-                    {data.units
-                      .filter((u) => u.lead)
-                      .map((unit) => (
-                        <option key={unit.id} value={unit.id}>
-                          {unit.name}
-                        </option>
-                      ))}
-                  </select>
+                    onChange={(value) => navigate({ einheit: value })}
+                    options={[
+                      ...data.units
+                        .filter((u) => u.lead)
+                        .map((unit) => ({ value: String(unit.id), label: String(unit.name) })),
+                    ]}
+                  />
                 )}
                 <label className="roster-search">
                   <MagnifyingGlass aria-hidden="true" />
@@ -398,30 +396,27 @@ export default function RosterPlanner() {
                     aria-label="Person suchen"
                   />
                 </label>
-                <select
-                  aria-label="Diensttyp filtern"
+                <CareOptionSelect
+                  label="Diensttyp filtern"
                   value={typeFilter}
-                  onChange={(event) => setTypeFilter(event.target.value)}
-                >
-                  <option value="">Alle Diensttypen</option>
-                  {data?.shiftTypes.map((type) => (
-                    <option key={type.id} value={type.id}>
-                      {type.code} · {type.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Qualifikation filtern"
+                  onChange={(value) => setTypeFilter(value)}
+                  options={[
+                    { value: "", label: "Alle Diensttypen" },
+                    ...(data?.shiftTypes ?? []).map((type) => ({
+                      value: String(type.id),
+                      label: `${type.code} · ${type.name}`,
+                    })),
+                  ]}
+                />
+                <CareOptionSelect
+                  label="Qualifikation filtern"
                   value={qualificationFilter}
-                  onChange={(event) => setQualificationFilter(event.target.value)}
-                >
-                  <option value="">Alle Qualifikationen</option>
-                  {qualifications.map((q) => (
-                    <option key={q} value={q}>
-                      {q}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setQualificationFilter(value)}
+                  options={[
+                    { value: "", label: "Alle Qualifikationen" },
+                    ...qualifications.map((q) => ({ value: String(q), label: String(q) })),
+                  ]}
+                />
                 <label className="roster-toggle">
                   <input
                     type="checkbox"

@@ -436,6 +436,21 @@
 .area-select-menu button.selected svg {
   opacity: 1;
 }
+.area-select-menu button.active {
+  background: var(--brand-soft);
+}
+.area-select-menu button:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.area-select-trigger .placeholder {
+  color: var(--muted);
+}
+.area-select-trigger:disabled {
+  color: var(--muted);
+  background: #f8fafc;
+  cursor: not-allowed;
+}
 .area-select-menu-portal {
   position: fixed;
   inset: auto;

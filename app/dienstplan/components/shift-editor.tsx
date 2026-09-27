@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { EditorDialog } from "@/app/components/workspace-ui";
 import { localTime, plannedInterval } from "@/lib/roster/time";
 import type { GridShift, SchedulePayload } from "@/lib/roster/view-types";
+import { CareOptionSelect } from "@/app/components/care-form-controls";
 
 export type ShiftDraft = {
   employeeId: string;
@@ -120,13 +121,17 @@ export function ShiftEditor({
     >
       <label>
         <span>Person</span>
-        <select value={draft.employeeId} onChange={(event) => set("employeeId", event.target.value)}>
-          {data.employees.map((employee) => (
-            <option key={employee.id} value={employee.id}>
-              {employee.name} · {employee.pensumPercent} %
-            </option>
-          ))}
-        </select>
+        <CareOptionSelect
+          label="Person"
+          value={draft.employeeId}
+          onChange={(value) => set("employeeId", value)}
+          options={[
+            ...data.employees.map((employee) => ({
+              value: String(employee.id),
+              label: `${employee.name} · ${employee.pensumPercent} %`,
+            })),
+          ]}
+        />
       </label>
       <label>
         <span>Datum</span>
@@ -134,13 +139,17 @@ export function ShiftEditor({
       </label>
       <label className="area-editor-wide">
         <span>Diensttyp</span>
-        <select value={draft.shiftTypeId} onChange={(event) => selectType(event.target.value)}>
-          {types.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.code} · {t.name} ({t.startTime}–{t.endTime}){t.active ? "" : " – inaktiv"}
-            </option>
-          ))}
-        </select>
+        <CareOptionSelect
+          label="Diensttyp"
+          value={draft.shiftTypeId}
+          onChange={(value) => selectType(value)}
+          options={[
+            ...types.map((t) => ({
+              value: String(t.id),
+              label: `${t.code} · ${t.name} (${t.startTime}–${t.endTime})${t.active ? "" : " – inaktiv"}`,
+            })),
+          ]}
+        />
       </label>
       <label className="area-editor-wide roster-checkbox">
         <input
@@ -240,13 +249,14 @@ export function MoveDialog({
     >
       <label>
         <span>Person</span>
-        <select value={employeeId} onChange={(event) => setEmployeeId(event.target.value)}>
-          {data.employees.map((employee) => (
-            <option key={employee.id} value={employee.id}>
-              {employee.name}
-            </option>
-          ))}
-        </select>
+        <CareOptionSelect
+          label="Person"
+          value={employeeId}
+          onChange={(value) => setEmployeeId(value)}
+          options={[
+            ...data.employees.map((employee) => ({ value: String(employee.id), label: String(employee.name) })),
+          ]}
+        />
       </label>
       <label>
         <span>Datum</span>

@@ -9,6 +9,7 @@ import type { SchedulePayload } from "@/lib/roster/view-types";
 import { RosterRequestError, rosterRequest } from "./roster-api";
 import { SidePanel } from "./side-panel";
 import { ViolationList } from "./violation-dialog";
+import { CareOptionSelect } from "@/app/components/care-form-controls";
 
 type Pending = {
   violations: Violation[];
@@ -199,10 +200,15 @@ export function AiPlanningPanel({
             <>
               <label>
                 <span>Zeitraum</span>
-                <select value={scope} onChange={(event) => setScope(event.target.value as "month" | "week")}>
-                  <option value="month">Ganzer Monat</option>
-                  <option value="week">Eine Woche</option>
-                </select>
+                <CareOptionSelect
+                  label="Zeitraum"
+                  value={scope}
+                  onChange={(value) => setScope(value as "month" | "week")}
+                  options={[
+                    { value: "month", label: "Ganzer Monat" },
+                    { value: "week", label: "Eine Woche" },
+                  ]}
+                />
               </label>
               {scope === "week" && (
                 <label>

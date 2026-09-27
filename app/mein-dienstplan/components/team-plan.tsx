@@ -9,6 +9,7 @@ import { RosterGrid } from "@/app/dienstplan/components/roster-grid";
 import { ShiftDetail } from "@/app/dienstplan/components/shift-detail";
 import { addDays, monthLabel, shiftMonth, weekStart } from "@/lib/roster/time";
 import type { GridShift, SchedulePayload } from "@/lib/roster/view-types";
+import { CareOptionSelect } from "@/app/components/care-form-controls";
 
 const zurichMonth = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Zurich" }).format(new Date()).slice(0, 7);
@@ -136,17 +137,12 @@ export default function TeamPlan() {
                   </button>
                 </div>
                 {memberUnits.length > 1 && data && (
-                  <select
-                    aria-label="Wohnbereich"
+                  <CareOptionSelect
+                    label="Wohnbereich"
                     value={data.unit.id}
-                    onChange={(event) => navigate({ einheit: event.target.value })}
-                  >
-                    {memberUnits.map((unit) => (
-                      <option key={unit.id} value={unit.id}>
-                        {unit.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => navigate({ einheit: value })}
+                    options={[...memberUnits.map((unit) => ({ value: String(unit.id), label: String(unit.name) }))]}
+                  />
                 )}
                 <label className="roster-search">
                   <MagnifyingGlass aria-hidden="true" />
