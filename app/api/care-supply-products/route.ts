@@ -13,6 +13,17 @@ type ProductInput = {
   status?: unknown;
 };
 const cleanText = (value: unknown, max: number) => (typeof value === "string" ? value.trim().slice(0, max) : "");
+// Catalog changes appear in the change log of the administration.
+async function audit(
+  sql: ReturnType<typeof carecoreDb>,
+  actor: { id: string; organizationId?: string | null },
+  productId: unknown,
+  action: string,
+  after: unknown,
+) {
+  await sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
+    VALUES (${randomUUID()}, ${actor.organizationId}, ${actor.id}, 'care_supply_product', ${String(productId)}, ${action}, ${JSON.stringify(after)}::jsonb)`;
+}
 const quantity = (value: unknown) =>
   typeof value === "number" && Number.isInteger(value) ? Math.max(0, Math.min(100000, value)) : 0;
 
@@ -47,6 +58,7 @@ export async function POST(request: Request) {
     const sql = carecoreDb();
     const rows =
       await sql`INSERT INTO carecore_care_supply_products (id, organization_id, item_name, category, unit, description, default_target_quantity, current_stock_quantity, created_by, updated_by) VALUES (${randomUUID()}, ${actor.organizationId}, ${itemName}, ${category}, ${unit}, ${description || null}, ${target}, ${currentStock}, ${actor.id}, ${actor.id}) RETURNING id, item_name, category, unit, description, default_target_quantity, current_stock_quantity, status, created_at, updated_at`;
+    await audit(sql, actor, rows[0].id, "created", { name: itemName, category, unit, stock: currentStock });
     return NextResponse.json({ product: rows[0] }, { status: 201 });
   } catch (error) {
     if (String(error).toLowerCase().includes("duplicate"))
@@ -75,6 +87,7 @@ export async function PATCH(request: Request) {
     const rows =
       await sql`UPDATE carecore_care_supply_products SET item_name = ${itemName}, category = ${category}, unit = ${unit}, description = ${description || null}, default_target_quantity = ${quantity(input.defaultTargetQuantity)}, current_stock_quantity = ${currentStock}, status = ${status}, updated_by = ${actor.id}, updated_at = NOW() WHERE id = ${id} AND organization_id = ${actor.organizationId} RETURNING id, item_name, category, unit, description, default_target_quantity, current_stock_quantity, status, created_at, updated_at`;
     if (!rows[0]) return NextResponse.json({ error: "Pflegeprodukt nicht gefunden." }, { status: 404 });
+    await audit(sql, actor, id, "updated", { name: itemName, category, unit, stock: currentStock, status });
     return NextResponse.json({ product: rows[0] });
   } catch (error) {
     if (String(error).toLowerCase().includes("duplicate"))

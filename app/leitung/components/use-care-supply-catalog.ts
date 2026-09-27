@@ -34,8 +34,9 @@ export function useCareSupplyCatalog() {
     fetch("/api/work-context", { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
-        const currentRole = data?.profile?.role ?? null;
-        if (currentRole && currentRole !== "admin") router.replace("/c");
+        // Only staff with administration rights manage the catalog.
+        const permissions: string[] | undefined = data?.profile?.permissions;
+        if (permissions && !permissions.includes("administration.manage")) router.replace("/c");
       })
       .catch(() => undefined);
     return () => window.clearTimeout(timer);
