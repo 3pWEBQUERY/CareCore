@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { UUID, readableFile } from "@/lib/file-access";
 import { carecoreActor, carecoreDb } from "@/lib/server-data";
 
 export const runtime = "nodejs";
@@ -28,14 +29,10 @@ export async function GET(request: Request, { params }: Context) {
     const actor = await carecoreActor();
     if (!actor?.organizationId) return NextResponse.json({ error: "Bitte erneut anmelden." }, { status: 401 });
     const { fileId } = await params;
-    const sql = carecoreDb();
-    const rows = (await sql`
-      SELECT name, mime_type, content_base64
-      FROM carecore_cloud_files
-      WHERE id = ${fileId} AND organization_id = ${actor.organizationId}
-      LIMIT 1
-    `) as unknown as Array<{ name: string; mime_type: string; content_base64: string }>;
-    if (!rows[0]) return NextResponse.json({ error: "Datei nicht gefunden." }, { status: 404 });
+    // Not found and not allowed look the same, so file ids cannot be probed.
+    const file = await readableFile(actor, fileId);
+    if (!file) return NextResponse.json({ error: "Datei nicht gefunden." }, { status: 404 });
+    const rows = [file];
     const safeName = rows[0].name.replace(/["\r\n]/g, "_");
     const mimeType = (rows[0].mime_type || "").split(";")[0].trim().toLowerCase();
     const preview = new URL(request.url).searchParams.get("preview") === "1" && inlinePreviewTypes.has(mimeType);
@@ -67,6 +64,7 @@ export async function PATCH(request: Request, { params }: Context) {
     const actor = await carecoreActor();
     if (!actor?.organizationId) return NextResponse.json({ error: "Bitte erneut anmelden." }, { status: 401 });
     const { fileId } = await params;
+    if (!UUID.test(fileId)) return NextResponse.json({ error: "Datei nicht gefunden." }, { status: 404 });
     const body = (await request.json()) as { name?: unknown };
     const name =
       typeof body.name === "string"
@@ -79,7 +77,7 @@ export async function PATCH(request: Request, { params }: Context) {
     const sql = carecoreDb();
     const rows = await sql`
       UPDATE carecore_cloud_files SET name = ${name}, updated_at = NOW()
-      WHERE id = ${fileId} AND organization_id = ${actor.organizationId} AND purpose = 'cloud'
+      WHERE id = ${fileId} AND organization_id = ${actor.organizationId} AND purpose = 'cloud' AND uploaded_by = ${actor.id}
       RETURNING id, name, mime_type, size_bytes, uploaded_by, created_at, updated_at
     `;
     if (!rows[0]) return NextResponse.json({ error: "Datei nicht gefunden." }, { status: 404 });
@@ -95,9 +93,10 @@ export async function DELETE(_request: Request, { params }: Context) {
     const actor = await carecoreActor();
     if (!actor?.organizationId) return NextResponse.json({ error: "Bitte erneut anmelden." }, { status: 401 });
     const { fileId } = await params;
+    if (!UUID.test(fileId)) return NextResponse.json({ error: "Datei nicht gefunden." }, { status: 404 });
     const sql = carecoreDb();
     const rows =
-      await sql`DELETE FROM carecore_cloud_files WHERE id = ${fileId} AND organization_id = ${actor.organizationId} AND purpose = 'cloud' RETURNING id`;
+      await sql`DELETE FROM carecore_cloud_files WHERE id = ${fileId} AND organization_id = ${actor.organizationId} AND purpose = 'cloud' AND uploaded_by = ${actor.id} RETURNING id`;
     if (!rows[0]) return NextResponse.json({ error: "Datei nicht gefunden." }, { status: 404 });
     return NextResponse.json({ ok: true });
   } catch (error) {

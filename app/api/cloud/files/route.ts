@@ -5,6 +5,7 @@ import { carecoreActor, carecoreDb } from "@/lib/server-data";
 export const runtime = "nodejs";
 const MAX_FILE_BYTES = 4 * 1024 * 1024;
 
+// "Meine Dateien" are personal: everyone sees and manages only the files they uploaded.
 export async function GET() {
   try {
     const actor = await carecoreActor();
@@ -13,7 +14,7 @@ export async function GET() {
     const files = (await sql`
       SELECT id, name, mime_type, size_bytes, uploaded_by, created_at, updated_at
       FROM carecore_cloud_files
-      WHERE organization_id = ${actor.organizationId} AND purpose = 'cloud'
+      WHERE organization_id = ${actor.organizationId} AND purpose = 'cloud' AND uploaded_by = ${actor.id}
       ORDER BY created_at DESC
     `) as unknown as Array<{
       id: string;
