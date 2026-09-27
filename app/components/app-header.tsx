@@ -10,6 +10,7 @@ import { HeaderLocationControl } from "./header-location-control";
 import { HeaderProfileMenu } from "./header-profile-menu";
 import { HeaderNotificationMenu } from "./header-notification-menu";
 import { KeyboardShortcutsMenu } from "./keyboard-shortcuts";
+import { HeaderAiButton } from "./header-ai-panel";
 
 export default function AppHeader(props: {
   locationPrimary?: string;
@@ -63,6 +64,7 @@ export default function AppHeader(props: {
             <span>Suchen…</span>
             <kbd>⌘ K</kbd>
           </button>
+          <HeaderAiButton />
           <KeyboardShortcutsMenu />
           <HeaderNotificationMenu r={r} ref={notificationMenuRef} />
           <HeaderProfileMenu r={r} ref={profileMenuRef} />
@@ -76,6 +78,7 @@ export default function AppHeader(props: {
           <button className="icon-button" type="button" aria-label="Suche öffnen" onClick={onSearch}>
             <ModuleIcon name="search" />
           </button>
+          <HeaderAiButton />
           <HeaderNotificationMenu r={r} ref={mobileNotificationMenuRef} compact={true} />
           <HeaderProfileMenu r={r} ref={mobileProfileMenuRef} compact={true} />
         </div>

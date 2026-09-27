@@ -4,14 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ModuleIcon } from "./module-icon";
 import { useWorkContext } from "./care-context";
-import { navigationFor, routeFor } from "./navigation";
+import { routeFor, sidebarNavigation } from "./navigation";
 
 // Mobile main menu and bottom navigation; shows only the areas the signed-in person may use.
 export function MobileNavigation({ activeModule }: { activeModule?: string }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const permissions = useWorkContext()?.profile.permissions;
-  const visibleNavigation = useMemo(() => navigationFor(permissions), [permissions]);
+  const visibleNavigation = useMemo(() => sidebarNavigation(permissions), [permissions]);
   const [groupId, setGroupId] = useState<string | null>(null);
   useEffect(() => {
     const timer = window.setTimeout(
@@ -85,22 +85,23 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
             </button>
           </div>
           {group ? (
-            <div className="mobile-nav-subgroups">
+            <div className="mobile-nav-groups">
               {group.modules.map((module) => (
-                <section key={module.id}>
-                  <h3>
+                <button
+                  className={module.id === activeModule ? "active" : ""}
+                  type="button"
+                  key={module.id}
+                  onClick={() => chooseChild(module.id, module.children[0])}
+                >
+                  <span className="mobile-nav-group-icon">
                     <ModuleIcon name={module.icon} />
-                    {module.label}
-                  </h3>
-                  <div>
-                    {module.children.map((child) => (
-                      <button type="button" key={child} onClick={() => chooseChild(module.id, child)}>
-                        {child}
-                        <ModuleIcon name="chevron" />
-                      </button>
-                    ))}
-                  </div>
-                </section>
+                  </span>
+                  <span>
+                    <strong>{module.label}</strong>
+                    <small>{module.children.join(" · ")}</small>
+                  </span>
+                  <ModuleIcon name="chevron" />
+                </button>
               ))}
             </div>
           ) : (

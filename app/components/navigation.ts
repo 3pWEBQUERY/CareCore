@@ -38,19 +38,23 @@ export type NavModule = {
   id: string;
   label: string;
   icon: ModuleIconName;
+  // Pages of the module, shown as tabs at the top of the page (the sidebar links the module only).
   children: string[];
   badge?: number;
   href?: string;
   // Permission needed to see the module (all signed-in staff when omitted).
   permission?: string;
-  // Children that need an additional permission.
+  // Tabs that need an additional permission.
   childPermissions?: Record<string, string>;
+  // Reached elsewhere (e.g. the header), so not listed in the sidebar.
+  hiddenInSidebar?: boolean;
 };
+
 export type NavGroup = { id: string; label: string; modules: NavModule[] };
 
 // Grouped along the working day: my shift, the resident and the care process,
-// team and knowledge, then leadership. Within the care group the modules follow
-// how often they are used during a shift, followed by the care process itself.
+// team and knowledge, then leadership. Every module is one click in the sidebar;
+// its pages are tabs on the page itself, so there are no nested submenus.
 export const navigation: NavGroup[] = [
   {
     id: "operations",
@@ -58,14 +62,11 @@ export const navigation: NavGroup[] = [
     modules: [
       {
         id: "shift",
-        label: "Schicht",
+        label: "Mein Dienst",
         icon: "shift",
-        href: "/betrieb/schicht",
-        children: ["Mein Dienst", "Schichtverlauf"],
+        children: ["Heute", "Übergabe", "Seit letztem Dienst", "Termine", "Verlauf"],
       },
-      { id: "handover", label: "Übergabe", icon: "handover", children: ["Meine Übergabe", "Seit letztem Dienst"] },
-      { id: "tasks", label: "Aufgaben", icon: "tasks", children: ["Meine Aufgaben", "Teamaufgaben"] },
-      { id: "care-calendar", label: "Termine", icon: "calendar", children: ["Kalender"] },
+      { id: "tasks", label: "Aufgaben", icon: "tasks", children: ["Meine Aufgaben", "Team"] },
       { id: "schedule", label: "Dienstplan", icon: "calendar", children: ["Mein Dienstplan", "Teamplanung"] },
     ],
   },
@@ -77,37 +78,34 @@ export const navigation: NavGroup[] = [
         id: "residents",
         label: "Bewohner",
         icon: "residents",
-        href: "/bewohner",
-        children: ["Übersicht", "Pflegeakte", "Verlauf & Archiv"],
+        children: ["Übersicht", "Pflegeakten", "Verlauf & Archiv"],
       },
-      {
-        id: "chart",
-        label: "Pflegedokumentation",
-        icon: "note",
-        children: ["Schnelldokumentation", "Verlaufsdokumentation"],
-      },
+      { id: "chart", label: "Dokumentation", icon: "note", children: ["Schnelldokumentation", "Verlauf"] },
       {
         id: "med",
         label: "Medikation",
         icon: "med",
         children: ["Medikamentenrunde", "Medikamentenplan", "Reserven", "Bestände"],
       },
-      { id: "vitals", label: "Vitalwerte", icon: "vitals", children: ["Übersicht", "Entwicklung", "Grenzwerte"] },
-      { id: "wounds", label: "Wundmanagement", icon: "wounds", children: ["Wundübersicht", "Dokumentation"] },
-      { id: "nutrition", label: "Ernährung", icon: "nutrition", children: ["Trinkprotokoll", "Ernährungsplan"] },
-      { id: "assess", label: "Einschätzungen", icon: "assess", children: ["Fälligkeiten", "Einschätzungen"] },
+      {
+        id: "vitals",
+        label: "Vitalwerte & Ernährung",
+        icon: "vitals",
+        children: ["Vitalwerte", "Entwicklung", "Trinkprotokoll", "Ernährungsplan", "Grenzwerte"],
+      },
+      { id: "wounds", label: "Wunden", icon: "wounds", children: ["Wundübersicht", "Dokumentation"] },
       {
         id: "plan",
-        label: "Pflegeplanung",
+        label: "Planung & Einschätzungen",
         icon: "plan",
-        children: ["Pflegeplanung", "Ziele & Massnahmen", "Auswertung"],
+        children: ["Pflegeplanung", "Ziele & Massnahmen", "Auswertung", "Einschätzungen", "Fälligkeiten"],
       },
       {
         id: "rai",
         label: "RAI / interRAI",
         icon: "assess",
         permission: "rai.manage",
-        children: ["Übersicht", "interRAI-Erfassung", "Fälligkeiten", "Berichte"],
+        children: ["Übersicht", "Erfassung", "Fälligkeiten", "Berichte"],
       },
     ],
   },
@@ -115,11 +113,14 @@ export const navigation: NavGroup[] = [
     id: "workforce",
     label: "Team & Wissen",
     modules: [
-      { id: "team", label: "Team", icon: "team", children: ["Neuigkeiten & Kanäle"] },
-      { id: "messenger", label: "Nachrichten", icon: "team", children: ["Nachrichten"] },
+      { id: "team", label: "Team", icon: "team", children: ["Neuigkeiten", "Nachrichten"] },
       { id: "learn", label: "Schulungen", icon: "learn", children: ["Meine Schulungen", "Pflichtnachweise"] },
-      { id: "docs", label: "Dokumente", icon: "docs", children: ["Standards & Weisungen", "Dokumente"] },
-      { id: "cloud", label: "Meine Dateien", icon: "docs", children: ["Dateien"] },
+      {
+        id: "docs",
+        label: "Dokumente",
+        icon: "docs",
+        children: ["Standards & Weisungen", "Dokumente", "Meine Dateien"],
+      },
     ],
   },
   {
@@ -128,31 +129,34 @@ export const navigation: NavGroup[] = [
     modules: [
       {
         id: "quality",
-        label: "Qualität",
+        label: "Qualität & Kennzahlen",
         icon: "quality",
-        children: ["Ereignisse", "Massnahmen"],
-        childPermissions: { Massnahmen: "quality.manage" },
+        children: ["Ereignisse", "Massnahmen", "Kennzahlen Pflege", "Kennzahlen Leitung", "Kennzahlen Personal"],
+        childPermissions: {
+          Massnahmen: "quality.manage",
+          "Kennzahlen Pflege": "insights.read",
+          "Kennzahlen Leitung": "insights.read",
+          "Kennzahlen Personal": "insights.read",
+        },
       },
       {
-        id: "insights",
-        label: "Kennzahlen",
-        icon: "chart",
-        permission: "insights.read",
-        children: ["Pflege", "Leitung", "Personal"],
-      },
-      {
-        id: "teamlead",
-        label: "Teamleitung",
+        id: "staff",
+        label: "Mitarbeitende & Dienste",
         icon: "team",
-        permission: "team.manage",
-        children: ["Mitarbeiter", "Dienste", "Aufgaben"],
+        children: ["Mitarbeitende", "Dienste", "Aufgaben", "Profile & Rollen"],
+        childPermissions: {
+          Mitarbeitende: "team.manage",
+          Dienste: "team.manage",
+          Aufgaben: "team.manage",
+          "Profile & Rollen": "administration.manage",
+        },
       },
       {
         id: "admin",
         label: "Administration",
         icon: "settings",
         permission: "administration.manage",
-        children: ["Organisation", "Mitarbeiter", "Pflegebedarf", "Konfiguration"],
+        children: ["Organisation", "Pflegebedarf", "Konfiguration"],
       },
     ],
   },
@@ -160,67 +164,87 @@ export const navigation: NavGroup[] = [
     id: "intelligence",
     label: "CareCore KI",
     modules: [
-      { id: "ai", label: "CareCore KI", icon: "ai", permission: "ai.use", children: ["Assistenz", "KI-Entwürfe"] },
+      {
+        id: "ai",
+        label: "CareCore KI",
+        icon: "ai",
+        permission: "ai.use",
+        hiddenInSidebar: true,
+        children: ["Assistenz", "KI-Entwürfe"],
+      },
     ],
   },
 ];
 
 const routes: Record<string, Record<string, string>> = {
+  shift: {
+    Heute: "/betrieb/schicht",
+    Übergabe: "/betrieb/uebergabe",
+    "Seit letztem Dienst": "/betrieb/uebergabe/letzter-dienst",
+    Termine: "/betrieb/schicht/kalender",
+    Verlauf: "/betrieb/schicht/verlauf",
+  },
+  tasks: { "Meine Aufgaben": "/betrieb/aufgaben", Team: "/betrieb/aufgaben/team" },
+  schedule: { "Mein Dienstplan": "/betrieb/dienstplanung", Teamplanung: "/betrieb/dienstplanung/team" },
   residents: {
     Übersicht: "/bewohner",
+    Pflegeakten: "/bewohner/pflegeakte",
     "Verlauf & Archiv": "/bewohner/verlauf",
-    Pflegeakte: "/bewohner/pflegeakte",
   },
+  chart: { Schnelldokumentation: "/pflegedokumentation", Verlauf: "/pflegedokumentation/verlauf" },
+  med: {
+    Medikamentenrunde: "/medikation/runde",
+    Medikamentenplan: "/medikation",
+    Reserven: "/medikation/reserven",
+    Bestände: "/medikation/bestaende",
+  },
+  vitals: {
+    Vitalwerte: "/vitalwerte",
+    Entwicklung: "/vitalwerte/entwicklung",
+    Trinkprotokoll: "/ernaehrung/trinkprotokoll",
+    Ernährungsplan: "/ernaehrung",
+    Grenzwerte: "/vitalwerte/grenzwerte",
+  },
+  wounds: { Wundübersicht: "/wundmanagement", Dokumentation: "/wundmanagement/dokumentation" },
   plan: {
     Pflegeplanung: "/pflegeplanung",
     "Ziele & Massnahmen": "/pflegeplanung/ziele-massnahmen",
     Auswertung: "/pflegeplanung/auswertung",
+    Einschätzungen: "/einschaetzungen",
+    Fälligkeiten: "/einschaetzungen/faelligkeiten",
   },
-  chart: { Schnelldokumentation: "/pflegedokumentation", Verlaufsdokumentation: "/pflegedokumentation/verlauf" },
-  vitals: { Übersicht: "/vitalwerte", Entwicklung: "/vitalwerte/entwicklung", Grenzwerte: "/vitalwerte/grenzwerte" },
-  med: {
-    Medikamentenplan: "/medikation",
-    Medikamentenrunde: "/medikation/runde",
-    Bestände: "/medikation/bestaende",
-    Reserven: "/medikation/reserven",
-  },
-  shift: { "Mein Dienst": "/betrieb/schicht", Schichtverlauf: "/betrieb/schicht/verlauf" },
-  "care-calendar": { Kalender: "/betrieb/schicht/kalender" },
-  messenger: { Nachrichten: "/personal/team/nachrichten" },
-  cloud: { Dateien: "/carecore-one/cloud" },
-  tasks: { "Meine Aufgaben": "/betrieb/aufgaben", Teamaufgaben: "/betrieb/aufgaben/team" },
-  handover: { "Meine Übergabe": "/betrieb/uebergabe", "Seit letztem Dienst": "/betrieb/uebergabe/letzter-dienst" },
-  schedule: { "Mein Dienstplan": "/betrieb/dienstplanung", Teamplanung: "/betrieb/dienstplanung/team" },
-  assess: { Einschätzungen: "/einschaetzungen", Fälligkeiten: "/einschaetzungen/faelligkeiten" },
-  wounds: { Wundübersicht: "/wundmanagement", Dokumentation: "/wundmanagement/dokumentation" },
-  nutrition: { Ernährungsplan: "/ernaehrung", Trinkprotokoll: "/ernaehrung/trinkprotokoll" },
-  team: { "Neuigkeiten & Kanäle": "/personal/team" },
-  learn: { "Meine Schulungen": "/personal/schulungen", Pflichtnachweise: "/personal/schulungen/pflichtnachweise" },
-  docs: { Dokumente: "/personal/dokumente", "Standards & Weisungen": "/personal/dokumente/standards" },
-  quality: { Ereignisse: "/leitung/qualitaet", Massnahmen: "/leitung/qualitaet/massnahmen" },
-  insights: {
-    Pflege: "/leitung/kennzahlen",
-    Leitung: "/leitung/kennzahlen/leitung",
-    Personal: "/leitung/kennzahlen/personal",
-  },
-  admin: {
-    Organisation: "/leitung/administration",
-    Mitarbeiter: "/leitung/administration/mitarbeiter",
-    Pflegebedarf: "/leitung/administration/pflegebedarf",
-    Konfiguration: "/leitung/administration/konfiguration",
-  },
-  teamlead: {
-    Mitarbeiter: "/leitung/teamleitung/mitarbeiter",
-    Dienste: "/leitung/teamleitung/dienste",
-    Aufgaben: "/leitung/teamleitung/aufgaben",
-  },
-  ai: { Assistenz: "/intelligenz", "KI-Entwürfe": "/intelligenz/entwuerfe" },
   rai: {
     Übersicht: "/rai",
-    "interRAI-Erfassung": "/rai/erfassung",
+    Erfassung: "/rai/erfassung",
     Fälligkeiten: "/rai/faelligkeiten",
     Berichte: "/rai/berichte",
   },
+  team: { Neuigkeiten: "/personal/team", Nachrichten: "/personal/team/nachrichten" },
+  learn: { "Meine Schulungen": "/personal/schulungen", Pflichtnachweise: "/personal/schulungen/pflichtnachweise" },
+  docs: {
+    "Standards & Weisungen": "/personal/dokumente/standards",
+    Dokumente: "/personal/dokumente",
+    "Meine Dateien": "/carecore-one/cloud",
+  },
+  quality: {
+    Ereignisse: "/leitung/qualitaet",
+    Massnahmen: "/leitung/qualitaet/massnahmen",
+    "Kennzahlen Pflege": "/leitung/kennzahlen",
+    "Kennzahlen Leitung": "/leitung/kennzahlen/leitung",
+    "Kennzahlen Personal": "/leitung/kennzahlen/personal",
+  },
+  staff: {
+    Mitarbeitende: "/leitung/teamleitung/mitarbeiter",
+    Dienste: "/leitung/teamleitung/dienste",
+    Aufgaben: "/leitung/teamleitung/aufgaben",
+    "Profile & Rollen": "/leitung/administration/mitarbeiter",
+  },
+  admin: {
+    Organisation: "/leitung/administration",
+    Pflegebedarf: "/leitung/administration/pflegebedarf",
+    Konfiguration: "/leitung/administration/konfiguration",
+  },
+  ai: { Assistenz: "/intelligenz", "KI-Entwürfe": "/intelligenz/entwuerfe" },
 };
 
 export function routeFor(moduleId: string, child: string) {
@@ -228,8 +252,23 @@ export function routeFor(moduleId: string, child: string) {
   return route ? `/c${route}` : null;
 }
 
-// Navigation limited to what the signed-in person may use. Until the permissions
-// are known only the modules without a permission are shown.
+// The module and tab of a page, found by its address (longest matching route, so
+// detail pages below a tab keep it active). Pages outside the navigation give null.
+export function activePage(pathname: string | null): { moduleId: string; child: string } | null {
+  if (!pathname) return null;
+  const path = (pathname.replace(/^\/c(?=\/|$)/, "") || "/").replace(/\/$/, "") || "/";
+  let best: { moduleId: string; child: string; length: number } | null = null;
+  for (const [moduleId, children] of Object.entries(routes))
+    for (const [child, route] of Object.entries(children))
+      if ((path === route || path.startsWith(`${route}/`)) && (!best || route.length > best.length))
+        best = { moduleId, child, length: route.length };
+  return best && { moduleId: best.moduleId, child: best.child };
+}
+
+export function moduleById(moduleId: string) {
+  return navigation.flatMap((group) => group.modules).find((module) => module.id === moduleId) ?? null;
+}
+
 export function navigationFor(permissions?: string[] | null): NavGroup[] {
   const allowed = (permission?: string) => !permission || !!permissions?.includes(permission);
   return navigation
@@ -246,6 +285,12 @@ export function navigationFor(permissions?: string[] | null): NavGroup[] {
     .filter((group) => group.modules.length);
 }
 
+// Navigation of the sidebar and the mobile menu: without modules reached elsewhere.
+export const sidebarNavigation = (permissions?: string[] | null) =>
+  navigationFor(permissions)
+    .map((group) => ({ ...group, modules: group.modules.filter((module) => !module.hiddenInSidebar) }))
+    .filter((group) => group.modules.length);
+
 // Most used functions of a shift: one click from the sidebar, with live counts.
 export type QuickLink = {
   moduleId: string;
@@ -257,15 +302,8 @@ export type QuickLink = {
 };
 
 export const quickLinks: QuickLink[] = [
-  { moduleId: "shift", child: "Mein Dienst", label: "Mein Dienst", icon: "shift", shortcut: "S" },
-  {
-    moduleId: "handover",
-    child: "Meine Übergabe",
-    label: "Übergabe",
-    icon: "handover",
-    badge: "handover",
-    shortcut: "Ü",
-  },
+  { moduleId: "shift", child: "Heute", label: "Mein Dienst", icon: "shift", shortcut: "S" },
+  { moduleId: "shift", child: "Übergabe", label: "Übergabe", icon: "handover", badge: "handover", shortcut: "Ü" },
   {
     moduleId: "tasks",
     child: "Meine Aufgaben",
@@ -285,9 +323,11 @@ export const quickLinks: QuickLink[] = [
   },
 ];
 
-// Badge per module child (flyout links) derived from the quick links.
+// Badge per tab derived from the quick links, and all badges of a module (sidebar).
 export const badgeFor = (moduleId: string, child: string) =>
   quickLinks.find((link) => link.moduleId === moduleId && link.child === child)?.badge;
+export const moduleBadges = (moduleId: string) =>
+  quickLinks.filter((link) => link.moduleId === moduleId && link.badge).map((link) => link.badge!);
 
 // Recently used pages of this browser, most recent first.
 const RECENT_KEY = "carecore.recent-pages";
