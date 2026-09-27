@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useNavigationBadges, useWorkContext } from "./care-context";
 import { badgeFor, moduleById, navigationFor, routeFor } from "./navigation";
@@ -13,9 +14,17 @@ export function PageTabs({ moduleId, child }: { moduleId: string; child: string 
     .flatMap((group) => group.modules)
     .find((item) => item.id === moduleId);
   const tabs = entry?.children ?? moduleById(moduleId)?.children ?? [];
+  const ref = useRef<HTMLElement>(null);
+  // On narrow screens the active tab is scrolled into view.
+  useEffect(() => {
+    const nav = ref.current;
+    const active = nav?.querySelector<HTMLElement>("a.active");
+    if (nav && active && nav.scrollWidth > nav.clientWidth)
+      nav.scrollLeft = active.offsetLeft - nav.clientWidth / 2 + active.offsetWidth / 2;
+  }, [child, tabs.length]);
   if (tabs.length < 2) return null;
   return (
-    <nav className="page-tabs" aria-label={`${entry?.label ?? "Bereich"}: Seiten`}>
+    <nav ref={ref} className="page-tabs" aria-label={`${entry?.label ?? "Bereich"}: Seiten`}>
       {tabs.map((tab) => {
         const href = routeFor(moduleId, tab);
         if (!href) return null;

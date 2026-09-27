@@ -316,7 +316,8 @@ export const quickLinks: QuickLink[] = [
   {
     moduleId: "med",
     child: "Medikamentenrunde",
-    label: "Medikamentenrunde",
+    // Soft hyphen: breaks as "Medikamenten-runde" where space is short (mobile menu).
+    label: "Medikamenten\u00adrunde",
     icon: "med",
     badge: "medRound",
     shortcut: "R",
