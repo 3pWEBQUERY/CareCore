@@ -104,8 +104,15 @@ export async function POST(request: Request, context: { params: Promise<{ reside
           SELECT ${transactionId}, ${residentId}, product.id, upserted.id, ${quantity}, 'issued', NULLIF(${notes}, ''), ${active.actor.id}
           FROM upserted JOIN product ON product.id = upserted.product_id
           RETURNING id
+        ), stocked AS (
+          -- Issuing to a resident takes the quantity from the house stock of the catalog.
+          UPDATE carecore_care_supply_products
+          SET current_stock_quantity = GREATEST(0, current_stock_quantity - ${quantity}), updated_at = NOW()
+          WHERE id IN (SELECT product_id FROM upserted)
+          RETURNING current_stock_quantity
         )
-        SELECT upserted.* FROM upserted CROSS JOIN recorded`;
+        SELECT upserted.*, stocked.current_stock_quantity AS stock_left
+        FROM upserted CROSS JOIN recorded LEFT JOIN stocked ON TRUE`;
       if (!rows[0]) return NextResponse.json({ error: "Das Pflegeprodukt ist nicht mehr verfügbar." }, { status: 404 });
       return NextResponse.json({ supply: rows[0], transactionId }, { status: 201 });
     }
