@@ -109,11 +109,23 @@ export async function POST(request: Request, context: { params: Promise<{ reside
           UPDATE carecore_care_supply_products
           SET current_stock_quantity = GREATEST(0, current_stock_quantity - ${quantity}), updated_at = NOW()
           WHERE id IN (SELECT product_id FROM upserted)
-          RETURNING current_stock_quantity
+          RETURNING current_stock_quantity, min_stock_quantity
         )
-        SELECT upserted.*, stocked.current_stock_quantity AS stock_left
+        SELECT upserted.*, stocked.current_stock_quantity AS stock_left, stocked.min_stock_quantity AS min_stock
         FROM upserted CROSS JOIN recorded LEFT JOIN stocked ON TRUE`;
       if (!rows[0]) return NextResponse.json({ error: "Das Pflegeprodukt ist nicht mehr verfügbar." }, { status: 404 });
+      const stockLeft = Number(rows[0].stock_left ?? 0);
+      const minStock = Number(rows[0].min_stock ?? 0);
+      // Crossing the minimum stock notifies the administration once.
+      if (minStock > 0 && stockLeft <= minStock && stockLeft + quantity > minStock)
+        await sql`
+          INSERT INTO carecore_notifications (id, user_id, title, body, type, priority, link_url)
+          SELECT gen_random_uuid(), u.id, ${`Nachbestellen: ${rows[0].item_name}`},
+            ${`Bestand ${stockLeft} ${rows[0].unit} – Mindestbestand ${minStock}.`}, 'supply_low', 'high',
+            '/c/leitung/administration/pflegebedarf'
+          FROM carecore_users u JOIN carecore_user_profiles p ON p.user_id = u.id JOIN carecore_roles r ON r.key = u.role
+          WHERE p.organization_id = ${active.actor.organizationId} AND u.active AND u.archived_at IS NULL
+            AND r.permissions ? 'administration.manage'`;
       return NextResponse.json({ supply: rows[0], transactionId }, { status: 201 });
     }
     const input = supplyValues(body);

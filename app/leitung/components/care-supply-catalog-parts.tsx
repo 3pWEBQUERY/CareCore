@@ -3,7 +3,7 @@
 import type { CareSupplyCatalogState } from "./use-care-supply-catalog";
 
 export function CatalogKpis({ r }: { r: CareSupplyCatalogState }) {
-  const { products, activeCount, blockedCount, archivedCount } = r;
+  const { products, activeCount, blockedCount, archivedCount, reorderCount, setFilter } = r;
   return (
     <section className="leadership-kpis" aria-label="Katalogübersicht">
       <article className="leadership-kpi info">
@@ -16,15 +16,23 @@ export function CatalogKpis({ r }: { r: CareSupplyCatalogState }) {
         <strong>Aktiv und buchbar</strong>
         <small>für Bewohnerakten verfügbar</small>
       </article>
+      <article className={`leadership-kpi ${reorderCount ? "critical" : "stable"}`}>
+        <span className="leadership-kpi-value">{reorderCount}</span>
+        <strong>Nachbestellen</strong>
+        <small>
+          {reorderCount ? (
+            <button className="link-button" type="button" onClick={() => setFilter("Nachbestellen")}>
+              Mindestbestand erreicht · anzeigen
+            </button>
+          ) : (
+            "alle Bestände über dem Minimum"
+          )}
+        </small>
+      </article>
       <article className="leadership-kpi attention">
         <span className="leadership-kpi-value">{blockedCount}</span>
         <strong>Gesperrt</strong>
-        <small>derzeit nicht auswählbar</small>
-      </article>
-      <article className="leadership-kpi">
-        <span className="leadership-kpi-value">{archivedCount}</span>
-        <strong>Archiviert</strong>
-        <small>nicht mehr im aktiven Katalog</small>
+        <small>derzeit nicht auswählbar · {archivedCount} archiviert</small>
       </article>
     </section>
   );

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Product, Draft, emptyDraft } from "./care-supply-catalog-model";
+import { Product, Draft, emptyDraft, needsReorder } from "./care-supply-catalog-model";
 
 export function useCareSupplyCatalog() {
   const router = useRouter();
@@ -47,11 +47,12 @@ export function useCareSupplyCatalog() {
       products.filter((product) => {
         const matchesFilter =
           filter === "Alle" ||
+          (filter === "Nachbestellen" && needsReorder(product)) ||
           (filter === "Aktiv"
             ? product.status === "active"
             : filter === "Gesperrt"
               ? product.status === "blocked"
-              : product.status === "archived");
+              : filter === "Archiviert" && product.status === "archived");
         const haystack = `${product.item_name} ${product.category} ${product.description ?? ""}`.toLocaleLowerCase(
           "de-CH",
         );
@@ -73,6 +74,7 @@ export function useCareSupplyCatalog() {
               description: product.description ?? "",
               defaultTargetQuantity: product.default_target_quantity,
               currentStockQuantity: product.current_stock_quantity,
+              minStockQuantity: product.min_stock_quantity,
               status: product.status,
             },
           }
@@ -120,6 +122,7 @@ export function useCareSupplyCatalog() {
           description: product.description ?? "",
           defaultTargetQuantity: product.default_target_quantity,
           currentStockQuantity: product.current_stock_quantity,
+          minStockQuantity: product.min_stock_quantity,
           status,
         }),
       });
@@ -134,6 +137,7 @@ export function useCareSupplyCatalog() {
   const activeCount = products.filter((product) => product.status === "active").length;
   const blockedCount = products.filter((product) => product.status === "blocked").length;
   const archivedCount = products.filter((product) => product.status === "archived").length;
+  const reorderCount = products.filter(needsReorder).length;
   return {
     router,
     products,
@@ -158,6 +162,7 @@ export function useCareSupplyCatalog() {
     activeCount,
     blockedCount,
     archivedCount,
+    reorderCount,
   };
 }
 

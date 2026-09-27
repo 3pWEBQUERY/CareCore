@@ -159,6 +159,7 @@ const FIELDS: Record<string, string> = {
   category: "Kategorie",
   unit: "Einheit",
   stock: "Bestand",
+  minStock: "Mindestbestand",
   title: "Titel",
   displayName: "Name",
   jobTitle: "Funktion",
@@ -249,7 +250,11 @@ export async function adminOverview(ctx: ApiContext, view: AdminView): Promise<A
             AND u.created_at < NOW() - INTERVAL '7 days')::int AS never_signed_in,
         (SELECT COUNT(*) FROM carecore_residents r WHERE r.organization_id = ${org} AND r.status = 'active'
           AND NOT EXISTS (SELECT 1 FROM carecore_resident_stays st WHERE st.resident_id = r.id AND st.ended_at IS NULL
-            AND st.care_unit_id IS NOT NULL))::int AS residents_without_unit` as Promise<Row[]>,
+            AND st.care_unit_id IS NOT NULL))::int AS residents_without_unit,
+        (SELECT COUNT(*) FROM carecore_care_supply_products WHERE organization_id = ${org} AND status = 'active'
+          AND min_stock_quantity > 0 AND current_stock_quantity <= min_stock_quantity)::int AS supplies_low` as Promise<
+      Row[]
+    >,
     readSettings(ctx),
   ]);
 
@@ -270,6 +275,12 @@ export async function adminOverview(ctx: ApiContext, view: AdminView): Promise<A
     detail: (n) => `${n} Bewohner einem Wohnbereich zuteilen`,
     tone: "critical",
     href: "/bewohner",
+  });
+  add(counts.supplies_low, {
+    title: "Pflegebedarf nachbestellen",
+    detail: (n) => `${n} Produkt${n === 1 ? "" : "e"} am Mindestbestand`,
+    tone: "attention",
+    href: "/leitung/administration/pflegebedarf",
   });
   add(counts.units_without_lead, {
     title: "Bereichsleitung festlegen",

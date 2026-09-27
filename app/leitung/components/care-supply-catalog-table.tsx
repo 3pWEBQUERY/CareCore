@@ -2,6 +2,7 @@
 
 import { Archive, Check, ClipboardText, PencilSimple, Plus, Prohibit, Sparkle } from "@phosphor-icons/react";
 import { SidebarTooltip } from "@/app/components/app-sidebar";
+import { needsReorder } from "./care-supply-catalog-model";
 import type { CareSupplyCatalogState } from "./use-care-supply-catalog";
 
 export function CatalogTable({ r }: { r: CareSupplyCatalogState }) {
@@ -35,8 +36,11 @@ export function CatalogTable({ r }: { r: CareSupplyCatalogState }) {
               <span>
                 {product.default_target_quantity} {product.unit}
               </span>
-              <span className="care-supply-product-stock">
+              <span className={`care-supply-product-stock ${needsReorder(product) ? "low" : ""}`}>
                 {product.current_stock_quantity} {product.unit}
+                {product.min_stock_quantity > 0 && (
+                  <small>{needsReorder(product) ? "Nachbestellen" : `min. ${product.min_stock_quantity}`}</small>
+                )}
               </span>
               <span className={`care-supply-product-status ${product.status}`}>
                 {product.status === "active" ? "Aktiv" : product.status === "blocked" ? "Gesperrt" : "Archiviert"}

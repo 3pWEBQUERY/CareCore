@@ -17,6 +17,7 @@ function iconFor(href: string): ModuleIconName {
   if (href.includes("konfiguration")) return "settings";
   if (href.includes("mitarbeiter")) return "team";
   if (href.includes("bewohner")) return "residents";
+  if (href.includes("pflegebedarf")) return "docs";
   if (href.endsWith("/leitung/administration")) return "building";
   if (href.includes("qualitaet")) return "quality";
   if (href.includes("medikation")) return "med";
