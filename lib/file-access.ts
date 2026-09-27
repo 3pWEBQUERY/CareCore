@@ -1,0 +1,39 @@
+import { carecoreDb, hasPermission, type CarecoreActor } from "@/lib/server-data";
+
+// Who may open a stored file. The file store holds personal files ("Meine Dateien"),
+// documents of residents and of the house, and training certificates, so every
+// download is checked against what the file belongs to:
+// - personal file: only the person who uploaded it
+// - resident document: staff who may read resident records
+// - house document (standards, instructions): staff who may read documents
+// - certificate: the person it belongs to, the uploader and the team leads
+
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export type StoredFile = { name: string; mime_type: string; content_base64: string };
+
+export async function readableFile(actor: CarecoreActor, fileId: string): Promise<StoredFile | null> {
+  if (!actor.organizationId || !UUID.test(fileId)) return null;
+  const rows = (await carecoreDb()`
+    SELECT f.name, f.mime_type, f.content_base64, f.purpose, f.uploaded_by,
+      d.id AS document_id, d.resident_id AS document_resident_id,
+      (SELECT e.user_id FROM carecore_training_enrollments e WHERE e.certificate_file_id = f.id LIMIT 1) AS certificate_user_id
+    FROM carecore_cloud_files f
+    LEFT JOIN carecore_documents d ON d.file_id = f.id AND d.organization_id = f.organization_id
+    WHERE f.id = ${fileId} AND f.organization_id = ${actor.organizationId}
+    LIMIT 1`) as Array<Record<string, unknown>>;
+  const file = rows[0];
+  if (!file) return null;
+  const own = file.uploaded_by === actor.id;
+  const allowed =
+    file.purpose === "cloud"
+      ? own
+      : file.purpose === "certificate"
+        ? own || file.certificate_user_id === actor.id || hasPermission(actor, "team.manage")
+        : file.purpose === "document" && file.document_id
+          ? hasPermission(actor, "residents.read")
+          : own;
+  return allowed
+    ? { name: String(file.name), mime_type: String(file.mime_type ?? ""), content_base64: String(file.content_base64) }
+    : null;
+}
