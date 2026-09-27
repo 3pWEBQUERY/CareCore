@@ -1,4 +1,6 @@
-import TeamleadWorkspace from "../components/teamlead-workspace";
+import { redirect } from "next/navigation";
+
+// Dienste plant die Leitung jetzt im Dienstplan; alte Links bleiben gültig.
 export default function TeamleadShiftsPage() {
-  return <TeamleadWorkspace view="shifts" />;
+  redirect("/c/dienstplan");
 }

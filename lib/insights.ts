@@ -10,8 +10,7 @@ import {
   type WorkforceInsights,
 } from "@/lib/insights-shared";
 import { canManage as canManageTeam, learningData } from "@/lib/learning";
-import { ABSENCE_KINDS, activeAssignments, openSlots } from "@/lib/schedule-shared";
-import { addDays, orgToday, scheduleData, selectAbsences } from "@/lib/schedule";
+import { addDays } from "@/lib/roster/time";
 
 // Key figures are computed live from the operational tables; nothing is stored.
 
@@ -161,33 +160,91 @@ export async function careInsights(ctx: ApiContext): Promise<CareInsights> {
 
 // ------------------------------------------------------------- workforce
 
+const ABSENCE_KINDS: Record<string, string> = {
+  vacation: "Ferien",
+  sick: "Krankheit",
+  training: "Weiterbildung",
+  personal: "Persönlicher Termin",
+};
+
+// Besetzung der nächsten 7 Tage aus dem Dienstplan: Soll = Mindestbesetzung je Diensttyp und Tag,
+// besetzt = eingeteilte Dienste (höchstens bis zum Soll).
 async function staffing(ctx: ApiContext) {
-  const today = await orgToday(ctx);
-  const to = addDays(today, 6);
-  const schedule = await scheduleData(ctx, new URLSearchParams({ scope: "team", from: today, to }));
+  const org = ctx.actor.organizationId;
+  const rows = (await ctx.sql`
+    WITH today AS (SELECT (NOW() AT TIME ZONE timezone)::date AS d FROM carecore_organizations WHERE id = ${org}),
+    days AS (SELECT (today.d + i) AS d FROM today, generate_series(0, 6) AS i),
+    units AS (
+      SELECT cu.id, cu.name FROM carecore_care_units cu JOIN carecore_sites si ON si.id = cu.site_id
+      WHERE si.organization_id = ${org} AND cu.active),
+    cells AS (
+      SELECT u.id AS unit_id, u.name, days.d,
+        COALESCE(
+          (SELECT r.min_count FROM carecore_staffing_requirements r
+            WHERE r.care_unit_id = u.id AND r.shift_type_id = t.id AND r.date = days.d LIMIT 1),
+          (SELECT r.min_count FROM carecore_staffing_requirements r
+            WHERE r.care_unit_id = u.id AND r.shift_type_id = t.id AND r.date IS NULL
+              AND r.weekday = EXTRACT(ISODOW FROM days.d)::int LIMIT 1),
+          0) AS required,
+        (SELECT COUNT(*) FROM carecore_roster_shifts s
+          WHERE s.care_unit_id = u.id AND s.shift_type_id = t.id AND s.date = days.d)::int AS staffed
+      FROM units u CROSS JOIN days
+      JOIN carecore_shift_types t ON t.organization_id = ${org} AND t.category <> 'ABSENCE' AND t.active
+        AND (t.care_unit_id IS NULL OR t.care_unit_id = u.id))
+    SELECT unit_id, name, to_char(d, 'YYYY-MM-DD') AS day, SUM(required)::int AS required,
+      SUM(LEAST(staffed, required))::int AS assigned, (SELECT to_char(d, 'YYYY-MM-DD') FROM today) AS today
+    FROM cells GROUP BY unit_id, name, d ORDER BY name, d`) as Row[];
+  const pending = (await ctx.sql`
+    SELECT COUNT(*)::int AS n FROM carecore_absences WHERE organization_id = ${org} AND status = 'requested'`) as Row[];
+  const today =
+    rows.length > 0
+      ? String(rows[0].today)
+      : String(
+          (
+            (await ctx.sql`SELECT to_char(NOW() AT TIME ZONE timezone, 'YYYY-MM-DD') AS d FROM carecore_organizations WHERE id = ${org}`) as Row[]
+          )[0].d,
+        );
   const days = Array.from({ length: 7 }, (_, index) => addDays(today, index));
-  const units = [...schedule.careUnits.map((unit) => unit.name)];
-  if (schedule.shifts.some((shift) => !shift.careUnit)) units.push("Ohne Wohnbereich");
+  const units = [...new Set(rows.map((row) => String(row.name)))];
   const matrix = units.map((unit) => ({
     unit,
     cells: days.map((day) => {
-      const shifts = schedule.shifts.filter((s) => s.day === day && (s.careUnit ?? "Ohne Wohnbereich") === unit);
-      return {
-        required: shifts.reduce((sum, s) => sum + s.requiredStaff, 0),
-        assigned: shifts.reduce((sum, s) => sum + Math.min(activeAssignments(s).length, s.requiredStaff), 0),
-      };
+      const cell = rows.find((row) => row.name === unit && row.day === day);
+      return { required: Number(cell?.required ?? 0), assigned: Number(cell?.assigned ?? 0) };
     }),
   }));
-  const required = schedule.shifts.reduce((sum, s) => sum + s.requiredStaff, 0);
-  const covered = schedule.shifts.reduce((sum, s) => sum + Math.min(activeAssignments(s).length, s.requiredStaff), 0);
+  const required = rows.reduce((sum, row) => sum + Number(row.required), 0);
+  const covered = rows.reduce((sum, row) => sum + Number(row.assigned), 0);
   return {
     today,
     days,
     matrix,
     coverage: percent(covered, required),
-    openSlots: schedule.shifts.reduce((sum, s) => sum + openSlots(s), 0),
-    pendingRequests: schedule.requests.filter((a) => a.status === "requested").length,
+    openSlots: required - covered,
+    pendingRequests: Number(pending[0]?.n ?? 0),
   };
+}
+
+async function upcomingAbsences(ctx: ApiContext, from: string, to: string) {
+  const rows = (await ctx.sql`
+    SELECT ab.id, ab.kind, ab.status, to_char(ab.starts_on, 'YYYY-MM-DD') AS starts_on, to_char(ab.ends_on, 'YYYY-MM-DD') AS ends_on,
+      u.display_name AS name, sub.display_name AS substitute_name
+    FROM carecore_absences ab
+    JOIN carecore_users u ON u.id = ab.user_id
+    LEFT JOIN carecore_users sub ON sub.id = ab.substitute_user_id
+    WHERE ab.organization_id = ${ctx.actor.organizationId} AND ab.status IN ('requested', 'approved')
+      AND ab.ends_on >= ${from}::date AND ab.starts_on <= ${to}::date
+    ORDER BY ab.starts_on
+    LIMIT 200`) as Row[];
+  return rows.map((row) => ({
+    id: String(row.id),
+    name: String(row.name),
+    kind: String(row.kind),
+    status: String(row.status),
+    startsOn: String(row.starts_on),
+    endsOn: String(row.ends_on),
+    substituteName: (row.substitute_name as string | null) ?? null,
+  }));
 }
 
 async function compliance(ctx: ApiContext) {
@@ -208,9 +265,7 @@ const complianceShare = (c: NonNullable<Awaited<ReturnType<typeof compliance>>>)
 
 export async function workforceInsights(ctx: ApiContext): Promise<WorkforceInsights> {
   const [plan, training] = await Promise.all([staffing(ctx), compliance(ctx)]);
-  const absences = (await selectAbsences(ctx, { from: plan.today, to: addDays(plan.today, 13) }))
-    .filter((a) => a.status === "requested" || a.status === "approved")
-    .sort((a, b) => a.startsOn.localeCompare(b.startsOn));
+  const absences = await upcomingAbsences(ctx, plan.today, addDays(plan.today, 13));
   const trainingShare = training ? complianceShare(training) : null;
   return {
     kpis: [
@@ -318,7 +373,7 @@ export async function leadershipInsights(ctx: ApiContext): Promise<LeadershipIns
       status: "Besetzen",
       tone: "attention" as InsightTone,
       icon: "calendar" as const,
-      href: "/betrieb/dienstplanung/team",
+      href: "/dienstplan",
       count: plan.openSlots,
     },
     {
@@ -340,7 +395,7 @@ export async function leadershipInsights(ctx: ApiContext): Promise<LeadershipIns
       status: "Entscheiden",
       tone: "info" as InsightTone,
       icon: "team" as const,
-      href: "/betrieb/dienstplanung/team",
+      href: "/dienstplan/antraege",
       count: plan.pendingRequests,
     },
     {

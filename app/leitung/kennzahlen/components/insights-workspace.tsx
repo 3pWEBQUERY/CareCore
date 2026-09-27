@@ -187,7 +187,7 @@ function WorkforceView({ data }: { data: WorkforceInsights }) {
             <h2 className="card-title">Besetzung nach Wohnbereich</h2>
             <p className="card-subtitle">Nächste 7 Tage · {formatPercent(data.coverage)} besetzt</p>
           </div>
-          <Link className="secondary-button" href="/betrieb/dienstplanung/team">
+          <Link className="secondary-button" href="/dienstplan">
             Dienstplan <ModuleIcon name="chevron" />
           </Link>
         </div>
@@ -244,7 +244,7 @@ function WorkforceView({ data }: { data: WorkforceInsights }) {
             </div>
           ))}
           {!data.absences.length && <p className="list-hint workforce-hint">Keine Abwesenheiten geplant.</p>}
-          <Link className="primary-button" href="/betrieb/dienstplanung/team">
+          <Link className="primary-button" href="/dienstplan">
             Vertretung planen
           </Link>
         </section>

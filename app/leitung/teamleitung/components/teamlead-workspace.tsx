@@ -1,22 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import {
-  Archive,
-  CalendarDots,
-  CheckCircle,
-  ClipboardText,
-  Plus,
-  UserPlus,
-  UsersThree,
-  WarningCircle,
-} from "@phosphor-icons/react";
+import { Archive, CheckCircle, ClipboardText, Plus, UserPlus, UsersThree, WarningCircle } from "@phosphor-icons/react";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { View, Employee, TeamleadRow, Unit, config, endpointFor } from "./teamlead-utils";
 import { TeamleadEmployeeEditor } from "./teamlead-employee-editor";
 import { TeamleadForm } from "./teamlead-form";
 import { TasksView } from "./teamlead-tasks-view";
-import { EmployeesView, ShiftsView } from "./teamlead-views";
+import { EmployeesView } from "./teamlead-views";
 
 export default function TeamleadWorkspace({ view }: { view: View }) {
   const [role, setRole] = useState<string | null>(null);
@@ -39,7 +30,7 @@ export default function TeamleadWorkspace({ view }: { view: View }) {
         .catch(() => null),
     ]);
     setRole(context?.profile?.role ?? null);
-    setRows((result?.employees ?? result?.shifts ?? result?.tasks ?? []) as TeamleadRow[]);
+    setRows((result?.employees ?? result?.tasks ?? []) as TeamleadRow[]);
     setEmployees((result?.employees ?? []) as Employee[]);
     setUnits((result?.units ?? []) as Unit[]);
   }, [view]);
@@ -61,9 +52,7 @@ export default function TeamleadWorkspace({ view }: { view: View }) {
       attention:
         view === "employees"
           ? rows.filter((row) => row.role === "leitung").length
-          : view === "shifts"
-            ? rows.filter((row) => row.status === "planned").length
-            : rows.filter((row) => row.priority === "high" || row.priority === "critical").length,
+          : rows.filter((row) => row.priority === "high" || row.priority === "critical").length,
       archived: rows.filter(isArchived).length,
     }),
     [isArchived, rows, view],
@@ -71,7 +60,7 @@ export default function TeamleadWorkspace({ view }: { view: View }) {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const payload = view === "shifts" ? { ...form, employeeIds: form.employeeId ? [form.employeeId] : [] } : form;
+    const payload = form;
     const response = await fetch(endpointFor(view), {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -107,17 +96,11 @@ export default function TeamleadWorkspace({ view }: { view: View }) {
           [totals.attention, "Leitungsrollen", "mit erweiterter Berechtigung"],
           [totals.archived, "Archiviert", "nicht im Tagesgeschäft"],
         ]
-      : view === "shifts"
-        ? [
-            [totals.active, "Geplante Dienste", "im aktuellen Plan"],
-            [totals.attention, "Noch offen", "Besetzung prüfen"],
-            [rows.filter((row) => row.assignees).length, "Besetzt", "mit Teamzuweisung"],
-          ]
-        : [
-            [totals.active, "Aktive Aufgaben", "im Team in Bearbeitung"],
-            [totals.attention, "Hohe Priorität", "brauchen heute Fokus"],
-            [totals.archived, "Archiviert", "abgeschlossen oder verworfen"],
-          ];
+      : [
+          [totals.active, "Aktive Aufgaben", "im Team in Bearbeitung"],
+          [totals.attention, "Hohe Priorität", "brauchen heute Fokus"],
+          [totals.archived, "Archiviert", "abgeschlossen oder verworfen"],
+        ];
 
   return (
     <ModulePageShell activeModule="teamlead" activeChild={content.title} pageClass="leadership-page">
@@ -151,8 +134,6 @@ export default function TeamleadWorkspace({ view }: { view: View }) {
                       {index === 0 ? (
                         view === "employees" ? (
                           <UsersThree />
-                        ) : view === "shifts" ? (
-                          <CalendarDots />
                         ) : (
                           <ClipboardText />
                         )
@@ -178,7 +159,6 @@ export default function TeamleadWorkspace({ view }: { view: View }) {
                   onSelect={setSelectedEmployee}
                 />
               )}
-              {view === "shifts" && <ShiftsView rows={rows} isArchived={isArchived} onUpdate={updateState} />}
               {view === "tasks" && <TasksView rows={rows} isArchived={isArchived} onUpdate={updateState} />}
             </>
           )}

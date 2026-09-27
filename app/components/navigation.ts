@@ -67,7 +67,12 @@ export const navigation: NavGroup[] = [
         children: ["Heute", "Übergabe", "Seit letztem Dienst", "Verlauf"],
       },
       { id: "tasks", label: "Aufgaben", icon: "tasks", children: ["Meine Aufgaben", "Team"] },
-      { id: "schedule", label: "Dienstplan", icon: "calendar", children: ["Mein Dienstplan", "Teamplanung"] },
+      {
+        id: "schedule",
+        label: "Mein Dienstplan",
+        icon: "calendar",
+        children: ["Meine Dienste", "Teamplan", "Anträge", "Zeiten"],
+      },
     ],
   },
   {
@@ -150,13 +155,19 @@ export const navigation: NavGroup[] = [
         },
       },
       {
+        id: "roster",
+        label: "Dienstplan",
+        icon: "calendar",
+        permission: "schedule.manage",
+        children: ["Planung", "Anträge", "Arbeitszeit", "Einstellungen", "Protokoll"],
+      },
+      {
         id: "staff",
-        label: "Mitarbeitende & Dienste",
+        label: "Mitarbeitende",
         icon: "team",
-        children: ["Mitarbeitende", "Dienste", "Aufgaben", "Profile & Rollen"],
+        children: ["Mitarbeitende", "Aufgaben", "Profile & Rollen"],
         childPermissions: {
           Mitarbeitende: "team.manage",
-          Dienste: "team.manage",
           Aufgaben: "team.manage",
           "Profile & Rollen": "administration.manage",
         },
@@ -194,7 +205,19 @@ const routes: Record<string, Record<string, string>> = {
     Verlauf: "/betrieb/schicht/verlauf",
   },
   tasks: { "Meine Aufgaben": "/betrieb/aufgaben", Team: "/betrieb/aufgaben/team" },
-  schedule: { "Mein Dienstplan": "/betrieb/dienstplanung", Teamplanung: "/betrieb/dienstplanung/team" },
+  schedule: {
+    "Meine Dienste": "/mein-dienstplan",
+    Teamplan: "/mein-dienstplan/team",
+    Anträge: "/mein-dienstplan/antraege",
+    Zeiten: "/mein-dienstplan/zeiten",
+  },
+  roster: {
+    Planung: "/dienstplan",
+    Anträge: "/dienstplan/antraege",
+    Arbeitszeit: "/dienstplan/arbeitszeit",
+    Einstellungen: "/dienstplan/einstellungen",
+    Protokoll: "/dienstplan/protokoll",
+  },
   residents: {
     Übersicht: "/bewohner",
     Pflegeakten: "/bewohner/pflegeakte",
@@ -246,7 +269,6 @@ const routes: Record<string, Record<string, string>> = {
   },
   staff: {
     Mitarbeitende: "/leitung/teamleitung/mitarbeiter",
-    Dienste: "/leitung/teamleitung/dienste",
     Aufgaben: "/leitung/teamleitung/aufgaben",
     "Profile & Rollen": "/leitung/administration/mitarbeiter",
   },

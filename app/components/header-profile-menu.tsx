@@ -69,7 +69,7 @@ export function HeaderProfileMenu({
             role="menuitem"
             onClick={() => {
               setProfileOpen(false);
-              router.push("/c/betrieb/dienstplanung");
+              router.push("/c/mein-dienstplan");
             }}
           >
             <span className="profile-menu-icon">

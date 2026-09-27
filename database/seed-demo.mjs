@@ -108,8 +108,6 @@ const tables = new Set([
   "carecore_wound_entries",
   "carecore_nutrition_plans",
   "carecore_fluid_entries",
-  "carecore_shifts",
-  "carecore_shift_assignments",
   "carecore_tasks",
   "carecore_handovers",
   "carecore_conversations",
@@ -504,41 +502,6 @@ await seed("carecore_fluid_entries", [
     consumed_at: date(0, -2),
     amount_ml: 180,
     beverage: "Tee",
-  },
-]);
-await seed("carecore_shifts", [
-  {
-    id: id("shift-early"),
-    organization_id: org,
-    care_unit_id: unit,
-    name: "Frühdienst",
-    starts_at: date(0, -1),
-    ends_at: date(0, 7),
-    status: "active",
-  },
-  {
-    id: id("shift-late"),
-    organization_id: org,
-    care_unit_id: unit,
-    name: "Spätdienst",
-    starts_at: date(1, 7),
-    ends_at: date(1, 15),
-  },
-]);
-await seed("carecore_shift_assignments", [
-  {
-    id: id("shift-assignment-early"),
-    shift_id: id("shift-early"),
-    user_id: actor,
-    role: "Pflegefachperson",
-    status: "confirmed",
-  },
-  {
-    id: id("shift-assignment-late"),
-    shift_id: id("shift-late"),
-    user_id: actor,
-    role: "Pflegefachperson",
-    status: "scheduled",
   },
 ]);
 await seed("carecore_tasks", [

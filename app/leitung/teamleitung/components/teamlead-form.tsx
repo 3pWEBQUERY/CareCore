@@ -1,9 +1,9 @@
 "use client";
 
 import { type FormEvent } from "react";
-import { CalendarDots, ClipboardText, UsersThree } from "@phosphor-icons/react";
+import { ClipboardText, UsersThree } from "@phosphor-icons/react";
 import { CareSelect } from "@/app/components/care-form-controls";
-import { View, Employee, Unit, config, labelRole, priorityLabel, formatDate } from "./teamlead-utils";
+import { View, Employee, Unit, config, labelRole, priorityLabel } from "./teamlead-utils";
 
 export function TeamleadForm({
   view,
@@ -36,17 +36,11 @@ export function TeamleadForm({
           copy: "Lege Zugang, Rolle und festen Arbeitsbereich in einem Schritt fest.",
           status: "Bereit zum Erstellen",
         }
-      : view === "shifts"
-        ? {
-            title: "Neuen Dienst planen",
-            copy: "Plane Einsatzzeit, Wohnbereich und Besetzung direkt im Teamkontext.",
-            status: "Bereit zum Planen",
-          }
-        : {
-            title: "Neue Teamaufgabe",
-            copy: "Halte Verantwortlichkeit, Priorität und Termin nachvollziehbar fest.",
-            status: "Bereit zum Erstellen",
-          };
+      : {
+          title: "Neue Teamaufgabe",
+          copy: "Halte Verantwortlichkeit, Priorität und Termin nachvollziehbar fest.",
+          status: "Bereit zum Erstellen",
+        };
   const summary =
     view === "employees"
       ? {
@@ -55,19 +49,12 @@ export function TeamleadForm({
           context: careUnitName || "Noch kein fester Wohnbereich",
           contextLabel: "Arbeitsbereich",
         }
-      : view === "shifts"
-        ? {
-            primary: form.name || "Neuer Dienst",
-            secondary: form.startsAt ? `Beginn ${formatDate(form.startsAt)}` : "Zeit noch festlegen",
-            context: assignedEmployee || "Noch nicht zugewiesen",
-            contextLabel: "Besetzung",
-          }
-        : {
-            primary: form.title || "Neue Aufgabe",
-            secondary: priorityLabel(form.priority),
-            context: assignedEmployee || "Noch nicht zugewiesen",
-            contextLabel: "Verantwortung",
-          };
+      : {
+          primary: form.title || "Neue Aufgabe",
+          secondary: priorityLabel(form.priority),
+          context: assignedEmployee || "Noch nicht zugewiesen",
+          contextLabel: "Verantwortung",
+        };
 
   return (
     <div
@@ -95,9 +82,7 @@ export function TeamleadForm({
         </header>
         <form id="teamlead-form" className="area-editor-form" onSubmit={onSubmit}>
           <div className="area-editor-intro">
-            <span className="area-editor-icon">
-              {view === "employees" ? <UsersThree /> : view === "shifts" ? <CalendarDots /> : <ClipboardText />}
-            </span>
+            <span className="area-editor-icon">{view === "employees" ? <UsersThree /> : <ClipboardText />}</span>
             <div>
               <strong>{intro.title}</strong>
               <p>{intro.copy}</p>
@@ -166,59 +151,6 @@ export function TeamleadForm({
                     options={["Nicht festgelegt", ...units.map((unit) => unit.name)]}
                     onChange={(name) => update("primaryCareUnitId", units.find((unit) => unit.name === name)?.id ?? "")}
                   />
-                </label>
-              </>
-            )}
-            {view === "shifts" && (
-              <>
-                <label>
-                  Bezeichnung
-                  <input
-                    required
-                    placeholder="z. B. Frühdienst"
-                    value={form.name ?? ""}
-                    onChange={(event) => update("name", event.target.value)}
-                  />
-                </label>
-                <label>
-                  Wohnbereich
-                  <select value={form.careUnitId ?? ""} onChange={(event) => update("careUnitId", event.target.value)}>
-                    <option value="">Bereich übergreifend</option>
-                    {units.map((unit) => (
-                      <option key={unit.id} value={unit.id}>
-                        {unit.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Beginn
-                  <input
-                    required
-                    type="datetime-local"
-                    value={form.startsAt ?? ""}
-                    onChange={(event) => update("startsAt", event.target.value)}
-                  />
-                </label>
-                <label>
-                  Ende
-                  <input
-                    required
-                    type="datetime-local"
-                    value={form.endsAt ?? ""}
-                    onChange={(event) => update("endsAt", event.target.value)}
-                  />
-                </label>
-                <label className="area-editor-wide">
-                  Mitarbeiter zuweisen
-                  <select value={form.employeeId ?? ""} onChange={(event) => update("employeeId", event.target.value)}>
-                    <option value="">Noch nicht zuweisen</option>
-                    {employees.map((employee) => (
-                      <option key={employee.id} value={employee.id}>
-                        {employee.display_name}
-                      </option>
-                    ))}
-                  </select>
                 </label>
               </>
             )}
