@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowsLeftRight,
@@ -10,6 +10,7 @@ import {
   ChartBar,
   CheckCircle,
   ClockCountdown,
+  CopySimple,
   MagnifyingGlass,
   Plus,
   Sparkle,
@@ -22,7 +23,8 @@ import type { RuleCode } from "@/lib/roster/types";
 import type { CommitResult, GridShift, SchedulePayload } from "@/lib/roster/view-types";
 import { AiPlanningPanel } from "./ai-panel";
 import { PublishPanel } from "./publish-panel";
-import { RosterGrid } from "./roster-grid";
+import { CopyWeekDialog } from "./copy-week";
+import { RosterGrid, type CellValue, type PaintTool } from "./roster-grid";
 import { RosterRequestError, rosterRequest, useRosterData } from "./roster-api";
 import { MoveDialog, ShiftEditor, type ShiftDraft } from "./shift-editor";
 import { ShiftDetail } from "./shift-detail";
@@ -38,7 +40,8 @@ type Dialog =
   | { kind: "move"; shift: GridShift }
   | { kind: "swap"; source: GridShift; target: GridShift }
   | { kind: "publish" | "analyze" }
-  | { kind: "ai" };
+  | { kind: "ai" }
+  | { kind: "copy-week" };
 
 const zurichMonth = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Zurich" }).format(new Date()).slice(0, 7);
@@ -59,6 +62,14 @@ export default function RosterPlanner() {
 
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [prompt, setPrompt] = useState<ViolationPrompt | null>(null);
+  // Dienst-Palette ("Stempel") wie im PEP: gewählter Diensttyp, "clear" oder aus.
+  const [paintTool, setPaintTool] = useState<PaintTool>(null);
+  useEffect(() => {
+    if (!paintTool) return;
+    const onKey = (event: globalThis.KeyboardEvent) => event.key === "Escape" && setPaintTool(null);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [paintTool]);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [qualificationFilter, setQualificationFilter] = useState("");
@@ -218,6 +229,17 @@ export default function RosterPlanner() {
             "Dienst gelöscht",
           );
         };
+
+        // Mehrere Zellen auf einmal (Kürzel, Stempel, Einfügen, Woche übertragen) – eine Regelprüfung.
+        const applyCells = (cells: CellValue[], label: string) =>
+          run(
+            (ack) =>
+              rosterRequest("/api/dienstplan/cells", {
+                method: "PUT",
+                body: { unitId: data!.unit.id, cells, ...ack },
+              }),
+            label,
+          );
 
         const drop = (shift: GridShift, employeeId: string, date: string) => {
           const occupant = data!.shifts.find(
@@ -536,6 +558,52 @@ export default function RosterPlanner() {
                       <p>Dienst hinzufügen (Doppelklick auf eine Zelle) oder mit KI planen.</p>
                     </div>
                   )}
+                  {data.canEdit && (
+                    <div className="roster-palette" role="toolbar" aria-label="Dienst-Palette">
+                      <span className="roster-palette-label">Stempel</span>
+                      <button
+                        type="button"
+                        className={paintTool === null ? "active" : ""}
+                        aria-pressed={paintTool === null}
+                        onClick={() => setPaintTool(null)}
+                        title="Markieren: Zelle anklicken, Kürzel tippen"
+                      >
+                        Markieren
+                      </button>
+                      {data.shiftTypes
+                        .filter((type) => type.active)
+                        .map((type) => (
+                          <button
+                            key={type.id}
+                            type="button"
+                            className={`roster-palette-code ${paintTool === type.id ? "active" : ""}`}
+                            style={{ "--chip-color": type.color } as React.CSSProperties}
+                            aria-pressed={paintTool === type.id}
+                            title={`${type.name} ${type.startTime}–${type.endTime} – Zellen anklicken oder überstreichen`}
+                            onClick={() => setPaintTool(paintTool === type.id ? null : type.id)}
+                          >
+                            {type.code}
+                          </button>
+                        ))}
+                      <button
+                        type="button"
+                        className={paintTool === "clear" ? "active" : ""}
+                        aria-pressed={paintTool === "clear"}
+                        onClick={() => setPaintTool(paintTool === "clear" ? null : "clear")}
+                        title="Radierer: Zellen anklicken oder überstreichen"
+                      >
+                        Leeren
+                      </button>
+                      <button
+                        type="button"
+                        className="roster-palette-action"
+                        onClick={() => setDialog({ kind: "copy-week" })}
+                        disabled={!employees.length}
+                      >
+                        <CopySimple aria-hidden="true" /> Woche übertragen
+                      </button>
+                    </div>
+                  )}
                   <RosterGrid
                     data={data}
                     days={days}
@@ -545,10 +613,14 @@ export default function RosterPlanner() {
                     onCreate={(employeeId, date) => setDialog({ kind: "create", employeeId, date })}
                     onOpen={(shift) => setDialog({ kind: "detail", shift })}
                     onDrop={drop}
+                    onApplyCells={(cells, label) => void applyCells(cells, label)}
+                    paintTool={paintTool}
+                    onNotice={showToast}
                   />
                   <p className="roster-legend">
-                    Ziehen zum Verschieben (Touch: lange drücken), auf belegte Zelle zum Tauschen. Tastatur:
-                    Pfeiltasten, Enter öffnet.
+                    {data.canEdit
+                      ? "Zelle anklicken und Kürzel tippen (Enter übernimmt), Entf leert, Shift+Pfeile oder Ziehen markiert einen Bereich, Strg+C/V kopiert und fügt ein (auch aus Excel). Doppelklick öffnet, Dienst ziehen verschiebt."
+                      : "Tastatur: Pfeiltasten, Enter öffnet."}
                     {data.shiftTypes.map((type) => (
                       <span key={type.id}>
                         <i style={{ background: type.color }} /> {type.code} {type.name}
@@ -668,6 +740,18 @@ export default function RosterPlanner() {
                   setDialog(null);
                   showToast(message);
                   reload();
+                }}
+              />
+            )}
+            {data && dialog?.kind === "copy-week" && (
+              <CopyWeekDialog
+                data={data}
+                employees={employees}
+                initialWeek={view === "woche" && days[0] ? weekStart(days[0].date) : null}
+                onClose={() => setDialog(null)}
+                onApply={async (cells, label) => {
+                  setDialog(null);
+                  await applyCells(cells, label);
                 }}
               />
             )}

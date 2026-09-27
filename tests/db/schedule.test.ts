@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { RosterError } from "@/lib/roster/errors";
 import { periodAction } from "@/lib/roster/period-service";
 import { getSchedule } from "@/lib/roster/schedule";
-import { changeShift, createShift } from "@/lib/roster/shift-service";
+import { changeShift, createShift, setCells } from "@/lib/roster/shift-service";
 import { fixture, q } from "../support/db";
 
 const code = (error: unknown) => (error instanceof RosterError ? error.code : String(error));
@@ -241,4 +241,50 @@ test("Neuer Stammwohnbereich im Profil macht die Person dort planbar (Trigger)",
     [f.people.ben, f.units.a],
   );
   assert.equal(row.plannable, true);
+});
+
+test("PEP-Arbeitsweise: mehrere Zellen setzen, ändern, leeren – atomar und mit Regelprüfung", async () => {
+  const f = await fixture();
+  const lead = await f.ctx("leadA");
+  const [F, S, N] = [await f.type("F"), await f.type("S"), await f.type("N")];
+  const cell = (person: string, date: string, shiftTypeId: string | null) => ({
+    employeeId: f.people[person],
+    date,
+    shiftTypeId,
+  });
+  const first = await setCells(lead, {
+    unitId: f.units.a,
+    cells: [cell("anna", "2026-11-16", F), cell("anna", "2026-11-17", F), cell("max", "2026-11-16", S)],
+  });
+  assert.equal(first.changed, 3);
+  const codes = async () =>
+    (
+      await q<{ key: string }>(
+        `SELECT u.display_name || ' ' || to_char(s.date, 'DD') || ' ' || t.code AS key FROM carecore_roster_shifts s
+         JOIN carecore_users u ON u.id = s.employee_id JOIN carecore_shift_types t ON t.id = s.shift_type_id
+         WHERE s.care_unit_id = $1 ORDER BY 1`,
+        [f.units.a],
+      )
+    ).map((r) => r.key);
+  assert.deepEqual(await codes(), ["Anna Müller 16 F", "Anna Müller 17 F", "Max Meier 16 S"]);
+  // Ändern, leeren und unveränderte Zelle in einem Schritt.
+  const second = await setCells(lead, {
+    unitId: f.units.a,
+    cells: [cell("anna", "2026-11-16", S), cell("anna", "2026-11-17", null), cell("max", "2026-11-16", S)],
+  });
+  assert.equal(second.changed, 2);
+  assert.deepEqual(await codes(), ["Anna Müller 16 S", "Max Meier 16 S"]);
+  // Ruhezeitverstoss irgendwo im Block: nichts wird geschrieben.
+  const blocked = await setCells(lead, {
+    unitId: f.units.a,
+    cells: [cell("lea", "2026-11-18", F), cell("anna", "2026-11-17", F)],
+  }).catch((error: RosterError) => error);
+  assert.ok(blocked instanceof RosterError);
+  assert.equal(blocked.code, "RULE_VIOLATION");
+  assert.deepEqual(await codes(), ["Anna Müller 16 S", "Max Meier 16 S"]);
+  // Mitarbeitende dürfen das nicht.
+  await expectCode(
+    setCells(await f.ctx("anna"), { unitId: f.units.a, cells: [cell("anna", "2026-11-20", N)] }),
+    "FORBIDDEN",
+  );
 });

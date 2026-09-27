@@ -961,6 +961,150 @@ tr.self .roster-name {
   text-overflow: ellipsis;
 }
 
+/* PEP-Arbeitsweise: Bereichsauswahl, Kürzel-Eingabe, Stempel-Palette und Stundenspalte */
+.roster-grid.pep .roster-cell-inner {
+  cursor: cell;
+  user-select: none;
+}
+.roster-cell.selected .roster-cell-inner {
+  background: color-mix(in srgb, var(--brand) 9%, transparent);
+  box-shadow: inset 0 0 0 1px #93c5fd;
+}
+.roster-cell.previewed .roster-cell-inner {
+  background: color-mix(in srgb, var(--brand) 16%, transparent);
+  box-shadow: inset 0 0 0 2px var(--brand);
+}
+.roster-grid.pep .roster-cell-add {
+  display: none;
+}
+.roster-grid.painting .roster-cell-inner {
+  cursor: crosshair;
+  touch-action: none;
+}
+.roster-grid.painting .roster-chip,
+.roster-grid.painting .roster-cell-add {
+  pointer-events: none;
+}
+.roster-code-input {
+  position: absolute;
+  inset: 2px;
+  z-index: 3;
+  width: calc(100% - 4px);
+  min-width: 0;
+  padding: 0 4px;
+  border: 2px solid var(--brand);
+  border-radius: 5px;
+  color: var(--ink);
+  background: white;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
+  outline: 0;
+}
+.roster-palette {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: #f8fafc;
+}
+.roster-palette-label {
+  margin-right: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.roster-palette button {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: white;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.roster-palette button:hover,
+.roster-palette button.active {
+  border-color: #93c5fd;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+}
+.roster-palette button.active {
+  box-shadow: inset 0 0 0 1px var(--brand);
+}
+.roster-palette .roster-palette-code {
+  min-width: 36px;
+  justify-content: center;
+  border-left: 4px solid var(--chip-color);
+  font-weight: 800;
+}
+.roster-palette .roster-palette-code.active {
+  background: color-mix(in srgb, var(--chip-color) 16%, white);
+}
+.roster-palette .roster-palette-action {
+  margin-left: auto;
+}
+.roster-palette button:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.roster-palette svg {
+  width: 14px;
+  height: 14px;
+}
+.roster-grid thead th.roster-total-head,
+.roster-total {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  min-width: 72px;
+  border-left: 1px solid var(--line);
+  background: white;
+  text-align: right;
+}
+.roster-grid thead th.roster-total-head {
+  z-index: 4;
+  padding-right: 8px;
+  background: #f8fafc;
+}
+.roster-total {
+  padding: 4px 8px;
+  border-bottom: 1px solid #edf1f7;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+.roster-total span,
+.roster-total small,
+.roster-total em {
+  display: block;
+  line-height: 1.25;
+}
+.roster-total span {
+  color: var(--ink);
+  font-weight: 750;
+}
+.roster-total small {
+  color: var(--muted);
+}
+.roster-total em {
+  color: var(--muted);
+  font-size: 10px;
+  font-style: normal;
+}
+
 @media (max-width: 1100px) {
   .roster-tiles {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -983,6 +1127,13 @@ tr.self .roster-name {
   }
   .roster-name small,
   .roster-name-tags {
+    display: none;
+  }
+  .roster-palette .roster-palette-action {
+    margin-left: 0;
+  }
+  .roster-grid thead th.roster-total-head,
+  .roster-total {
     display: none;
   }
   .roster-search input {

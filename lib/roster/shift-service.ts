@@ -3,7 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { RosterContext } from "./context";
 import { requirePermission } from "./context";
 import { auditQuery, notificationQuery, type NotificationInput } from "./audit";
-import { ensurePeriod, loadEmployees, loadShift, loadSnapshot } from "./data";
+import { ensurePeriod, loadEmployees, loadShift, loadSnapshot, mapShift, SHIFT_COLUMNS } from "./data";
 import { RosterError, invalid, notFound } from "./errors";
 import { applyChanges, blocking, unacknowledged, validateChanges } from "./rules";
 import { acknowledgement, date, instant, int, optionalUuid, text, uuid, type Body } from "./schemas";
@@ -350,6 +350,73 @@ export async function createShift(ctx: RosterContext, body: Body) {
       },
     ],
   });
+}
+
+// PEP-Arbeitsweise: mehrere Zellen (Person × Tag) auf einmal setzen oder leeren – Kürzel tippen,
+// Stempeln, Einfügen, Woche übertragen. Eine Zelle mit shiftTypeId null wird geleert. Alles in einer
+// Regelprüfung und einer Transaktion; Dienste mit Zeiterfassung bleiben unangetastet.
+export const MAX_CELLS = 1500;
+export async function setCells(ctx: RosterContext, body: Body) {
+  const unitId = uuid(body.unitId, "Wohnbereich");
+  requirePermission(ctx, "dienstplan:update", unitId);
+  const { acknowledged, reason } = acknowledgement(body);
+  if (!Array.isArray(body.cells) || !body.cells.length) throw invalid("Keine Zellen angegeben.");
+  if (body.cells.length > MAX_CELLS) throw invalid(`Höchstens ${MAX_CELLS} Zellen auf einmal.`);
+  const cells = new Map<string, { employeeId: string; date: string; shiftTypeId: string | null }>();
+  for (const raw of body.cells as Array<Record<string, unknown>>) {
+    const cell = {
+      employeeId: uuid(raw?.employeeId, "Person"),
+      date: date(raw?.date, "Datum"),
+      shiftTypeId: optionalUuid(raw?.shiftTypeId, "Diensttyp"),
+    };
+    cells.set(`${cell.employeeId}|${cell.date}`, cell);
+  }
+  const list = [...cells.values()];
+  const dates = list.map((c) => c.date).sort();
+  const rows = (await ctx.sql.query(
+    `SELECT ${SHIFT_COLUMNS} FROM carecore_roster_shifts s
+     WHERE s.care_unit_id = $1 AND s.employee_id = ANY($2::uuid[]) AND s.date BETWEEN $3::date AND $4::date`,
+    [unitId, [...new Set(list.map((c) => c.employeeId))], dates[0], dates.at(-1)],
+  )) as Array<Record<string, unknown>>;
+  const existing = rows.map(mapShift);
+  const changes: ShiftChange[] = [];
+  let skipped = 0;
+  for (const cell of list) {
+    const inCell = existing.filter((s) => s.employeeId === cell.employeeId && s.date === cell.date);
+    const locked = inCell.filter((s) => s.hasTimeEntry);
+    const editable = inCell.filter((s) => !s.hasTimeEntry);
+    if (locked.length) {
+      skipped += 1;
+      continue;
+    }
+    if (!cell.shiftTypeId) {
+      changes.push(...editable.map((s) => ({ kind: "delete" as const, shiftId: s.id, expectedVersion: s.version })));
+      continue;
+    }
+    const [first, ...rest] = editable;
+    changes.push(...rest.map((s) => ({ kind: "delete" as const, shiftId: s.id, expectedVersion: s.version })));
+    if (!first)
+      changes.push({
+        kind: "create",
+        shift: {
+          id: randomUUID(),
+          unitId,
+          employeeId: cell.employeeId,
+          shiftTypeId: cell.shiftTypeId,
+          date: cell.date,
+        },
+      });
+    else if (first.shiftTypeId !== cell.shiftTypeId)
+      changes.push({
+        kind: "update",
+        shiftId: first.id,
+        expectedVersion: first.version,
+        patch: { shiftTypeId: cell.shiftTypeId },
+      });
+  }
+  if (!changes.length) return { shiftIds: [], violations: [], skipped, changed: 0 };
+  const result = await commitChanges(ctx, { unitId, acknowledged, reason, source: "MANUAL", changes });
+  return { ...result, skipped, changed: changes.length };
 }
 
 // update | move | delete | swap (Drag & Drop auf eine belegte Zelle).
