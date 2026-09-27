@@ -284,3 +284,70 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Tabs of the current module (replace the former sidebar submenus). */
+.page-tabs {
+  width: min(100%, 1640px);
+  display: flex;
+  gap: 7px;
+  margin: 0 auto;
+  padding: 22px 34px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.page-tabs::-webkit-scrollbar {
+  display: none;
+}
+.page-tabs a {
+  min-height: 32px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+  background: white;
+  font-size: 11px;
+  font-weight: 740;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.page-tabs a:hover,
+.page-tabs a.active {
+  color: var(--brand-dark);
+  border-color: #93c5fd;
+  background: var(--brand-soft);
+}
+.page-tabs em {
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: white;
+  background: var(--critical);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+  text-align: center;
+}
+.page-tabs + .workspace,
+.page-tabs + main {
+  padding-top: 22px;
+}
+@media (max-width: 960px) {
+  .page-tabs {
+    padding: 16px 16px 0;
+  }
+}
+
+/* CareCore KI side panel from the header. */
+.ai-panel-body {
+  display: grid;
+  gap: 14px;
+  padding: 24px 28px 32px;
+  overflow-y: auto;
+}
+.ai-panel-body > .secondary-button {
+  justify-self: start;
+}

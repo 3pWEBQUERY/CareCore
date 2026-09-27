@@ -4,6 +4,7 @@ import { useState } from "react";
 import { MobileNavigation } from "@/app/components/mobile-navigation";
 import AppHeader from "../components/app-header";
 import AppSidebar from "../components/app-sidebar";
+import { PageTabs } from "../components/page-tabs";
 import { ResidentRecord } from "./components/resident-record";
 import type { RecordView } from "./components/resident-record-data";
 import { Icon } from "./components/residents-utils";
@@ -49,6 +50,7 @@ export default function ResidentsPage() {
 
       <div className="main-column">
         <AppHeader searchOpen={searchOpen} onSearch={openSearch} onToast={setToast} />
+        <PageTabs moduleId="residents" child="Übersicht" />
 
         <main className="workspace residents-workspace">
           <section className="page-heading residents-heading" aria-labelledby="residents-page-title">

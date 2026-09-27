@@ -37,9 +37,9 @@ import {
 } from "@phosphor-icons/react";
 import { useNavigationBadges, useWorkContext, type NavigationBadges } from "./care-context";
 import {
-  badgeFor,
+  moduleBadges,
   moduleLabel,
-  navigationFor,
+  sidebarNavigation,
   quickLinks,
   readRecentPages,
   rememberPage,
@@ -167,7 +167,7 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
   const router = useRouter();
   const [flyoutGroup, setFlyoutGroup] = useState<string | null>(null);
   const context = useWorkContext();
-  const visibleNavigation = navigationFor(context?.profile.permissions);
+  const visibleNavigation = sidebarNavigation(context?.profile.permissions);
   const badges = useNavigationBadges();
   const [recentPages, setRecentPages] = useState<RecentPage[]>([]);
   const badgeCount = (key?: keyof NavigationBadges) => (key && badges ? badges[key] : 0);
@@ -340,25 +340,24 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
                 ))}
               </section>
             )}
-            {flyout.modules.map((module) => (
-              <section className="sidebar-flyout-module" key={module.id}>
-                <strong>{module.label}</strong>
-                {module.children.map((child) => (
+            <section className="sidebar-flyout-module">
+              <strong>Bereiche</strong>
+              {flyout.modules.map((module) => {
+                const count = moduleBadges(module.id).reduce((sum, key) => sum + badgeCount(key), 0);
+                return (
                   <button
-                    className={`sidebar-flyout-link ${module.id === activeModule && child === activeChild ? "active" : ""}`}
+                    className={`sidebar-flyout-link ${module.id === activeModule ? "active" : ""}`}
                     type="button"
-                    key={child}
-                    onClick={() => selectChild(module.id, child)}
+                    key={module.id}
+                    onClick={() => selectChild(module.id, module.children[0])}
                   >
-                    <span>{child}</span>
-                    {badgeCount(badgeFor(module.id, child)) > 0 && (
-                      <em className="sidebar-flyout-badge">{badgeCount(badgeFor(module.id, child))}</em>
-                    )}
+                    <span>{module.label}</span>
+                    {count > 0 && <em className="sidebar-flyout-badge">{count}</em>}
                     <RailIcon name="chevron" />
                   </button>
-                ))}
-              </section>
-            ))}
+                );
+              })}
+            </section>
           </div>
         </aside>
       )}
