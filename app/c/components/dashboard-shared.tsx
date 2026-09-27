@@ -169,7 +169,7 @@ export const dashboardWidgets: Array<{ id: DashboardWidgetId; label: string; des
   { id: "worklist", label: "Tagesliste", description: "Was heute je Bewohner fällig ist", wide: true },
   { id: "critical", label: "Wichtiger Hinweis", description: "Kritische Informationen", wide: true },
   { id: "tasks", label: "Als Nächstes", description: "Offene Aufgaben" },
-  { id: "shift", label: "Meine Schicht", description: "Zeitlicher Dienstplan" },
+  { id: "shift", label: "Zeitplan", description: "Deine nächsten terminierten Aufgaben" },
   { id: "residents", label: "Meine Bewohner", description: "Zugewiesene Bewohner", wide: true },
 ];
 

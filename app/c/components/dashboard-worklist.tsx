@@ -47,7 +47,7 @@ export function DashboardWorklistCard() {
       <div className="card-header">
         <div>
           <h2 className="card-title" id="worklist-title">
-            Mein Dienst · Tagesliste
+            Tagesliste
           </h2>
           <p className="card-subtitle">
             {data.loading && !data.data
