@@ -11,7 +11,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:migrate": "node --env-file=.env.local database/migrate.mjs",
-    "db:seed": "node --env-file=.env.local database/seed-demo.mjs"
+    "db:seed": "node --env-file=.env.local database/seed-demo.mjs",
+    "styles:mobile-type": "node scripts/build-mobile-type.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",

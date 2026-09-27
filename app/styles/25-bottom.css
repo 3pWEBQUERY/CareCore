@@ -807,3 +807,27 @@
     grid-column: 1 / -1;
   }
 }
+@media (max-width: 960px) {
+  /* Resident record header: name on its own line, paging below, close button top right. */
+  .resident-record-header {
+    position: relative;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .record-heading {
+    flex: 1 1 100%;
+    padding-right: 48px;
+  }
+  .record-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .record-close-button {
+    position: absolute;
+    top: 16px;
+    right: 14px;
+  }
+  .record-heading p {
+    font-size: 12px;
+  }
+}
