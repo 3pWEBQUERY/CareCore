@@ -3,8 +3,8 @@ import { createHash, randomUUID } from "node:crypto";
 import type { RosterContext } from "./context";
 import { requirePermission } from "./context";
 import { auditQuery, notificationQuery, type NotificationInput } from "./audit";
-import { ensurePeriod, loadShift, loadSnapshot } from "./data";
-import { RosterError, invalid } from "./errors";
+import { ensurePeriod, loadEmployees, loadShift, loadSnapshot } from "./data";
+import { RosterError, invalid, notFound } from "./errors";
 import { applyChanges, blocking, unacknowledged, validateChanges } from "./rules";
 import { acknowledgement, date, instant, int, optionalUuid, text, uuid, type Body } from "./schemas";
 import { addDays, formatDate, localTime } from "./time";
@@ -290,18 +290,53 @@ export async function createShift(ctx: RosterContext, body: Body) {
   requirePermission(ctx, "dienstplan:create", unitId);
   const { acknowledged, reason } = acknowledgement(body);
   const custom = body.plannedStart && body.plannedEnd;
+  const employeeId = uuid(body.employeeId, "Person");
+  // "Dem Wohnbereich zuordnen": Person des Hauses wird beim Einplanen im Wohnbereich planbar –
+  // in derselben Transaktion wie der Dienst, damit ohne gültigen Dienst keine Zuordnung entsteht.
+  const addToUnit = body.addToUnit === true;
+  if (addToUnit) {
+    const employee = (await loadEmployees(ctx, [employeeId]))[employeeId];
+    if (!employee) throw notFound("Person");
+    if (!employee.active) throw invalid(`${employee.name} ist nicht aktiv und kann nicht eingeplant werden.`);
+  }
   return commitChanges(ctx, {
     unitId,
     acknowledged,
     reason,
     source: "MANUAL",
+    snapshotScope: addToUnit
+      ? (snapshot) => {
+          const employee = snapshot.employees[employeeId];
+          if (!employee || employee.unitIds.includes(unitId)) return snapshot;
+          return {
+            ...snapshot,
+            employees: { ...snapshot.employees, [employeeId]: { ...employee, unitIds: [...employee.unitIds, unitId] } },
+          };
+        }
+      : undefined,
+    extra: addToUnit
+      ? () => [
+          ctx.sql`INSERT INTO carecore_unit_memberships (user_id, care_unit_id, plannable, is_lead)
+            VALUES (${employeeId}, ${unitId}, TRUE, FALSE)
+            ON CONFLICT (user_id, care_unit_id) DO UPDATE SET plannable = TRUE`,
+          ctx.sql`INSERT INTO carecore_employee_profiles (user_id) VALUES (${employeeId}) ON CONFLICT (user_id) DO NOTHING`,
+          auditQuery(ctx, {
+            action: "updated",
+            entityType: "employee_profile",
+            entityId: employeeId,
+            unitId,
+            after: { employeeId, plannable: true },
+            reason: "Beim Einplanen dem Wohnbereich zugeordnet",
+          }),
+        ]
+      : undefined,
     changes: [
       {
         kind: "create",
         shift: {
           id: randomUUID(),
           unitId,
-          employeeId: uuid(body.employeeId, "Person"),
+          employeeId,
           shiftTypeId: uuid(body.shiftTypeId, "Diensttyp"),
           date: date(body.date, "Datum"),
           plannedStart: custom ? instant(body.plannedStart, "Beginn") : undefined,

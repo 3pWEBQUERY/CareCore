@@ -130,9 +130,19 @@ export function ShiftEditor({
               value: String(employee.id),
               label: `${employee.name} · ${employee.pensumPercent} %`,
             })),
+            // Neue Dienste: auch Personen des Hauses, die dabei dem Wohnbereich zugeordnet werden.
+            ...(shift ? [] : data.candidates).map((person) => ({
+              value: person.id,
+              label: `${person.name} · neu${person.detail ? ` (${person.detail})` : ""}`,
+            })),
           ]}
         />
       </label>
+      {!shift && data.candidates.some((person) => person.id === draft.employeeId) && (
+        <p className="roster-muted area-editor-wide">
+          Die Person wird beim Speichern {data.unit.name} zugeordnet und erscheint danach im Dienstplan.
+        </p>
+      )}
       <label>
         <span>Datum</span>
         <input type="date" value={draft.date} onChange={(event) => set("date", event.target.value)} />

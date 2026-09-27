@@ -115,6 +115,8 @@ export type SchedulePayload = {
   tiles: ScheduleTiles | null;
   ruleSet: Pick<RuleSet, "valuesConfirmed" | "autoSwapApproval" | "allowShiftTakeover" | "deviationThresholdMinutes">;
   aiAvailable: boolean;
+  // Leitung: aktive Personen des Hauses, die (noch) nicht in diesem Wohnbereich planbar sind.
+  candidates: Array<{ id: string; name: string; detail: string | null }>;
   changeToken: string;
 };
 

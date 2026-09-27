@@ -195,14 +195,16 @@ async function main() {
   for (const person of people) {
     await sql`INSERT INTO carecore_users (id, username, display_name, role, password_hash)
       VALUES (${person.id}, ${person.username}, ${person.name}, ${person.role}, ${passwordHash}) ON CONFLICT DO NOTHING`;
+    // Personalprofil zuerst: der Trigger aus 0024 legt sonst beim Stammwohnbereich ein Standardprofil an.
+    await sql`INSERT INTO carecore_employee_profiles (user_id, pensum_percent, excluded_categories)
+      VALUES (${person.id}, ${person.pensum}, ${person.excluded}::text[]) ON CONFLICT (user_id) DO NOTHING`;
     await sql`INSERT INTO carecore_user_profiles (user_id, organization_id, job_title, primary_care_unit_id)
       VALUES (${person.id}, ${org}, ${person.lead ? "Teamleitung Pflege" : { HF: "Pflegefachperson HF", FAGE: "Fachperson Gesundheit", SRK: "Pflegehelfer:in SRK" }[person.qualification ?? "SRK"]},
         ${unitId[person.unitKeys[0]]}) ON CONFLICT (user_id) DO NOTHING`;
-    await sql`INSERT INTO carecore_employee_profiles (user_id, pensum_percent, excluded_categories)
-      VALUES (${person.id}, ${person.pensum}, ${person.excluded}::text[]) ON CONFLICT (user_id) DO NOTHING`;
     for (const key of person.unitKeys)
       await sql`INSERT INTO carecore_unit_memberships (user_id, care_unit_id, plannable, is_lead)
-        VALUES (${person.id}, ${unitId[key]}, ${!person.lead}, ${person.lead}) ON CONFLICT DO NOTHING`;
+        VALUES (${person.id}, ${unitId[key]}, ${!person.lead}, ${person.lead})
+        ON CONFLICT (user_id, care_unit_id) DO UPDATE SET plannable = EXCLUDED.plannable, is_lead = EXCLUDED.is_lead`;
     if (person.qualification)
       await sql`INSERT INTO carecore_employee_qualifications (user_id, qualification_id, valid_from)
         VALUES (${person.id}, ${qualification[person.qualification]}, '2020-01-01') ON CONFLICT DO NOTHING`;
