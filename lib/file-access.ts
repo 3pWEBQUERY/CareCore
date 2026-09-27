@@ -1,4 +1,5 @@
-import { carecoreDb, hasPermission, type CarecoreActor } from "@/lib/server-data";
+import { mayReadFile } from "@/lib/file-access-rules";
+import { carecoreDb, type CarecoreActor } from "@/lib/server-data";
 
 // Who may open a stored file. The file store holds personal files ("Meine Dateien"),
 // documents of residents and of the house, and training certificates, so every
@@ -24,15 +25,15 @@ export async function readableFile(actor: CarecoreActor, fileId: string): Promis
     LIMIT 1`) as Array<Record<string, unknown>>;
   const file = rows[0];
   if (!file) return null;
-  const own = file.uploaded_by === actor.id;
-  const allowed =
-    file.purpose === "cloud"
-      ? own
-      : file.purpose === "certificate"
-        ? own || file.certificate_user_id === actor.id || hasPermission(actor, "team.manage")
-        : file.purpose === "document" && file.document_id
-          ? hasPermission(actor, "residents.read")
-          : own;
+  const allowed = mayReadFile(
+    {
+      purpose: String(file.purpose),
+      uploadedBy: file.uploaded_by ? String(file.uploaded_by) : null,
+      documentId: file.document_id ? String(file.document_id) : null,
+      certificateUserId: file.certificate_user_id ? String(file.certificate_user_id) : null,
+    },
+    actor,
+  );
   return allowed
     ? { name: String(file.name), mime_type: String(file.mime_type ?? ""), content_base64: String(file.content_base64) }
     : null;
