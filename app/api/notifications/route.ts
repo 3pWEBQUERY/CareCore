@@ -3,6 +3,8 @@ import { carecoreActor, carecoreDb } from "@/lib/server-data";
 import { createLearningReminders } from "@/lib/learning";
 import { createShiftReminders } from "@/lib/schedule";
 import { createDueReminders } from "@/lib/tasks";
+import { readPreferences } from "@/lib/user-settings";
+import { notifyCategory } from "@/lib/user-settings-shared";
 
 export const runtime = "nodejs";
 
@@ -17,8 +19,15 @@ export async function GET() {
         (error) => console.error("Reminders failed", error),
       );
     }
-    const notifications =
-      await sql`SELECT id, title, body, type, priority, link_url, read_at, created_at FROM carecore_notifications WHERE user_id = ${actor.id} ORDER BY created_at DESC LIMIT 100`;
+    const [rows, preferences] = await Promise.all([
+      sql`SELECT id, title, body, type, priority, link_url, read_at, created_at FROM carecore_notifications WHERE user_id = ${actor.id} ORDER BY created_at DESC LIMIT 100`,
+      readPreferences(actor.id),
+    ]);
+    // Categories switched off in the personal settings are hidden; critical notices always show.
+    const notifications = rows.filter((row) => {
+      const category = notifyCategory(String(row.type));
+      return row.priority === "critical" || !category || preferences.notify[category];
+    });
     return NextResponse.json({ notifications });
   } catch (error) {
     console.error("Notifications GET failed", error);

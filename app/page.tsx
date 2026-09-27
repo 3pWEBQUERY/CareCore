@@ -22,13 +22,14 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
-      const result = (await response.json()) as { error?: string };
+      const result = (await response.json()) as { error?: string; startPath?: string };
       if (!response.ok) {
         setError(result.error ?? "Anmeldung fehlgeschlagen.");
         return;
       }
       const requestedPath = new URLSearchParams(window.location.search).get("next");
-      router.replace(requestedPath?.startsWith("/c") ? requestedPath : "/c");
+      const startPath = result.startPath?.startsWith("/c") ? result.startPath : "/c";
+      router.replace(requestedPath?.startsWith("/c") ? requestedPath : startPath);
       router.refresh();
     } catch {
       setError("Die Verbindung zum CareCore-Arbeitsplatz konnte nicht hergestellt werden.");
@@ -73,7 +74,7 @@ export default function LoginPage() {
             </span>
           </span>
         </div>
-        <footer>CareCore · Alterszentrum Sonnengarten</footer>
+        <footer>CareCore · Pflegedokumentation für Alters- und Pflegeheime</footer>
       </section>
 
       <section className="login-form-panel">

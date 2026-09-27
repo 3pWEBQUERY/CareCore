@@ -897,3 +897,24 @@
   padding-top: 6px;
   border-top: 1px solid #edf1f5;
 }
+.settings-permission-list {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ink);
+  font-size: 11px;
+}
+.settings-permission-list li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.settings-permission-list svg {
+  width: 14px;
+  color: var(--success);
+}
+.settings-detail-footer small {
+  color: var(--muted);
+}
