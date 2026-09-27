@@ -1,5 +1,6 @@
-import ScheduleWorkspace from "../../components/schedule-workspace";
+import { redirect } from "next/navigation";
 
+// Der Teamplan ist in das neue Modul umgezogen; alte Links bleiben gültig.
 export default function TeamSchedulePage() {
-  return <ScheduleWorkspace team />;
+  redirect("/c/mein-dienstplan/team");
 }

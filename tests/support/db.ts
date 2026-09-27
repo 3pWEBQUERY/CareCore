@@ -1,5 +1,6 @@
 // Hilfen für die DB-Integrationstests: eigene Organisation pro Test und ein RosterContext wie im Betrieb.
 import { randomUUID } from "node:crypto";
+import pg from "pg";
 import { carecoreDb } from "@/lib/server-data";
 import { accessFor, type RosterContext } from "@/lib/roster/context";
 import { ensureRosterDefaults } from "@/lib/roster/data";
@@ -8,7 +9,7 @@ import { pool } from "./neon-pg.mjs";
 export { pool };
 
 export const q = async <T = Record<string, unknown>>(text: string, values: unknown[] = []) =>
-  (await pool.query({ text, values })).rows as T[];
+  (await pool.query({ text, values, types: pg.types })).rows as T[];
 
 export type Fixture = {
   org: string;

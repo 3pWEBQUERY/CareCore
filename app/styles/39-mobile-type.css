@@ -1644,6 +1644,30 @@
   .care-process-step small {
     font-size: 12px;
   }
+  .roster-name small {
+    font-size: 12px;
+  }
+  .roster-name-tags em {
+    font-size: 11.5px;
+  }
+  .roster-chip small {
+    font-size: 11.5px;
+  }
+  .roster-timeoff {
+    font-size: 11.5px;
+  }
+  .roster-staffing {
+    font-size: 12px;
+  }
+  .roster-ai-diff {
+    font-size: 12px;
+  }
+  .roster-priority {
+    font-size: 12px;
+  }
+  .roster-pill {
+    font-size: 12px;
+  }
   :root .operations-quick a {
     font-size: 11.5px;
   }

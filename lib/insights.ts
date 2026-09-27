@@ -318,7 +318,7 @@ export async function leadershipInsights(ctx: ApiContext): Promise<LeadershipIns
       status: "Besetzen",
       tone: "attention" as InsightTone,
       icon: "calendar" as const,
-      href: "/betrieb/dienstplanung/team",
+      href: "/dienstplan",
       count: plan.openSlots,
     },
     {
@@ -340,7 +340,7 @@ export async function leadershipInsights(ctx: ApiContext): Promise<LeadershipIns
       status: "Entscheiden",
       tone: "info" as InsightTone,
       icon: "team" as const,
-      href: "/betrieb/dienstplanung/team",
+      href: "/dienstplan/antraege",
       count: plan.pendingRequests,
     },
     {
