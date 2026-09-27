@@ -1,28 +1,46 @@
 "use client";
 
 import { useState } from "react";
+import { useApiData } from "@/app/components/workspace-ui";
+import { CARE_LEVELS, NOT_ASSESSED } from "@/lib/care-levels";
 import { CareDatePicker, CareSelect, formatCareDate } from "../../components/care-form-controls";
 import { Icon } from "./residents-utils";
 
-export function ResidentIntakeEditor({
-  open,
-  onClose,
-  onSuccess,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSuccess: (message: string) => void;
-}) {
+type IntakeOptions = {
+  units: Array<{ id: string; name: string }>;
+  rooms: Array<{ id: string; name: string; careUnitId: string; free: number }>;
+  staff: Array<{ id: string; name: string }>;
+  primaryCareUnitId: string | null;
+};
+
+const NO_NURSE = "Noch nicht festgelegt";
+
+type Props = { open: boolean; onClose: () => void; onSuccess: (message: string) => void };
+
+// Rendered only while open, so every admission starts with an empty form.
+export function ResidentIntakeEditor(props: Props) {
+  return props.open ? <IntakeForm {...props} /> : null;
+}
+
+function IntakeForm({ onClose, onSuccess }: Props) {
+  const options = useApiData<IntakeOptions>("/api/residents/intake-options");
+  const units = options.data?.units ?? [];
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [birthDate, setBirthDate] = useState("1942-05-18");
+  const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState("Weiblich");
   const [admissionDate, setAdmissionDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [unit, setUnit] = useState("Wohnbereich 2");
-  const [room, setRoom] = useState("Zimmer 216");
-  const [careLevel, setCareLevel] = useState("Pflegestufe 3");
-  const [owner, setOwner] = useState("Anna Meier");
+  const [chosenUnitId, setUnitId] = useState<string | null>(null);
+  const [room, setRoom] = useState("");
+  const [careLevel, setCareLevel] = useState(NOT_ASSESSED);
+  const [nurseId, setNurseId] = useState<string | null>(null);
   const [status, setStatus] = useState("Aktiv");
+  // Until chosen: the own care unit, otherwise the first one.
+  const unitId =
+    chosenUnitId ?? units.find((item) => item.id === options.data?.primaryCareUnitId)?.id ?? units[0]?.id ?? null;
+  const unit = units.find((item) => item.id === unitId)?.name ?? "";
+  const unitRooms = (options.data?.rooms ?? []).filter((item) => item.careUnitId === unitId);
+  const nurse = options.data?.staff.find((item) => item.id === nurseId)?.name ?? NO_NURSE;
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -40,10 +58,10 @@ export function ResidentIntakeEditor({
           birthDate,
           gender,
           admissionDate,
-          unit,
+          careUnitId: unitId,
           room,
           careLevel,
-          owner,
+          primaryNurseId: nurseId,
           status,
           note,
         }),
@@ -58,7 +76,6 @@ export function ResidentIntakeEditor({
       setSaving(false);
     }
   }
-  if (!open) return null;
   const fullName = `${firstName} ${lastName}`.trim();
   return (
     <div
@@ -117,7 +134,14 @@ export function ResidentIntakeEditor({
             </label>
             <label>
               Geburtsdatum
-              <CareDatePicker label="Geburtsdatum" value={birthDate} onChange={setBirthDate} />
+              <input
+                type="date"
+                value={birthDate}
+                max={admissionDate}
+                onChange={(event) => setBirthDate(event.target.value)}
+                aria-label="Geburtsdatum"
+                required
+              />
             </label>
             <label>
               Geschlecht
@@ -137,7 +161,7 @@ export function ResidentIntakeEditor({
               <CareSelect
                 label="Pflegestufe"
                 value={careLevel}
-                options={["Pflegestufe 1", "Pflegestufe 2", "Pflegestufe 3", "Pflegestufe 4", "Pflegestufe 5"]}
+                options={[NOT_ASSESSED, ...CARE_LEVELS]}
                 onChange={setCareLevel}
               />
             </label>
@@ -145,9 +169,12 @@ export function ResidentIntakeEditor({
               Wohnbereich
               <CareSelect
                 label="Wohnbereich"
-                value={unit}
-                options={["Wohnbereich 1", "Wohnbereich 2", "Wohnbereich 3", "Pflegewohngruppe"]}
-                onChange={setUnit}
+                value={unit || (options.loading ? "Wird geladen …" : "Kein Wohnbereich")}
+                options={units.map((item) => item.name)}
+                onChange={(name) => {
+                  setUnitId(units.find((item) => item.name === name)?.id ?? null);
+                  setRoom("");
+                }}
               />
             </label>
             <label>
@@ -155,17 +182,26 @@ export function ResidentIntakeEditor({
               <input
                 value={room}
                 onChange={(event) => setRoom(event.target.value)}
-                placeholder="z. B. Zimmer 216"
+                placeholder={unitRooms[0] ? `z. B. ${unitRooms[0].name}` : "z. B. Zimmer 216"}
+                list="intake-rooms"
+                maxLength={80}
                 required
               />
+              <datalist id="intake-rooms">
+                {unitRooms.map((item) => (
+                  <option key={item.id} value={item.name}>
+                    {item.free > 0 ? `${item.free} Bett${item.free === 1 ? "" : "en"} frei` : "belegt"}
+                  </option>
+                ))}
+              </datalist>
             </label>
             <label>
               Bezugspflege
               <CareSelect
                 label="Bezugspflege"
-                value={owner}
-                options={["Anna Meier", "Lea Frei", "Nora Baumann", "Sven Keller"]}
-                onChange={setOwner}
+                value={nurse}
+                options={[NO_NURSE, ...(options.data?.staff ?? []).map((item) => item.name)]}
+                onChange={(name) => setNurseId(options.data?.staff.find((item) => item.name === name)?.id ?? null)}
               />
             </label>
             <label>
@@ -190,14 +226,12 @@ export function ResidentIntakeEditor({
           <div className="duty-assignment-summary">
             <span>
               <strong>{fullName || "Neue Bewohnerakte"}</strong>
-              <small>
-                {room} · {unit} · {careLevel}
-              </small>
+              <small>{[room || "Zimmer offen", unit, careLevel].filter(Boolean).join(" · ")}</small>
             </span>
             <span>
               <strong>Eintritt {formatCareDate(admissionDate)}</strong>
               <small>
-                Bezugspflege: {owner} · {status}
+                Bezugspflege: {nurse} · {status}
               </small>
             </span>
           </div>
@@ -205,11 +239,15 @@ export function ResidentIntakeEditor({
             <button className="secondary-button" type="button" onClick={onClose}>
               Abbrechen
             </button>
-            <button className="primary-button" type="submit" disabled={saving}>
+            <button className="primary-button" type="submit" disabled={saving || !unitId}>
               <Icon name="check" /> {saving ? "Speichern…" : "Bewohner aufnehmen"}
             </button>
           </footer>
-          {error && <p role="alert">{error}</p>}
+          {(error || options.error) && (
+            <p className="appointment-editor-error" role="alert">
+              {error || options.error}
+            </p>
+          )}
         </form>
       </section>
     </div>

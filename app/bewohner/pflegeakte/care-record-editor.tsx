@@ -1,12 +1,12 @@
 "use client";
 
+import { CARE_LEVELS } from "@/lib/care-levels";
 import { useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { CareDatePicker, CareSelect, formatCareDate } from "@/app/components/care-form-controls";
 import { requestJson, todayInZurich } from "@/app/components/workspace-ui";
 import type { CareRecordRow } from "@/lib/care-records-shared";
 
-const CARE_LEVELS = ["Pflegestufe 1", "Pflegestufe 2", "Pflegestufe 3", "Pflegestufe 4", "Pflegestufe 5"];
 const NO_OWNER = "Noch nicht festgelegt";
 
 const plusDays = (day: string, days: number) => {
