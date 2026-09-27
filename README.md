@@ -31,6 +31,42 @@ Der Seed überspringt Tabellen, die bereits Daten enthalten. Vorhandene Bewohner
 
 Für Vercel müssen `DATABASE_URL` und `CARECORE_ADMIN_PASSWORD` in den Umgebungsvariablen des Projekts für Production, Preview und Development gesetzt sein. Die Anwendung benötigt den normalen Next.js-Serverbetrieb; ein statischer Export ist wegen Login, Sessions und Datenbankzugriff nicht möglich.
 
+## Dienstplan
+
+Das Dienstplan-Modul (Spezifikation: `docs/specs/dienstplan.md`, Entscheidungen und Stand: `docs/dienstplan/`) ersetzt die frühere Dienstplanung. Es besteht aus:
+
+- **Leitung › Dienstplan** (`/c/dienstplan`, Berechtigung `schedule.manage` und Leitung des Wohnbereichs): Monats-/Wochenraster mit Drag & Drop, Entwurf/Veröffentlichen, Analyse, KI-Planung, Anträge, Arbeitszeit (Soll/Ist, Korrekturen, Monatsabschluss), Einstellungen (Diensttypen, Mindestbesetzung, Regelwerk, Personal, Qualifikationen, Feiertage) und Protokoll.
+- **Mein Dienst › Mein Dienstplan** (`/c/mein-dienstplan`): eigene veröffentlichte Dienste mit Stempeln und Pause, Teamplan der Wohngruppe (Abwesenheiten anderer nur als „Abwesend“), Anträge (Wunschfrei, Abwesenheit, Dienstwunsch, Tausch, Korrekturen) und Zeiten.
+- „Dienst starten/beenden“ unter **Mein Dienst › Heute** stempelt in derselben Zeiterfassung.
+
+Jede Änderung läuft serverseitig durch die Regel-Engine (`lib/roster/rules.ts`): Blocker verhindern das Speichern, Warnungen müssen mit Begründung bestätigt werden. Das Regelwerk enthält Beispielwerte nach Schweizer ArG und muss von der Leitung unter Einstellungen geprüft und bestätigt werden.
+
+**Umgebungsvariablen**
+
+| Variable          | Pflicht | Zweck                                                                                        |
+| ----------------- | ------- | -------------------------------------------------------------------------------------------- |
+| `MISTRAL_API_KEY` | nein    | KI-Planung und -Analyse. Ohne Schlüssel ist „Mit KI planen“ deaktiviert, alles andere läuft. |
+| `MISTRAL_MODEL`   | nein    | Modell für die KI, Standard `mistral-large-latest`.                                          |
+
+An die KI gehen nur pseudonymisierte Daten (E1, E2, …, Diensttyp-Codes, Zahlen) – keine Namen, Abwesenheitsgründe oder Freitexte. Jede vorgeschlagene Zuweisung wird von der Regel-Engine geprüft; übernommen wird nur in Entwürfe.
+
+**Demo-Daten und Tests (nur Entwicklung)**
+
+```bash
+npm run db:seed:roster        # Wohngruppen Linde, Ahorn, Birke mit Personal, Plänen und Zeiten
+npm test                      # Unit-Tests (Regeln, Zeitberechnung, Berechtigungen, KI-Kern)
+TEST_DATABASE_URL=postgres://… npm run test:db:setup && npm run test:db   # Integrationstests
+```
+
+Demo-Logins nach dem Seed: `demo.leitung.linde`, `demo.leitung.ahorn`, `demo.leitung.birke` (Leitung) sowie `demo.linde.aline`, `demo.linde.elif` … (Mitarbeitende); Passwort `Dienstplan-Demo-2026` oder der Wert aus `ROSTER_DEMO_PASSWORD`. Der Seed bricht mit `NODE_ENV=production` ab. Die Integrationstests brauchen eine eigene, leere Postgres-Datenbank und laufen nie gegen die Produktionsdatenbank.
+
+**Bekannte Grenzen**
+
+- Aktualisierung per Polling (alle 25 s, pausiert im Hintergrund), kein Push in Echtzeit.
+- Arbeitsrechtliche Werte sind Beispielwerte und ersetzen keine rechtliche Prüfung (GAV, Betriebsreglement).
+- Der Saldo im laufenden Monat vergleicht das Ist mit dem Soll bis heute; Überträge aus Vormonaten werden nicht geführt.
+- Die KI-Planung wurde mit einem Test-Double geprüft; mit einem echten Mistral-Schlüssel ist sie lokal zu verifizieren.
+
 ## Getting Started
 
 First, run the development server:

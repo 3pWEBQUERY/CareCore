@@ -4,7 +4,7 @@ Abweichungen von `docs/specs/dienstplan.md` und technische Entscheide. Regel 0.2
 
 ## Durch die Produktverantwortung bestätigt (27.09.2026)
 
-- **D1 – Neues Modul ersetzt den alten Dienstplan.** Die Slot-Tabellen `carecore_shifts`/`carecore_shift_assignments` werden nicht mehr beschrieben. Migration 0024 übernimmt bestehende Einteilungen als veröffentlichte Dienste, eingecheckte Einteilungen als Zeiteinträge und bewilligte Abwesenheiten als Abwesenheitsdienste, soweit zuordenbar. Alte Seiten leiten auf die neuen um.
+- **D1 – Neues Modul ersetzt den alten Dienstplan.** Die Slot-Tabellen `carecore_shifts`/`carecore_shift_assignments` werden nicht mehr beschrieben. Migration 0023 übernimmt bestehende Einteilungen als veröffentlichte Dienste, eingecheckte Einteilungen als Zeiteinträge und bewilligte Abwesenheiten als Abwesenheitsdienste, soweit zuordenbar. Alte Seiten leiten auf die neuen um; das alte Modul (API, Komponenten, `lib/schedule*`) ist entfernt.
 - **D2 – KI-Anbieter Mistral** (`@mistralai/mistralai`), Modell über `MISTRAL_MODEL` (Default `mistral-large-latest`), Key `MISTRAL_API_KEY` nur serverseitig. Ohne Key ist die KI im Dienstplan deaktiviert, der Rest funktioniert.
 - **D3 – Rechtsraum Schweiz (ArG).** Seed- und Default-Werte aus Abschnitt 4, überall als „Beispielwerte – rechtlich prüfen“ gekennzeichnet, bis die Leitung sie bestätigt.
 - **D4 – Sichtbarkeit: Teamplan der Wohngruppe.** Mitarbeitende sehen veröffentlichte Dienste ihrer Wohnbereiche; Abwesenheiten anderer erscheinen nur als „Abwesend“ (ohne Kategorie).
@@ -22,7 +22,7 @@ Abweichungen von `docs/specs/dienstplan.md` und technische Entscheide. Regel 0.2
 - **T9 – `pg` als Dev-Abhängigkeit** für Integrationstests gegen echtes Postgres: ein Test-Adapter leitet die Neon-HTTP-Aufrufe an eine lokale Datenbank weiter. `npm test` bleibt ohne Datenbank lauffähig, `npm run test:db` braucht `TEST_DATABASE_URL`; die CI startet dafür einen Postgres-Service.
 - **T10 – Hintergrundarbeit.** Kein Cron/Queue vorhanden: fehlender Clock-out wird beim Laden (Dienstplan, Zeiterfassung, Benachrichtigungen) geprüft; KI-Läufe starten mit `after()` und werden vom Browser abgefragt.
 - **T11 – Aktualisierung ohne Neuladen** per Polling (`/api/dienstplan/changes`, 25 s, pausiert bei verstecktem Tab).
-- **T12 – Seed.** `database/seed-roster.mjs` (`npm run db:seed:roster`), idempotent mit festen IDs, bricht bei `NODE_ENV=production` ohne `--allow-production` ab. Es legt eigene Demo-Wohnbereiche und -Personen an und überschreibt keine echten Daten.
+- **T12 – Seed.** `database/seed-roster.ts` (`npm run db:seed:roster`), idempotent mit festen IDs, bricht bei `NODE_ENV=production` ohne `--allow-production` ab. Es legt eigene Demo-Wohnbereiche und -Personen an und überschreibt keine echten Daten.
 
 ## Fachlich (Spec gewinnt, hier nur Präzisierungen)
 
@@ -44,3 +44,7 @@ Abweichungen von `docs/specs/dienstplan.md` und technische Entscheide. Regel 0.2
 - **F12 – Zusätzliche Regelcodes:** `SWAP_NOT_ALLOWED` (BLOCK, Tausch nicht zulässig) und `UNEVEN_DISTRIBUTION` (INFO, ungleiche Verteilung von Nacht- und Wochenenddiensten, Spec 9.3).
 - **F13 – Benachrichtigungstypen** werden als `shift_<typ>` gespeichert (z. B. `shift_swap_requested`), damit sie in die bestehende Einstellungskategorie „Dienstplan“ fallen.
 - **F14 – Personen löschen.** Dienste und Zeiteinträge verweisen mit `RESTRICT` auf die Person; wer Dienstplan-Daten hat, kann nur archiviert werden.
+- **F15 – Mein Dienst › Heute.** „Dienst starten/beenden“ stempelt in `carecore_time_entries` (Checkliste, Übergabestatus und Notizen werden am Zeiteintrag gespeichert). Ohne geplanten Dienst entsteht ein ungeplanter Einsatz im gewählten eigenen Wohnbereich; die Leitung wird benachrichtigt. Das Zeitfenster eines ungeplanten Einsatzes für die Tagesansicht ist das des Diensttyps, dessen Beginn am nächsten am Einstempeln liegt.
+- **F16 – Saldo.** Über-/Minusstunden = Ist − Soll bis einschliesslich heute (im laufenden Monat), in abgeschlossenen Monaten gegen das volle Monatssoll. So zeigt der laufende Monat keine scheinbaren Minusstunden für noch nicht erreichte Tage.
+- **F17 – Dienst-Erinnerungen.** Veröffentlichte Dienste der nächsten 24 Stunden erzeugen einmal pro Dienst die Erinnerung „Dienst morgen“ (bisherige Funktion, jetzt aus dem Dienstplan).
+- **F18 – Entscheidungen mit Folgen.** Genehmigt die Leitung Wunschfrei oder eine Abwesenheit, obwohl dadurch die Besetzung sinkt, zeigt die Oberfläche die Warnungen und verlangt eine Begründung (gleiche Regel wie beim Planen).
