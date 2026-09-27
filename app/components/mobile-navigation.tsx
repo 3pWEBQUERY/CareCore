@@ -3,164 +3,178 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ModuleIcon } from "./module-icon";
-import { useWorkContext } from "./care-context";
-import { routeFor, sidebarNavigation } from "./navigation";
+import { useNavigationBadges, useWorkContext, type NavigationBadges } from "./care-context";
+import { moduleBadges, quickLinks, routeFor, sidebarNavigation, type ModuleIconName } from "./navigation";
 
-// Mobile main menu and bottom navigation; shows only the areas the signed-in person may use.
+type BarItem = { id: string; label: string; icon: ModuleIconName; moduleId: string; child: string };
+
+// Always the same buttons in the same place, so staff find them blind during a shift.
+const BAR: BarItem[] = [
+  { id: "residents", label: "Bewohner", icon: "residents", moduleId: "residents", child: "Übersicht" },
+  { id: "chart", label: "Doku", icon: "note", moduleId: "chart", child: "Schnelldokumentation" },
+  { id: "med", label: "Medikation", icon: "med", moduleId: "med", child: "Medikamentenrunde" },
+];
+
+// Mobile bottom bar and main menu; shows only the areas the signed-in person may use.
 export function MobileNavigation({ activeModule }: { activeModule?: string }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const permissions = useWorkContext()?.profile.permissions;
-  const visibleNavigation = useMemo(() => sidebarNavigation(permissions), [permissions]);
-  const [groupId, setGroupId] = useState<string | null>(null);
+  const groups = useMemo(() => sidebarNavigation(permissions), [permissions]);
+  const badges = useNavigationBadges();
+  const count = (keys: Array<keyof NavigationBadges>) =>
+    badges ? keys.reduce((sum, key) => sum + (badges[key] ?? 0), 0) : 0;
+  const allowed = new Set(groups.flatMap((group) => group.modules.map((module) => module.id)));
+  const bar = BAR.filter((item) => allowed.has(item.moduleId));
+  const quick = quickLinks.filter((link) => allowed.has(link.moduleId));
+  const inBar = activeModule === "home" || bar.some((item) => item.moduleId === activeModule);
+  const menuCount = count(["tasks", "handover"]);
+
   useEffect(() => {
-    const timer = window.setTimeout(
-      () =>
-        setGroupId(
-          visibleNavigation.find((group) => group.modules.some((module) => module.id === activeModule))?.id ?? null,
-        ),
-      0,
-    );
-    return () => window.clearTimeout(timer);
-  }, [activeModule, visibleNavigation]);
+    if (!menuOpen) return;
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && setMenuOpen(false);
+    window.addEventListener("keydown", onKey);
+    document.body.classList.add("mobile-menu-open");
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.classList.remove("mobile-menu-open");
+    };
+  }, [menuOpen]);
 
-  const group = visibleNavigation.find((item) => item.id === groupId);
-  const needsMenu = group ? group.modules.length > 4 : true;
-  const visibleModules = group
-    ? group.modules.length <= 4
-      ? group.modules
-      : [
-          ...group.modules.filter((module) => module.id === activeModule),
-          ...group.modules.filter((module) => module.id !== activeModule),
-        ].slice(0, 3)
-    : [];
-
-  function chooseGroup(nextGroupId: string) {
-    const next = visibleNavigation.find((item) => item.id === nextGroupId);
-    const firstModule = next?.modules[0];
-    const firstChild = firstModule?.children[0];
-    setGroupId(nextGroupId);
+  function go(moduleId: string, child: string) {
+    const href = routeFor(moduleId, child);
     setMenuOpen(false);
-    const href = firstModule && firstChild ? routeFor(firstModule.id, firstChild) : null;
     if (href) router.push(href);
   }
-
-  function chooseChild(moduleId: string, child: string) {
-    const href = routeFor(moduleId, child);
-    if (href) {
-      setMenuOpen(false);
-      router.push(href);
-    }
-  }
-
-  const menuButton = (label: string) => (
-    <button
-      className={menuOpen ? "active" : ""}
-      type="button"
-      aria-haspopup="dialog"
-      aria-expanded={menuOpen}
-      onClick={() => setMenuOpen((value) => !value)}
-    >
-      <ModuleIcon name="sidebar" />
-      <span>{label}</span>
-    </button>
-  );
 
   return (
     <>
       {menuOpen && (
-        <div className="mobile-nav-menu" role="dialog" aria-label="Hauptmenü">
-          <div className="mobile-nav-menu-head">
-            <div>
-              {group && (
-                <button className="mobile-nav-back" type="button" onClick={() => setGroupId(null)}>
-                  <ModuleIcon name="chevron" /> Alle Hauptbereiche
-                </button>
-              )}
-              <p className="eyebrow">CareCore Navigation</p>
-              <strong>{group?.label ?? "Hauptbereiche"}</strong>
+        <>
+          <div className="mobile-nav-backdrop" role="presentation" onClick={() => setMenuOpen(false)} />
+          <div className="mobile-nav-menu" role="dialog" aria-modal="true" aria-label="Hauptmenü">
+            <div className="mobile-nav-menu-head">
+              <div>
+                <p className="eyebrow">CareCore</p>
+                <strong>Menü</strong>
+              </div>
+              <button type="button" aria-label="Menü schliessen" onClick={() => setMenuOpen(false)}>
+                <ModuleIcon name="close" />
+              </button>
             </div>
-            <button type="button" aria-label="Hauptmenü schliessen" onClick={() => setMenuOpen(false)}>
-              <ModuleIcon name="close" />
-            </button>
+            {quick.length > 0 && (
+              <section className="mobile-nav-section">
+                <h3>Schnellzugriff</h3>
+                <div className="mobile-nav-quick">
+                  {quick.map((link) => {
+                    const value = link.badge ? count([link.badge]) : 0;
+                    return (
+                      <button
+                        type="button"
+                        key={`${link.moduleId}:${link.child}`}
+                        onClick={() => go(link.moduleId, link.child)}
+                      >
+                        <ModuleIcon name={link.icon} />
+                        <span>{link.label}</span>
+                        {value > 0 && <em>{value}</em>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+            {groups.map((group) => (
+              <section className="mobile-nav-section" key={group.id}>
+                <h3>{group.label}</h3>
+                <div className="mobile-nav-groups">
+                  {group.modules.map((module) => {
+                    const value = count(moduleBadges(module.id));
+                    return (
+                      <button
+                        className={module.id === activeModule ? "active" : ""}
+                        type="button"
+                        key={module.id}
+                        aria-current={module.id === activeModule ? "page" : undefined}
+                        onClick={() => go(module.id, module.children[0])}
+                      >
+                        <span className="mobile-nav-group-icon">
+                          <ModuleIcon name={module.icon} />
+                        </span>
+                        <span>
+                          <strong>{module.label}</strong>
+                          {module.children.length > 1 && <small>{module.children.join(" · ")}</small>}
+                        </span>
+                        {value > 0 ? <em className="mobile-nav-count">{value}</em> : <ModuleIcon name="chevron" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+            <section className="mobile-nav-section">
+              <div className="mobile-nav-groups">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    router.push("/c/einstellungen");
+                  }}
+                >
+                  <span className="mobile-nav-group-icon">
+                    <ModuleIcon name="settings" />
+                  </span>
+                  <span>
+                    <strong>Einstellungen</strong>
+                  </span>
+                  <ModuleIcon name="chevron" />
+                </button>
+              </div>
+            </section>
           </div>
-          {group ? (
-            <div className="mobile-nav-groups">
-              {group.modules.map((module) => (
-                <button
-                  className={module.id === activeModule ? "active" : ""}
-                  type="button"
-                  key={module.id}
-                  onClick={() => chooseChild(module.id, module.children[0])}
-                >
-                  <span className="mobile-nav-group-icon">
-                    <ModuleIcon name={module.icon} />
-                  </span>
-                  <span>
-                    <strong>{module.label}</strong>
-                    <small>{module.children.join(" · ")}</small>
-                  </span>
-                  <ModuleIcon name="chevron" />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="mobile-nav-groups">
-              {visibleNavigation.map((item) => (
-                <button
-                  className={item.id === groupId ? "active" : ""}
-                  type="button"
-                  key={item.id}
-                  onClick={() => chooseGroup(item.id)}
-                >
-                  <span className="mobile-nav-group-icon">
-                    <ModuleIcon name={item.modules[0]?.icon ?? "pulse"} />
-                  </span>
-                  <span>
-                    <strong>{item.label}</strong>
-                    <small>{item.modules.length} Bereiche</small>
-                  </span>
-                  <ModuleIcon name="chevron" />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        </>
       )}
       <nav className="bottom-nav" aria-label="Mobile Navigation">
         <button
-          className={activeModule === "home" ? "active" : ""}
+          className={activeModule === "home" && !menuOpen ? "active" : ""}
           type="button"
+          aria-current={activeModule === "home" ? "page" : undefined}
           onClick={() => {
-            setGroupId(null);
             setMenuOpen(false);
             router.push("/c");
           }}
         >
           <ModuleIcon name="home" />
-          <span>Startseite</span>
+          <span>Start</span>
         </button>
-        {!group ? (
-          menuButton("Menü")
-        ) : (
-          <>
-            {visibleModules.map((module) => {
-              const href = routeFor(module.id, module.children[0]);
-              return (
-                <button
-                  className={activeModule === module.id ? "active" : ""}
-                  type="button"
-                  key={module.id}
-                  onClick={() => href && router.push(href)}
-                >
-                  <ModuleIcon name={module.icon} />
-                  <span>{module.label}</span>
-                </button>
-              );
-            })}
-            {needsMenu && menuButton("Mehr")}
-          </>
-        )}
+        {bar.map((item) => {
+          const value = item.id === "med" ? count(["medRound"]) : 0;
+          const active = activeModule === item.moduleId && !menuOpen;
+          return (
+            <button
+              className={active ? "active" : ""}
+              type="button"
+              key={item.id}
+              aria-current={active ? "page" : undefined}
+              aria-label={value ? `${item.label} (${value} überfällig)` : undefined}
+              onClick={() => go(item.moduleId, item.child)}
+            >
+              <ModuleIcon name={item.icon} />
+              <span>{item.label}</span>
+              {value > 0 && <em className="bottom-nav-badge">{value > 99 ? "99+" : value}</em>}
+            </button>
+          );
+        })}
+        <button
+          className={menuOpen || !inBar ? "active" : ""}
+          type="button"
+          aria-haspopup="dialog"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((value) => !value)}
+        >
+          <ModuleIcon name={menuOpen ? "close" : "sidebar"} />
+          <span>Menü</span>
+          {menuCount > 0 && !menuOpen && <em className="bottom-nav-badge">{menuCount > 99 ? "99+" : menuCount}</em>}
+        </button>
       </nav>
     </>
   );
