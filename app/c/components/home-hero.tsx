@@ -89,7 +89,7 @@ export function HomeHero({ r }: { r: DashboardState }) {
               </span>
               Aufgaben
             </button>
-            <button type="button" onClick={() => router.push("/c/betrieb/schicht/kalender")}>
+            <button type="button" onClick={() => router.push("/c/carecore-one/kalender")}>
               <span>
                 <Icon name="calendar" />
               </span>

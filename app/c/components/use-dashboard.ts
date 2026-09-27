@@ -154,7 +154,7 @@ export function useDashboard() {
           title: "Kalender",
           meta: "Termine im Wohnbereich",
           icon: "calendar" as IconName,
-          href: "/c/betrieb/schicht/kalender",
+          href: "/c/carecore-one/kalender",
         },
       ]
         .filter((result) => `${result.title} ${result.meta}`.toLowerCase().includes(query.toLowerCase()))

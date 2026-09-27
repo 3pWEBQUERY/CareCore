@@ -29,7 +29,7 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
   const bar = BAR.filter((item) => allowed.has(item.moduleId));
   const quick = quickLinks.filter((link) => allowed.has(link.moduleId));
   const inBar = activeModule === "home" || bar.some((item) => item.moduleId === activeModule);
-  const menuCount = count(["tasks", "handover"]);
+  const menuCount = count(["tasks", "handover", "messages"]);
 
   useEffect(() => {
     if (!menuOpen) return;

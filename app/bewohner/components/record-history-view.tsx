@@ -163,7 +163,7 @@ export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
                                 ? "/c/vitalwerte/entwicklung"
                                 : entry.category === "Medikation"
                                   ? "/c/medikation"
-                                  : "/c/betrieb/schicht/kalender",
+                                  : "/c/carecore-one/kalender",
                             );
                         }}
                       >

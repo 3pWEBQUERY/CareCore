@@ -231,7 +231,7 @@ export async function shiftOverview(ctx: ApiContext, params: URLSearchParams): P
       tone: "info",
       done: row.status === "completed",
       overdue: false,
-      href: "/betrieb/schicht/kalender",
+      href: "/carecore-one/kalender",
     })),
   ].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
 

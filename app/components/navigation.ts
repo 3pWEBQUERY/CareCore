@@ -53,7 +53,7 @@ export type NavModule = {
 export type NavGroup = { id: string; label: string; modules: NavModule[] };
 
 // Grouped along the working day: my shift, the resident and the care process,
-// team and knowledge, then leadership. Every module is one click in the sidebar;
+// team and knowledge, the CareCore One tools, then leadership. Every module is one click in the sidebar;
 // its pages are tabs on the page itself, so there are no nested submenus.
 export const navigation: NavGroup[] = [
   {
@@ -64,7 +64,7 @@ export const navigation: NavGroup[] = [
         id: "shift",
         label: "Mein Dienst",
         icon: "shift",
-        children: ["Heute", "Übergabe", "Seit letztem Dienst", "Termine", "Verlauf"],
+        children: ["Heute", "Übergabe", "Seit letztem Dienst", "Verlauf"],
       },
       { id: "tasks", label: "Aufgaben", icon: "tasks", children: ["Meine Aufgaben", "Team"] },
       { id: "schedule", label: "Dienstplan", icon: "calendar", children: ["Mein Dienstplan", "Teamplanung"] },
@@ -113,14 +113,24 @@ export const navigation: NavGroup[] = [
     id: "workforce",
     label: "Team & Wissen",
     modules: [
-      { id: "team", label: "Team", icon: "team", children: ["Neuigkeiten", "Nachrichten"] },
+      { id: "team", label: "Team", icon: "team", children: ["Neuigkeiten"] },
       { id: "learn", label: "Schulungen", icon: "learn", children: ["Meine Schulungen", "Pflichtnachweise"] },
       {
         id: "docs",
         label: "Dokumente",
         icon: "docs",
-        children: ["Standards & Weisungen", "Dokumente", "Gemeinsame Ablage", "Meine Dateien"],
+        children: ["Standards & Weisungen", "Dokumente"],
       },
+    ],
+  },
+  {
+    // Everyday tools for the whole house: calendar, messenger and file storage.
+    id: "carecore-one",
+    label: "CareCore One",
+    modules: [
+      { id: "one-calendar", label: "Kalender", icon: "calendar", children: ["Kalender"] },
+      { id: "messenger", label: "Messenger", icon: "team", children: ["Nachrichten"] },
+      { id: "cloud", label: "Cloud", icon: "docs", children: ["Gemeinsame Ablage", "Meine Dateien"] },
     ],
   },
   {
@@ -181,7 +191,6 @@ const routes: Record<string, Record<string, string>> = {
     Heute: "/betrieb/schicht",
     Übergabe: "/betrieb/uebergabe",
     "Seit letztem Dienst": "/betrieb/uebergabe/letzter-dienst",
-    Termine: "/betrieb/schicht/kalender",
     Verlauf: "/betrieb/schicht/verlauf",
   },
   tasks: { "Meine Aufgaben": "/betrieb/aufgaben", Team: "/betrieb/aufgaben/team" },
@@ -219,14 +228,15 @@ const routes: Record<string, Record<string, string>> = {
     Fälligkeiten: "/rai/faelligkeiten",
     Berichte: "/rai/berichte",
   },
-  team: { Neuigkeiten: "/personal/team", Nachrichten: "/personal/team/nachrichten" },
+  team: { Neuigkeiten: "/personal/team" },
   learn: { "Meine Schulungen": "/personal/schulungen", Pflichtnachweise: "/personal/schulungen/pflichtnachweise" },
   docs: {
     "Standards & Weisungen": "/personal/dokumente/standards",
     Dokumente: "/personal/dokumente",
-    "Gemeinsame Ablage": "/carecore-one/ablage",
-    "Meine Dateien": "/carecore-one/cloud",
   },
+  "one-calendar": { Kalender: "/carecore-one/kalender" },
+  messenger: { Nachrichten: "/carecore-one/messenger" },
+  cloud: { "Gemeinsame Ablage": "/carecore-one/ablage", "Meine Dateien": "/carecore-one/cloud" },
   quality: {
     Ereignisse: "/leitung/qualitaet",
     Massnahmen: "/leitung/qualitaet/massnahmen",
@@ -292,6 +302,8 @@ export const sidebarNavigation = (permissions?: string[] | null) =>
     .map((group) => ({ ...group, modules: group.modules.filter((module) => !module.hiddenInSidebar) }))
     .filter((group) => group.modules.length);
 
+export type BadgeKey = "tasks" | "handover" | "medRound" | "messages";
+
 // Most used functions of a shift: one click from the sidebar, with live counts.
 export type QuickLink = {
   moduleId: string;
@@ -328,8 +340,14 @@ export const quickLinks: QuickLink[] = [
 // Badge per tab derived from the quick links, and all badges of a module (sidebar).
 export const badgeFor = (moduleId: string, child: string) =>
   quickLinks.find((link) => link.moduleId === moduleId && link.child === child)?.badge;
-export const moduleBadges = (moduleId: string) =>
-  quickLinks.filter((link) => link.moduleId === moduleId && link.badge).map((link) => link.badge!);
+// Counts of modules without a quick link; shown on the module and its sidebar group.
+const moduleOnlyBadges: Record<string, BadgeKey[]> = { messenger: ["messages"] };
+export const moduleBadges = (moduleId: string): BadgeKey[] => [
+  ...quickLinks.filter((link) => link.moduleId === moduleId && link.badge).map((link) => link.badge!),
+  ...(moduleOnlyBadges[moduleId] ?? []),
+];
+export const groupBadges = (group: NavGroup): BadgeKey[] =>
+  group.modules.flatMap((module) => moduleOnlyBadges[module.id] ?? []);
 
 // Recently used pages of this browser, most recent first.
 const RECENT_KEY = "carecore.recent-pages";

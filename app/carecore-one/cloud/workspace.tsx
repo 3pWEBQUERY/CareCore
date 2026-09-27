@@ -237,12 +237,12 @@ export default function CloudWorkspace({ scope = "personal" }: { scope?: Scope }
   }
 
   return (
-    <ModulePageShell activeModule="docs" activeChild={copy.child} pageClass="cloud-page">
+    <ModulePageShell activeModule="cloud" activeChild={copy.child} pageClass="cloud-page">
       {() => (
         <main className="workspace cloud-workspace">
           <header className="page-heading cloud-hero">
             <div className="heading-copy">
-              <p className="eyebrow">Dokumente · Dateien</p>
+              <p className="eyebrow">CareCore One · Cloud</p>
               <h1>{copy.title}</h1>
               <p>{copy.lead}</p>
             </div>

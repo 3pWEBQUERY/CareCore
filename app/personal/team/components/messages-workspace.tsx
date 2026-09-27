@@ -124,7 +124,7 @@ export default function MessagesWorkspace() {
         <main className="workspace messages-workspace">
           <header className="messages-heading">
             <div>
-              <p className="eyebrow">CareCore Team</p>
+              <p className="eyebrow">CareCore One · Messenger</p>
               <h1>Nachrichten</h1>
               <p>Direkt im Team abstimmen, Gruppen organisieren und den Pflegealltag nachvollziehbar begleiten.</p>
             </div>

@@ -1,5 +1,6 @@
-import ResidentCalendar from "../../components/resident-calendar";
+import { redirect } from "next/navigation";
 
+// The calendar moved to CareCore One; old links keep working.
 export default function ShiftCalendarPage() {
-  return <ResidentCalendar />;
+  redirect("/c/carecore-one/kalender");
 }

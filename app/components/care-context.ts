@@ -131,7 +131,7 @@ export function useResidentNavigation() {
 }
 
 // Sidebar badge counts; refreshed every minute while the page is open.
-export type NavigationBadges = { tasks: number; handover: number; medRound: number };
+export type NavigationBadges = { tasks: number; handover: number; medRound: number; messages: number };
 
 export function useNavigationBadges() {
   const [badges, setBadges] = useState<NavigationBadges | null>(null);
