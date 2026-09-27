@@ -180,7 +180,12 @@ export default function RosterPlanner() {
                   })
                 : rosterRequest("/api/dienstplan/shifts", {
                     method: "POST",
-                    body: { unitId: data!.unit.id, ...body, ...ack },
+                    body: {
+                      unitId: data!.unit.id,
+                      ...body,
+                      addToUnit: data!.candidates.some((person) => person.id === draft.employeeId),
+                      ...ack,
+                    },
                   }),
             shift ? "Dienst geändert" : "Dienst gespeichert",
           );
@@ -268,11 +273,10 @@ export default function RosterPlanner() {
                     onClick={() =>
                       setDialog({
                         kind: "create",
-                        employeeId: employees[0]?.id ?? data.employees[0]?.id ?? "",
+                        employeeId: employees[0]?.id ?? data.employees[0]?.id ?? data.candidates[0]?.id ?? "",
                         date: data.days.find((d) => d.today)?.date ?? data.days[0].date,
                       })
                     }
-                    disabled={!data.employees.length}
                   >
                     <Plus className="button-icon" /> Dienst hinzufügen
                   </button>
@@ -518,7 +522,11 @@ export default function RosterPlanner() {
               ) : !data.employees.length ? (
                 <div className="roster-empty">
                   <strong>Noch keine Mitarbeitenden in {data.unit.name}</strong>
-                  <p>Unter Einstellungen › Personal können Personen dem Wohnbereich zugeordnet werden.</p>
+                  <p>
+                    {data.canEdit && data.candidates.length
+                      ? "Mit „Dienst hinzufügen“ Personen des Hauses einplanen – sie werden dabei dem Wohnbereich zugeordnet. Alternativ unter Einstellungen › Personal."
+                      : "Unter Einstellungen › Personal können Personen dem Wohnbereich zugeordnet werden."}
+                  </p>
                 </div>
               ) : (
                 <>

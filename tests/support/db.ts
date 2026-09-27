@@ -53,10 +53,11 @@ export async function fixture(): Promise<Fixture> {
       org,
       memberships[0]?.[0] ?? null,
     ]);
-    await q(`INSERT INTO carecore_employee_profiles (user_id) VALUES ($1)`, [id]);
+    await q(`INSERT INTO carecore_employee_profiles (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, [id]);
     for (const [unit, plannable, lead] of memberships)
       await q(
-        `INSERT INTO carecore_unit_memberships (user_id, care_unit_id, plannable, is_lead) VALUES ($1, $2, $3, $4)`,
+        `INSERT INTO carecore_unit_memberships (user_id, care_unit_id, plannable, is_lead) VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id, care_unit_id) DO UPDATE SET plannable = EXCLUDED.plannable, is_lead = EXCLUDED.is_lead`,
         [id, unit, plannable, lead],
       );
   };

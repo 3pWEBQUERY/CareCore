@@ -205,3 +205,40 @@ test("Leitung B sieht Wohngruppe A nicht", async () => {
   const f = await fixture();
   await expectCode(getSchedule(await f.ctx("leadB"), { unitId: f.units.a, year: 2026, month: 12 }), "NOT_FOUND");
 });
+
+test("Wohnbereich ohne Mitarbeitende: Person des Hauses einplanen ordnet sie dem Wohnbereich zu", async () => {
+  const f = await fixture();
+  const lead = await f.ctx("leadB");
+  // Anna gehört zu Wohngruppe A; für B ist sie Kandidatin.
+  const plan = await getSchedule(lead, { unitId: f.units.b, year: 2026, month: 11 });
+  assert.ok(plan.candidates.some((c) => c.id === f.people.anna));
+  assert.ok(!plan.candidates.some((c) => c.id === f.people.ben));
+  const input = { unitId: f.units.b, employeeId: f.people.anna, shiftTypeId: await f.type("F"), date: "2026-11-12" };
+  // Ohne Zuordnung bleibt es ein Blocker.
+  await expectCode(createShift(lead, input), "RULE_VIOLATION");
+  await createShift(lead, { ...input, addToUnit: true });
+  const [membership] = await q<{ plannable: boolean }>(
+    `SELECT plannable FROM carecore_unit_memberships WHERE user_id = $1 AND care_unit_id = $2`,
+    [f.people.anna, f.units.b],
+  );
+  assert.equal(membership.plannable, true);
+  const [audit] = await q<{ n: number }>(
+    `SELECT COUNT(*)::int AS n FROM carecore_roster_audit WHERE entity_type = 'employee_profile' AND entity_id = $1`,
+    [f.people.anna],
+  );
+  assert.equal(audit.n, 1);
+  const after = await getSchedule(lead, { unitId: f.units.b, year: 2026, month: 11 });
+  assert.ok(after.employees.some((e) => e.id === f.people.anna));
+  // Mitarbeitende dürfen niemanden zuordnen.
+  await expectCode(createShift(await f.ctx("ben"), { ...input, date: "2026-11-13", addToUnit: true }), "FORBIDDEN");
+});
+
+test("Neuer Stammwohnbereich im Profil macht die Person dort planbar (Trigger)", async () => {
+  const f = await fixture();
+  await q(`UPDATE carecore_user_profiles SET primary_care_unit_id = $2 WHERE user_id = $1`, [f.people.ben, f.units.a]);
+  const [row] = await q<{ plannable: boolean }>(
+    `SELECT plannable FROM carecore_unit_memberships WHERE user_id = $1 AND care_unit_id = $2`,
+    [f.people.ben, f.units.a],
+  );
+  assert.equal(row.plannable, true);
+});

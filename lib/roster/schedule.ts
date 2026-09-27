@@ -330,8 +330,29 @@ export async function getSchedule(
       deviationThresholdMinutes: snapshot.ruleSet.deviationThresholdMinutes,
     },
     aiAvailable: lead && mistralConfigured(),
+    candidates: lead && !period?.lockedAt ? await planningCandidates(ctx, unitId, rowIds) : [],
     changeToken: token,
   };
+}
+
+// Personen der Organisation, die beim Einplanen dem Wohnbereich zugeordnet werden können.
+async function planningCandidates(ctx: RosterContext, unitId: string, exclude: string[]) {
+  const rows = (await ctx.sql`
+    SELECT u.id, u.display_name, p.job_title, cu.name AS unit
+    FROM carecore_users u
+    JOIN carecore_user_profiles p ON p.user_id = u.id AND p.organization_id = ${ctx.actor.organizationId}
+    LEFT JOIN carecore_employee_profiles ep ON ep.user_id = u.id
+    LEFT JOIN carecore_care_units cu ON cu.id = p.primary_care_unit_id
+    WHERE u.active AND u.archived_at IS NULL AND COALESCE(ep.active, TRUE)
+      AND NOT (u.id = ANY(${exclude}::uuid[]))
+      AND NOT EXISTS (SELECT 1 FROM carecore_unit_memberships m WHERE m.user_id = u.id AND m.care_unit_id = ${unitId} AND m.plannable)
+    ORDER BY u.display_name
+    LIMIT 300`) as Row[];
+  return rows.map((row) => ({
+    id: String(row.id),
+    name: String(row.display_name),
+    detail: [row.job_title, row.unit].filter(Boolean).join(" · ") || null,
+  }));
 }
 
 async function holidayNamesFor(ctx: RosterContext, from: string, to: string) {
