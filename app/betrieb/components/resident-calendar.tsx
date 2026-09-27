@@ -13,7 +13,7 @@ export default function ResidentCalendar() {
   const { residents, careUnits, editor, setEditor, create, saved } = r;
   return (
     <ModulePageShell
-      activeModule="care-calendar"
+      activeModule="one-calendar"
       activeChild="Kalender"
       pageClass="resident-calendar-page"
       locationSecondary="Gesamtes Haus · alle Wohnbereiche"
@@ -22,7 +22,7 @@ export default function ResidentCalendar() {
         <main className="workspace resident-calendar-workspace">
           <header className="page-heading resident-calendar-heading">
             <div className="heading-copy">
-              <p className="eyebrow">CareCore Betrieb · Schicht</p>
+              <p className="eyebrow">CareCore One · Kalender</p>
               <h1>Kalender</h1>
               <p>Bewohnertermine und geplante Aufgaben im Wohnbereich an einem Ort.</p>
             </div>

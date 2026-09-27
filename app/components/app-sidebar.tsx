@@ -38,6 +38,7 @@ import {
 import { useNavigationBadges, useWorkContext, type NavigationBadges } from "./care-context";
 import { openHelp } from "./help-panel";
 import {
+  groupBadges,
   moduleBadges,
   moduleLabel,
   sidebarNavigation,
@@ -216,6 +217,7 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
     operations: "calendar",
     clinical: "residents",
     workforce: "team",
+    "carecore-one": "carecoreOne",
     management: "chart",
     intelligence: "ai",
   };
@@ -267,19 +269,23 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
             );
           })}
           <span className="sidebar-rail-divider" aria-hidden="true" />
-          {visibleNavigation.map((group) => (
-            <button
-              className={`sidebar-rail-button ${activeGroup?.id === group.id && !visibleQuickLinks.some((link) => link.moduleId === activeModule && link.child === activeChild) ? "active" : ""}`}
-              type="button"
-              key={group.id}
-              aria-label={group.label}
-              aria-expanded={flyoutGroup === group.id}
-              onClick={() => openGroup(group.id)}
-            >
-              <RailIcon name={groupIcons[group.id] ?? "pulse"} />
-              <SidebarTooltip label={group.label} />
-            </button>
-          ))}
+          {visibleNavigation.map((group) => {
+            const count = groupBadges(group).reduce((sum, key) => sum + badgeCount(key), 0);
+            return (
+              <button
+                className={`sidebar-rail-button ${activeGroup?.id === group.id && !visibleQuickLinks.some((link) => link.moduleId === activeModule && link.child === activeChild) ? "active" : ""}`}
+                type="button"
+                key={group.id}
+                aria-label={count ? `${group.label} (${count} ungelesen)` : group.label}
+                aria-expanded={flyoutGroup === group.id}
+                onClick={() => openGroup(group.id)}
+              >
+                <RailIcon name={groupIcons[group.id] ?? "pulse"} />
+                {count > 0 && <span className="sidebar-rail-badge">{count > 99 ? "99+" : count}</span>}
+                <SidebarTooltip label={`${group.label}${count ? ` · ${count} ungelesen` : ""}`} />
+              </button>
+            );
+          })}
         </nav>
         <div className="sidebar-rail-footer">
           <button

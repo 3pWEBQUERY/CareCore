@@ -52,3 +52,15 @@ test("CareCore KI is reached from the header, not the sidebar", () => {
   assert.ok(!ids.includes("ai"));
   assert.deepEqual(activePage("/c/intelligenz/entwuerfe"), { moduleId: "ai", child: "KI-Entwürfe" });
 });
+
+test("CareCore One bundles calendar, messenger and cloud", () => {
+  const group = sidebarNavigation([]).find((entry) => entry.id === "carecore-one");
+  assert.deepEqual(
+    group?.modules.map((entry) => entry.id),
+    ["one-calendar", "messenger", "cloud"],
+  );
+  assert.deepEqual(activePage("/c/carecore-one/kalender"), { moduleId: "one-calendar", child: "Kalender" });
+  assert.deepEqual(activePage("/c/carecore-one/messenger"), { moduleId: "messenger", child: "Nachrichten" });
+  assert.deepEqual(activePage("/c/carecore-one/ablage"), { moduleId: "cloud", child: "Gemeinsame Ablage" });
+  assert.deepEqual(activePage("/c/carecore-one/cloud"), { moduleId: "cloud", child: "Meine Dateien" });
+});

@@ -1,5 +1,6 @@
-import MessagesWorkspace from "../components/messages-workspace";
+import { redirect } from "next/navigation";
 
+// The messenger moved to CareCore One; old links keep working.
 export default function TeamMessagesPage() {
-  return <MessagesWorkspace />;
+  redirect("/c/carecore-one/messenger");
 }

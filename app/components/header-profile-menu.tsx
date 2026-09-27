@@ -83,7 +83,7 @@ export function HeaderProfileMenu({
             role="menuitem"
             onClick={() => {
               setProfileOpen(false);
-              router.push("/c/personal/team/nachrichten");
+              router.push("/c/carecore-one/messenger");
             }}
           >
             <span className="profile-menu-icon">
