@@ -30,6 +30,7 @@ const ENTITY_LABELS: Record<string, string> = {
   medication_order: "Verordnung",
   medication_administration: "Medikamentengabe",
   assessment_record: "Einschätzung",
+  rai_assessment: "RAI-Erfassung",
   fluid_entry: "Trinkprotokoll",
   meal_entry: "Ernährung",
   nutrition_plan: "Ernährungsplan",

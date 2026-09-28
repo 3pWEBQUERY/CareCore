@@ -5,7 +5,9 @@ export type CsvValue = string | number | null | undefined;
 
 const cell = (value: CsvValue) => {
   if (value === null || value === undefined) return "";
-  const text = typeof value === "number" ? String(value).replace(".", ",") : value;
+  // Texte, die Excel als Formel ausführen würde (=, +, -, @, Tab), beginnen mit einem Apostroph.
+  const text =
+    typeof value === "number" ? String(value).replace(".", ",") : /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
   return /[";\n\r]/.test(text) || /^\s|\s$/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 };
 

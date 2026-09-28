@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ApiError, assertUuid, iso, num, text, writeAudit, type ApiContext, type Row } from "@/lib/api-context";
+import { ApiError, assertUuid, auditStatement, iso, num, text, type ApiContext, type Row } from "@/lib/api-context";
 import { storeFile } from "@/lib/files";
 import { hasPermission } from "@/lib/server-data";
 import {
@@ -117,8 +117,8 @@ function parseMeta(kind: DocumentKind, input: { get: (key: string) => unknown })
   };
 }
 
-async function notifyStandard(ctx: ApiContext, id: string, title: string, versionNo: number) {
-  await ctx.sql`
+function notifyStandard(ctx: ApiContext, id: string, title: string, versionNo: number) {
+  return ctx.sql`
     INSERT INTO carecore_notifications (id, user_id, title, body, type, priority, link_url)
     SELECT gen_random_uuid(), u.id, ${`${versionNo > 1 ? "Standard aktualisiert" : "Neuer Standard"}: ${title}`},
       'Bitte lesen und mit „Gelesen & verstanden“ bestätigen.', 'standard', 'high', ${`/c/personal/dokumente/standards?document=${id}`}
@@ -137,16 +137,18 @@ export async function createDocument(ctx: ApiContext, form: FormData) {
   const file = await storeFile(ctx, form.get("file"), "document", DOCUMENT_TYPES);
   const publish = form.get("status") !== "draft";
   const id = randomUUID();
-  await ctx.sql`
-    INSERT INTO carecore_documents (id, organization_id, kind, title, category, description, file_id, storage_key, mime_type,
-      size_bytes, version, version_no, status, requires_ack, review_due_on, uploaded_by, approved_by, approved_at)
-    VALUES (${id}, ${ctx.actor.organizationId}, ${kind}, ${meta.title}, ${meta.category}, ${meta.description}, ${file.id},
-      ${`cloud:${file.id}`}, ${file.type}, ${file.size}, '1', 1, ${publish ? "active" : "draft"}, ${meta.requiresAck},
-      ${meta.reviewDueOn}, ${ctx.actor.id}, ${publish && kind === "standard" ? ctx.actor.id : null},
-      ${publish && kind === "standard" ? new Date().toISOString() : null})`;
-  await ctx.sql`INSERT INTO carecore_document_reads (document_id, user_id, acknowledged_at) VALUES (${id}, ${ctx.actor.id}, NOW())`;
-  await writeAudit(ctx, kind, id, publish ? "published" : "drafted", null, { ...meta, file: file.name });
-  if (publish && kind === "standard" && meta.requiresAck) await notifyStandard(ctx, id, meta.title, 1);
+  await ctx.sql.transaction([
+    ctx.sql`
+      INSERT INTO carecore_documents (id, organization_id, kind, title, category, description, file_id, storage_key, mime_type,
+        size_bytes, version, version_no, status, requires_ack, review_due_on, uploaded_by, approved_by, approved_at)
+      VALUES (${id}, ${ctx.actor.organizationId}, ${kind}, ${meta.title}, ${meta.category}, ${meta.description}, ${file.id},
+        ${`cloud:${file.id}`}, ${file.type}, ${file.size}, '1', 1, ${publish ? "active" : "draft"}, ${meta.requiresAck},
+        ${meta.reviewDueOn}, ${ctx.actor.id}, ${publish && kind === "standard" ? ctx.actor.id : null},
+        ${publish && kind === "standard" ? new Date().toISOString() : null})`,
+    ctx.sql`INSERT INTO carecore_document_reads (document_id, user_id, acknowledged_at) VALUES (${id}, ${ctx.actor.id}, NOW())`,
+    auditStatement(ctx, kind, id, publish ? "published" : "drafted", null, { ...meta, file: file.name }),
+    ...(publish && kind === "standard" && meta.requiresAck ? [notifyStandard(ctx, id, meta.title, 1)] : []),
+  ]);
   return id;
 }
 
@@ -165,34 +167,47 @@ export async function newVersion(ctx: ApiContext, idInput: unknown, form: FormDa
     throw new ApiError("Nur aktuelle Dokumente erhalten neue Versionen.", 409);
   const note = text(form.get("changeNote"), 1000);
   if (!note) throw new ApiError("Bitte kurz beschreiben, was sich geändert hat.");
+  // Je Dokument höchstens eine Folgeversion (Entwurf oder aktuell), sonst gäbe es zwei gültige Fassungen.
+  const successor = (await ctx.sql`
+    SELECT 1 FROM carecore_documents WHERE previous_id = ${doc.id} AND status IN ('draft', 'active') LIMIT 1`) as Row[];
+  if (successor[0]) throw new ApiError("Zu diesem Dokument gibt es bereits eine neue Version (Entwurf).", 409);
   const file = await storeFile(ctx, form.get("file"), "document", DOCUMENT_TYPES);
   const publish = form.get("status") !== "draft";
   const id = randomUUID();
   const versionNo = doc.versionNo + 1;
-  await ctx.sql.transaction([
-    ctx.sql`
-      INSERT INTO carecore_documents (id, organization_id, kind, title, category, description, file_id, storage_key, mime_type,
-        size_bytes, version, version_no, previous_id, change_note, status, requires_ack, review_due_on, uploaded_by,
-        approved_by, approved_at)
-      SELECT ${id}, organization_id, kind, title, category, description, ${file.id}, ${`cloud:${file.id}`}, ${file.type},
-        ${file.size}, ${String(versionNo)}, ${versionNo}, ${doc.id}, ${note}, ${publish ? "active" : "draft"}, requires_ack,
-        review_due_on, ${ctx.actor.id}, ${publish && doc.kind === "standard" ? ctx.actor.id : null},
-        ${publish && doc.kind === "standard" ? new Date().toISOString() : null}
-      FROM carecore_documents WHERE id = ${doc.id}`,
-    ...(publish
-      ? [ctx.sql`UPDATE carecore_documents SET status = 'superseded', updated_at = NOW() WHERE id = ${doc.id}`]
-      : []),
-    ctx.sql`INSERT INTO carecore_document_reads (document_id, user_id, acknowledged_at) VALUES (${id}, ${ctx.actor.id}, NOW())`,
-  ]);
-  await writeAudit(
-    ctx,
-    doc.kind,
-    id,
-    "versioned",
-    { id: doc.id, versionNo: doc.versionNo },
-    { versionNo, note, publish },
-  );
-  if (publish && doc.kind === "standard" && doc.requiresAck) await notifyStandard(ctx, id, doc.title, versionNo);
+  // Die Prüfung auf eine Folgeversion wiederholt die Einfügung selbst, damit zwei gleichzeitige Uploads nicht beide
+  // gelingen; ohne eingefügte Zeile scheitert die Lesebestätigung (Fremdschlüssel) und damit die ganze Transaktion.
+  try {
+    await ctx.sql.transaction([
+      ctx.sql`
+        INSERT INTO carecore_documents (id, organization_id, kind, title, category, description, file_id, storage_key, mime_type,
+          size_bytes, version, version_no, previous_id, change_note, status, requires_ack, review_due_on, uploaded_by,
+          approved_by, approved_at)
+        SELECT ${id}, organization_id, kind, title, category, description, ${file.id}, ${`cloud:${file.id}`}, ${file.type},
+          ${file.size}, ${String(versionNo)}, ${versionNo}, ${doc.id}, ${note}, ${publish ? "active" : "draft"}, requires_ack,
+          review_due_on, ${ctx.actor.id}, ${publish && doc.kind === "standard" ? ctx.actor.id : null},
+          ${publish && doc.kind === "standard" ? new Date().toISOString() : null}
+        FROM carecore_documents d WHERE d.id = ${doc.id} AND d.status IN ('active', 'draft')
+          AND NOT EXISTS (SELECT 1 FROM carecore_documents n WHERE n.previous_id = d.id AND n.status IN ('draft', 'active'))`,
+      ...(publish
+        ? [ctx.sql`UPDATE carecore_documents SET status = 'superseded', updated_at = NOW() WHERE id = ${doc.id}`]
+        : []),
+      ctx.sql`INSERT INTO carecore_document_reads (document_id, user_id, acknowledged_at) VALUES (${id}, ${ctx.actor.id}, NOW())`,
+      auditStatement(
+        ctx,
+        doc.kind,
+        id,
+        "versioned",
+        { id: doc.id, versionNo: doc.versionNo },
+        { versionNo, note, publish },
+      ),
+      ...(publish && doc.kind === "standard" && doc.requiresAck ? [notifyStandard(ctx, id, doc.title, versionNo)] : []),
+    ]);
+  } catch (error) {
+    if (String(error).includes("carecore_document_reads"))
+      throw new ApiError("Zu diesem Dokument gibt es bereits eine neue Version (Entwurf).", 409);
+    throw error;
+  }
   return id;
 }
 
@@ -202,19 +217,38 @@ export async function documentAction(ctx: ApiContext, idInput: unknown, body: Re
   if (body.action === "read" || body.action === "ack") {
     const ack = body.action === "ack";
     if (ack && !doc.requiresAck) throw new ApiError("Für dieses Dokument ist keine Bestätigung nötig.", 409);
-    await sql`
-      INSERT INTO carecore_document_reads (document_id, user_id, acknowledged_at) VALUES (${doc.id}, ${actor.id}, ${ack ? new Date().toISOString() : null})
-      ON CONFLICT (document_id, user_id) DO UPDATE SET acknowledged_at = COALESCE(carecore_document_reads.acknowledged_at, EXCLUDED.acknowledged_at)`;
-    if (ack) await writeAudit(ctx, doc.kind, doc.id, "acknowledged", null, null);
+    await sql.transaction([
+      sql`
+        INSERT INTO carecore_document_reads (document_id, user_id, acknowledged_at) VALUES (${doc.id}, ${actor.id}, ${ack ? new Date().toISOString() : null})
+        ON CONFLICT (document_id, user_id) DO UPDATE SET acknowledged_at = COALESCE(carecore_document_reads.acknowledged_at, EXCLUDED.acknowledged_at)`,
+      ...(ack && !doc.acknowledgedAt ? [auditStatement(ctx, doc.kind, doc.id, "acknowledged", null, null)] : []),
+    ]);
     return;
   }
   if (!doc.canEdit) throw new ApiError("Keine Berechtigung für dieses Dokument.", 403);
   if (body.action === "update") {
+    if (doc.status !== "active" && doc.status !== "draft")
+      throw new ApiError("Archivierte und ersetzte Versionen bleiben unverändert.", 409);
     const meta = parseMeta(doc.kind, { get: (key: string) => body[key] });
-    await sql`
-      UPDATE carecore_documents SET title = ${meta.title}, category = ${meta.category}, description = ${meta.description},
-        review_due_on = ${meta.reviewDueOn}, requires_ack = ${meta.requiresAck}, updated_at = NOW() WHERE id = ${doc.id}`;
-    await writeAudit(ctx, doc.kind, doc.id, "updated", { title: doc.title, category: doc.category }, meta);
+    await sql.transaction([
+      sql`
+        UPDATE carecore_documents SET title = ${meta.title}, category = ${meta.category}, description = ${meta.description},
+          review_due_on = ${meta.reviewDueOn}, requires_ack = ${meta.requiresAck}, updated_at = NOW() WHERE id = ${doc.id}`,
+      auditStatement(
+        ctx,
+        doc.kind,
+        doc.id,
+        "updated",
+        {
+          title: doc.title,
+          category: doc.category,
+          description: doc.description,
+          reviewDueOn: doc.reviewDueOn,
+          requiresAck: doc.requiresAck,
+        },
+        meta,
+      ),
+    ]);
     return;
   }
   if (body.action === "publish") {
@@ -230,19 +264,21 @@ export async function documentAction(ctx: ApiContext, idInput: unknown, body: Re
             sql`UPDATE carecore_documents SET status = 'superseded', updated_at = NOW() WHERE id = ${doc.previousId} AND status = 'active'`,
           ]
         : []),
+      auditStatement(ctx, doc.kind, doc.id, "published", { status: doc.status }, { status: "active" }),
+      ...(doc.kind === "standard" && doc.requiresAck ? [notifyStandard(ctx, doc.id, doc.title, doc.versionNo)] : []),
     ]);
-    await writeAudit(ctx, doc.kind, doc.id, "published", { status: doc.status }, { status: "active" });
-    if (doc.kind === "standard" && doc.requiresAck) await notifyStandard(ctx, doc.id, doc.title, doc.versionNo);
     return;
   }
   if (body.action === "archive") {
     if (doc.status === "archived") throw new ApiError("Das Dokument ist bereits archiviert.", 409);
     const reason = text(body.reason, 1000);
     if (!reason) throw new ApiError("Bitte einen Grund angeben.");
-    await sql`
-      UPDATE carecore_documents SET status = 'archived', archived_at = NOW(), archived_by = ${actor.id},
-        archive_reason = ${reason}, updated_at = NOW() WHERE id = ${doc.id}`;
-    await writeAudit(ctx, doc.kind, doc.id, "archived", { status: doc.status }, { reason });
+    await sql.transaction([
+      sql`
+        UPDATE carecore_documents SET status = 'archived', archived_at = NOW(), archived_by = ${actor.id},
+          archive_reason = ${reason}, updated_at = NOW() WHERE id = ${doc.id}`,
+      auditStatement(ctx, doc.kind, doc.id, "archived", { status: doc.status }, { reason }),
+    ]);
     return;
   }
   throw new ApiError("Unbekannte Aktion.");

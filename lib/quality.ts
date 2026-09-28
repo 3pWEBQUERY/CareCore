@@ -5,12 +5,12 @@ import {
   assertUuid,
   iso,
   text,
-  writeAudit,
+  auditStatement,
   type ApiContext,
   type Row,
 } from "@/lib/api-context";
 import { staffOf } from "@/lib/care-planning";
-import { notify } from "@/lib/notify";
+import { notifyStatements } from "@/lib/notify";
 import { hasPermission } from "@/lib/server-data";
 import {
   ACTION_STATUS,
@@ -57,8 +57,10 @@ async function assertStaff(ctx: ApiContext, value: unknown) {
   if (!value) return null;
   const id = assertUuid(value, "Verantwortliche Person");
   const rows = await ctx.sql`
-    SELECT user_id FROM carecore_user_profiles WHERE user_id = ${id} AND organization_id = ${ctx.actor.organizationId}`;
-  if (!rows[0]) throw new ApiError("Die verantwortliche Person gehört nicht zu dieser Organisation.");
+    SELECT p.user_id FROM carecore_user_profiles p JOIN carecore_users u ON u.id = p.user_id AND u.active
+    WHERE p.user_id = ${id} AND p.organization_id = ${ctx.actor.organizationId}`;
+  if (!rows[0])
+    throw new ApiError("Die verantwortliche Person gehört nicht zu dieser Organisation oder ist nicht aktiv.");
   return id;
 }
 
@@ -181,22 +183,24 @@ export async function reportEvent(ctx: ApiContext, body: Record<string, unknown>
   const title = text(body.title, 180) || type;
   const immediateAction = text(body.immediateAction, 2000) || null;
   const id = randomUUID();
-  await ctx.sql`
-    INSERT INTO carecore_quality_events (id, organization_id, resident_id, care_unit_id, reported_by, type, severity, status,
-      occurred_at, description, title, immediate_action)
-    VALUES (${id}, ${ctx.actor.organizationId}, ${residentId}, ${careUnitId}, ${ctx.actor.id}, ${type}, ${severity}, 'open',
-      ${occurredAt.toISOString()}, ${description}, ${title}, ${immediateAction})`;
-  await writeAudit(ctx, "quality_event", id, "reported", null, { type, severity, residentId, careUnitId, title });
-  for (const managerId of await qualityManagers(ctx))
-    await notify(
+  // Meldung, Protokoll und Benachrichtigung der Qualitätsverantwortlichen gemeinsam.
+  await ctx.sql.transaction([
+    ctx.sql`
+      INSERT INTO carecore_quality_events (id, organization_id, resident_id, care_unit_id, reported_by, type, severity, status,
+        occurred_at, description, title, immediate_action)
+      VALUES (${id}, ${ctx.actor.organizationId}, ${residentId}, ${careUnitId}, ${ctx.actor.id}, ${type}, ${severity}, 'open',
+        ${occurredAt.toISOString()}, ${description}, ${title}, ${immediateAction})`,
+    auditStatement(ctx, "quality_event", id, "reported", null, { type, severity, residentId, careUnitId, title }),
+    ...notifyStatements(
       ctx,
-      managerId,
+      await qualityManagers(ctx),
       `${severity === "critical" ? "Kritisches Ereignis" : "Neues Ereignis"}: ${title}`,
       description.slice(0, 180),
       "quality_event",
       "/c/leitung/qualitaet",
       severity === "critical" ? "high" : "normal",
-    );
+    ),
+  ]);
   return id;
 }
 
@@ -220,30 +224,33 @@ export async function updateEvent(ctx: ApiContext, idInput: unknown, body: Recor
   const resolution = "resolution" in body ? text(body.resolution, 4000) || null : (before.resolution as string | null);
   const done = status === "resolved" || status === "closed";
   if (done && !resolution) throw new ApiError("Bitte Ergebnis und umgesetzte Massnahmen beschreiben.");
-  await ctx.sql`
-    UPDATE carecore_quality_events SET status = ${status}, severity = ${severity}, owner_user_id = ${ownerId},
-      resolution = ${resolution},
-      resolved_at = CASE WHEN ${done} THEN COALESCE(resolved_at, NOW()) END,
-      resolved_by = CASE WHEN ${done} THEN COALESCE(resolved_by, ${ctx.actor.id}::uuid) END,
-      updated_at = NOW()
-    WHERE id = ${before.id}`;
-  await writeAudit(
-    ctx,
-    "quality_event",
-    String(before.id),
-    status === before.status ? "updated" : `status_${status}`,
-    { status: before.status, severity: before.severity, ownerId: before.owner_user_id },
-    { status, severity, ownerId, resolution },
-  );
-  if (ownerId && ownerId !== before.owner_user_id)
-    await notify(
+  if (before.status === "closed" && status === "closed")
+    throw new ApiError("Abgeschlossene Ereignisse können nicht mehr geändert werden.", 409);
+  await ctx.sql.transaction([
+    ctx.sql`
+      UPDATE carecore_quality_events SET status = ${status}, severity = ${severity}, owner_user_id = ${ownerId},
+        resolution = ${resolution},
+        resolved_at = CASE WHEN ${done} THEN COALESCE(resolved_at, NOW()) END,
+        resolved_by = CASE WHEN ${done} THEN COALESCE(resolved_by, ${ctx.actor.id}::uuid) END,
+        updated_at = NOW()
+      WHERE id = ${before.id}`,
+    auditStatement(
       ctx,
-      ownerId,
+      "quality_event",
+      String(before.id),
+      status === before.status ? "updated" : `status_${status}`,
+      { status: before.status, severity: before.severity, ownerId: before.owner_user_id },
+      { status, severity, ownerId, resolution },
+    ),
+    ...notifyStatements(
+      ctx,
+      ownerId && ownerId !== before.owner_user_id ? [ownerId] : [],
       `Ereignis zugewiesen: ${before.title ?? before.type}`,
       "Bitte das Ereignis prüfen und Massnahmen festlegen.",
       "quality_event",
       "/c/leitung/qualitaet",
-    );
+    ),
+  ]);
 }
 
 // ----------------------------------------------------------------- actions
@@ -335,23 +342,27 @@ export async function createAction(ctx: ApiContext, body: Record<string, unknown
   const action = await parseAction(ctx, body);
   const status = body.status === "planned" ? "planned" : "open";
   const id = randomUUID();
-  await ctx.sql`
-    INSERT INTO carecore_quality_actions (id, organization_id, quality_event_id, care_unit_id, title, description,
-      owner_user_id, due_on, status, created_by)
-    VALUES (${id}, ${ctx.actor.organizationId}, ${action.eventId}, ${action.careUnitId}, ${action.title}, ${action.description},
-      ${action.ownerId}, ${action.dueOn}, ${status}, ${ctx.actor.id})`;
-  if (action.eventId)
-    await ctx.sql`UPDATE carecore_quality_events SET status = 'investigating', updated_at = NOW() WHERE id = ${action.eventId} AND status = 'open'`;
-  await writeAudit(ctx, "quality_action", id, "created", null, { ...action, status });
-  if (action.ownerId)
-    await notify(
+  await ctx.sql.transaction([
+    ctx.sql`
+      INSERT INTO carecore_quality_actions (id, organization_id, quality_event_id, care_unit_id, title, description,
+        owner_user_id, due_on, status, created_by)
+      VALUES (${id}, ${ctx.actor.organizationId}, ${action.eventId}, ${action.careUnitId}, ${action.title}, ${action.description},
+        ${action.ownerId}, ${action.dueOn}, ${status}, ${ctx.actor.id})`,
+    ...(action.eventId
+      ? [
+          ctx.sql`UPDATE carecore_quality_events SET status = 'investigating', updated_at = NOW() WHERE id = ${action.eventId} AND status = 'open'`,
+        ]
+      : []),
+    auditStatement(ctx, "quality_action", id, "created", null, { ...action, status }),
+    ...notifyStatements(
       ctx,
-      action.ownerId,
+      [action.ownerId],
       `Qualitätsmassnahme: ${action.title}`,
       `Termin ${action.dueOn.split("-").reverse().join(".")}`,
       "quality_action",
       "/c/leitung/qualitaet/massnahmen",
-    );
+    ),
+  ]);
   return id;
 }
 
@@ -363,14 +374,17 @@ async function loadAction(ctx: ApiContext, idInput: unknown) {
   return rows[0];
 }
 
-// Either a status change (done needs an effectiveness rating, cancelling a reason)
-// or an edit of an open action.
+// Either a status change (done needs an effectiveness rating, cancelling a reason) or an edit of an open
+// action. The edit form also sends its status (open/planned), so an edit is recognised by its title.
 export async function updateAction(ctx: ApiContext, idInput: unknown, body: Record<string, unknown>) {
   requireManage(ctx);
   const before = await loadAction(ctx, idInput);
-  if ("status" in body) {
+  if (before.status === "done" || before.status === "cancelled")
+    throw new ApiError("Abgeschlossene Massnahmen können nicht mehr geändert werden.", 409);
+  if (!("title" in body)) {
     const status = body.status as ActionStatus;
     if (!(status in ACTION_STATUS)) throw new ApiError("Ungültiger Status.");
+    if (status === before.status) return;
     const note = text(body.note, 2000) || null;
     const effectiveness = status === "done" ? (body.effectiveness as Effectiveness) : null;
     if (status === "done" && !(effectiveness && effectiveness in EFFECTIVENESS))
@@ -378,39 +392,56 @@ export async function updateAction(ctx: ApiContext, idInput: unknown, body: Reco
     if (status === "done" && !note) throw new ApiError("Bitte den Nachweis bzw. das Ergebnis beschreiben.");
     if (status === "cancelled" && !note) throw new ApiError("Bitte den Grund angeben.");
     const closing = status === "done" || status === "cancelled";
-    await ctx.sql`
-      UPDATE carecore_quality_actions SET status = ${status}, effectiveness = ${effectiveness},
-        completion_note = ${closing ? note : null},
-        completed_at = CASE WHEN ${status === "done"} THEN NOW() END,
-        completed_by = CASE WHEN ${status === "done"} THEN ${ctx.actor.id}::uuid END,
-        updated_at = NOW()
-      WHERE id = ${before.id}`;
-    await writeAudit(
+    await ctx.sql.transaction([
+      ctx.sql`
+        UPDATE carecore_quality_actions SET status = ${status}, effectiveness = ${effectiveness},
+          completion_note = ${closing ? note : null},
+          completed_at = CASE WHEN ${status === "done"} THEN NOW() END,
+          completed_by = CASE WHEN ${status === "done"} THEN ${ctx.actor.id}::uuid END,
+          updated_at = NOW()
+        WHERE id = ${before.id}`,
+      auditStatement(
+        ctx,
+        "quality_action",
+        String(before.id),
+        `status_${status}`,
+        { status: before.status },
+        { status, effectiveness, note },
+      ),
+    ]);
+    return;
+  }
+  const action = await parseAction(ctx, body);
+  const status = body.status === "planned" || body.status === "open" ? body.status : String(before.status);
+  await ctx.sql.transaction([
+    ctx.sql`
+      UPDATE carecore_quality_actions SET title = ${action.title}, description = ${action.description},
+        quality_event_id = ${action.eventId}, care_unit_id = ${action.careUnitId}, owner_user_id = ${action.ownerId},
+        due_on = ${action.dueOn}, status = ${status}, updated_at = NOW()
+      WHERE id = ${before.id}`,
+    auditStatement(
       ctx,
       "quality_action",
       String(before.id),
-      `status_${status}`,
-      { status: before.status },
-      { status, effectiveness, note },
-    );
-    return;
-  }
-  if (before.status === "done" || before.status === "cancelled")
-    throw new ApiError("Abgeschlossene Massnahmen können nicht bearbeitet werden.", 409);
-  const action = await parseAction(ctx, body);
-  await ctx.sql`
-    UPDATE carecore_quality_actions SET title = ${action.title}, description = ${action.description},
-      quality_event_id = ${action.eventId}, care_unit_id = ${action.careUnitId}, owner_user_id = ${action.ownerId},
-      due_on = ${action.dueOn}, updated_at = NOW()
-    WHERE id = ${before.id}`;
-  await writeAudit(ctx, "quality_action", String(before.id), "updated", before, action);
-  if (action.ownerId && action.ownerId !== before.owner_user_id)
-    await notify(
+      "updated",
+      {
+        title: before.title,
+        description: before.description,
+        eventId: before.quality_event_id,
+        careUnitId: before.care_unit_id,
+        ownerId: before.owner_user_id,
+        dueOn: before.due_on,
+        status: before.status,
+      },
+      { ...action, status },
+    ),
+    ...notifyStatements(
       ctx,
-      action.ownerId,
+      action.ownerId && action.ownerId !== before.owner_user_id ? [action.ownerId] : [],
       `Qualitätsmassnahme: ${action.title}`,
       `Termin ${action.dueOn.split("-").reverse().join(".")}`,
       "quality_action",
       "/c/leitung/qualitaet/massnahmen",
-    );
+    ),
+  ]);
 }
