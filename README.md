@@ -8,6 +8,14 @@ CareCore ist eine Next.js-Anwendung mit geschütztem Pflegearbeitsplatz unter `/
 
 Beim ersten Anmeldeversuch wird der Administrator `Admin` mit dem Passwort aus `CARECORE_ADMIN_PASSWORD` angelegt.
 
+## Tests
+
+- `npm test`: Unit-Tests ohne Datenbank.
+- `npm run test:db`: Integrationstests gegen eine echte Postgres (`TEST_DATABASE_URL`, vorher `npm run test:db:setup` auf einer leeren Datenbank).
+- `npm run test:e2e`: Klicktests mit Playwright gegen die gebaute App (`npx next build`). Vorher auf einer **leeren** Datenbank `npm run test:e2e:setup` (Migrationen, Dienstplan- und Demodaten); die Tests verändern die Demodaten. Die App beantwortet ihre Datenbankanfragen dabei aus `TEST_DATABASE_URL` (`tests/support/neon-pg.mjs`), der Administrator erhält ein festes Testpasswort (`playwright.config.ts`). Geprüft werden alle Seiten der Navigation (ohne Skript-, Server- und API-Fehler) sowie Anmeldung, BtM mit Zweitunterschrift, Medikationsrecht nach Qualifikation, Änderungsprotokoll nur für die Leitung und das Bearbeiten von Qualitätsmassnahmen.
+
+Alle drei laufen in der CI bei jedem Pull Request.
+
 ## Datenbank-Migrationen
 
 Das Schema wird ausschließlich über nummerierte SQL-Dateien in `database/migrations` verwaltet; die Anwendung legt zur Laufzeit keine Tabellen an. Das Schema deckt Organisationen, Wohnbereiche, Bewohner, Pflegeplanung, Dokumentation, Assessments, Vitalwerte, Medikation, Wunden, Ernährung, Dienste, Aufgaben, Übergaben, Kommunikation, Dokumente, Schulungen, Qualität, RAI, KI-Entwürfe, Benachrichtigungen und Auditierung ab.

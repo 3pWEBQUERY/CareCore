@@ -17,7 +17,9 @@
     "test:db": "node --import ./scripts/node-ts/register.mjs --import ./tests/support/neon-pg.mjs --experimental-transform-types --no-warnings=ExperimentalWarning --test --test-concurrency=1 tests/db/*.test.ts",
     "test:db:setup": "node --import ./tests/support/neon-pg.mjs database/migrate.mjs",
     "db:seed:roster": "node --import ./scripts/node-ts/register.mjs --env-file=.env.local database/seed-roster.ts",
-    "test:db:seed": "node --import ./scripts/node-ts/register.mjs --import ./tests/support/neon-pg.mjs database/seed-roster.ts"
+    "test:db:seed": "node --import ./scripts/node-ts/register.mjs --import ./tests/support/neon-pg.mjs database/seed-roster.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:setup": "node --import ./tests/support/neon-pg.mjs database/migrate.mjs && node --import ./scripts/node-ts/register.mjs --import ./tests/support/neon-pg.mjs database/seed-roster.ts && node --import ./tests/support/neon-pg.mjs database/seed-demo.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
@@ -31,6 +33,7 @@
     "three": "^0.186.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.23.1",
