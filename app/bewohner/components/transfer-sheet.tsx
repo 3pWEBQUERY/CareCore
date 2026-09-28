@@ -209,6 +209,7 @@ export default function TransferSheetPage() {
                     <tr key={`${item.name}-${index}`}>
                       <td>
                         {item.name}
+                        {item.controlled && <small className="transfer-paused">Betäubungsmittel (BtM)</small>}
                         {item.form && <small>{item.form}</small>}
                         {item.paused && <small className="transfer-paused">pausiert</small>}
                       </td>
@@ -241,6 +242,7 @@ export default function TransferSheetPage() {
                       <tr key={`${item.name}-${index}`}>
                         <td>
                           {item.name}
+                          {item.controlled && <small className="transfer-paused">Betäubungsmittel (BtM)</small>}
                           {item.paused && <small className="transfer-paused">pausiert</small>}
                         </td>
                         <td>{or(item.amount)}</td>

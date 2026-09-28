@@ -11,6 +11,12 @@ test("organisation settings fall back to safe defaults", () => {
   assert.equal(settings.documentationReminder.value, 24, "out of range falls back to the default");
   assert.equal(settings.keyboardShortcuts.enabled, true);
   assert.equal(settings.navigationBadges.value, null);
+  // Das BtM-Kontrollintervall hat keinen Standardwert; die Einrichtung legt es fest.
+  assert.deepEqual(settings.btmCountInterval, { enabled: false, value: null });
+  assert.deepEqual(resolveSettings({ btmCountInterval: { enabled: true, value: 14 } }).btmCountInterval, {
+    enabled: true,
+    value: 14,
+  });
 });
 
 test("personal preferences default to everything on", () => {
@@ -29,6 +35,7 @@ test("notification types map to their category", () => {
   assert.equal(notifyCategory("task_due"), "tasks");
   assert.equal(notifyCategory("shift_reminder"), "schedule");
   assert.equal(notifyCategory("supply_low"), "supply");
+  assert.equal(notifyCategory("btm_count_due"), "btm");
   assert.equal(notifyCategory("support_request"), null);
 });
 

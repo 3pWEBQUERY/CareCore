@@ -173,6 +173,7 @@ export default function RoundView({ showToast }: { showToast: ShowToast }) {
                     <ModuleIcon name="med" />
                     <strong>
                       {dose.time} · {dose.medication}
+                      {dose.controlled && <em className="btm-badge">BtM</em>}
                     </strong>
                     <small>
                       {dose.amount}

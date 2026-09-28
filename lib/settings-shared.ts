@@ -4,7 +4,12 @@ import type { ModuleIconName } from "@/app/components/module-icon";
 // carecore_organizations.settings.app). Every setting changes how the app behaves.
 
 export type SettingKey =
-  "documentationReminder" | "vitalsReminder" | "medicationOverdue" | "navigationBadges" | "keyboardShortcuts";
+  | "documentationReminder"
+  | "vitalsReminder"
+  | "medicationOverdue"
+  | "btmCountInterval"
+  | "navigationBadges"
+  | "keyboardShortcuts";
 
 export type SettingValue = { enabled: boolean; value: number | null };
 export type AppSettings = Record<SettingKey, SettingValue>;
@@ -50,6 +55,20 @@ export const SETTING_DEFINITIONS: Record<SettingKey, Definition> = {
     min: 5,
     max: 240,
     defaults: { enabled: true, value: 30 },
+  },
+  // Kein Standardwert: Das Kontrollintervall für Betäubungsmittel legt die Einrichtung selbst fest.
+  btmCountInterval: {
+    title: "BtM-Bestandskontrolle",
+    icon: "med",
+    area: "BtM-Kontrolle & Benachrichtigungen",
+    describe: (value) =>
+      value
+        ? `Kontrolle fällig ${value} ${value === 1 ? "Tag" : "Tage"} nach der letzten Bestandskontrolle`
+        : "Intervall ist noch nicht festgelegt",
+    unit: "Tage",
+    min: 1,
+    max: 365,
+    defaults: { enabled: false, value: null },
   },
   navigationBadges: {
     title: "Zähler in der Navigation",

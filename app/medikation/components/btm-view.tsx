@@ -72,6 +72,8 @@ export default function BtmView({ showToast }: { showToast: ShowToast }) {
   };
   const withDifference = items.filter((item) => item.lastCount && item.lastCount.counted !== item.lastCount.expected);
   const neverCounted = items.filter((item) => !item.lastCount);
+  const interval = data?.countInterval ?? null;
+  const dueItems = items.filter((item) => item.countDue?.due);
   const oldestCount = items.reduce<number | null>((oldest, item) => {
     const days = daysSince(item.lastCount?.at ?? null);
     return days === null ? oldest : Math.max(oldest ?? 0, days);
@@ -111,12 +113,19 @@ export default function BtmView({ showToast }: { showToast: ShowToast }) {
             caption: "mit Differenz bei der letzten Kontrolle",
             tone: withDifference.length ? "critical" : undefined,
           },
-          {
-            icon: "check",
-            value: neverCounted.length,
-            caption: "noch nie kontrolliert",
-            tone: neverCounted.length ? "attention" : undefined,
-          },
+          interval === null
+            ? {
+                icon: "check",
+                value: neverCounted.length,
+                caption: "noch nie kontrolliert",
+                tone: neverCounted.length ? "attention" : undefined,
+              }
+            : {
+                icon: "check",
+                value: dueItems.length,
+                caption: `Kontrolle fällig (alle ${interval} ${interval === 1 ? "Tag" : "Tage"})`,
+                tone: dueItems.length ? "attention" : undefined,
+              },
           {
             icon: "calendar",
             value: oldestCount === null ? "–" : `${oldestCount} Tage`,
@@ -175,7 +184,7 @@ export default function BtmView({ showToast }: { showToast: ShowToast }) {
                   </small>
                 </span>
                 <span>
-                  <strong className={difference ? "critical-text" : ""}>
+                  <strong className={difference ? "critical-text" : item.countDue?.due ? "attention-text" : ""}>
                     {count ? formatDateTime(count.at) : "Noch nie"}
                   </strong>
                   <small>
@@ -184,6 +193,10 @@ export default function BtmView({ showToast }: { showToast: ShowToast }) {
                         ? `Differenz ${signed(difference)} ${item.unit}`
                         : `ohne Differenz · ${[count.countedBy, count.witness].filter(Boolean).join(" / ")}`
                       : "Bestandskontrolle ausstehend"}
+                    {item.countDue &&
+                      (item.countDue.due
+                        ? " · Kontrolle fällig"
+                        : ` · nächste Kontrolle ${formatDateTime(item.countDue.at)}`)}
                   </small>
                 </span>
                 <span className="btm-actions">

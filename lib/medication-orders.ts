@@ -126,7 +126,7 @@ export async function listOrders(ctx: ApiContext, residentIdInput: unknown): Pro
   const residentId = await assertResident(ctx, residentIdInput);
   const rows = (await ctx.sql`
     SELECT o.id, o.resident_id, o.medication_id, COALESCE(m.name, 'Unbekanntes Präparat') AS name,
-      COALESCE(m.strength, '') AS strength, COALESCE(m.form, '') AS form, COALESCE(o.route, '') AS route,
+      COALESCE(m.strength, '') AS strength, COALESCE(m.form, '') AS form, COALESCE(m.is_controlled, FALSE) AS controlled, COALESCE(o.route, '') AS route,
       o.dosage, o.schedule, o.is_prn, COALESCE(o.prn_instructions, '') AS prn_instructions,
       COALESCE(o.indication, '') AS indication, COALESCE(o.prescribed_by, '') AS prescribed_by,
       to_char(o.start_on, 'YYYY-MM-DD') AS start_on, to_char(o.end_on, 'YYYY-MM-DD') AS end_on,
@@ -161,6 +161,7 @@ export async function listOrders(ctx: ApiContext, residentIdInput: unknown): Pro
       name: String(row.name),
       strength: String(row.strength),
       form: String(row.form),
+      controlled: Boolean(row.controlled),
       route: String(row.route),
       amount: typeof dosage.amount === "string" ? dosage.amount : "",
       stockQuantity: num(dosage.quantity),

@@ -53,6 +53,8 @@ Unter Medikation › „BtM-Kontrolle“ (`/medikation/btm`) werden als BtM geke
 - **Zweitunterschrift:** Eingang, Entsorgung, Bestandskorrektur und Bestandskontrolle eines BtM verlangen eine zweite Person. Sie bestätigt mit eigenem Benutzernamen und Passwort; sie muss aktiv, in derselben Organisation und für Medikation berechtigt sein. Fehlversuche werden wie bei der Anmeldung gedrosselt. Gaben aus der Medikamentenrunde werden mit der verabreichenden Person gebucht, ohne Zweitunterschrift.
 - **Bestandskontrolle:** Gezählter und erwarteter Bestand werden gegenübergestellt. Eine Differenz muss begründet werden und wird als Korrekturbuchung im selben Schritt gebucht.
 - **Unveränderlichkeit:** Buchungen von BtM und Bestandskontrollen können per Datenbank-Trigger weder geändert noch gelöscht werden; Fehler werden durch neue Buchungen korrigiert.
+- **Kontrollintervall:** Unter Leitung › Konfiguration › „BtM-Bestandskontrolle“ legt die Einrichtung fest, nach wie vielen Tagen eine Kontrolle fällig ist (ohne Standardwert, anfangs ausgeschaltet). Fällige Bestände werden auf der BtM-Seite markiert; Personen mit Medikationsrecht erhalten je Bestand und Kontrollzyklus eine Benachrichtigung (mit Stammwohnbereich nur für dessen Bestände; abschaltbar unter Einstellungen › Benachrichtigungen › „BtM-Kontrolle“).
+- **Gaben:** In Medikamentenrunde, Medikamentenplan, Reserven und im Überleitungsbogen sind BtM gekennzeichnet.
 - **BtM-Buch:** Pro Bestand alle Buchungen mit laufendem Bestand, Person und Zweitunterschrift, als Seitenpanel und als A4-Druckansicht (`/medikation/btm/buch?stock=…`, PDF über den Druckdialog).
 
 ## Dienstplan

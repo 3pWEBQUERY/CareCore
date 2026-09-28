@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { ApiError } from "@/lib/api-context";
 import { hashPassword } from "@/lib/auth";
-import { btmBook, btmOverview, countStock, setControlled } from "@/lib/medication-btm";
+import { btmBook, btmOverview, countStock, createBtmReminders, setControlled } from "@/lib/medication-btm";
+import { saveSetting } from "@/lib/settings";
 import { correctStock, receiveStock } from "@/lib/medication-stock";
 import { apiContextFor, createResident, fixture, q, qualify, type Fixture } from "../support/db";
 
@@ -194,4 +195,64 @@ test("BtM-Kennzeichnung: Aufheben nur mit Begründung, beides protokolliert", as
     (await failure(setControlled(await apiContextFor(other, "anna"), medication, { controlled: true }))).status,
     404,
   );
+});
+
+test("BtM-Kontrollintervall: ohne festgelegten Wert keine Fälligkeit, danach Erinnerung je Kontrollzyklus", async () => {
+  const f = await fixture();
+  const witness = await withPasswords(f);
+  const ctx = await apiContextFor(f, "anna");
+  const med = { ...ctx, actor: { ...ctx.actor, permissions: [...ctx.actor.permissions, "medication.manage"] } };
+  const { stock } = await btmStock(f);
+  const reminders = async () =>
+    q<{ title: string; body: string }>(
+      `SELECT title, body FROM carecore_notifications WHERE user_id = $1 AND type = 'btm_count_due' ORDER BY created_at`,
+      [f.people.anna],
+    );
+
+  // Die Einrichtung legt das Intervall fest; ohne Wert lässt es sich nicht einschalten.
+  assert.equal((await btmOverview(ctx)).countInterval, null);
+  assert.equal((await btmOverview(ctx)).items[0].countDue, null);
+  assert.match((await failure(saveSetting(ctx, "btmCountInterval", { enabled: true }))).message, /Wert/);
+  await createBtmReminders(med);
+  assert.equal((await reminders()).length, 0, "ohne Intervall keine Erinnerung");
+
+  await saveSetting(ctx, "btmCountInterval", { enabled: true, value: 7 });
+  let overview = await btmOverview(ctx);
+  assert.equal(overview.countInterval, 7);
+  assert.deepEqual(overview.items[0].countDue, { at: null, due: true }, "nie kontrolliert: sofort fällig");
+
+  // Nur Personen mit Medikationsrecht, und je Zyklus nur einmal.
+  await createBtmReminders(ctx);
+  assert.equal((await reminders()).length, 0);
+  await createBtmReminders(med);
+  await createBtmReminders(med);
+  assert.equal((await reminders()).length, 1);
+  assert.match((await reminders())[0].body, /noch nie kontrolliert/);
+
+  await countStock(ctx, stock, { counted: 10, witness: witness("max") });
+  overview = await btmOverview(ctx);
+  assert.equal(overview.items[0].countDue?.due, false);
+  await createBtmReminders(med);
+  assert.equal((await reminders()).length, 1, "nach der Kontrolle nicht fällig");
+
+  // Kontrolle liegt 8 Tage zurück (die erste Erinnerung davor): wieder fällig, neue Erinnerung.
+  await q(`UPDATE carecore_notifications SET created_at = NOW() - INTERVAL '9 days' WHERE user_id = $1`, [
+    f.people.anna,
+  ]);
+  await q(`ALTER TABLE carecore_btm_counts DISABLE TRIGGER carecore_btm_count_guard`);
+  await q(`UPDATE carecore_btm_counts SET created_at = NOW() - INTERVAL '8 days' WHERE stock_id = $1`, [stock]);
+  await q(`ALTER TABLE carecore_btm_counts ENABLE TRIGGER carecore_btm_count_guard`);
+  assert.equal((await btmOverview(ctx)).items[0].countDue?.due, true);
+  await createBtmReminders(med);
+  assert.equal((await reminders()).length, 2);
+  assert.match((await reminders())[1].body, /letzte Kontrolle am/);
+
+  // Personen mit anderem Stammwohnbereich erhalten keine Erinnerung für diesen Bestand.
+  const ben = await apiContextFor(f, "ben");
+  await createBtmReminders({ ...ben, actor: { ...ben.actor, permissions: ["medication.manage"] } });
+  const [benCount] = await q<{ n: number }>(
+    `SELECT COUNT(*)::int AS n FROM carecore_notifications WHERE user_id = $1 AND type = 'btm_count_due'`,
+    [f.people.ben],
+  );
+  assert.equal(benCount.n, 0);
 });

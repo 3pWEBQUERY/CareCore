@@ -145,7 +145,10 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
                             <ModuleIcon name="med" />
                           </span>
                           <span>
-                            <strong>{`${order.name} ${order.strength}`.trim()}</strong>
+                            <strong>
+                              {`${order.name} ${order.strength}`.trim()}
+                              {order.controlled && <em className="btm-badge">BtM</em>}
+                            </strong>
                             <small>{order.indication || "Keine Indikation erfasst"}</small>
                           </span>
                           <span

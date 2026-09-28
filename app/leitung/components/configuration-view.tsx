@@ -201,7 +201,9 @@ function SettingEditor({
       </fieldset>
       {definition.unit && (
         <label>
-          {definition.unit} (Standard {definition.defaults.value})
+          {definition.defaults.value === null
+            ? `${definition.unit} (legt die Einrichtung fest)`
+            : `${definition.unit} (Standard ${definition.defaults.value})`}
           <input
             type="number"
             min={definition.min}
