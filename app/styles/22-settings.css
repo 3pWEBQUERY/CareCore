@@ -587,6 +587,14 @@
 .settings-toggle input:checked + i::after {
   transform: translateX(14px);
 }
+.settings-toggle input:focus-visible + i {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.settings-toggle input:disabled + i {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .settings-select,
 .settings-action {
   display: grid;

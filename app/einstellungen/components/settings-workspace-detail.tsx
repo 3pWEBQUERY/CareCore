@@ -19,6 +19,7 @@ import {
 } from "@/lib/user-settings-shared";
 import SettingsSelect from "./settings-select";
 import PasswordChangePopover from "./password-change-popover";
+import PushControl from "./push-control";
 
 export type SettingsView = "overview" | "profile" | "notifications" | "security" | "appearance";
 
@@ -36,6 +37,7 @@ type Item = {
     | { kind: "notify"; category: NotifyCategory; text: string }
     | { kind: "password"; text: string }
     | { kind: "sessions"; text: string }
+    | { kind: "push"; text: string }
     | { kind: "select"; text: string; label: string; value: string; options: string[]; save: (value: string) => void };
 };
 
@@ -183,7 +185,7 @@ export default function SettingsWorkspaceDetail({ view }: { view: SettingsView }
                           {settings.error ??
                             (data
                               ? view === "notifications"
-                                ? `${enabledCount} von ${items.length} Kategorien aktiv`
+                                ? `${enabledCount} von ${Object.keys(NOTIFY_CATEGORIES).length} Kategorien aktiv`
                                 : `${items.length} Bereiche`
                               : "Wird geladen …")}
                         </p>
@@ -227,6 +229,7 @@ export default function SettingsWorkspaceDetail({ view }: { view: SettingsView }
                           onOpenView={(next) => router.push(`/c/einstellungen/${next}`)}
                           onProfile={() => setProfileOpen(true)}
                           onPassword={() => setPasswordOpen(true)}
+                          onMessage={showToast}
                           onToggle={(category, value) =>
                             savePreferences(
                               { notify: { ...data.preferences.notify, [category]: value } },
@@ -294,12 +297,14 @@ function DetailControl({
   onPassword,
   onToggle,
   onEndSessions,
+  onMessage,
 }: {
   item: Item;
   data: UserSettings;
   onOpenView: (view: SettingsView) => void;
   onProfile: () => void;
   onPassword: () => void;
+  onMessage: (message: string) => void;
   onToggle: (category: NotifyCategory, value: boolean) => void;
   onEndSessions: (id: string | null) => void;
 }) {
@@ -343,6 +348,7 @@ function DetailControl({
         <i />
       </label>
     );
+  if (detail.kind === "push") return <PushControl onMessage={onMessage} />;
   if (detail.kind === "select")
     return (
       <label className="settings-select">
@@ -495,18 +501,31 @@ function itemsFor(
     ];
 
   if (view === "notifications")
-    return (Object.keys(NOTIFY_CATEGORIES) as NotifyCategory[]).map((category) => ({
-      id: `notify-${category}`,
-      title: NOTIFY_CATEGORIES[category].label,
-      description: NOTIFY_CATEGORIES[category].detail,
-      value: preferences.notify[category] ? "Aktiv" : "Aus",
-      icon: "bell",
-      detail: {
-        kind: "notify",
-        category,
-        text: `${NOTIFY_CATEGORIES[category].detail}. Ausgeschaltete Hinweise werden nicht angezeigt; kritische Hinweise erhältst du immer.`,
+    return [
+      ...(Object.keys(NOTIFY_CATEGORIES) as NotifyCategory[]).map((category): Item => ({
+        id: `notify-${category}`,
+        title: NOTIFY_CATEGORIES[category].label,
+        description: NOTIFY_CATEGORIES[category].detail,
+        value: preferences.notify[category] ? "Aktiv" : "Aus",
+        icon: "bell",
+        detail: {
+          kind: "notify",
+          category,
+          text: `${NOTIFY_CATEGORIES[category].detail}. Ausgeschaltete Hinweise werden nicht angezeigt; kritische Hinweise erhältst du immer.`,
+        },
+      })),
+      {
+        id: "push",
+        title: "Push-Nachrichten",
+        description: "Hinweise auch bei geschlossener App",
+        value: "Dieses Gerät",
+        icon: "bell",
+        detail: {
+          kind: "push",
+          text: "Neue Benachrichtigungen erscheinen als Mitteilung auf diesem Gerät, auch wenn CareCore geschlossen ist. Angezeigt wird nur der Titel; es gelten die Kategorien oben.",
+        },
       },
-    }));
+    ];
 
   if (view === "security")
     return [

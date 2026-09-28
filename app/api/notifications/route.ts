@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { carecoreActor, carecoreDb } from "@/lib/server-data";
 import { createLearningReminders } from "@/lib/learning";
 import { createBtmReminders } from "@/lib/medication-btm";
+import { schedulePush } from "@/lib/push";
 import { createRosterReminders } from "@/lib/roster/reminders";
 import { createDueReminders } from "@/lib/tasks";
 import { readPreferences } from "@/lib/user-settings";
@@ -22,6 +23,7 @@ export async function GET() {
         createLearningReminders(ctx),
         createBtmReminders(ctx),
       ]).catch((error) => console.error("Reminders failed", error));
+      schedulePush();
     }
     const [rows, preferences] = await Promise.all([
       sql`SELECT id, title, body, type, priority, link_url, read_at, created_at FROM carecore_notifications WHERE user_id = ${actor.id} ORDER BY created_at DESC LIMIT 100`,

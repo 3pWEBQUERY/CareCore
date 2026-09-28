@@ -5,13 +5,14 @@
 //   per Nachricht („Stand der Daten“). Beim Abmelden und Anmelden werden Seiten und Daten gelöscht.
 // Schreibende Anfragen gehen immer ans Netz; offline erfasste Einträge verwaltet die App selbst
 // (app/components/offline-queue.ts).
+// Push: zeigt den Titel einer Benachrichtigung (lib/push.ts); ein Tipp öffnet die zugehörige Seite.
 const VERSION = "v1";
 const STATIC = `carecore-static-${VERSION}`;
 const PAGES = `carecore-pages-${VERSION}`;
 const DATA = `carecore-data-${VERSION}`;
 
 // Nicht zwischengespeichert: Anmeldung, Dateien und Fotos, Exporte, KI.
-const NO_CACHE = /^\/api\/(auth|cloud|ai|intelligenz)\b|\/photos\/|\/export\b|\/files?\//;
+const NO_CACHE = /^\/api\/(auth|cloud|ai|intelligenz|push)\b|\/photos\/|\/export\b|\/files?\//;
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -48,6 +49,40 @@ async function warm(urls) {
     }
   }
 }
+
+self.addEventListener("push", (event) => {
+  let message = {};
+  try {
+    message = event.data ? event.data.json() : {};
+  } catch {
+    message = {};
+  }
+  event.waitUntil(
+    self.registration.showNotification(message.title || "CareCore", {
+      body: "In CareCore öffnen",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: message.tag,
+      data: { url: typeof message.url === "string" && message.url.startsWith("/") ? message.url : "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || "/", self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const open = windows.find((client) => new URL(client.url).origin === self.location.origin);
+      if (open) {
+        await open.focus();
+        return open.navigate(url);
+      }
+      return self.clients.openWindow(url);
+    })(),
+  );
+});
 
 self.addEventListener("fetch", (event) => {
   const request = event.request;
