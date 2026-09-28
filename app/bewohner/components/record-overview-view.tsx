@@ -1,6 +1,8 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useEscapeClose } from "@/app/components/use-escape-close";
 import { useRouter } from "next/navigation";
 import { setCareResident } from "@/app/components/care-context";
 import { formatDate, formatDateTime } from "@/app/components/workspace-ui";
@@ -25,6 +27,15 @@ import {
   FirstAidKit,
 } from "@phosphor-icons/react";
 import type { ResidentRecordState } from "./use-resident-record";
+import type { BodyObservation } from "./resident-record-data";
+
+const BODY_KINDS = [
+  ["wound", "Wunde"],
+  ["redness", "Rötung"],
+  ["fracture", "Fraktur"],
+  ["other", "Sonstiges"],
+] as const satisfies ReadonlyArray<readonly [BodyObservation["kind"], string]>;
+const BODY_KIND_LABELS = Object.fromEntries(BODY_KINDS) as Record<BodyObservation["kind"], string>;
 
 // Standardtext der Bewohnerliste, wenn weder ein klinischer Hinweis noch eine Notiz vorliegt.
 const NO_HINT = "Keine aktuellen Hinweise";
@@ -51,9 +62,30 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
     archiveBodyObservation,
     openDocumentation,
     live,
+    bodyEditor,
   } = r;
   const router = useRouter();
   const summary = live.summary.data;
+  const [hiddenKinds, setHiddenKinds] = useState<BodyObservation["kind"][]>([]);
+  const visibleObservations = useMemo(
+    () => bodyObservations.filter((item) => !hiddenKinds.includes(item.kind)),
+    [bodyObservations, hiddenKinds],
+  );
+  const mapObservations = useMemo(
+    () =>
+      visibleObservations.map((item) => ({
+        id: item.id,
+        kind: item.kind,
+        label: item.label,
+        location: item.location,
+        x: Number(item.body_x),
+        y: Number(item.body_y),
+        z: Number(item.body_z),
+      })),
+    [visibleObservations],
+  );
+  // Escape beendet das Markieren, ohne die Akte zu schliessen.
+  useEscapeClose(() => setPlacingBodyPoint(false), placingBodyPoint && !bodyEditor);
   // Quick actions open the module for this resident; the record's resident becomes the working context.
   const openModule = (href: string) => {
     if (resident.id) setCareResident(resident.id);
@@ -199,38 +231,59 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
             </div>
             <button
               type="button"
+              className={placingBodyPoint ? "active" : ""}
+              aria-pressed={placingBodyPoint}
               onClick={() => {
-                setPlacingBodyPoint(true);
+                setPlacingBodyPoint(!placingBodyPoint);
                 setActiveBodyObservationId(null);
               }}
             >
-              <Plus aria-hidden="true" /> Befund hinzufügen
+              {placingBodyPoint ? (
+                "Abbrechen"
+              ) : (
+                <>
+                  <Plus aria-hidden="true" /> Befund hinzufügen
+                </>
+              )}
             </button>
           </div>
           <div className="body-map-content">
             <div className="body-map-visual">
-              <div className="body-map-legend" aria-label="Legende">
-                <span className="redness">Rötung</span>
-                <span className="wound">Wunde</span>
-                <span className="fracture">Fraktur</span>
+              <div className="body-map-legend" role="group" aria-label="Befunde nach Art ein- und ausblenden">
+                {BODY_KINDS.map(([kind, label]) => {
+                  const count = bodyObservations.filter((item) => item.kind === kind).length;
+                  const shown = !hiddenKinds.includes(kind);
+                  return (
+                    <button
+                      type="button"
+                      key={kind}
+                      className={`${kind} ${shown ? "" : "off"}`}
+                      aria-pressed={shown}
+                      title={shown ? `${label} ausblenden` : `${label} einblenden`}
+                      onClick={() =>
+                        setHiddenKinds((current) =>
+                          current.includes(kind) ? current.filter((item) => item !== kind) : [...current, kind],
+                        )
+                      }
+                    >
+                      {label}
+                      <small>{count}</small>
+                    </button>
+                  );
+                })}
               </div>
               <BodyMap3D
                 gender={residentGender}
-                observations={bodyObservations.map((item) => ({
-                  id: item.id,
-                  kind: item.kind,
-                  label: item.label,
-                  x: Number(item.body_x),
-                  y: Number(item.body_y),
-                  z: Number(item.body_z),
-                }))}
+                observations={mapObservations}
                 selectedId={activeBodyObservationId}
                 placing={placingBodyPoint}
+                pending={bodyEditor && !bodyEditor.id ? bodyEditor.draft : null}
                 onSelect={(id) => {
                   setPlacingBodyPoint(false);
                   setActiveBodyObservationId(id);
                 }}
                 onPlace={newBodyObservation}
+                onCancelPlacing={() => setPlacingBodyPoint(false)}
               />
               <span className="body-model-caption">
                 {genderLabel === "Keine Angabe" || genderLabel === "Divers"
@@ -249,14 +302,36 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
             </div>
 
             <div className="body-observation-list" aria-label="Erfasste Körperstellen">
+              {bodyObservations.length > 0 && (
+                <p className="body-observation-summary">
+                  <strong>
+                    {bodyObservations.length} aktive{bodyObservations.length === 1 ? "r" : ""} Befund
+                    {bodyObservations.length === 1 ? "" : "e"}
+                  </strong>
+                  {visibleObservations.length < bodyObservations.length && (
+                    <span>
+                      {visibleObservations.length} angezeigt ·{" "}
+                      <button type="button" onClick={() => setHiddenKinds([])}>
+                        Alle zeigen
+                      </button>
+                    </span>
+                  )}
+                </p>
+              )}
               {bodyLoading && <p className="body-observation-empty">Körperstatus wird geladen…</p>}
               {!bodyLoading && bodyObservations.length === 0 && (
                 <div className="body-observation-empty">
                   <strong>Noch keine Körperbefunde</strong>
-                  <p>Wunden, Rötungen und weitere Auffälligkeiten können direkt am Körpermodell markiert werden.</p>
-                  <button className="secondary-button" type="button" onClick={() => setPlacingBodyPoint(true)}>
-                    Körperstelle auswählen
-                  </button>
+                  <p>
+                    {placingBodyPoint
+                      ? "Körperstelle am Modell anklicken oder unter dem Modell aus der Liste wählen."
+                      : "Wunden, Rötungen und weitere Auffälligkeiten werden direkt am Körpermodell markiert; die Körperstelle wird dabei automatisch benannt."}
+                  </p>
+                  {!placingBodyPoint && (
+                    <button className="secondary-button" type="button" onClick={() => setPlacingBodyPoint(true)}>
+                      Körperstelle auswählen
+                    </button>
+                  )}
                 </div>
               )}
               {bodyError && (
@@ -264,7 +339,7 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
                   {bodyError}
                 </p>
               )}
-              {bodyObservations.map((observation) => {
+              {visibleObservations.map((observation) => {
                 const expanded = activeBodyObservationId === observation.id;
                 return (
                   <section className={`body-observation ${expanded ? "expanded" : ""}`} key={observation.id}>
@@ -283,7 +358,7 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
                       <span>
                         <strong>{observation.label}</strong>
                         <small>
-                          {observation.location} · {observation.status}
+                          {BODY_KIND_LABELS[observation.kind]} · {observation.location} · {observation.status}
                         </small>
                       </span>
                       <CaretDown aria-hidden="true" />

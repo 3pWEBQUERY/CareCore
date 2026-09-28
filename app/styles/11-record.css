@@ -352,6 +352,10 @@
   font-weight: 700;
   cursor: pointer;
 }
+.record-card-heading button.active {
+  color: white;
+  background: var(--brand);
+}
 .record-card-heading button svg {
   width: 13px;
   height: 13px;
@@ -503,8 +507,8 @@
 }
 .body-map-content {
   display: grid;
-  grid-template-columns: minmax(280px, 0.8fr) minmax(310px, 1.2fr);
-  min-height: 560px;
+  grid-template-columns: minmax(300px, 1fr) minmax(260px, 0.95fr);
+  min-height: 600px;
 }
 .body-map-visual {
   min-width: 0;
@@ -516,32 +520,83 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 7px;
-  margin-bottom: 7px;
+  gap: 6px;
+  margin-bottom: 9px;
 }
-.body-map-legend span {
+.body-map-legend button {
+  --kind: var(--muted);
+  min-height: 26px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #53687d;
-  font-size: 9px;
+  padding: 0 9px;
+  border: 1px solid #d6e3f6;
+  border-radius: 999px;
+  color: #3d5268;
+  background: white;
+  font: inherit;
+  font-size: 10px;
   font-weight: 700;
+  cursor: pointer;
 }
-.body-map-legend span::before {
+.body-map-legend button::before {
   content: "";
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--kind);
   border-radius: 50%;
-  background: currentColor;
+  background: var(--kind);
+}
+.body-map-legend button small {
+  min-width: 16px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: #f1f5fa;
+  font-size: 9px;
+  text-align: center;
+}
+.body-map-legend button.off {
+  color: var(--muted);
+  background: transparent;
+  border-style: dashed;
+}
+.body-map-legend button.off::before {
+  background: transparent;
 }
 .body-map-legend .redness {
-  color: var(--attention);
+  --kind: #ba7621;
 }
 .body-map-legend .wound {
-  color: var(--critical);
+  --kind: #cc4d41;
 }
 .body-map-legend .fracture {
-  color: var(--brand);
+  --kind: #285ddd;
+}
+.body-map-legend .other {
+  --kind: #28746e;
+}
+.body-observation-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 4px 4px 2px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.body-observation-summary strong {
+  color: var(--ink);
+}
+.body-observation-summary button {
+  padding: 0;
+  border: 0;
+  color: var(--brand-dark);
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
 }
 .body-observation-list {
   min-width: 0;
@@ -586,6 +641,14 @@
 .body-observation-icon.wound {
   color: var(--critical);
   background: var(--critical-soft);
+}
+.body-observation-icon.fracture {
+  color: #285ddd;
+  background: #eaf0fd;
+}
+.body-observation-icon.other {
+  color: #28746e;
+  background: #e6f3f1;
 }
 .body-observation-icon svg {
   width: 17px;

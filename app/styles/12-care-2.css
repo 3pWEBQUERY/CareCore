@@ -1,9 +1,42 @@
 .clinical-body-viewer {
-  max-width: 410px;
+  max-width: 440px;
   margin: 0 auto;
 }
+.clinical-body-views {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+  margin-bottom: 8px;
+  padding: 3px;
+  border: 1px solid #d6e3f6;
+  border-radius: 8px;
+  background: white;
+}
+.clinical-body-views button {
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  color: #53687d;
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.clinical-body-views button:hover:not(:disabled) {
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+}
+.clinical-body-views button.active {
+  color: white;
+  background: var(--brand);
+}
+.clinical-body-views button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 .clinical-body-canvas {
-  height: 450px;
+  height: 480px;
   position: relative;
   overflow: hidden;
   border: 1px solid #dce7f6;
@@ -11,6 +44,10 @@
   background: radial-gradient(ellipse at 50% 35%, #fff 0%, #f4f8ff 64%, #eaf1fb 100%);
   cursor: grab;
   touch-action: pan-y;
+  outline: none;
+}
+.clinical-body-canvas:focus-visible {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.28);
 }
 .clinical-body-canvas:active {
   cursor: grabbing;
@@ -24,10 +61,90 @@
   width: 100%;
   height: 100%;
 }
-.clinical-body-canvas p {
+.clinical-body-status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
   padding: 24px;
   color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
   text-align: center;
+  pointer-events: none;
+}
+.clinical-body-tooltip {
+  position: absolute;
+  z-index: 2;
+  max-width: 220px;
+  padding: 5px 9px;
+  overflow: hidden;
+  border-radius: 6px;
+  color: white;
+  background: #10233f;
+  box-shadow: 0 6px 18px rgba(16, 35, 63, 0.22);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 14px));
+}
+.clinical-body-tooltip.marker {
+  color: var(--ink);
+  background: white;
+  border: 1px solid #d6e3f6;
+}
+.clinical-body-placing {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 9px 10px;
+  border: 1px solid #bfd3fb;
+  border-radius: 8px;
+  background: #eff5ff;
+}
+.clinical-body-placing > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--brand-dark);
+  font-size: 12px;
+}
+.clinical-body-placing > span svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.clinical-body-placing > div {
+  display: flex;
+  gap: 6px;
+}
+.clinical-body-placing .area-custom-select {
+  min-width: 0;
+  flex: 1;
+}
+.clinical-body-placing .area-select-trigger {
+  min-height: 36px;
+  font-size: 12px;
+}
+.clinical-body-placing > div > button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border: 1px solid #d6e3f6;
+  border-radius: 6px;
+  color: var(--brand-dark);
+  background: white;
+  cursor: pointer;
+}
+.clinical-body-placing > div > button svg {
+  width: 15px;
+  height: 15px;
 }
 .clinical-body-toolbar {
   display: flex;
@@ -37,8 +154,8 @@
   margin-top: 9px;
 }
 .clinical-body-toolbar button {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
   flex: 0 0 auto;
@@ -46,24 +163,30 @@
   border-radius: 6px;
   color: var(--brand-dark);
   background: white;
-  font-size: 16px;
   cursor: pointer;
 }
-.clinical-body-toolbar button:hover {
+.clinical-body-toolbar button:hover:not(:disabled) {
   background: var(--brand-soft);
+}
+.clinical-body-toolbar button:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 .clinical-body-toolbar button svg {
   width: 15px;
   height: 15px;
 }
-.clinical-body-toolbar input {
-  width: min(110px, 24%);
-  accent-color: var(--brand);
+.clinical-body-toolbar i {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: #d6e3f6;
 }
 .clinical-body-toolbar span {
-  min-width: 36px;
+  min-width: 40px;
   color: var(--muted);
   font-size: 10px;
+  font-weight: 700;
   text-align: center;
 }
 .clinical-body-hint,
@@ -196,6 +319,11 @@
   font-size: 11px;
   font-weight: 700;
 }
+.body-observation-editor-note {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+}
 .body-observation-editor-fields input,
 .body-observation-editor-fields textarea {
   width: 100%;
@@ -243,7 +371,7 @@
     justify-content: center;
   }
   .clinical-body-canvas {
-    height: 390px;
+    height: 420px;
   }
 }
 .record-document-button strong {

@@ -52,12 +52,13 @@ export function useRecordBody({
     };
   }, [resident.id]);
 
-  function newBodyObservation(point: BodyPoint) {
+  // Die Körperstelle wird aus dem Punkt am Modell benannt und kann im Befund angepasst werden.
+  function newBodyObservation(point: BodyPoint, region = "") {
     setPlacingBodyPoint(false);
     setBodyError("");
     setBodyEditor({
       id: null,
-      draft: { kind: "wound", label: "", location: "", status: "Beobachten", notes: "", ...point },
+      draft: { kind: "wound", label: "", location: region, status: "Beobachten", notes: "", ...point },
     });
   }
 

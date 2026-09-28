@@ -25,7 +25,11 @@ export function BodyObservationDialog({ r }: { r: ResidentRecordState }) {
           <div>
             <span className="record-section-label">Körperstatus · {bodyEditor.id ? "Bearbeiten" : "Neuer Befund"}</span>
             <h2 id="body-observation-editor-title">{bodyEditor.id ? "Befund bearbeiten" : "Befund erfassen"}</h2>
-            <p>Die gewählte Körperstelle ist präzise am Modell markiert.</p>
+            <p>
+              {bodyEditor.id
+                ? "Art, Bezeichnung und Verlauf des Befunds anpassen."
+                : "Die gewählte Körperstelle ist am Modell blau markiert."}
+            </p>
           </div>
           <button type="button" aria-label="Befundeditor schliessen" onClick={() => setBodyEditor(null)}>
             <X aria-hidden="true" />
@@ -89,6 +93,11 @@ export function BodyObservationDialog({ r }: { r: ResidentRecordState }) {
               }
               placeholder="z. B. rechter Unterarm"
             />
+            {!bodyEditor.id && (
+              <small className="body-observation-editor-note">
+                Aus der Markierung am Modell erkannt – bei Bedarf genauer beschreiben.
+              </small>
+            )}
           </label>
           <label>
             Status
