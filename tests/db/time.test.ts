@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { RosterError } from "@/lib/roster/errors";
+import { timesheetCsv } from "@/lib/roster/export-service";
 import { getMySchedule } from "@/lib/roster/my-schedule";
 import { periodAction } from "@/lib/roster/period-service";
 import { getSchedule } from "@/lib/roster/schedule";
@@ -216,4 +217,28 @@ test("Stammwohnbereich ist die Vorauswahl in Teamplan und Zeiterfassung", async 
   assert.equal(entry.care_unit_id, f.units.b);
   const mine = await getMySchedule(sam, { year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) });
   assert.equal(mine.openEntry?.id, id);
+});
+
+test("Arbeitszeit-Export: Summen und Einträge als CSV, nur für die Leitung", async () => {
+  const f = await fixture();
+  const shiftId = await runningShift(f, "anna");
+  const anna = await f.ctx("anna");
+  const { id } = await clockIn(anna, { shiftId });
+  await q(`UPDATE carecore_time_entries SET clock_in = $2 WHERE id = $1`, [id, minutesAgo(8 * 60)]);
+  await clockOut(anna, {});
+  const lead = await f.ctx("leadA");
+  const month = localDate(new Date(), TZ).slice(0, 7);
+  const sums = await timesheetCsv(lead, new URLSearchParams({ monat: month, einheit: f.units.a }));
+  assert.match(sums.filename, new RegExp(`^arbeitszeit-summen-wohngruppe-a-${month}\\.csv$`));
+  const lines = sums.body.replace("\uFEFF", "").trim().split("\r\n");
+  assert.match(lines[0], /^Monat;Wohnbereich;Person;Pensum %;Soll \(h\);Geplant \(h\);Ist \(h\);Saldo \(h\)/);
+  const annaLine = lines.find((line) => line.includes("Anna Müller"))!;
+  assert.ok(annaLine.startsWith(`${month};Wohngruppe A;Anna Müller;100;`));
+  assert.equal(annaLine.split(";")[6], "7,5");
+  const entries = await timesheetCsv(lead, new URLSearchParams({ monat: month, einheit: f.units.a, art: "eintraege" }));
+  const entryLines = entries.body.trim().split("\r\n");
+  assert.equal(entryLines.length, 2);
+  assert.match(entryLines[1], /Anna Müller;Frühdienst;/);
+  // Mitarbeitende erhalten keinen Export des Wohnbereichs.
+  await expectCode(timesheetCsv(anna, new URLSearchParams({ monat: month, einheit: f.units.a })), "FORBIDDEN");
 });

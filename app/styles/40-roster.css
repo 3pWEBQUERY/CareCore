@@ -1272,7 +1272,163 @@ tr.self .roster-name {
   .roster-heading-actions {
     width: 100%;
   }
-  .roster-heading-actions button {
+  .roster-heading-actions button,
+  .roster-heading-actions a {
     flex: 1 1 calc(50% - 8px);
+  }
+}
+
+/* Druckansicht Monatsplan (A4 quer, PDF über den Druckdialog). */
+.roster-print {
+  min-height: 100vh;
+  padding: 16px;
+  color: #0f172a;
+  background: #fff;
+}
+.roster-print-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.roster-print-bar span {
+  flex: 1 1 auto;
+  color: #64748b;
+  font-size: 12px;
+}
+.roster-print-bar .button-icon {
+  width: 16px;
+  height: 16px;
+}
+.roster-print-message {
+  margin: 24px 0;
+  color: #475569;
+}
+.roster-print-sheet > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.roster-print-sheet h1 {
+  margin: 0;
+  font-size: 18px;
+}
+.roster-print-sheet header p {
+  margin: 2px 0 0;
+  color: #475569;
+  font-size: 11px;
+}
+.roster-print-draft {
+  padding: 3px 10px;
+  border: 1px solid #f59e0b;
+  border-radius: 999px;
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.roster-print-sheet table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 9px;
+}
+.roster-print-sheet th,
+.roster-print-sheet td {
+  padding: 2px 1px;
+  border: 1px solid #cbd5e1;
+  text-align: center;
+  vertical-align: middle;
+}
+.roster-print-sheet thead th span,
+.roster-print-sheet thead th strong {
+  display: block;
+}
+.roster-print-sheet thead th span {
+  color: #64748b;
+  font-weight: 500;
+}
+.roster-print-sheet .name {
+  width: 120px;
+  padding-inline: 4px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.roster-print-sheet .name small {
+  margin-left: 4px;
+  color: #64748b;
+  font-weight: 400;
+}
+.roster-print-sheet .total {
+  width: 38px;
+}
+.roster-print-sheet td.total small {
+  display: block;
+  color: #64748b;
+}
+.roster-print-sheet .weekend,
+.roster-print-sheet .holiday {
+  background: #f1f5f9;
+}
+.roster-print-sheet .code,
+.roster-print-sheet footer i {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 2px;
+  border: 1px solid #94a3b8;
+  border-radius: 3px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 13px;
+}
+.roster-print-sheet .code + .code {
+  margin-top: 1px;
+}
+.roster-print-sheet tfoot td.low {
+  color: #b91c1c;
+  font-weight: 700;
+}
+.roster-print-sheet footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 8px;
+  font-size: 10px;
+}
+.roster-print-notes h2 {
+  margin: 10px 0 4px;
+  font-size: 11px;
+}
+.roster-print-notes ul {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 10px;
+}
+@media print {
+  .roster-print {
+    min-height: 0;
+    padding: 0;
+  }
+  .roster-print-bar {
+    display: none;
+  }
+  .roster-print-sheet {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .roster-print-sheet thead {
+    display: table-header-group;
+  }
+  .roster-print-sheet tr {
+    break-inside: avoid;
   }
 }

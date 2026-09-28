@@ -1671,6 +1671,15 @@
   .roster-total em {
     font-size: 12px;
   }
+  .roster-print-sheet table {
+    font-size: 11.5px;
+  }
+  .roster-print-sheet footer {
+    font-size: 12px;
+  }
+  .roster-print-notes ul {
+    font-size: 12px;
+  }
   :root .operations-quick a {
     font-size: 11.5px;
   }
