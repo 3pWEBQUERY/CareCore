@@ -161,7 +161,14 @@ export default function StockView({ showToast }: { showToast: ShowToast }) {
                   <ModuleIcon name="med" />
                 </span>
                 <span>
-                  <strong>{`${item.name} ${item.strength}`.trim()}</strong>
+                  <strong>
+                    {`${item.name} ${item.strength}`.trim()}
+                    {item.controlled && (
+                      <em className="btm-badge" title="Betäubungsmittel – Buchungen mit Zweitunterschrift">
+                        BtM
+                      </em>
+                    )}
+                  </strong>
                   <small>{[item.form, item.batch && `Charge ${item.batch}`].filter(Boolean).join(" · ") || "–"}</small>
                 </span>
                 <span>
@@ -222,6 +229,9 @@ export default function StockView({ showToast }: { showToast: ShowToast }) {
           items={items}
           careUnits={data.careUnits}
           residents={data.residents}
+          controlledNames={[
+            ...new Set(items.filter((item) => item.controlled).map((item) => item.name.toLocaleLowerCase("de-CH"))),
+          ]}
           onClose={() => setDialog(null)}
           onSaved={done}
         />

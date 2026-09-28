@@ -90,7 +90,7 @@ export const navigation: NavGroup[] = [
         id: "med",
         label: "Medikation",
         icon: "med",
-        children: ["Medikamentenrunde", "Medikamentenplan", "Reserven", "Bestände"],
+        children: ["Medikamentenrunde", "Medikamentenplan", "Reserven", "Bestände", "BtM-Kontrolle"],
       },
       {
         id: "vitals",
@@ -229,6 +229,7 @@ const routes: Record<string, Record<string, string>> = {
     Medikamentenplan: "/medikation",
     Reserven: "/medikation/reserven",
     Bestände: "/medikation/bestaende",
+    "BtM-Kontrolle": "/medikation/btm",
   },
   vitals: {
     Vitalwerte: "/vitalwerte",

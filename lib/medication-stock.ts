@@ -3,6 +3,7 @@ import { ApiError, assertResident, assertUuid, iso, num, text, type ApiContext, 
 import { type StockItem, type StockMovement } from "@/lib/medication-shared";
 import { DATE } from "./medication";
 import { medicationId } from "./medication-orders";
+import { witnessFor } from "./medication-btm";
 
 // -------------------------------------------------------------------- stock
 
@@ -12,7 +13,7 @@ export async function listStock({
 }: ApiContext): Promise<{ items: StockItem[]; movements: StockMovement[] }> {
   const [items, movements] = (await Promise.all([
     sql`
-      SELECT st.id, st.medication_id, m.name, COALESCE(m.strength, '') AS strength, COALESCE(m.form, '') AS form,
+      SELECT st.id, st.medication_id, m.name, COALESCE(m.strength, '') AS strength, COALESCE(m.form, '') AS form, m.is_controlled,
         CASE WHEN st.resident_id IS NOT NULL THEN r.first_name || ' ' || r.last_name ELSE COALESCE(cu.name, 'Ohne Wohnbereich') END AS owner,
         (st.resident_id IS NOT NULL) AS is_resident, COALESCE(st.storage_location, '') AS location, st.quantity, st.unit,
         st.minimum_quantity, to_char(st.expires_on, 'YYYY-MM-DD') AS expires_on, COALESCE(st.batch_number, '') AS batch, st.updated_at
@@ -49,6 +50,7 @@ export async function listStock({
       expiresOn: (row.expires_on as string | null) ?? null,
       batch: String(row.batch),
       updatedAt: iso(row.updated_at) ?? "",
+      controlled: Boolean(row.is_controlled),
     })),
     movements: movements.map(mapMovement),
   };
@@ -88,10 +90,11 @@ export async function recordMovement(
   delta: number,
   reason: StockMovement["reason"],
   note: string,
+  witnessId: string | null = null,
 ) {
   await ctx.sql`
-    INSERT INTO carecore_medication_stock_movements (id, organization_id, stock_id, medication_id, resident_id, delta, reason, note, created_by)
-    VALUES (${randomUUID()}, ${ctx.actor.organizationId}, ${stockId}, ${medId}, ${residentId}, ${delta}, ${reason}, ${note || null}, ${ctx.actor.id})`;
+    INSERT INTO carecore_medication_stock_movements (id, organization_id, stock_id, medication_id, resident_id, delta, reason, note, created_by, witness_user_id)
+    VALUES (${randomUUID()}, ${ctx.actor.organizationId}, ${stockId}, ${medId}, ${residentId}, ${delta}, ${reason}, ${note || null}, ${ctx.actor.id}, ${witnessId})`;
 }
 
 export const quantityValue = (value: unknown) =>
@@ -104,6 +107,11 @@ export async function receiveStock(ctx: ApiContext, body: Record<string, unknown
   const note = text(body.note, 1000);
   if (typeof body.stockId === "string") {
     const stockId = assertUuid(body.stockId, "Bestand");
+    const current =
+      (await ctx.sql`SELECT medication_id FROM carecore_medication_stock WHERE id = ${stockId} AND organization_id = ${ctx.actor.organizationId}`) as Row[];
+    if (!current[0]) throw new ApiError("Bestand nicht gefunden.", 404);
+    // Betäubungsmittel: Eingang nur mit Zweitunterschrift.
+    const witness = await witnessFor(ctx, String(current[0].medication_id), body.witness);
     const rows = (await ctx.sql`
       UPDATE carecore_medication_stock SET quantity = quantity + ${quantity}, updated_at = NOW()
       WHERE id = ${stockId} AND organization_id = ${ctx.actor.organizationId}
@@ -117,6 +125,7 @@ export async function receiveStock(ctx: ApiContext, body: Record<string, unknown
       quantity,
       "receipt",
       note,
+      witness?.id ?? null,
     );
     return stockId;
   }
@@ -135,6 +144,7 @@ export async function receiveStock(ctx: ApiContext, body: Record<string, unknown
   const expiresOn = typeof body.expiresOn === "string" && DATE.test(body.expiresOn) ? body.expiresOn : null;
   const minimum = typeof body.minimum === "number" && body.minimum >= 0 ? body.minimum : null;
   const medId = await medicationId(ctx, name, text(body.strength, 80), text(body.form, 80));
+  const witness = await witnessFor(ctx, medId, body.witness);
   const batch = text(body.batch, 100) || null;
   // Same medication, owner, batch and unit: add to the existing row instead of creating a duplicate.
   const existing = (await ctx.sql`
@@ -147,14 +157,32 @@ export async function receiveStock(ctx: ApiContext, body: Record<string, unknown
       LIMIT 1)
     RETURNING id`) as Row[];
   if (existing[0]) {
-    await recordMovement(ctx, String(existing[0].id), medId, residentId, quantity, "receipt", note);
+    await recordMovement(
+      ctx,
+      String(existing[0].id),
+      medId,
+      residentId,
+      quantity,
+      "receipt",
+      note,
+      witness?.id ?? null,
+    );
     return String(existing[0].id);
   }
   const id = randomUUID();
   await ctx.sql`
     INSERT INTO carecore_medication_stock (id, organization_id, care_unit_id, resident_id, medication_id, quantity, unit, minimum_quantity, expires_on, batch_number, storage_location)
     VALUES (${id}, ${ctx.actor.organizationId}, ${careUnitId}, ${residentId}, ${medId}, ${quantity}, ${unit}, ${minimum}, ${expiresOn}, ${batch}, ${text(body.location, 160) || null})`;
-  await recordMovement(ctx, id, medId, residentId, quantity, "receipt", note || "Neuer Bestand angelegt");
+  await recordMovement(
+    ctx,
+    id,
+    medId,
+    residentId,
+    quantity,
+    "receipt",
+    note || "Neuer Bestand angelegt",
+    witness?.id ?? null,
+  );
   return id;
 }
 
@@ -170,6 +198,8 @@ export async function correctStock(ctx: ApiContext, stockIdInput: unknown, body:
   if (!rows[0]) throw new ApiError("Bestand nicht gefunden.", 404);
   const delta = body.quantity - Number(rows[0].quantity);
   if (delta !== 0 && !note) throw new ApiError("Bitte einen Grund für die Bestandsänderung angeben.");
+  // Betäubungsmittel: Mengenänderungen (Korrektur, Entsorgung) nur mit Zweitunterschrift.
+  const witness = delta !== 0 ? await witnessFor(ctx, String(rows[0].medication_id), body.witness) : null;
   const expiresOn = typeof body.expiresOn === "string" && DATE.test(body.expiresOn) ? body.expiresOn : null;
   const minimum = typeof body.minimum === "number" && body.minimum >= 0 ? body.minimum : null;
   await ctx.sql`
@@ -185,5 +215,6 @@ export async function correctStock(ctx: ApiContext, stockIdInput: unknown, body:
       delta,
       reason,
       note,
+      witness?.id ?? null,
     );
 }
