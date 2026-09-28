@@ -13,6 +13,7 @@ export function useResidentsPage() {
   const [units, setUnits] = useState<string[]>([]);
   const [admissionsThisWeek, setAdmissionsThisWeek] = useState(0);
   const [unit, setUnit] = useState("Alle");
+  const [ownUnit, setOwnUnit] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<ResidentStatusFilter>("Alle");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -39,11 +40,8 @@ export function useResidentsPage() {
       const residentId = new URLSearchParams(window.location.search).get("resident");
       if (residentId) setSelectedResident(records.find((resident) => resident.id === residentId) ?? null);
       setUnits(data.units.map((item) => item.name));
-      setUnit(
-        data.primaryCareUnitName && data.units.some((item) => item.name === data.primaryCareUnitName)
-          ? data.primaryCareUnitName
-          : "Alle",
-      );
+      // Alle Bewohner sind sichtbar; die eigene Wohngruppe liefert die API zuerst.
+      setOwnUnit(data.primaryCareUnitName);
       const start = Date.now() - 7 * 86400000;
       setAdmissionsThisWeek(
         data.residents.filter((item) => item.admitted_on && new Date(item.admitted_on).getTime() >= start).length,
@@ -107,6 +105,7 @@ export function useResidentsPage() {
   return {
     query,
     setQuery,
+    ownUnit,
     residents,
     setResidents,
     units,

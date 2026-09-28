@@ -34,6 +34,11 @@ async function medsToday(ctx: ApiContext, residentId: string) {
 }
 
 // Master data, key figures and completeness of the record.
+// Das Änderungsprotokoll der Akte sieht nur die Leitung.
+export function canViewResidentAudit(actor: Parameters<typeof hasPermission>[0]) {
+  return hasPermission(actor, "team.manage") || hasPermission(actor, "administration.manage");
+}
+
 export async function recordSummary(ctx: ApiContext, residentIdInput: unknown): Promise<RecordSummary> {
   const residentId = await assertResident(ctx, residentIdInput);
   const [rows, vitals, documents, meds, staff] = await Promise.all([
@@ -107,6 +112,7 @@ export async function recordSummary(ctx: ApiContext, residentIdInput: unknown): 
     documentsCount: Number(documents[0]?.n ?? 0),
     staff,
     canWrite: hasPermission(ctx.actor, "residents.write"),
+    canViewAudit: canViewResidentAudit(ctx.actor),
   };
 }
 

@@ -230,7 +230,7 @@ export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
           </section>
         </aside>
       </div>
-      {resident.id && live.summary.data?.canWrite && <RecordAuditCard residentId={resident.id} />}
+      {resident.id && live.summary.data?.canViewAudit && <RecordAuditCard residentId={resident.id} />}
     </main>
   );
 }

@@ -17,6 +17,7 @@ export function ResidentDirectory({ r }: { r: ResidentsPageState }) {
     setSelectedResident,
     filteredResidents,
     residents,
+    ownUnit,
   } = r;
   const filtered = unit !== "Alle" || statusFilter !== "Alle" || Boolean(query);
   const activeFilters = Number(unit !== "Alle") + Number(statusFilter !== "Alle");
@@ -68,7 +69,12 @@ export function ResidentDirectory({ r }: { r: ResidentsPageState }) {
           <div className="resident-filter-group">
             <span>Wohnbereich</span>
             <div className="unit-filter" aria-label="Wohnbereich filtern">
-              {["Alle", ...units].map((label) => (
+              {[
+                "Alle",
+                ...(ownUnit && units.includes(ownUnit)
+                  ? [ownUnit, ...units.filter((item) => item !== ownUnit)]
+                  : units),
+              ].map((label) => (
                 <button
                   className={unit === label ? "active" : ""}
                   type="button"
@@ -129,7 +135,10 @@ export function ResidentDirectory({ r }: { r: ResidentsPageState }) {
                 <small>{resident.room}</small>
               </span>
             </span>
-            <span role="cell">{resident.unit}</span>
+            <span role="cell">
+              {resident.unit}
+              {ownUnit && resident.unit === ownUnit && <small className="resident-own-unit">Meine Wohngruppe</small>}
+            </span>
             <span role="cell">
               <strong>{resident.careLevel}</strong>
               <small>{resident.note}</small>
