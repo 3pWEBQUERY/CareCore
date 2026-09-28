@@ -6,7 +6,7 @@ import {
   assertUuid,
   iso,
   text,
-  writeAudit,
+  auditStatement,
   type ApiContext,
   type Row,
 } from "@/lib/api-context";
@@ -288,11 +288,13 @@ export async function generateDraft(ctx: ApiContext, body: Record<string, unknow
   if (!content) throw new ApiError("Die KI hat keinen Text geliefert. Bitte erneut versuchen.", 502);
 
   const id = randomUUID();
-  await ctx.sql`
+  await ctx.sql.transaction([
+    ctx.sql`
     INSERT INTO carecore_ai_drafts (id, organization_id, resident_id, care_unit_id, requested_by, type, prompt, content, model)
     VALUES (${id}, ${ctx.actor.organizationId}, ${residentId}, ${careUnitId}, ${ctx.actor.id}, ${task}, ${prompt || null},
-      ${content}, ${MODEL})`;
-  await writeAudit(ctx, "ai_draft", id, "created", null, { task, residentId, careUnitId });
+      ${content}, ${MODEL})`,
+    auditStatement(ctx, "ai_draft", id, "created", null, { task, residentId, careUnitId }),
+  ]);
   return mapDraft(await draftById(ctx, id));
 }
 
@@ -305,16 +307,22 @@ export async function reviewDraft(ctx: ApiContext, idInput: string, body: Record
     throw new ApiError("Der Entwurf wurde bereits bearbeitet.", 409);
   const action = String(body.action ?? "");
   const content = text(body.content, 10000) || String(before.content);
-  if (action === "discard") {
-    await ctx.sql`
-      UPDATE carecore_ai_drafts SET status = 'discarded', reviewed_by = ${ctx.actor.id}, reviewed_at = NOW(), updated_at = NOW()
-      WHERE id = ${id}`;
-  } else if (action === "save") {
-    await ctx.sql`
-      UPDATE carecore_ai_drafts SET content = ${content}, status = 'reviewed', reviewed_by = ${ctx.actor.id}, reviewed_at = NOW(),
-        updated_at = NOW()
-      WHERE id = ${id}`;
-  } else if (action === "accept") {
+  if (action !== "discard" && action !== "save" && action !== "accept") throw new ApiError("Aktion ist ungültig.");
+  const status = action === "accept" ? "accepted" : action === "discard" ? "discarded" : "reviewed";
+  // Status und Protokoll in einer Anweisung; nur ein noch offener Entwurf ändert sich. So entsteht auch bei
+  // doppeltem Klick auf „Übernehmen“ nur ein Eintrag.
+  const claimed = (await ctx.sql`
+    WITH changed AS (
+      UPDATE carecore_ai_drafts SET content = ${action === "discard" ? String(before.content) : content}, status = ${status},
+        reviewed_by = ${ctx.actor.id}, reviewed_at = NOW(), updated_at = NOW()
+      WHERE id = ${id} AND status NOT IN ('accepted', 'discarded')
+      RETURNING id)
+    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, before_data, after_data)
+    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'ai_draft', changed.id, ${status},
+      ${JSON.stringify({ status: before.status })}::jsonb, ${JSON.stringify({ status: action })}::jsonb
+    FROM changed RETURNING entity_id`) as Row[];
+  if (!claimed[0]) throw new ApiError("Der Entwurf wurde bereits bearbeitet.", 409);
+  if (action === "accept") {
     let savedType: string | null = null;
     let savedId: string | null = null;
     if (before.type === "documentation" && before.resident_id) {
@@ -332,20 +340,10 @@ export async function reviewDraft(ctx: ApiContext, idInput: string, body: Record
       });
       savedType = "handover";
     }
-    await ctx.sql`
-      UPDATE carecore_ai_drafts SET content = ${content}, status = 'accepted', reviewed_by = ${ctx.actor.id},
-        reviewed_at = NOW(), saved_entity_type = ${savedType}, saved_entity_id = ${savedId}, updated_at = NOW()
-      WHERE id = ${id}`;
-  } else throw new ApiError("Aktion ist ungültig.");
-  await writeAudit(
-    ctx,
-    "ai_draft",
-    id,
-    action === "accept" ? "accepted" : action === "discard" ? "discarded" : "reviewed",
-    {
-      status: before.status,
-    },
-    { status: action },
-  );
+    if (savedId)
+      await ctx.sql`
+        UPDATE carecore_ai_drafts SET saved_entity_type = ${savedType}, saved_entity_id = ${savedId}, updated_at = NOW()
+        WHERE id = ${id}`;
+  }
   return mapDraft(await draftById(ctx, id));
 }

@@ -21,7 +21,7 @@ const quality = (ctx: ApiContext): ApiContext => ({
 const form = (fields: Record<string, string>) => {
   const data = new FormData();
   for (const [key, value] of Object.entries(fields)) data.set(key, value);
-  data.set("file", new File([new Uint8Array([0x25, 0x50, 0x44, 0x46])], "standard.pdf", { type: "application/pdf" }));
+  data.set("file", new File([new TextEncoder().encode("%PDF-1.4\n")], "standard.pdf", { type: "application/pdf" }));
   return data;
 };
 
@@ -44,6 +44,13 @@ test("Standards: je Dokument nur eine Folgeversion, nie zwei gültige Fassungen"
     403,
     "Standards veröffentlicht das Qualitätsmanagement",
   );
+  // Der Inhalt muss zum Dateityp passen: eine HTML-Seite als „PDF“ wird abgelehnt.
+  const disguised = new FormData();
+  disguised.set("kind", "standard");
+  disguised.set("title", title);
+  disguised.set("category", "Pflegestandard");
+  disguised.set("file", new File(["<html><script>alert(1)</script>"], "standard.pdf", { type: "application/pdf" }));
+  assert.equal((await failure(createDocument(lead, disguised))).status, 415);
   const v1 = await createDocument(
     lead,
     form({ kind: "standard", title, category: "Pflegestandard", requiresAck: "true" }),

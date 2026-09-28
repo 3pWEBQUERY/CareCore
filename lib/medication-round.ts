@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ApiError, assertUuid, iso, num, text, writeAudit, type ApiContext, type Row } from "@/lib/api-context";
+import { ApiError, assertUuid, iso, num, text, type ApiContext, type Row } from "@/lib/api-context";
 import {
   ADMINISTRATION_STATUSES,
   ROUNDS,
@@ -108,20 +108,20 @@ export async function documentScheduledDose(ctx: ApiContext, body: Record<string
     throw new ApiError("Für diesen Zeitpunkt ist keine Gabe verordnet oder sie liegt zu weit in der Zukunft.", 409);
   const before =
     await ctx.sql`SELECT id, status, administered_at, administered_by, note FROM carecore_medication_administrations WHERE medication_order_id = ${orderId} AND scheduled_at = ${scheduledAt}`;
+  // Gabe und Protokoll (mit Bewohnerbezug für die Akte) in einer Anweisung.
+  const auditBefore = before[0] ? JSON.stringify({ residentId: valid[0].resident_id, ...before[0] }) : null;
+  const auditAfter = JSON.stringify({ residentId: valid[0].resident_id, status, note: note || null, scheduledAt });
   const rows = await ctx.sql`
-    INSERT INTO carecore_medication_administrations (id, medication_order_id, resident_id, scheduled_at, administered_at, administered_by, status, note)
-    VALUES (${randomUUID()}, ${orderId}, ${valid[0].resident_id}, ${scheduledAt}, ${status === "administered" ? new Date().toISOString() : null}, ${ctx.actor.id}, ${status}, ${note || null})
-    ON CONFLICT (medication_order_id, scheduled_at) DO UPDATE
-      SET status = EXCLUDED.status, administered_at = EXCLUDED.administered_at, administered_by = EXCLUDED.administered_by, note = EXCLUDED.note, updated_at = NOW()
-    RETURNING id`;
-  await writeAudit(
-    ctx,
-    "medication_administration",
-    String(rows[0].id),
-    before[0] ? "corrected" : "documented",
-    before[0] ?? null,
-    { status, note: note || null, scheduledAt },
-  );
+    WITH dose AS (
+      INSERT INTO carecore_medication_administrations (id, medication_order_id, resident_id, scheduled_at, administered_at, administered_by, status, note)
+      VALUES (${randomUUID()}, ${orderId}, ${valid[0].resident_id}, ${scheduledAt}, ${status === "administered" ? new Date().toISOString() : null}, ${ctx.actor.id}, ${status}, ${note || null})
+      ON CONFLICT (medication_order_id, scheduled_at) DO UPDATE
+        SET status = EXCLUDED.status, administered_at = EXCLUDED.administered_at, administered_by = EXCLUDED.administered_by, note = EXCLUDED.note, updated_at = NOW()
+      RETURNING id)
+    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, before_data, after_data)
+    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'medication_administration', dose.id,
+      ${before[0] ? "corrected" : "documented"}, ${auditBefore}::jsonb, ${auditAfter}::jsonb
+    FROM dose RETURNING entity_id AS id`;
   const quantity = num(((valid[0].dosage ?? {}) as Record<string, unknown>).quantity);
   return syncDoseStock(ctx, String(rows[0].id), valid[0], quantity, status);
 }
@@ -256,18 +256,20 @@ export async function administerPrn(ctx: ApiContext, body: Record<string, unknow
       SELECT ${administrationId}, ${orderId}, ${order.resident_id}, date_trunc('second', NOW()), NOW(), ${ctx.actor.id}, 'administered', ${note} FROM s
       RETURNING id
     )
-    INSERT INTO carecore_medication_stock_movements (id, organization_id, stock_id, medication_id, resident_id, administration_id, delta, reason, note, created_by)
-    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, s.id, s.medication_id, ${order.resident_id}, a.id, ${-quantity}, 'administration', ${note}, ${ctx.actor.id}
-    FROM s CROSS JOIN a
+    , m AS (
+      INSERT INTO carecore_medication_stock_movements (id, organization_id, stock_id, medication_id, resident_id, administration_id, delta, reason, note, created_by)
+      SELECT ${randomUUID()}, ${ctx.actor.organizationId}, s.id, s.medication_id, ${order.resident_id}, a.id, ${-quantity}, 'administration', ${note}, ${ctx.actor.id}
+      FROM s CROSS JOIN a
+      RETURNING id
+    )
+    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
+    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'medication_administration', ${administrationId}, 'prn_administered',
+      ${JSON.stringify({ residentId: order.resident_id, orderId, quantity, note })}::jsonb
+    FROM m
     RETURNING id`) as Row[];
   if (!result[0])
     throw new ApiError(
       "Die Gabe wurde gerade anderweitig dokumentiert oder der Bestand hat sich geändert. Bitte neu laden.",
       409,
     );
-  await writeAudit(ctx, "medication_administration", administrationId, "prn_administered", null, {
-    orderId,
-    quantity,
-    note,
-  });
 }

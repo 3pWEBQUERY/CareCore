@@ -5,7 +5,7 @@ import {
   assertUuid,
   iso,
   text,
-  writeAudit,
+  auditStatement,
   type ApiContext,
   type Row,
 } from "@/lib/api-context";
@@ -170,17 +170,19 @@ export async function amendEntry(ctx: ApiContext, entryIdInput: unknown, body: R
       ? body.importance
       : String(original.importance);
   const id = randomUUID();
-  await ctx.sql`
+  await ctx.sql.transaction([
+    ctx.sql`
     INSERT INTO carecore_documentation_entries (id, resident_id, care_unit_id, author_user_id, category, title, body, occurred_at, importance, metadata, amended_from_id)
     VALUES (${id}, ${original.resident_id}, ${original.care_unit_id}, ${ctx.actor.id}, ${original.category}, ${original.category}, ${content},
-      ${iso(original.occurred_at)}, ${importance}, ${JSON.stringify({ amendReason: reason })}::jsonb, ${originalId})`;
-  await writeAudit(
-    ctx,
-    "documentation_entry",
-    id,
-    "amended",
-    { id: originalId, body: original.body },
-    { body: content, reason },
-  );
+      ${iso(original.occurred_at)}, ${importance}, ${JSON.stringify({ amendReason: reason })}::jsonb, ${originalId})`,
+    auditStatement(
+      ctx,
+      "documentation_entry",
+      id,
+      "amended",
+      { id: originalId, body: original.body },
+      { body: content, reason },
+    ),
+  ]);
   return id;
 }

@@ -5,7 +5,7 @@ import {
   assertUuid,
   iso,
   text,
-  writeAudit,
+  auditStatement,
   type ApiContext,
   type Row,
 } from "@/lib/api-context";
@@ -213,8 +213,8 @@ export async function createNote(ctx: ApiContext, body: Record<string, unknown>)
       VALUES (${id}, ${ctx.actor.organizationId}, ${careUnitId}, ${residentId}, ${ctx.actor.id}, ${content}, ${priority})`,
     // The author has obviously read the own note.
     ctx.sql`INSERT INTO carecore_handover_reads (handover_id, user_id) VALUES (${id}, ${ctx.actor.id})`,
+    auditStatement(ctx, "handover", id, "created", null, { residentId, careUnitId, priority }),
   ]);
-  await writeAudit(ctx, "handover", id, "created", null, { residentId, careUnitId, priority });
   return id;
 }
 

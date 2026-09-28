@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ApiError, assertUuid, num, text, writeAudit, type ApiContext, type Row } from "@/lib/api-context";
+import { ApiError, assertUuid, num, text, auditStatement, type ApiContext, type Row } from "@/lib/api-context";
 import { TRAINING_CATEGORIES, TRAINING_FORMATS, type TrainingFormat } from "@/lib/learning-shared";
 import { requireManage, loadTraining, DATE, TIME, orgToday, notify } from "./learning";
 
@@ -44,12 +44,14 @@ export async function createTraining(ctx: ApiContext, body: Record<string, unkno
   requireManage(ctx);
   const t = parseTraining(body, await roleKeys(ctx));
   const id = randomUUID();
-  await ctx.sql`
+  await ctx.sql.transaction([
+    ctx.sql`
     INSERT INTO carecore_trainings (id, organization_id, title, description, category, format, duration_minutes, mandatory,
       valid_for_months, link_url, required_roles, created_by)
     VALUES (${id}, ${ctx.actor.organizationId}, ${t.title}, ${t.description}, ${t.category}, ${t.format}, ${t.duration},
-      ${t.mandatory}, ${t.validFor}, ${t.link}, ${JSON.stringify(t.roles)}::jsonb, ${ctx.actor.id})`;
-  await writeAudit(ctx, "training", id, "created", null, t);
+      ${t.mandatory}, ${t.validFor}, ${t.link}, ${JSON.stringify(t.roles)}::jsonb, ${ctx.actor.id})`,
+    auditStatement(ctx, "training", id, "created", null, t),
+  ]);
   return id;
 }
 
@@ -57,17 +59,21 @@ export async function updateTraining(ctx: ApiContext, idInput: unknown, body: Re
   requireManage(ctx);
   const before = await loadTraining(ctx, idInput);
   if (body.action === "archive") {
-    await ctx.sql`UPDATE carecore_trainings SET active = FALSE, updated_at = NOW() WHERE id = ${before.id as string}`;
-    await writeAudit(ctx, "training", String(before.id), "archived", null, null);
+    await ctx.sql.transaction([
+      ctx.sql`UPDATE carecore_trainings SET active = FALSE, updated_at = NOW() WHERE id = ${before.id as string}`,
+      auditStatement(ctx, "training", String(before.id), "archived", null, null),
+    ]);
     return;
   }
   const t = parseTraining(body, await roleKeys(ctx));
-  await ctx.sql`
+  await ctx.sql.transaction([
+    ctx.sql`
     UPDATE carecore_trainings SET title = ${t.title}, description = ${t.description}, category = ${t.category},
       format = ${t.format}, duration_minutes = ${t.duration}, mandatory = ${t.mandatory}, valid_for_months = ${t.validFor},
       link_url = ${t.link}, required_roles = ${JSON.stringify(t.roles)}::jsonb, updated_at = NOW()
-    WHERE id = ${before.id as string}`;
-  await writeAudit(ctx, "training", String(before.id), "updated", before, t);
+    WHERE id = ${before.id as string}`,
+    auditStatement(ctx, "training", String(before.id), "updated", before, t),
+  ]);
 }
 
 export async function addSession(ctx: ApiContext, trainingIdInput: unknown, body: Record<string, unknown>) {
@@ -82,17 +88,19 @@ export async function addSession(ctx: ApiContext, trainingIdInput: unknown, body
   if (capacity !== null && (!Number.isInteger(capacity) || capacity < 1 || capacity > 500))
     throw new ApiError("Die Platzzahl muss zwischen 1 und 500 liegen.");
   const id = randomUUID();
-  await ctx.sql`
+  await ctx.sql.transaction([
+    ctx.sql`
     INSERT INTO carecore_training_sessions (id, training_id, starts_at, ends_at, location, capacity)
     SELECT ${id}, ${training.id as string}, (${body.date}::date + ${start}::time) AT TIME ZONE timezone,
       (${body.date}::date + ${end}::time) AT TIME ZONE timezone, ${text(body.location, 180) || null}, ${capacity}
-    FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}`;
-  await writeAudit(ctx, "training_session", id, "created", null, {
-    trainingId: training.id,
-    date: body.date,
-    start,
-    end,
-  });
+    FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}`,
+    auditStatement(ctx, "training_session", id, "created", null, {
+      trainingId: training.id,
+      date: body.date,
+      start,
+      end,
+    }),
+  ]);
   return id;
 }
 
@@ -105,8 +113,10 @@ export async function cancelSession(ctx: ApiContext, sessionIdInput: unknown) {
   if (!rows[0]) throw new ApiError("Termin nicht gefunden.", 404);
   const affected = (await ctx.sql`
     UPDATE carecore_training_enrollments SET session_id = NULL, updated_at = NOW() WHERE session_id = ${id} RETURNING user_id`) as Row[];
-  await ctx.sql`UPDATE carecore_training_sessions SET cancelled_at = NOW() WHERE id = ${id}`;
-  await writeAudit(ctx, "training_session", id, "cancelled", null, { affected: affected.length });
+  await ctx.sql.transaction([
+    ctx.sql`UPDATE carecore_training_sessions SET cancelled_at = NOW() WHERE id = ${id}`,
+    auditStatement(ctx, "training_session", id, "cancelled", null, { affected: affected.length }),
+  ]);
   for (const row of affected)
     await notify(
       ctx,

@@ -1,16 +1,7 @@
 import { randomUUID } from "node:crypto";
-import {
-  ApiError,
-  assertResident,
-  assertUuid,
-  iso,
-  num,
-  text,
-  writeAudit,
-  type ApiContext,
-  type Row,
-} from "@/lib/api-context";
+import { ApiError, assertResident, assertUuid, iso, num, text, type ApiContext, type Row } from "@/lib/api-context";
 import { initials, type MedOrder, type MedResident, type OrderInput } from "@/lib/medication-shared";
+import { residentAudit } from "@/lib/resident-audit";
 import { TIME, DATE } from "./medication";
 
 export function parseOrderInput(body: Record<string, unknown>): OrderInput {
@@ -113,10 +104,17 @@ export async function updateMedicationAllergies(ctx: ApiContext, residentId: unk
   const id = await assertResident(ctx, residentId);
   const value = text(allergies, 1000);
   const before = await ctx.sql`SELECT medication_allergies FROM carecore_residents WHERE id = ${id}`;
-  await ctx.sql`UPDATE carecore_residents SET medication_allergies = ${value || null}, updated_at = NOW() WHERE id = ${id}`;
-  await writeAudit(ctx, "resident", id, "medication_allergies_updated", before[0] ?? null, {
-    medication_allergies: value || null,
-  });
+  await ctx.sql.transaction([
+    ctx.sql`UPDATE carecore_residents SET medication_allergies = ${value || null}, updated_at = NOW() WHERE id = ${id}`,
+    residentAudit(ctx.sql, ctx.actor, {
+      residentId: id,
+      entityType: "resident",
+      entityId: id,
+      action: "medication_allergies_updated",
+      before: (before[0] as Record<string, unknown> | undefined) ?? null,
+      after: { medication_allergies: value || null },
+    }),
+  ]);
   return value || null;
 }
 
@@ -211,11 +209,19 @@ export async function createOrder(ctx: ApiContext, residentIdInput: unknown, inp
   const medId = await medicationId(ctx, input.name, input.strength, input.form);
   const { dosage, schedule } = orderJson(input);
   const id = randomUUID();
-  await ctx.sql`
-    INSERT INTO carecore_medication_orders (id, resident_id, medication_id, prescribed_by, indication, dosage, route, schedule, is_prn, prn_instructions, start_on, end_on, status, created_by)
-    VALUES (${id}, ${residentId}, ${medId}, ${input.prescribedBy}, ${input.indication || null}, ${dosage}::jsonb, ${input.route}, ${schedule}::jsonb,
-      ${input.isPrn}, ${input.prnInstructions || null}, ${input.startOn}, ${input.endOn}, 'active', ${ctx.actor.id})`;
-  await writeAudit(ctx, "medication_order", id, "created", null, { residentId, ...input });
+  await ctx.sql.transaction([
+    ctx.sql`
+      INSERT INTO carecore_medication_orders (id, resident_id, medication_id, prescribed_by, indication, dosage, route, schedule, is_prn, prn_instructions, start_on, end_on, status, created_by)
+      VALUES (${id}, ${residentId}, ${medId}, ${input.prescribedBy}, ${input.indication || null}, ${dosage}::jsonb, ${input.route}, ${schedule}::jsonb,
+        ${input.isPrn}, ${input.prnInstructions || null}, ${input.startOn}, ${input.endOn}, 'active', ${ctx.actor.id})`,
+    residentAudit(ctx.sql, ctx.actor, {
+      residentId,
+      entityType: "medication_order",
+      entityId: id,
+      action: "created",
+      after: { ...input },
+    }),
+  ]);
   return id;
 }
 
@@ -237,12 +243,21 @@ export async function updateOrder(ctx: ApiContext, orderId: unknown, input: Orde
     throw new ApiError("Regel- und Reservemedikation können nicht ineinander umgewandelt werden.");
   const medId = await medicationId(ctx, input.name, input.strength, input.form);
   const { dosage, schedule } = orderJson(input);
-  await ctx.sql`
-    UPDATE carecore_medication_orders SET medication_id = ${medId}, prescribed_by = ${input.prescribedBy}, indication = ${input.indication || null},
-      dosage = ${dosage}::jsonb, route = ${input.route}, schedule = ${schedule}::jsonb, prn_instructions = ${input.prnInstructions || null},
-      start_on = ${input.startOn}, end_on = ${input.endOn}, updated_at = NOW()
-    WHERE id = ${before.id}`;
-  await writeAudit(ctx, "medication_order", String(before.id), "updated", before, input);
+  await ctx.sql.transaction([
+    ctx.sql`
+      UPDATE carecore_medication_orders SET medication_id = ${medId}, prescribed_by = ${input.prescribedBy}, indication = ${input.indication || null},
+        dosage = ${dosage}::jsonb, route = ${input.route}, schedule = ${schedule}::jsonb, prn_instructions = ${input.prnInstructions || null},
+        start_on = ${input.startOn}, end_on = ${input.endOn}, updated_at = NOW()
+      WHERE id = ${before.id}`,
+    residentAudit(ctx.sql, ctx.actor, {
+      residentId: String(before.resident_id),
+      entityType: "medication_order",
+      entityId: String(before.id),
+      action: "updated",
+      before,
+      after: { ...input },
+    }),
+  ]);
 }
 
 export async function setOrderStatus(ctx: ApiContext, orderId: unknown, status: unknown, reason: unknown) {
@@ -252,16 +267,19 @@ export async function setOrderStatus(ctx: ApiContext, orderId: unknown, status: 
   const before = await loadOrderForUpdate(ctx, orderId);
   if (before.status === "stopped" || before.status === "completed")
     throw new ApiError("Die Verordnung ist bereits abgesetzt.", 409);
-  await ctx.sql`
+  if (before.status === status) return;
+  await ctx.sql.transaction([
+    ctx.sql`
     UPDATE carecore_medication_orders
     SET status = ${status}, end_on = CASE WHEN ${status} = 'stopped' THEN LEAST(COALESCE(end_on, (SELECT (NOW() AT TIME ZONE timezone)::date FROM carecore_organizations WHERE id = ${ctx.actor.organizationId})), (SELECT (NOW() AT TIME ZONE timezone)::date FROM carecore_organizations WHERE id = ${ctx.actor.organizationId})) ELSE end_on END, updated_at = NOW()
-    WHERE id = ${before.id}`;
-  await writeAudit(
-    ctx,
-    "medication_order",
-    String(before.id),
-    `status_${status}`,
-    { status: before.status },
-    { status, reason: note || null },
-  );
+    WHERE id = ${before.id}`,
+    residentAudit(ctx.sql, ctx.actor, {
+      residentId: String(before.resident_id),
+      entityType: "medication_order",
+      entityId: String(before.id),
+      action: `status_${status}`,
+      before: { status: before.status },
+      after: { status, reason: note || null },
+    }),
+  ]);
 }

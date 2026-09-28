@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ApiError, assertUuid, iso, text, writeAudit, type ApiContext, type Row } from "@/lib/api-context";
+import { ApiError, assertUuid, iso, text, auditStatement, type ApiContext, type Row } from "@/lib/api-context";
 import { listCareUnits } from "@/lib/medication";
 import { hasPermission } from "@/lib/server-data";
 import {
@@ -195,12 +195,12 @@ export async function createPost(ctx: ApiContext, body: Record<string, unknown>)
       VALUES (${id}, ${ctx.actor.organizationId}, ${channel.id}, ${ctx.actor.id}, ${post.title}, ${post.content},
         ${post.importance}, ${pinned}, ${post.requiresAck})`,
     ctx.sql`INSERT INTO carecore_post_reads (post_id, user_id, acknowledged_at) VALUES (${id}, ${ctx.actor.id}, NOW())`,
+    auditStatement(ctx, "team_post", id, "created", null, {
+      channelId: channel.id,
+      title: post.title,
+      importance: post.importance,
+    }),
   ]);
-  await writeAudit(ctx, "team_post", id, "created", null, {
-    channelId: channel.id,
-    title: post.title,
-    importance: post.importance,
-  });
   if (post.importance === "critical" || post.requiresAck)
     await notifyAudience(
       ctx,
@@ -224,25 +224,34 @@ export async function postAction(ctx: ApiContext, postIdInput: unknown, body: Re
 
   if (body.action === "read" || body.action === "ack") {
     const ack = body.action === "ack";
-    await sql`
-      INSERT INTO carecore_post_reads (post_id, user_id, acknowledged_at) VALUES (${postId}, ${actor.id}, ${ack ? new Date().toISOString() : null})
-      ON CONFLICT (post_id, user_id) DO UPDATE SET acknowledged_at = COALESCE(carecore_post_reads.acknowledged_at, EXCLUDED.acknowledged_at)`;
-    if (ack) await writeAudit(ctx, "team_post", postId, "acknowledged", null, null);
+    // Die Bestätigung wird nur beim ersten Mal protokolliert.
+    const [read] = (await sql`
+      SELECT acknowledged_at FROM carecore_post_reads WHERE post_id = ${postId} AND user_id = ${actor.id}`) as Row[];
+    await sql.transaction([
+      sql`
+        INSERT INTO carecore_post_reads (post_id, user_id, acknowledged_at) VALUES (${postId}, ${actor.id}, ${ack ? new Date().toISOString() : null})
+        ON CONFLICT (post_id, user_id) DO UPDATE SET acknowledged_at = COALESCE(carecore_post_reads.acknowledged_at, EXCLUDED.acknowledged_at)`,
+      ...(ack && !read?.acknowledged_at ? [auditStatement(ctx, "team_post", postId, "acknowledged", null, null)] : []),
+    ]);
     return;
   }
   if (body.action === "edit") {
     if (!own) throw new ApiError("Nur die verfassende Person kann den Beitrag bearbeiten.", 403);
     const next = parsePost(body);
-    await sql`
+    await sql.transaction([
+      sql`
       UPDATE carecore_posts SET title = ${next.title}, body = ${next.content}, importance = ${next.importance},
-        requires_ack = ${next.requiresAck}, edited_at = NOW() WHERE id = ${postId}`;
-    await writeAudit(ctx, "team_post", postId, "edited", { title: post.title, body: post.body }, next);
+        requires_ack = ${next.requiresAck}, edited_at = NOW() WHERE id = ${postId}`,
+      auditStatement(ctx, "team_post", postId, "edited", { title: post.title, body: post.body }, next),
+    ]);
     return;
   }
   if (body.action === "pin" || body.action === "unpin") {
     if (!canManage(ctx)) throw new ApiError("Nur die Leitung kann Beiträge anheften.", 403);
-    await sql`UPDATE carecore_posts SET pinned = ${body.action === "pin"} WHERE id = ${postId}`;
-    await writeAudit(ctx, "team_post", postId, body.action === "pin" ? "pinned" : "unpinned", null, null);
+    await sql.transaction([
+      sql`UPDATE carecore_posts SET pinned = ${body.action === "pin"} WHERE id = ${postId}`,
+      auditStatement(ctx, "team_post", postId, body.action === "pin" ? "pinned" : "unpinned", null, null),
+    ]);
     return;
   }
   if (body.action === "archive") {
@@ -250,9 +259,11 @@ export async function postAction(ctx: ApiContext, postIdInput: unknown, body: Re
       throw new ApiError("Nur die verfassende Person oder die Leitung kann archivieren.", 403);
     const reason = text(body.reason, 1000);
     if (!reason) throw new ApiError("Bitte einen Grund angeben.");
-    await sql`
-      UPDATE carecore_posts SET archived_at = NOW(), archived_by = ${actor.id}, archive_reason = ${reason} WHERE id = ${postId}`;
-    await writeAudit(ctx, "team_post", postId, "archived", null, { reason });
+    await sql.transaction([
+      sql`
+      UPDATE carecore_posts SET archived_at = NOW(), archived_by = ${actor.id}, archive_reason = ${reason} WHERE id = ${postId}`,
+      auditStatement(ctx, "team_post", postId, "archived", null, { reason }),
+    ]);
     return;
   }
   throw new ApiError("Unbekannte Aktion.");
@@ -303,8 +314,8 @@ export async function createChannel(ctx: ApiContext, body: Record<string, unknow
       SELECT ${id}, p.user_id FROM carecore_user_profiles p JOIN carecore_users u ON u.id = p.user_id AND u.active
       WHERE ${careUnitId}::uuid IS NOT NULL AND p.primary_care_unit_id = ${careUnitId}::uuid
       ON CONFLICT DO NOTHING`,
+    auditStatement(ctx, "team_channel", id, "created", null, { name, color, careUnitId }),
   ]);
-  await writeAudit(ctx, "team_channel", id, "created", null, { name, color, careUnitId });
   return id;
 }
 
@@ -321,8 +332,10 @@ export async function channelAction(ctx: ApiContext, channelIdInput: unknown, bo
   }
   if (body.action === "archive") {
     if (!canManage(ctx)) throw new ApiError("Nur die Leitung kann Kanäle archivieren.", 403);
-    await ctx.sql`UPDATE carecore_channels SET archived_at = NOW() WHERE id = ${channel.id}`;
-    await writeAudit(ctx, "team_channel", channel.id, "archived", null, null);
+    await ctx.sql.transaction([
+      ctx.sql`UPDATE carecore_channels SET archived_at = NOW() WHERE id = ${channel.id}`,
+      auditStatement(ctx, "team_channel", channel.id, "archived", null, null),
+    ]);
     return;
   }
   throw new ApiError("Unbekannte Aktion.");

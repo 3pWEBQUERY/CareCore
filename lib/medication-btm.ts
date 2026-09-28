@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { authenticate, isLoginThrottled, recordFailedLogin } from "./auth";
-import { ApiError, assertUuid, iso, text, writeAudit, type ApiContext, type Row } from "./api-context";
+import { ApiError, assertUuid, iso, text, type ApiContext, type Row } from "./api-context";
 import type { BtmBook, BtmBookEntry, BtmOverview } from "./medication-btm-shared";
 import { readSettings } from "./settings";
 
@@ -261,21 +261,20 @@ export async function countStock(ctx: ApiContext, stockIdInput: unknown, body: R
       FROM updated WHERE ${delta !== 0}
       RETURNING id
     )
-    INSERT INTO carecore_btm_counts (id, organization_id, stock_id, medication_id, expected_quantity, counted_quantity, note, movement_id, counted_by, witness_user_id)
-    SELECT ${countId}, ${ctx.actor.organizationId}, ${stockId}, ${stock.medication_id}, ${expected}, ${counted}, ${note || null},
-      (SELECT id FROM booked), ${ctx.actor.id}, ${witness.id}
-    FROM updated
+    , counted AS (
+      INSERT INTO carecore_btm_counts (id, organization_id, stock_id, medication_id, expected_quantity, counted_quantity, note, movement_id, counted_by, witness_user_id)
+      SELECT ${countId}, ${ctx.actor.organizationId}, ${stockId}, ${stock.medication_id}, ${expected}, ${counted}, ${note || null},
+        (SELECT id FROM booked), ${ctx.actor.id}, ${witness.id}
+      FROM updated
+      RETURNING id
+    )
+    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
+    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'btm_count', counted.id, 'counted',
+      ${JSON.stringify({ stockId, expected, counted, difference: delta, note: note || null, witness: witness.name })}::jsonb
+    FROM counted
     RETURNING id`) as Row[];
   if (!result[0])
     throw new ApiError("Der Bestand hat sich während der Kontrolle verändert. Bitte neu laden und erneut zählen.", 409);
-  await writeAudit(ctx, "btm_count", countId, "counted", null, {
-    stockId,
-    expected,
-    counted,
-    difference: delta,
-    note: note || null,
-    witness: witness.name,
-  });
   return { difference: delta, witness: witness.name };
 }
 
@@ -286,20 +285,22 @@ export async function setControlled(ctx: ApiContext, medicationIdInput: unknown,
   const reason = text(body.reason, 500);
   if (!controlled && !reason)
     throw new ApiError("Bitte begründen, warum das Präparat nicht mehr als BtM geführt wird.");
+  // Kennzeichnung und Protokoll in einer Anweisung.
   const rows = (await ctx.sql`
-    UPDATE carecore_medications SET is_controlled = ${controlled}, updated_at = NOW()
-    WHERE id = ${medicationId} AND organization_id = ${ctx.actor.organizationId} AND is_controlled IS DISTINCT FROM ${controlled}
-    RETURNING id, name`) as Row[];
+    WITH marked AS (
+      UPDATE carecore_medications SET is_controlled = ${controlled}, updated_at = NOW()
+      WHERE id = ${medicationId} AND organization_id = ${ctx.actor.organizationId} AND is_controlled IS DISTINCT FROM ${controlled}
+      RETURNING id, name)
+    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
+    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'medication', marked.id,
+      ${controlled ? "btm_marked" : "btm_unmarked"}, jsonb_build_object('name', marked.name, 'reason', ${reason || null}::text)
+    FROM marked RETURNING entity_id`) as Row[];
   if (!rows[0]) {
     const exists =
       await ctx.sql`SELECT 1 FROM carecore_medications WHERE id = ${medicationId} AND organization_id = ${ctx.actor.organizationId}`;
     if (!exists[0]) throw new ApiError("Präparat nicht gefunden.", 404);
     return;
   }
-  await writeAudit(ctx, "medication", medicationId, controlled ? "btm_marked" : "btm_unmarked", null, {
-    name: rows[0].name,
-    reason: reason || null,
-  });
 }
 
 // Entsorgung eines Betäubungsmittels (z. B. verfallen, beschädigt): Menge und Grund mit Zweitunterschrift.

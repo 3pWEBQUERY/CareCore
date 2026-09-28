@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { ApiError, assertUuid, iso, num, text, writeAudit, type ApiContext, type Row } from "@/lib/api-context";
+import { ApiError, assertUuid, iso, num, text, auditStatement, type ApiContext, type Row } from "@/lib/api-context";
+import { notifyStatements } from "@/lib/notify";
 import { storeFile } from "@/lib/files";
 import { CERTIFICATE_TYPES } from "@/lib/learning-shared";
 import {
@@ -34,14 +35,16 @@ export async function enroll(ctx: ApiContext, body: Record<string, unknown>) {
   const training = await loadTraining(ctx, body.trainingId);
   if (!training.active) throw new ApiError("Diese Schulung wird nicht mehr angeboten.", 409);
   const sessionId = await checkSession(ctx, String(training.id), body.sessionId);
-  await ctx.sql`
+  await ctx.sql.transaction([
+    ctx.sql`
     INSERT INTO carecore_training_enrollments (id, training_id, user_id, status, session_id)
     VALUES (${randomUUID()}, ${training.id as string}, ${ctx.actor.id}, 'assigned', ${sessionId})
     ON CONFLICT (training_id, user_id) DO UPDATE SET session_id = EXCLUDED.session_id,
       status = CASE WHEN carecore_training_enrollments.status = 'completed' THEN 'assigned' ELSE carecore_training_enrollments.status END,
       progress = CASE WHEN carecore_training_enrollments.status = 'completed' THEN 0 ELSE carecore_training_enrollments.progress END,
-      updated_at = NOW()`;
-  await writeAudit(ctx, "training_enrollment", String(training.id), "enrolled", null, { sessionId });
+      updated_at = NOW()`,
+    auditStatement(ctx, "training_enrollment", String(training.id), "enrolled", null, { sessionId }),
+  ]);
 }
 
 export async function assignTraining(ctx: ApiContext, trainingIdInput: unknown, body: Record<string, unknown>) {
@@ -54,8 +57,9 @@ export async function assignTraining(ctx: ApiContext, trainingIdInput: unknown, 
     ? [...new Set(body.userIds.filter((id): id is string => typeof id === "string" && people.has(id)))]
     : [];
   if (!userIds.length) throw new ApiError("Bitte mindestens eine Person wählen.");
-  await ctx.sql.transaction(
-    userIds.map(
+  // Zuweisung, Protokoll und Benachrichtigungen gemeinsam.
+  await ctx.sql.transaction([
+    ...userIds.map(
       (userId) => ctx.sql`
         INSERT INTO carecore_training_enrollments (id, training_id, user_id, status, due_on, assigned_by)
         VALUES (${randomUUID()}, ${training.id as string}, ${userId}, 'assigned', ${dueOn}, ${ctx.actor.id})
@@ -64,15 +68,16 @@ export async function assignTraining(ctx: ApiContext, trainingIdInput: unknown, 
           progress = CASE WHEN carecore_training_enrollments.status = 'completed' THEN 0 ELSE carecore_training_enrollments.progress END,
           updated_at = NOW()`,
     ),
-  );
-  await writeAudit(ctx, "training", String(training.id), "assigned", null, { userIds, dueOn });
-  for (const userId of userIds)
-    await notify(
+    auditStatement(ctx, "training", String(training.id), "assigned", null, { userIds, dueOn }),
+    ...notifyStatements(
       ctx,
-      userId,
+      userIds,
       `Schulung zugewiesen: ${training.title}`,
       dueOn ? `Bitte bis ${dayLabel(dueOn)} abschliessen.` : "Bitte im Kurskatalog anmelden.",
-    );
+      "learning",
+      "/c/personal/schulungen",
+    ),
+  ]);
   return userIds.length;
 }
 
@@ -96,20 +101,24 @@ export async function enrollmentAction(ctx: ApiContext, idInput: unknown, body: 
     if (!own && !canManage(ctx)) throw new ApiError("Nur die angemeldete Person oder die Leitung kann abmelden.", 403);
     if (own && enrollment.assignedByName && !canManage(ctx))
       throw new ApiError("Zugewiesene Schulungen kann nur die Leitung zurücknehmen.", 403);
-    if (enrollment.completedAt)
-      await ctx.sql`
-        UPDATE carecore_training_enrollments SET status = 'completed', session_id = NULL, progress = 100, due_on = NULL, updated_at = NOW()
-        WHERE id = ${id}`;
-    else await ctx.sql`DELETE FROM carecore_training_enrollments WHERE id = ${id}`;
-    await writeAudit(ctx, "training_enrollment", id, "withdrawn", enrollment, null);
+    await ctx.sql.transaction([
+      enrollment.completedAt
+        ? ctx.sql`
+          UPDATE carecore_training_enrollments SET status = 'completed', session_id = NULL, progress = 100, due_on = NULL, updated_at = NOW()
+          WHERE id = ${id}`
+        : ctx.sql`DELETE FROM carecore_training_enrollments WHERE id = ${id}`,
+      auditStatement(ctx, "training_enrollment", id, "withdrawn", enrollment, null),
+    ]);
     return;
   }
   if (body.action === "verify") {
     requireManage(ctx);
     if (!enrollment.completedAt) throw new ApiError("Es liegt noch kein Nachweis vor.", 409);
-    await ctx.sql`
-      UPDATE carecore_training_enrollments SET verified_by = ${ctx.actor.id}, verified_at = NOW(), updated_at = NOW() WHERE id = ${id}`;
-    await writeAudit(ctx, "training_enrollment", id, "verified", null, null);
+    await ctx.sql.transaction([
+      ctx.sql`
+      UPDATE carecore_training_enrollments SET verified_by = ${ctx.actor.id}, verified_at = NOW(), updated_at = NOW() WHERE id = ${id}`,
+      auditStatement(ctx, "training_enrollment", id, "verified", null, null),
+    ]);
     await notify(ctx, enrollment.userId, "Nachweis bestätigt", "Dein Schulungsnachweis wurde von der Leitung geprüft.");
     return;
   }
@@ -133,7 +142,8 @@ export async function recordEvidence(ctx: ApiContext, form: FormData) {
     file instanceof File && file.size > 0 ? await storeFile(ctx, file, "certificate", CERTIFICATE_TYPES) : null;
   const note = text(form.get("note"), 1000) || null;
   const validFor = num(training.valid_for_months);
-  await ctx.sql`
+  await ctx.sql.transaction([
+    ctx.sql`
     INSERT INTO carecore_training_enrollments (id, training_id, user_id, status, progress, completed_at, valid_until,
       certificate_file_id, verified_by, verified_at, note)
     VALUES (${randomUUID()}, ${training.id as string}, ${userId}, 'completed', 100, (${completedOn}::date + TIME '12:00'),
@@ -143,13 +153,14 @@ export async function recordEvidence(ctx: ApiContext, form: FormData) {
       completed_at = EXCLUDED.completed_at, valid_until = EXCLUDED.valid_until,
       certificate_file_id = COALESCE(EXCLUDED.certificate_file_id, carecore_training_enrollments.certificate_file_id),
       verified_by = EXCLUDED.verified_by, verified_at = EXCLUDED.verified_at, note = EXCLUDED.note,
-      reminded_at = NULL, updated_at = NOW()`;
-  await writeAudit(ctx, "training_evidence", String(training.id), "recorded", null, {
-    userId,
-    completedOn,
-    certificate: certificate?.name ?? null,
-    verified: manager,
-  });
+      reminded_at = NULL, updated_at = NOW()`,
+    auditStatement(ctx, "training_evidence", String(training.id), "recorded", null, {
+      userId,
+      completedOn,
+      certificate: certificate?.name ?? null,
+      verified: manager,
+    }),
+  ]);
   if (!manager && training.mandatory) {
     const managers = (await ctx.sql`
       SELECT u.id FROM carecore_users u JOIN carecore_user_profiles p ON p.user_id = u.id JOIN carecore_roles r ON r.key = u.role
