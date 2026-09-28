@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
+import { toCsv } from "@/lib/roster/csv";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
 import { raiWorkplace } from "@/lib/rai";
 import { RAI_STATE } from "@/lib/rai-shared";
 
 export const runtime = "nodejs";
-
-const cell = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
 
 // RAI report as CSV (semicolon separated, opens directly in Excel).
 export async function GET() {
@@ -38,10 +37,10 @@ export async function GET() {
         row.instrument,
         row.assessor,
         row.lastCompletedOn,
-        row.averageScore === null ? "" : row.averageScore.toFixed(1).replace(".", ","),
+        row.averageScore === null ? null : Math.round(row.averageScore * 10) / 10,
       ]),
     ];
-    const csv = "﻿" + lines.map((line) => line.map(cell).join(";")).join("\r\n");
+    const csv = toCsv(lines);
     return new NextResponse(csv, {
       headers: {
         "content-type": "text/csv; charset=utf-8",

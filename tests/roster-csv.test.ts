@@ -18,3 +18,8 @@ test("Minuten als Dezimalstunden und Dateinamen ohne Sonderzeichen", () => {
   assert.equal(decimalHours(null), null);
   assert.equal(fileSlug("Wohngruppe Löwenzahn / 1. OG"), "wohngruppe-lowenzahn-1-og");
 });
+
+test("CSV: Texte, die Excel als Formel ausführen würde, werden entschärft", () => {
+  const csv = toCsv([['=HYPERLINK("http://x")', "+41 44 000", "-5", "@SUM(A1)", "Anna", -5]]);
+  assert.equal(csv, '﻿"\'=HYPERLINK(""http://x"")";\'+41 44 000;\'-5;\'@SUM(A1);Anna;-5\r\n');
+});

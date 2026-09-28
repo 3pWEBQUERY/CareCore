@@ -6,7 +6,7 @@ import {
   iso,
   num,
   text,
-  writeAudit,
+  auditStatement,
   type ApiContext,
   type Row,
 } from "@/lib/api-context";
@@ -23,6 +23,7 @@ import {
   type VitalStatus,
 } from "@/lib/vitals-shared";
 import { initials } from "@/lib/medication-shared";
+import { residentAudit } from "@/lib/resident-audit";
 
 const severity: Record<VitalStatus, number> = { normal: 0, attention: 1, critical: 2 };
 
@@ -174,18 +175,20 @@ export async function recordMeasurements(ctx: ApiContext, body: Record<string, u
   if (!rows.length) throw new ApiError("Bitte mindestens einen Messwert eingeben.");
   const at = measuredAt.toISOString();
   const ids = rows.map(() => randomUUID());
-  await ctx.sql.transaction(
-    rows.map(
+  await ctx.sql.transaction([
+    ...rows.map(
       (row, index) => ctx.sql`
         INSERT INTO carecore_vital_measurements (id, resident_id, measured_by, measured_at, metric, value, unit, secondary_value, status, note)
         VALUES (${ids[index]}, ${residentId}, ${ctx.actor.id}, ${at}, ${row.metric}, ${row.value}, ${row.unit}, ${row.secondary}, ${row.status}, ${note || null})`,
     ),
-  );
-  await writeAudit(ctx, "vital_measurements", residentId, "recorded", null, {
-    measuredAt: at,
-    rows,
-    note: note || null,
-  });
+    residentAudit(ctx.sql, ctx.actor, {
+      residentId,
+      entityType: "vital_measurements",
+      entityId: residentId,
+      action: "recorded",
+      after: { measuredAt: at, rows, note: note || null },
+    }),
+  ]);
   return rows.map(({ metric, status }) => ({ metric, status }));
 }
 
@@ -295,8 +298,21 @@ export async function saveThreshold(ctx: ApiContext, body: Record<string, unknow
       INSERT INTO carecore_vital_thresholds (id, resident_id, organization_id, metric, lower_bound, upper_bound, critical_lower, critical_upper, unit, reason, created_by)
       VALUES (${id}, ${residentId}, ${residentId ? null : ctx.actor.organizationId}, ${metric.key}, ${threshold.targetLower}, ${threshold.targetUpper},
         ${threshold.criticalLower}, ${threshold.criticalUpper}, ${metric.unit}, ${reason || null}, ${ctx.actor.id})`,
+    residentId
+      ? residentAudit(ctx.sql, ctx.actor, {
+          residentId,
+          entityType: "vital_threshold",
+          entityId: id,
+          action: "saved",
+          after: { metric: metric.key, ...threshold, reason },
+        })
+      : auditStatement(ctx, "vital_threshold", id, "saved", null, {
+          metric: metric.key,
+          residentId,
+          ...threshold,
+          reason,
+        }),
   ]);
-  await writeAudit(ctx, "vital_threshold", id, "saved", null, { metric: metric.key, residentId, ...threshold, reason });
   return id;
 }
 
@@ -308,16 +324,23 @@ export async function removeThreshold(
   reason: string,
 ) {
   const id = assertUuid(thresholdIdInput, "Grenzwert");
-  const scope = (await ctx.sql`SELECT resident_id FROM carecore_vital_thresholds WHERE id = ${id}`) as Row[];
-  if (scope[0] && !allowed(scope[0].resident_id ? "resident" : "organization"))
-    throw new ApiError("Keine Berechtigung für diese Aktion.", 403);
-  const rows = (await ctx.sql`
-    UPDATE carecore_vital_thresholds t SET active = FALSE
+  const [scope] = (await ctx.sql`
+    SELECT t.resident_id, t.metric FROM carecore_vital_thresholds t
     WHERE t.id = ${id} AND t.active AND (
       t.organization_id = ${ctx.actor.organizationId}
-      OR EXISTS (SELECT 1 FROM carecore_residents r WHERE r.id = t.resident_id AND r.organization_id = ${ctx.actor.organizationId}))
-    RETURNING id, resident_id, metric`) as Row[];
+      OR EXISTS (SELECT 1 FROM carecore_residents r WHERE r.id = t.resident_id AND r.organization_id = ${ctx.actor.organizationId}))`) as Row[];
+  if (!scope) throw new ApiError("Grenzwert nicht gefunden.", 404);
+  const residentId = (scope.resident_id as string | null) ?? null;
+  if (!allowed(residentId ? "resident" : "organization"))
+    throw new ApiError("Keine Berechtigung für diese Aktion.", 403);
+  // Deaktivieren und Protokoll in einer Anweisung (bereits deaktiviert: keines von beiden).
+  const before = { residentId, metric: String(scope.metric) };
+  const rows = (await ctx.sql`
+    WITH removed AS (UPDATE carecore_vital_thresholds SET active = FALSE WHERE id = ${id} AND active RETURNING id)
+    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, before_data, after_data)
+    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'vital_threshold', removed.id, 'removed',
+      ${JSON.stringify(before)}::jsonb, ${JSON.stringify({ residentId, reason: reason || null })}::jsonb
+    FROM removed RETURNING entity_id`) as Row[];
   if (!rows[0]) throw new ApiError("Grenzwert nicht gefunden.", 404);
-  await writeAudit(ctx, "vital_threshold", id, "removed", rows[0], { reason: reason || null });
-  return { residentId: (rows[0].resident_id as string | null) ?? null };
+  return { residentId };
 }

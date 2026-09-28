@@ -30,8 +30,10 @@ const ENTITY_LABELS: Record<string, string> = {
   medication_order: "Verordnung",
   medication_administration: "Medikamentengabe",
   assessment_record: "Einschätzung",
+  rai_assessment: "RAI-Erfassung",
   fluid_entry: "Trinkprotokoll",
   meal_entry: "Ernährung",
+  nutrition_plan: "Ernährungsplan",
   resident_stay: "Aufenthalt",
 };
 
@@ -54,6 +56,15 @@ const ACTION_LABELS: Record<string, string> = {
   gender_updated: "Geschlecht geändert",
   medication_allergies_updated: "Allergien geändert",
   prn_administered: "Reservegabe erfasst",
+  replaced: "ersetzt",
+  evaluated: "evaluiert",
+  status_review: "zur Überprüfung markiert",
+  status_paused: "pausiert",
+  status_completed: "abgeschlossen",
+  status_cancelled: "abgebrochen",
+  status_active: "wieder eröffnet",
+  status_healing: "als heilend markiert",
+  status_closed: "abgeschlossen",
 };
 
 const FIELD_LABELS: Record<string, string> = {
@@ -84,6 +95,27 @@ const FIELD_LABELS: Record<string, string> = {
   preferences: "Vorlieben",
   strengths: "Stärken",
   sensitiveTopics: "Sensible Themen",
+  title: "Bezeichnung",
+  bodyLocation: "Lokalisation",
+  woundType: "Wundart",
+  diagnosis: "Diagnose",
+  origin: "Entstehung",
+  careIntervalDays: "Versorgungsintervall",
+  treatmentPlan: "Behandlungsplan",
+  responsibleId: "Verantwortlich",
+  bodyObservationId: "Körpermarkierung",
+  focus: "Pflegefokus",
+  careLevel: "Pflegestufe",
+  startsOn: "Beginn",
+  reviewOn: "Überprüfung",
+  ownerId: "Verantwortlich",
+  problem: "Pflegeproblem",
+  resources: "Ressourcen",
+  statement: "Ziel",
+  targetDate: "Überprüfungsdatum",
+  instructions: "Anleitung",
+  frequency: "Häufigkeit",
+  responsibleRole: "Zuständigkeit",
 };
 
 const NAME_KEYS = ["fullName", "label", "itemName", "title", "name", "metric", "medication", "file"];

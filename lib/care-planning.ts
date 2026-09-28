@@ -1,14 +1,6 @@
 import { randomUUID } from "node:crypto";
-import {
-  ApiError,
-  assertResident,
-  assertUuid,
-  iso,
-  text,
-  writeAudit,
-  type ApiContext,
-  type Row,
-} from "@/lib/api-context";
+import { ApiError, assertResident, assertUuid, iso, text, type ApiContext, type Row } from "@/lib/api-context";
+import { residentAudit } from "@/lib/resident-audit";
 import { initials } from "@/lib/medication-shared";
 import {
   type CareGoal,
@@ -236,15 +228,23 @@ export async function createPlan(ctx: ApiContext, body: Record<string, unknown>)
   const ownerId = await assertStaff(ctx, body.ownerId);
   const id = randomUUID();
   try {
-    await ctx.sql`
-      INSERT INTO carecore_care_plans (id, resident_id, owner_user_id, status, care_level, focus, starts_on, review_on)
-      VALUES (${id}, ${residentId}, ${ownerId}, 'active', ${plan.careLevel}, ${plan.focus}, ${plan.startsOn}, ${plan.reviewOn})`;
+    await ctx.sql.transaction([
+      ctx.sql`
+        INSERT INTO carecore_care_plans (id, resident_id, owner_user_id, status, care_level, focus, starts_on, review_on)
+        VALUES (${id}, ${residentId}, ${ownerId}, 'active', ${plan.careLevel}, ${plan.focus}, ${plan.startsOn}, ${plan.reviewOn})`,
+      residentAudit(ctx.sql, ctx.actor, {
+        residentId,
+        entityType: "care_plan",
+        entityId: id,
+        action: "created",
+        after: { ownerId, ...plan },
+      }),
+    ]);
   } catch (error) {
     if (String(error).includes("carecore_care_plans_one_open_idx"))
       throw new ApiError("Für diesen Bewohner besteht bereits ein offener Pflegeplan.", 409);
     throw error;
   }
-  await writeAudit(ctx, "care_plan", id, "created", null, { residentId, ownerId, ...plan });
   return id;
 }
 
@@ -256,26 +256,44 @@ export async function updatePlan(ctx: ApiContext, planId: unknown, body: Record<
     const reason = text(body.reason, 1000);
     if (status === "closed" && !reason) throw new ApiError("Bitte den Grund für den Abschluss angeben.");
     assertOpen(before);
-    await ctx.sql`
-      UPDATE carecore_care_plans SET status = ${status}, closed_at = CASE WHEN ${status} = 'closed' THEN NOW() END,
-        closed_reason = CASE WHEN ${status} = 'closed' THEN ${reason} END, updated_at = NOW()
-      WHERE id = ${before.id}`;
-    await writeAudit(
-      ctx,
-      "care_plan",
-      String(before.id),
-      `status_${status}`,
-      { status: before.status },
-      { status, reason: reason || null },
-    );
+    if (before.status === status) return;
+    await ctx.sql.transaction([
+      ctx.sql`
+        UPDATE carecore_care_plans SET status = ${status}, closed_at = CASE WHEN ${status} = 'closed' THEN NOW() END,
+          closed_reason = CASE WHEN ${status} = 'closed' THEN ${reason} END, updated_at = NOW()
+        WHERE id = ${before.id}`,
+      residentAudit(ctx.sql, ctx.actor, {
+        residentId: String(before.resident_id),
+        entityType: "care_plan",
+        entityId: String(before.id),
+        action: `status_${status}`,
+        before: { status: before.status },
+        after: { status, reason: reason || null },
+      }),
+    ]);
     return;
   }
   assertOpen(before);
   const plan = parsePlan(body);
   const ownerId = await assertStaff(ctx, body.ownerId);
-  await ctx.sql`
-    UPDATE carecore_care_plans SET owner_user_id = ${ownerId}, care_level = ${plan.careLevel}, focus = ${plan.focus},
-      starts_on = ${plan.startsOn}, review_on = ${plan.reviewOn}, updated_at = NOW()
-    WHERE id = ${before.id}`;
-  await writeAudit(ctx, "care_plan", String(before.id), "updated", before, { ownerId, ...plan });
+  await ctx.sql.transaction([
+    ctx.sql`
+      UPDATE carecore_care_plans SET owner_user_id = ${ownerId}, care_level = ${plan.careLevel}, focus = ${plan.focus},
+        starts_on = ${plan.startsOn}, review_on = ${plan.reviewOn}, updated_at = NOW()
+      WHERE id = ${before.id}`,
+    residentAudit(ctx.sql, ctx.actor, {
+      residentId: String(before.resident_id),
+      entityType: "care_plan",
+      entityId: String(before.id),
+      action: "updated",
+      before: {
+        ownerId: before.owner_user_id,
+        careLevel: before.care_level,
+        focus: before.focus,
+        startsOn: before.starts_on,
+        reviewOn: before.review_on,
+      },
+      after: { ownerId, ...plan },
+    }),
+  ]);
 }

@@ -5,10 +5,11 @@ import {
   assertUuid,
   iso,
   text,
-  writeAudit,
+  auditStatement,
   type ApiContext,
   type Row,
 } from "@/lib/api-context";
+import { residentAudit } from "@/lib/resident-audit";
 import { initials } from "@/lib/medication-shared";
 import {
   RAI_ADMISSION_DAYS,
@@ -207,12 +208,20 @@ export async function raiResidentDetail(ctx: ApiContext, residentIdInput: string
   };
 }
 
+// Heutiges Datum in der Zeitzone der Organisation.
+async function orgToday(ctx: ApiContext) {
+  const rows =
+    (await ctx.sql`SELECT to_char(NOW() AT TIME ZONE timezone, 'YYYY-MM-DD') AS d FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}`) as Row[];
+  return String(rows[0].d);
+}
+
 export async function saveRaiAssessment(ctx: ApiContext, residentIdInput: string, body: Record<string, unknown>) {
   const residentId = await assertResident(ctx, residentIdInput);
   const instrument = String(body.instrument ?? "");
   if (!RAI_INSTRUMENTS.includes(instrument)) throw new ApiError("Instrument ist ungültig.");
   const assessedOn = String(body.assessedOn ?? "");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(assessedOn)) throw new ApiError("Erfassungsdatum ist ungültig.");
+  if (assessedOn > (await orgToday(ctx))) throw new ApiError("Das Erfassungsdatum liegt in der Zukunft.");
   const assessorId = body.assessorId ? assertUuid(body.assessorId, "RAI Verantwortliche") : null;
   if (assessorId && !(await raiPeople(ctx)).some((person) => person.id === assessorId))
     throw new ApiError("Die gewählte Person hat keine RAI-Berechtigung.");
@@ -260,13 +269,24 @@ export async function saveRaiAssessment(ctx: ApiContext, residentIdInput: string
           VALUES (${id}, ${residentId}, ${assessorId}, ${instrument}, ${status}, ${dueOn}, NOW(),
             ${complete ? new Date().toISOString() : null}, ${progress}, ${data}::jsonb)`,
   );
+  statements.push(
+    residentAudit(ctx.sql, ctx.actor, {
+      residentId,
+      entityType: "rai_assessment",
+      entityId: id,
+      action: complete ? "completed" : before ? "updated" : "created",
+      before: before
+        ? {
+            instrument: before.assessment_type,
+            status: before.status,
+            progress: before.progress,
+            assessorId: before.responsible_user_id,
+          }
+        : null,
+      after: { instrument, assessedOn, progress, assessorId },
+    }),
+  );
   await ctx.sql.transaction(statements);
-  await writeAudit(ctx, "rai_assessment", id, complete ? "completed" : before ? "updated" : "created", before, {
-    instrument,
-    assessedOn,
-    progress,
-    assessorId,
-  });
   return { id, status, dueOn };
 }
 
@@ -277,7 +297,7 @@ export async function refreshRaiDue(ctx: ApiContext, body: Record<string, unknow
   const days = Math.min(Math.max(Number(body.days) || 30, 0), 120);
   const unitIds = Array.isArray(body.unitIds) ? body.unitIds.map(String) : null;
   const workplace = await raiWorkplace(ctx);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = await orgToday(ctx);
   const limit = addDays(today, days);
   const candidates = workplace.residents.filter(
     (row) =>
@@ -306,7 +326,7 @@ export async function refreshRaiDue(ctx: ApiContext, body: Record<string, unknow
     UPDATE carecore_rai_assessments a SET status = 'overdue', updated_at = NOW()
     FROM carecore_residents r
     WHERE r.id = a.resident_id AND r.organization_id = ${ctx.actor.organizationId}
-      AND a.status = 'new' AND a.due_on < CURRENT_DATE`);
+      AND a.status = 'new' AND a.due_on < ${today}::date`);
   let notified = 0;
   if (body.notify === true && candidates.length)
     for (const person of workplace.people.filter((person) => person.id !== ctx.actor.id)) {
@@ -316,12 +336,14 @@ export async function refreshRaiDue(ctx: ApiContext, body: Record<string, unknow
           ${`${ctx.actor.display_name} hat die RAI-Fälligkeiten aktualisiert.`}, 'rai_due', 'normal', '/c/rai/faelligkeiten')`);
       notified += 1;
     }
+  statements.push(
+    auditStatement(ctx, "rai_due", ctx.actor.organizationId, "refreshed", null, {
+      scope,
+      days,
+      planned: planned.length,
+      due: candidates.length,
+    }),
+  );
   await ctx.sql.transaction(statements);
-  await writeAudit(ctx, "rai_due", ctx.actor.organizationId, "refreshed", null, {
-    scope,
-    days,
-    planned: planned.length,
-    due: candidates.length,
-  });
   return { due: candidates.length, planned: planned.length, notified };
 }
