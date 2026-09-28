@@ -351,7 +351,10 @@
   .record-horizontal-actions small {
     font-size: 11.5px;
   }
-  .body-map-legend span {
+  .body-map-legend button {
+    font-size: 12px;
+  }
+  .body-map-legend button small {
     font-size: 11.5px;
   }
   .body-observation-toggle small {
@@ -377,6 +380,9 @@
   }
   .body-model-source {
     font-size: 11.5px;
+  }
+  .body-observation-editor-note {
+    font-size: 12px;
   }
   .record-document-button small {
     font-size: 12px;
