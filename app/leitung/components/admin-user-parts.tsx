@@ -2,9 +2,14 @@
 
 import { type ReactNode } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
-import type { AdminCareUnit, ManagedRole, ManagedUser } from "@/lib/admin-users";
+import type { AdminCareUnit, AdminQualification, ManagedRole, ManagedUser } from "@/lib/admin-users";
 
-export type Data = { users: ManagedUser[]; careUnits: AdminCareUnit[]; roles: ManagedRole[] };
+export type Data = {
+  users: ManagedUser[];
+  careUnits: AdminCareUnit[];
+  roles: ManagedRole[];
+  qualifications: AdminQualification[];
+};
 
 export const permissions = [
   "residents.read",
@@ -184,4 +189,43 @@ export function initials(name: string) {
     .map((p) => p[0])
     .join("")
     .toUpperCase();
+}
+
+// Qualifikationen einer Person (heute gültig); berechtigende Qualifikationen sind mit „Medikation“ gekennzeichnet.
+export function QualificationFields({
+  qualifications,
+  selected,
+  onChange,
+}: {
+  qualifications: AdminQualification[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  if (!qualifications.length) return null;
+  return (
+    <fieldset className="user-editor-role">
+      <legend>Qualifikationen</legend>
+      <div>
+        {qualifications.map((q) => {
+          const on = selected.includes(q.id);
+          return (
+            <button
+              type="button"
+              key={q.id}
+              className={on ? "active" : ""}
+              aria-pressed={on}
+              onClick={() => onChange(on ? selected.filter((id) => id !== q.id) : [...selected, q.id])}
+            >
+              <strong>{q.name}</strong>
+              <small>
+                {q.code}
+                {q.grantsMedication ? " · berechtigt zur Medikation" : ""}
+              </small>
+              {on && <ModuleIcon name="check" />}
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
 }

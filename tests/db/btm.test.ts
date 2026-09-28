@@ -4,6 +4,9 @@ import { randomUUID } from "node:crypto";
 import { ApiError } from "@/lib/api-context";
 import { hashPassword } from "@/lib/auth";
 import { btmBook, btmOverview, countStock, createBtmReminders, setControlled } from "@/lib/medication-btm";
+import { createOrder, parseOrderInput } from "@/lib/medication-orders";
+import { administerPrn, documentScheduledDose } from "@/lib/medication-round";
+import { localDate, zonedToUtc } from "@/lib/roster/time";
 import { saveSetting } from "@/lib/settings";
 import { correctStock, receiveStock } from "@/lib/medication-stock";
 import { apiContextFor, createResident, fixture, q, qualify, type Fixture } from "../support/db";
@@ -255,4 +258,82 @@ test("BtM-Kontrollintervall: ohne festgelegten Wert keine Fälligkeit, danach Er
     [f.people.ben],
   );
   assert.equal(benCount.n, 0);
+});
+
+test("BtM-Gabe: Zweitunterschrift nur, wenn die Einrichtung sie verlangt, und nur für Betäubungsmittel", async () => {
+  const f = await fixture();
+  const witness = await withPasswords(f);
+  const ctx = await apiContextFor(f, "anna");
+  const residentId = await createResident(f);
+  const weekAgo = localDate(new Date(Date.now() - 7 * 86_400_000), "Europe/Zurich");
+  const order = async (name: string, controlled: boolean, prn: boolean) => {
+    const orderId = await createOrder(
+      ctx,
+      residentId,
+      parseOrderInput({
+        name,
+        strength: "10 mg",
+        amount: "1 Tablette",
+        stockQuantity: 1,
+        prescribedBy: "Dr. Weber",
+        startOn: weekAgo,
+        ...(prn
+          ? { isPrn: true, maxDosesPer24h: 6, minIntervalHours: 1, indication: "Schmerzen" }
+          : { times: ["08:00"] }),
+      }),
+    );
+    const [row] = await q<{ medication_id: string }>(
+      `SELECT medication_id FROM carecore_medication_orders WHERE id = $1`,
+      [orderId],
+    );
+    await q(`UPDATE carecore_medications SET is_controlled = $2 WHERE id = $1`, [row.medication_id, controlled]);
+    await q(
+      `INSERT INTO carecore_medication_stock (id, organization_id, resident_id, medication_id, quantity, unit) VALUES ($1, $2, $3, $4, 10, 'Tabletten')`,
+      [randomUUID(), f.org, residentId, row.medication_id],
+    );
+    return orderId;
+  };
+  const yesterday = localDate(new Date(Date.now() - 86_400_000), "Europe/Zurich");
+  const scheduledAt = zonedToUtc(yesterday, "08:00", "Europe/Zurich").toISOString();
+  const morphin = await order("Morphin", true, false);
+  const oxycodon = await order("Oxycodon", true, true);
+  const metformin = await order("Metformin", false, false);
+
+  // Ohne Einstellung genügt die eigene Unterschrift.
+  await documentScheduledDose(ctx, { orderId: morphin, scheduledAt, status: "administered" });
+  await documentScheduledDose(ctx, { orderId: morphin, scheduledAt, status: "declined", note: "Lehnt ab" });
+
+  await saveSetting(ctx, "btmAdministrationWitness", { enabled: true });
+  const dose = (extra: Record<string, unknown>) =>
+    documentScheduledDose(ctx, { orderId: morphin, scheduledAt, status: "administered", ...extra });
+  assert.match((await failure(dose({}))).message, /Zweitunterschrift/);
+  assert.match((await failure(dose({ witness: witness("anna") }))).message, /anderen Person/);
+  assert.match((await failure(dose({ witness: witness("sam") }))).message, /nicht für Medikation berechtigt/);
+  await dose({ witness: witness("max") });
+  // Verweigerungen und Nicht-BtM bleiben ohne Zweitunterschrift.
+  await documentScheduledDose(ctx, { orderId: metformin, scheduledAt, status: "administered" });
+  assert.match(
+    (await failure(administerPrn(ctx, { orderId: oxycodon, note: "Schmerzen NRS 6" }))).message,
+    /Zweitunterschrift/,
+  );
+  await administerPrn(ctx, { orderId: oxycodon, note: "Schmerzen NRS 6", witness: witness("lea") });
+
+  const rows = await q<{ name: string; witness: string | null }>(
+    `SELECT m.name, a.witness_user_id AS witness FROM carecore_medication_administrations a
+       JOIN carecore_medication_orders o ON o.id = a.medication_order_id
+       JOIN carecore_medications m ON m.id = o.medication_id
+      WHERE a.resident_id = $1 ORDER BY m.name`,
+    [residentId],
+  );
+  assert.deepEqual(rows, [
+    { name: "Metformin", witness: null },
+    { name: "Morphin", witness: f.people.max },
+    { name: "Oxycodon", witness: f.people.lea },
+  ]);
+  const [movement] = await q<{ witness: string | null }>(
+    `SELECT witness_user_id AS witness FROM carecore_medication_stock_movements
+      WHERE resident_id = $1 AND reason = 'administration' AND delta < 0 ORDER BY created_at DESC LIMIT 1`,
+    [residentId],
+  );
+  assert.equal(movement.witness, f.people.lea);
 });

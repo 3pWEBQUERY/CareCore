@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { updateManagedUser } from "@/lib/admin-users";
 import { saveQualification } from "@/lib/roster/settings-service";
 import { fixture, q, qualify, type Fixture } from "../support/db";
 
@@ -75,4 +76,44 @@ test("Rollen ohne Qualifikationspflicht behalten die Medikation unverändert", a
   assert.equal(await canMedicate(f, "anna"), false);
   const [arzt] = await q<{ permissions: string[] }>(`SELECT permissions FROM carecore_roles WHERE key = 'arzt'`);
   assert.ok(arzt.permissions.includes("medication.manage"), "Ärztlicher Dienst unverändert");
+});
+
+test("Mitarbeiterverwaltung: Qualifikationen setzen und entfernen, Verlauf bleibt, Protokoll mit Organisation", async () => {
+  const f = await fixture();
+  const quals = await q<{ id: string; code: string }>(
+    `SELECT id, code FROM carecore_qualifications WHERE organization_id = $1`,
+    [f.org],
+  );
+  const id = (code: string) => quals.find((row) => row.code === code)!.id;
+  const profile = { displayName: "Anna Müller", username: `anna-${f.org.slice(0, 6)}`, role: "pflege" };
+  // Eine frühere HF-Qualifikation (seit 2020) bleibt als Verlauf erhalten, wenn sie entfernt wird.
+  await qualify(f, "anna", "HF", "2020-01-01");
+  const result = await updateManagedUser(f.people.leadA, f.people.anna, { ...profile, qualificationIds: [id("FAGE")] });
+  assert.deepEqual(result.users.find((user) => user.id === f.people.anna)?.qualificationIds, [id("FAGE")]);
+  assert.equal(await canMedicate(f, "anna"), true);
+  const history = await q<{ code: string; ended: boolean }>(
+    `SELECT q.code, eq.valid_until IS NOT NULL AS ended FROM carecore_employee_qualifications eq
+     JOIN carecore_qualifications q ON q.id = eq.qualification_id WHERE eq.user_id = $1 ORDER BY q.code`,
+    [f.people.anna],
+  );
+  assert.deepEqual(history, [
+    { code: "FAGE", ended: false },
+    { code: "HF", ended: true },
+  ]);
+  // Am selben Tag wieder entfernt: die Vergabe wird zurückgenommen.
+  await updateManagedUser(f.people.leadA, f.people.anna, { ...profile, qualificationIds: [] });
+  assert.equal(await canMedicate(f, "anna"), false);
+  const other = await fixture();
+  const foreign = (
+    await q<{ id: string }>(`SELECT id FROM carecore_qualifications WHERE organization_id = $1 LIMIT 1`, [other.org])
+  )[0].id;
+  await assert.rejects(
+    updateManagedUser(f.people.leadA, f.people.anna, { ...profile, qualificationIds: [foreign] }),
+    /QUALIFICATION_NOT_FOUND/,
+  );
+  const [logged] = await q<{ n: number }>(
+    `SELECT COUNT(*)::int AS n FROM carecore_audit_log WHERE entity_type = 'user' AND entity_id = $1 AND organization_id = $2`,
+    [f.people.anna, f.org],
+  );
+  assert.equal(logged.n, 2);
 });

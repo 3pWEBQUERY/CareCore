@@ -1,19 +1,21 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { AdminCareUnit, ManagedRole, ManagedUser } from "@/lib/admin-users";
-import { Data, EmployeeFields, Confirm, Overlay, initials } from "./admin-user-parts";
+import type { AdminCareUnit, AdminQualification, ManagedRole, ManagedUser } from "@/lib/admin-users";
+import { Data, EmployeeFields, Confirm, Overlay, QualificationFields, initials } from "./admin-user-parts";
 
 export function EmployeeEditor({
   user,
   careUnits,
   roles,
+  qualifications,
   onClose,
   onUpdated,
 }: {
   user: ManagedUser;
   careUnits: AdminCareUnit[];
   roles: ManagedRole[];
+  qualifications: AdminQualification[];
   onClose: () => void;
   onUpdated: (data: Data, message: string) => void;
 }) {
@@ -23,6 +25,7 @@ export function EmployeeEditor({
     [job, setJob] = useState(user.jobTitle === "Noch nicht angegeben" ? "" : user.jobTitle),
     [phone, setPhone] = useState(user.phone),
     [unit, setUnit] = useState(user.primaryCareUnitId ?? ""),
+    [held, setHeld] = useState<string[]>(user.qualificationIds),
     [mode, setMode] = useState<"edit" | "lock" | "delete">("edit"),
     [error, setError] = useState(""),
     [saving, setSaving] = useState(false);
@@ -85,6 +88,7 @@ export function EmployeeEditor({
                     jobTitle: job,
                     phone,
                     primaryCareUnitId: unit || null,
+                    qualificationIds: held,
                   },
                   "Mitarbeiterprofil gespeichert",
                 );
@@ -108,6 +112,7 @@ export function EmployeeEditor({
                   careUnits,
                 }}
               />
+              <QualificationFields qualifications={qualifications} selected={held} onChange={setHeld} />
               {error && <p className="user-editor-error">{error}</p>}
               <footer className="user-editor-footer">
                 <button className="primary-button" disabled={saving}>

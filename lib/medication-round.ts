@@ -8,6 +8,7 @@ import {
   type RoundDose,
   type RoundKey,
 } from "@/lib/medication-shared";
+import { administrationWitness } from "./medication-btm";
 import { DATE } from "./medication";
 
 // -------------------------------------------------------------------- round
@@ -106,24 +107,35 @@ export async function documentScheduledDose(ctx: ApiContext, body: Record<string
     LIMIT 1`) as Row[];
   if (!valid[0])
     throw new ApiError("Für diesen Zeitpunkt ist keine Gabe verordnet oder sie liegt zu weit in der Zukunft.", 409);
+  const witness =
+    status === "administered"
+      ? await administrationWitness(ctx, (valid[0].medication_id as string | null) ?? null, body.witness)
+      : null;
   const before =
     await ctx.sql`SELECT id, status, administered_at, administered_by, note FROM carecore_medication_administrations WHERE medication_order_id = ${orderId} AND scheduled_at = ${scheduledAt}`;
   // Gabe und Protokoll (mit Bewohnerbezug für die Akte) in einer Anweisung.
   const auditBefore = before[0] ? JSON.stringify({ residentId: valid[0].resident_id, ...before[0] }) : null;
-  const auditAfter = JSON.stringify({ residentId: valid[0].resident_id, status, note: note || null, scheduledAt });
+  const auditAfter = JSON.stringify({
+    residentId: valid[0].resident_id,
+    status,
+    note: note || null,
+    scheduledAt,
+    witness: witness?.name ?? null,
+  });
   const rows = await ctx.sql`
     WITH dose AS (
-      INSERT INTO carecore_medication_administrations (id, medication_order_id, resident_id, scheduled_at, administered_at, administered_by, status, note)
-      VALUES (${randomUUID()}, ${orderId}, ${valid[0].resident_id}, ${scheduledAt}, ${status === "administered" ? new Date().toISOString() : null}, ${ctx.actor.id}, ${status}, ${note || null})
+      INSERT INTO carecore_medication_administrations (id, medication_order_id, resident_id, scheduled_at, administered_at, administered_by, status, note, witness_user_id)
+      VALUES (${randomUUID()}, ${orderId}, ${valid[0].resident_id}, ${scheduledAt}, ${status === "administered" ? new Date().toISOString() : null}, ${ctx.actor.id}, ${status}, ${note || null}, ${witness?.id ?? null})
       ON CONFLICT (medication_order_id, scheduled_at) DO UPDATE
-        SET status = EXCLUDED.status, administered_at = EXCLUDED.administered_at, administered_by = EXCLUDED.administered_by, note = EXCLUDED.note, updated_at = NOW()
+        SET status = EXCLUDED.status, administered_at = EXCLUDED.administered_at, administered_by = EXCLUDED.administered_by, note = EXCLUDED.note,
+          witness_user_id = EXCLUDED.witness_user_id, updated_at = NOW()
       RETURNING id)
     INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, before_data, after_data)
     SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'medication_administration', dose.id,
       ${before[0] ? "corrected" : "documented"}, ${auditBefore}::jsonb, ${auditAfter}::jsonb
     FROM dose RETURNING entity_id AS id`;
   const quantity = num(((valid[0].dosage ?? {}) as Record<string, unknown>).quantity);
-  return syncDoseStock(ctx, String(rows[0].id), valid[0], quantity, status);
+  return syncDoseStock(ctx, String(rows[0].id), valid[0], quantity, status, witness?.id ?? null);
 }
 
 // Resident-owned stock first, then the ward stock of the resident's current care unit.
@@ -148,6 +160,7 @@ export async function syncDoseStock(
   order: Row,
   quantity: number | null,
   status: AdministrationStatus,
+  witnessId: string | null = null,
 ): Promise<{ stockNote: string | null }> {
   const netRows = (await ctx.sql`
     SELECT COALESCE(SUM(delta), 0) AS net FROM carecore_medication_stock_movements WHERE administration_id = ${administrationId}`) as Row[];
@@ -164,8 +177,8 @@ export async function syncDoseStock(
               AND (SELECT COALESCE(SUM(delta), 0) FROM carecore_medication_stock_movements WHERE administration_id = ${administrationId}) = 0
             RETURNING id, medication_id
           )
-          INSERT INTO carecore_medication_stock_movements (id, organization_id, stock_id, medication_id, resident_id, administration_id, delta, reason, note, created_by)
-          SELECT ${randomUUID()}, ${ctx.actor.organizationId}, s.id, s.medication_id, ${order.resident_id}, ${administrationId}, ${-quantity}, 'administration', 'Regelgabe', ${ctx.actor.id}
+          INSERT INTO carecore_medication_stock_movements (id, organization_id, stock_id, medication_id, resident_id, administration_id, delta, reason, note, created_by, witness_user_id)
+          SELECT ${randomUUID()}, ${ctx.actor.organizationId}, s.id, s.medication_id, ${order.resident_id}, ${administrationId}, ${-quantity}, 'administration', 'Regelgabe', ${ctx.actor.id}, ${witnessId}
           FROM s RETURNING id`) as Row[])
       : [];
     return { stockNote: booked[0] ? null : "Kein ausreichender Bestand – Gabe dokumentiert, Bestand nicht abgebucht." };
@@ -233,6 +246,7 @@ export async function administerPrn(ctx: ApiContext, body: Record<string, unknow
       409,
     );
 
+  const witness = await administrationWitness(ctx, (order.medication_id as string | null) ?? null, body.witness);
   // Resident-owned stock first, then the ward stock of the resident's care unit.
   const stockId = await findStock(ctx, String(order.resident_id), order.medication_id as string | null, quantity);
   if (!stockId)
@@ -252,19 +266,19 @@ export async function administerPrn(ctx: ApiContext, body: Record<string, unknow
         AND NOT EXISTS (SELECT 1 FROM carecore_medication_administrations WHERE medication_order_id = ${orderId} AND status = 'administered' AND administered_at > NOW() - make_interval(mins => ${Math.round(minInterval * 60)}))
       RETURNING id, medication_id
     ), a AS (
-      INSERT INTO carecore_medication_administrations (id, medication_order_id, resident_id, scheduled_at, administered_at, administered_by, status, note)
-      SELECT ${administrationId}, ${orderId}, ${order.resident_id}, date_trunc('second', NOW()), NOW(), ${ctx.actor.id}, 'administered', ${note} FROM s
+      INSERT INTO carecore_medication_administrations (id, medication_order_id, resident_id, scheduled_at, administered_at, administered_by, status, note, witness_user_id)
+      SELECT ${administrationId}, ${orderId}, ${order.resident_id}, date_trunc('second', NOW()), NOW(), ${ctx.actor.id}, 'administered', ${note}, ${witness?.id ?? null} FROM s
       RETURNING id
     )
     , m AS (
-      INSERT INTO carecore_medication_stock_movements (id, organization_id, stock_id, medication_id, resident_id, administration_id, delta, reason, note, created_by)
-      SELECT ${randomUUID()}, ${ctx.actor.organizationId}, s.id, s.medication_id, ${order.resident_id}, a.id, ${-quantity}, 'administration', ${note}, ${ctx.actor.id}
+      INSERT INTO carecore_medication_stock_movements (id, organization_id, stock_id, medication_id, resident_id, administration_id, delta, reason, note, created_by, witness_user_id)
+      SELECT ${randomUUID()}, ${ctx.actor.organizationId}, s.id, s.medication_id, ${order.resident_id}, a.id, ${-quantity}, 'administration', ${note}, ${ctx.actor.id}, ${witness?.id ?? null}
       FROM s CROSS JOIN a
       RETURNING id
     )
     INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
     SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'medication_administration', ${administrationId}, 'prn_administered',
-      ${JSON.stringify({ residentId: order.resident_id, orderId, quantity, note })}::jsonb
+      ${JSON.stringify({ residentId: order.resident_id, orderId, quantity, note, witness: witness?.name ?? null })}::jsonb
     FROM m
     RETURNING id`) as Row[];
   if (!result[0])

@@ -21,6 +21,8 @@ function errorResponse(error: unknown) {
     return NextResponse.json({ error: "Mitarbeiter ist in dieser Organisation nicht verfügbar." }, { status: 404 });
   if (error instanceof Error && error.message === "CARE_UNIT_NOT_FOUND")
     return NextResponse.json({ error: "Der gewählte Wohnbereich ist nicht verfügbar." }, { status: 400 });
+  if (error instanceof Error && error.message === "QUALIFICATION_NOT_FOUND")
+    return NextResponse.json({ error: "Die Qualifikation gehört nicht zu dieser Organisation." }, { status: 400 });
   if (error instanceof Error && error.message === "INVALID_USER_INPUT")
     return NextResponse.json({ error: "Name, Benutzername und Rolle sind erforderlich." }, { status: 400 });
   if (error instanceof Error && error.message === "INVALID_EMPLOYEE_INPUT")
@@ -86,6 +88,7 @@ export async function PATCH(request: Request) {
       jobTitle?: unknown;
       phone?: unknown;
       primaryCareUnitId?: unknown;
+      qualificationIds?: unknown;
       action?: unknown;
     };
     if (typeof body.userId !== "string") return NextResponse.json({ error: "Benutzer fehlt." }, { status: 400 });
@@ -101,6 +104,9 @@ export async function PATCH(request: Request) {
           typeof body.primaryCareUnitId === "string" || body.primaryCareUnitId === null
             ? body.primaryCareUnitId
             : undefined,
+        qualificationIds: Array.isArray(body.qualificationIds)
+          ? body.qualificationIds.filter((id): id is string => typeof id === "string")
+          : undefined,
         action,
       }),
     );

@@ -37,6 +37,13 @@ export async function verifyWitness(ctx: ApiContext, input: unknown): Promise<Wi
   return { id: user.id, name: user.display_name };
 }
 
+// Zweitunterschrift bei der Gabe: nur für Betäubungsmittel und nur, wenn die Einrichtung sie verlangt.
+export async function administrationWitness(ctx: ApiContext, medicationId: string | null, input: unknown) {
+  if (!medicationId || !(await readSettings(ctx)).btmAdministrationWitness.enabled) return null;
+  if (!(await isControlledMedication(ctx, medicationId))) return null;
+  return verifyWitness(ctx, input);
+}
+
 export async function isControlledMedication(ctx: ApiContext, medicationId: string) {
   const rows =
     (await ctx.sql`SELECT is_controlled FROM carecore_medications WHERE id = ${medicationId} AND organization_id = ${ctx.actor.organizationId}`) as Row[];
