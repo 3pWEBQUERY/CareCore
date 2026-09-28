@@ -28,6 +28,14 @@ async function openEntry(ctx: RosterContext, employeeId: string) {
   return rows[0] ?? null;
 }
 
+async function primaryUnitOf(ctx: RosterContext) {
+  const rows = (await ctx.sql`
+    SELECT p.primary_care_unit_id FROM carecore_user_profiles p
+    WHERE p.user_id = ${ctx.actor.id} AND p.organization_id = ${ctx.actor.organizationId}`) as Row[];
+  const id = rows[0]?.primary_care_unit_id ? String(rows[0].primary_care_unit_id) : null;
+  return id && ctx.access.allUnitIds.includes(id) ? id : null;
+}
+
 async function homeUnitOf(ctx: RosterContext, employeeId: string) {
   const [employee] = Object.values(await loadEmployees(ctx, [employeeId]));
   return employee?.unitIds[0] ?? null;
@@ -48,10 +56,10 @@ async function matchingShift(ctx: RosterContext, requested: string | null, earli
 }
 
 export async function clockIn(ctx: RosterContext, body: Body) {
+  // Eigene Arbeitszeit darf jede Person des Hauses erfassen – auch ohne planbare Zuordnung zu einem
+  // Wohnbereich (z. B. Ärztin, Aushilfe, Administration). Die Zuordnung bestimmt nur den Wohnbereich.
   const home = await homeUnitOf(ctx, ctx.actor.id);
-  if (!home)
-    throw new RosterError("NO_UNIT", "Du bist keinem Wohnbereich zugeordnet. Bitte die Leitung kontaktieren.", 404);
-  requirePermission(ctx, "zeiterfassung:write_own", home);
+  if (home) requirePermission(ctx, "zeiterfassung:write_own", home);
   if (await openEntry(ctx, ctx.actor.id))
     throw new RosterError("ALREADY_CLOCKED_IN", "Du bist bereits eingestempelt.", 409);
   const rules = await loadRuleSet(ctx, home);
@@ -61,11 +69,10 @@ export async function clockIn(ctx: RosterContext, body: Body) {
     throw invalid(
       `Für diesen Dienst ist Einstempeln nur ab ${rules.clockInEarliestMinutes} Minuten vor Beginn bis Dienstende möglich.`,
     );
-  // Ohne Dienst: gewählter Wohnbereich (nur einer, in dem die Person planbar ist), sonst der Stammwohnbereich.
+  // Ohne Dienst: gewählter Wohnbereich des Hauses, sonst der planbare oder der eingetragene Stammwohnbereich.
   const chosen = optionalUuid(body.careUnitId, "Wohnbereich");
-  if (chosen && !shift && !ctx.access.memberUnitIds.includes(chosen))
-    throw invalid("Ungeplante Einsätze sind nur in deinen eigenen Wohnbereichen möglich.");
-  const unitId = shift?.unitId ?? chosen ?? home;
+  if (chosen && !shift && !ctx.access.allUnitIds.includes(chosen)) throw notFound("Wohnbereich");
+  const unitId = shift?.unitId ?? chosen ?? home ?? (await primaryUnitOf(ctx));
   const checklist = Array.isArray(body.checklist)
     ? [...new Set(body.checklist.filter((key) => CHECKLIST_KEYS.includes(key as never)))]
     : [];
@@ -73,7 +80,7 @@ export async function clockIn(ctx: RosterContext, body: Body) {
   const note = text(body.note, "Notiz", 2000);
   const id = randomUUID();
   const today = await orgToday(ctx, rules.timezone);
-  const leads = shift ? [] : await resolveRecipients(ctx, { leadsOf: unitId });
+  const leads = shift || !unitId ? [] : await resolveRecipients(ctx, { leadsOf: unitId });
   // Der Zeitstempel ist die Serverzeit (NOW()), nie ein Wert aus dem Browser.
   await ctx.sql.transaction([
     ctx.sql`INSERT INTO carecore_time_entries (id, organization_id, employee_id, care_unit_id, shift_id, date, clock_in, source, status,

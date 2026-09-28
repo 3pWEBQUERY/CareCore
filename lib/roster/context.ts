@@ -14,8 +14,10 @@ export async function accessFor(sql: ApiContext["sql"], actor: CarecoreActor & {
     FROM carecore_care_units cu
     JOIN carecore_sites si ON si.id = cu.site_id
     LEFT JOIN carecore_unit_memberships m ON m.care_unit_id = cu.id AND m.user_id = ${actor.id}
+    LEFT JOIN carecore_user_profiles p ON p.user_id = ${actor.id}
     WHERE si.organization_id = ${actor.organizationId} AND cu.active = TRUE
-    ORDER BY si.name, cu.name`) as Row[];
+    -- Stammwohnbereich zuerst: er ist die Vorauswahl in Teamplan, Planung und Zeiterfassung.
+    ORDER BY cu.id = p.primary_care_unit_id DESC NULLS LAST, si.name, cu.name`) as Row[];
   return {
     userId: actor.id,
     isAdmin: hasPermission(actor, "administration.manage"),

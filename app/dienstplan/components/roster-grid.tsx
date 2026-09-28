@@ -1,6 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import {
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import {
   DndContext,
   DragOverlay,
@@ -106,41 +116,49 @@ function ShiftChip({
   );
 }
 
-function Cell({
+// Stabile Aktionen für alle Zellen (ändern sich nie), damit memoisierte Zellen nur bei eigenen
+// Änderungen neu rendern – wichtig für grosse Raster (40 Personen × 31 Tage).
+type CellActions = {
+  focus: (row: number, col: number) => void;
+  create: (employeeId: string, date: string) => void;
+  open: (shift: GridShift) => void;
+  select: (row: number, col: number) => void;
+  pointerDown: (row: number, col: number, event: PointerEvent<HTMLDivElement>) => void;
+  keyDown: (row: number, col: number, event: KeyboardEvent<HTMLDivElement>) => void;
+};
+const NO_SHIFTS: GridShift[] = [];
+
+const Cell = memo(function Cell({
+  row,
+  col,
   employee,
   day,
   shifts,
   data,
   canEdit,
   draggable,
+  selectable,
   focused,
   selected,
   previewed,
   highlight,
-  onFocusCell,
-  onCreate,
-  onOpen,
-  onSelect,
-  onPointerDown,
-  onKeyDown,
+  actions,
   children,
 }: {
+  row: number;
+  col: number;
   employee: GridEmployee;
   day: GridDay;
   shifts: GridShift[];
   data: SchedulePayload;
   canEdit: boolean;
   draggable: boolean;
+  selectable: boolean;
   focused: boolean;
   selected: boolean;
   previewed: boolean;
   highlight: boolean;
-  onFocusCell: () => void;
-  onCreate: () => void;
-  onOpen: (shift: GridShift) => void;
-  onSelect?: () => void;
-  onPointerDown: (event: PointerEvent<HTMLDivElement>) => void;
-  onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
+  actions: CellActions;
   children?: ReactNode;
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: cellId(employee.id, day.date), disabled: !canEdit });
@@ -159,11 +177,14 @@ function Cell({
         tabIndex={focused ? 0 : -1}
         data-cell={cellId(employee.id, day.date)}
         aria-label={`${employee.name}, ${WEEKDAY_SHORT[day.weekday - 1]} ${day.date.slice(8)}.${day.date.slice(5, 7)}.${shifts.length ? "" : ", frei"}${timeOff ? `, Wunschfrei ${timeOff.status === "APPROVED" ? "genehmigt" : "beantragt"}` : ""}`}
-        onFocus={onFocusCell}
-        onKeyDown={onKeyDown}
-        onPointerDown={onPointerDown}
+        onFocus={() => actions.focus(row, col)}
+        onKeyDown={(event) => actions.keyDown(row, col, event)}
+        onPointerDown={(event) => actions.pointerDown(row, col, event)}
         onDoubleClick={(event) =>
-          canEdit && !shifts.length && !(event.target as HTMLElement).closest("input") && onCreate()
+          canEdit &&
+          !shifts.length &&
+          !(event.target as HTMLElement).closest("input") &&
+          actions.create(employee.id, day.date)
         }
       >
         {shifts.map((shift) => (
@@ -172,8 +193,8 @@ function Cell({
             shift={shift}
             data={data}
             draggable={draggable && !shift.masked && !shift.entry}
-            onOpen={() => onOpen(shift)}
-            onSelect={onSelect}
+            onOpen={() => actions.open(shift)}
+            onSelect={selectable ? () => actions.select(row, col) : undefined}
           />
         ))}
         {timeOff && (
@@ -185,7 +206,13 @@ function Cell({
           </span>
         )}
         {canEdit && !shifts.length && (
-          <button className="roster-cell-add" type="button" tabIndex={-1} aria-hidden="true" onClick={onCreate}>
+          <button
+            className="roster-cell-add"
+            type="button"
+            tabIndex={-1}
+            aria-hidden="true"
+            onClick={() => actions.create(employee.id, day.date)}
+          >
             +
           </button>
         )}
@@ -193,7 +220,7 @@ function Cell({
       </div>
     </td>
   );
-}
+});
 
 export type CellValue = { employeeId: string; date: string; shiftTypeId: string | null };
 // Stempel der Dienst-Palette: Diensttyp-ID, "clear" (leeren) oder null (aus).
@@ -216,7 +243,74 @@ export type GridProps = {
 
 type Pos = { row: number; col: number };
 
-export function RosterGrid({
+// Der DnD-Kontext liegt aussen und rendert bei Fokus- und Auswahländerungen nicht neu; sonst würden
+// alle Zellen (Droppables) über den Kontext mitrendern.
+export function RosterGrid(props: GridProps) {
+  const { data, employees, shifts, onDrop } = props;
+  const [active, setActive] = useState<GridShift | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    // Long press on touch devices so horizontal scrolling keeps working.
+    useSensor(TouchSensor, { activationConstraint: { delay: 280, tolerance: 8 } }),
+    useSensor(KeyboardSensor),
+  );
+  const latest = useRef({ shifts, onDrop });
+  useLayoutEffect(() => {
+    latest.current = { shifts, onDrop };
+  });
+  const handlers = useMemo(() => {
+    const find = (id: unknown) => latest.current.shifts.find((s) => s.id === id);
+    return {
+      dragStart: (event: DragStartEvent) => setActive(find(event.active.id) ?? null),
+      dragEnd: (event: DragEndEvent) => {
+        setActive(null);
+        const shift = find(event.active.id);
+        if (!shift || !event.over) return;
+        const [employeeId, date] = String(event.over.id).split("|");
+        if (employeeId === shift.employeeId && date === shift.date) return;
+        latest.current.onDrop(shift, employeeId, date);
+      },
+      dragCancel: () => setActive(null),
+    };
+  }, []);
+  // Ansagen für Screenreader; ändern sich nur mit Diensten und Personen, nicht mit Fokus/Auswahl.
+  const accessibility = useMemo(() => {
+    const names = new Map(employees.map((e) => [e.id, e.name]));
+    const shiftLabel = (id: string) => {
+      const shift = shifts.find((s) => s.id === id);
+      return shift
+        ? `${shift.name} von ${names.get(shift.employeeId) ?? ""} am ${shift.date.slice(8)}.${shift.date.slice(5, 7)}.`
+        : "Dienst";
+    };
+    const cellLabel = (id: string) => {
+      const [employeeId, date] = id.split("|");
+      return `${names.get(employeeId) ?? ""}, ${date?.slice(8)}.${date?.slice(5, 7)}.`;
+    };
+    return {
+      announcements: announcements(shiftLabel, cellLabel),
+      screenReaderInstructions: {
+        draggable:
+          "Leertaste drücken, um den Dienst aufzunehmen. Mit den Pfeiltasten verschieben, Leertaste zum Ablegen, Escape zum Abbrechen.",
+      },
+    };
+  }, [shifts, employees]);
+  return (
+    <DndContext
+      sensors={sensors}
+      onDragStart={handlers.dragStart}
+      onDragEnd={handlers.dragEnd}
+      onDragCancel={handlers.dragCancel}
+      accessibility={accessibility}
+    >
+      <GridTable {...props} />
+      <DragOverlay dropAnimation={null}>
+        {active ? <ShiftChip shift={active} data={data} draggable={false} overlay /> : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}
+
+const GridTable = memo(function GridTable({
   data,
   days,
   employees,
@@ -224,12 +318,10 @@ export function RosterGrid({
   highlightShiftIds,
   onCreate,
   onOpen,
-  onDrop,
   onApplyCells,
   paintTool = null,
   onNotice,
 }: GridProps) {
-  const [active, setActive] = useState<GridShift | null>(null);
   const [focus, setFocus] = useState<Pos>({ row: 0, col: 0 });
   const [anchor, setAnchor] = useState<Pos>({ row: 0, col: 0 });
   const [editing, setEditing] = useState<string | null>(null);
@@ -239,12 +331,6 @@ export function RosterGrid({
   const tableRef = useRef<HTMLTableElement>(null);
   const pep = !!onApplyCells && data.canEdit;
   const painting = pep && paintTool !== null;
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    // Long press on touch devices so horizontal scrolling keeps working.
-    useSensor(TouchSensor, { activationConstraint: { delay: 280, tolerance: 8 } }),
-    useSensor(KeyboardSensor),
-  );
   const byCell = useMemo(() => {
     const map = new Map<string, GridShift[]>();
     for (const shift of shifts) {
@@ -253,24 +339,12 @@ export function RosterGrid({
     }
     return map;
   }, [shifts]);
-  const names = useMemo(() => new Map(employees.map((e) => [e.id, e.name])), [employees]);
   const typeByCode = useMemo(
     () => new Map(data.shiftTypes.filter((t) => t.active).map((t) => [t.code.toUpperCase(), t])),
     [data.shiftTypes],
   );
   const rowOf = useMemo(() => new Map(employees.map((e, i) => [e.id, i])), [employees]);
   const colOf = useMemo(() => new Map(days.map((d, i) => [d.date, i])), [days]);
-  const shiftLabel = (id: string) => {
-    const shift = shifts.find((s) => s.id === id);
-    return shift
-      ? `${shift.name} von ${names.get(shift.employeeId) ?? ""} am ${shift.date.slice(8)}.${shift.date.slice(5, 7)}.`
-      : "Dienst";
-  };
-  const cellLabel = (id: string) => {
-    const [employeeId, date] = id.split("|");
-    return `${names.get(employeeId) ?? ""}, ${date?.slice(8)}.${date?.slice(5, 7)}.`;
-  };
-
   // Markierter Bereich (Rechteck zwischen Anker und Fokus).
   const range = {
     r0: Math.min(anchor.row, focus.row),
@@ -454,34 +528,58 @@ export function RosterGrid({
     setAnchor({ row, col });
     if (pep && !onChip && event.pointerType === "mouse") gesture.current = { kind: "select", cells: new Map() };
   };
+  const gestureMove = (event: globalThis.PointerEvent) => {
+    const current = gesture.current;
+    if (!current) return;
+    const hit = cellFromPoint(event.clientX, event.clientY);
+    if (!hit) return;
+    if (current.kind === "select")
+      setFocus((prev) => (prev.row === hit.row && prev.col === hit.col ? prev : { row: hit.row, col: hit.col }));
+    else if (!current.cells.has(cellId(hit.employeeId, hit.date))) {
+      current.cells.set(cellId(hit.employeeId, hit.date), {
+        employeeId: hit.employeeId,
+        date: hit.date,
+        shiftTypeId: null,
+      });
+      setPreview(new Set(current.cells.keys()));
+    }
+  };
+  const gestureEnd = () => {
+    const current = gesture.current;
+    gesture.current = null;
+    if (current?.kind !== "paint") return;
+    setPreview(new Set());
+    const shiftTypeId = paintTool === "clear" ? null : paintTool;
+    const type = data.shiftTypes.find((t) => t.id === shiftTypeId);
+    apply(
+      [...current.cells.values()].map((cell) => ({ ...cell, shiftTypeId })),
+      type ? `${type.code} gestempelt` : "Zellen geleert",
+    );
+  };
+
+  // Die aktuellen Handler liegen in einem Ref; Zellen und Fenster-Listener bekommen stabile Funktionen.
+  const latest = useRef({ keyHandler, pointerDown, moveFocus, onCreate, onOpen, gestureMove, gestureEnd });
+  useLayoutEffect(() => {
+    latest.current = { keyHandler, pointerDown, moveFocus, onCreate, onOpen, gestureMove, gestureEnd };
+  });
+  const actions = useMemo<CellActions>(
+    () => ({
+      focus: (row, col) => setFocus((prev) => (prev.row === row && prev.col === col ? prev : { row, col })),
+      create: (employeeId, date) => latest.current.onCreate(employeeId, date),
+      open: (shift) => latest.current.onOpen(shift),
+      select: (row, col) => latest.current.moveFocus(row, col),
+      pointerDown: (row, col, event) => latest.current.pointerDown(row, col)(event),
+      keyDown: (row, col, event) => {
+        const employee = employees[row];
+        const day = days[col];
+        if (employee && day) latest.current.keyHandler(row, col, employee, day)(event);
+      },
+    }),
+    [employees, days],
+  );
   useEffect(() => {
-    const move = (event: globalThis.PointerEvent) => {
-      const current = gesture.current;
-      if (!current) return;
-      const hit = cellFromPoint(event.clientX, event.clientY);
-      if (!hit) return;
-      if (current.kind === "select") setFocus({ row: hit.row, col: hit.col });
-      else if (!current.cells.has(cellId(hit.employeeId, hit.date))) {
-        current.cells.set(cellId(hit.employeeId, hit.date), {
-          employeeId: hit.employeeId,
-          date: hit.date,
-          shiftTypeId: null,
-        });
-        setPreview(new Set(current.cells.keys()));
-      }
-    };
-    const up = () => {
-      const current = gesture.current;
-      gesture.current = null;
-      if (current?.kind !== "paint") return;
-      setPreview(new Set());
-      const shiftTypeId = paintTool === "clear" ? null : paintTool;
-      const type = data.shiftTypes.find((t) => t.id === shiftTypeId);
-      apply(
-        [...current.cells.values()].map((cell) => ({ ...cell, shiftTypeId })),
-        type ? `${type.code} gestempelt` : "Zellen geleert",
-      );
-    };
+    const move = (event: globalThis.PointerEvent) => latest.current.gestureMove(event);
+    const up = () => latest.current.gestureEnd();
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", up);
@@ -490,34 +588,12 @@ export function RosterGrid({
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
     };
-  });
-
-  const dragStart = (event: DragStartEvent) => setActive(shifts.find((s) => s.id === event.active.id) ?? null);
-  const dragEnd = (event: DragEndEvent) => {
-    setActive(null);
-    const shift = shifts.find((s) => s.id === event.active.id);
-    if (!shift || !event.over) return;
-    const [employeeId, date] = String(event.over.id).split("|");
-    if (employeeId === shift.employeeId && date === shift.date) return;
-    onDrop(shift, employeeId, date);
-  };
+  }, []);
 
   const staffingTypes = data.shiftTypes.filter((type) => data.staffing.some((cell) => cell.shiftTypeId === type.id));
 
   return (
-    <DndContext
-      sensors={sensors}
-      onDragStart={dragStart}
-      onDragEnd={dragEnd}
-      onDragCancel={() => setActive(null)}
-      accessibility={{
-        announcements: announcements(shiftLabel, cellLabel),
-        screenReaderInstructions: {
-          draggable:
-            "Leertaste drücken, um den Dienst aufzunehmen. Mit den Pfeiltasten verschieben, Leertaste zum Ablegen, Escape zum Abbrechen.",
-        },
-      }}
-    >
+    <>
       <div className="roster-grid-scroll">
         <table
           className={`roster-grid${painting ? " painting" : ""}${pep ? " pep" : ""}`}
@@ -598,25 +674,23 @@ export function RosterGrid({
                 {days.map((day, col) => (
                   <Cell
                     key={day.date}
+                    row={row}
+                    col={col}
                     employee={employee}
                     day={day}
                     data={data}
-                    shifts={byCell.get(cellId(employee.id, day.date)) ?? []}
+                    shifts={byCell.get(cellId(employee.id, day.date)) ?? NO_SHIFTS}
                     canEdit={data.canEdit}
                     draggable={data.canEdit && !painting}
+                    selectable={pep}
                     focused={focus.row === row && focus.col === col}
                     selected={pep && inRange(row, col) && (range.r0 !== range.r1 || range.c0 !== range.c1)}
                     previewed={preview.has(cellId(employee.id, day.date))}
                     highlight={
                       !!highlightShiftIds &&
-                      (byCell.get(cellId(employee.id, day.date)) ?? []).some((s) => highlightShiftIds.has(s.id))
+                      (byCell.get(cellId(employee.id, day.date)) ?? NO_SHIFTS).some((s) => highlightShiftIds.has(s.id))
                     }
-                    onFocusCell={() => setFocus({ row, col })}
-                    onCreate={() => onCreate(employee.id, day.date)}
-                    onOpen={onOpen}
-                    onSelect={pep ? () => moveFocus(row, col) : undefined}
-                    onPointerDown={pointerDown(row, col)}
-                    onKeyDown={keyHandler(row, col, employee, day)}
+                    actions={actions}
                   >
                     {editing !== null && focus.row === row && focus.col === col && (
                       <input
@@ -712,9 +786,6 @@ export function RosterGrid({
             ))}
         </datalist>
       )}
-      <DragOverlay dropAnimation={null}>
-        {active ? <ShiftChip shift={active} data={data} draggable={false} overlay /> : null}
-      </DragOverlay>
-    </DndContext>
+    </>
   );
-}
+});

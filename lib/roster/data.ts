@@ -157,7 +157,8 @@ export async function loadEmployees(ctx: RosterContext, ids: string[]): Promise<
       COALESCE(ep.pensum_percent, 100) AS pensum_percent, ep.weekly_target_minutes_override,
       to_char(ep.employment_start, 'YYYY-MM-DD') AS employment_start, to_char(ep.employment_end, 'YYYY-MM-DD') AS employment_end,
       to_jsonb(COALESCE(ep.excluded_categories, '{}'::text[])) AS excluded_categories,
-      COALESCE((SELECT jsonb_agg(m.care_unit_id) FROM carecore_unit_memberships m WHERE m.user_id = u.id AND m.plannable), '[]'::jsonb) AS unit_ids,
+      COALESCE((SELECT jsonb_agg(m.care_unit_id ORDER BY m.care_unit_id = p.primary_care_unit_id DESC NULLS LAST, m.created_at)
+        FROM carecore_unit_memberships m WHERE m.user_id = u.id AND m.plannable), '[]'::jsonb) AS unit_ids,
       COALESCE((SELECT jsonb_agg(jsonb_build_object('qualificationId', q.qualification_id,
         'validFrom', to_char(q.valid_from, 'YYYY-MM-DD'), 'validUntil', to_char(q.valid_until, 'YYYY-MM-DD')))
         FROM carecore_employee_qualifications q WHERE q.user_id = u.id), '[]'::jsonb) AS qualifications
