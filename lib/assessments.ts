@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { ApiError, assertResident, iso, num, text, writeAudit, type ApiContext, type Row } from "@/lib/api-context";
+import { ApiError, assertResident, iso, num, text, type ApiContext, type Row } from "@/lib/api-context";
+import { residentAudit } from "@/lib/resident-audit";
 import { INSTRUMENTS, bandFor, instrumentByCode, scoreAnswers, type Instrument } from "@/lib/assessment-instruments";
 import { initials } from "@/lib/medication-shared";
 
@@ -214,13 +215,13 @@ export async function recordAssessment(ctx: ApiContext, body: Record<string, unk
     ctx.sql`
       UPDATE carecore_assessment_records SET status = 'superseded', updated_at = NOW()
       WHERE resident_id = ${residentId} AND assessment_id = ${assessmentId} AND status IN ('draft', 'in_progress')`,
+    residentAudit(ctx.sql, ctx.actor, {
+      residentId,
+      entityType: "assessment_record",
+      entityId: id,
+      action: "completed",
+      after: { instrument: instrument.code, score, risk: band?.level ?? null, nextDueOn },
+    }),
   ]);
-  await writeAudit(ctx, "assessment_record", id, "completed", null, {
-    residentId,
-    instrument: instrument.code,
-    score,
-    risk: band?.level,
-    nextDueOn,
-  });
   return { id, score, riskLabel: band?.label ?? null, tone: band?.tone ?? "info", nextDueOn };
 }

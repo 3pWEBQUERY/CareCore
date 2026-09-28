@@ -1,15 +1,6 @@
 import { randomUUID } from "node:crypto";
-import {
-  ApiError,
-  assertResident,
-  assertUuid,
-  iso,
-  num,
-  text,
-  writeAudit,
-  type ApiContext,
-  type Row,
-} from "@/lib/api-context";
+import { ApiError, assertResident, assertUuid, iso, num, text, type ApiContext, type Row } from "@/lib/api-context";
+import { residentAudit } from "@/lib/resident-audit";
 import { initials } from "@/lib/medication-shared";
 import {
   ASSISTANCE,
@@ -216,11 +207,15 @@ export async function savePlan(ctx: ApiContext, residentIdInput: unknown, body: 
         meal_rhythm, assistance, preferences, instructions, active, created_by)
       VALUES (${id}, ${residentId}, ${plan.diet}, ${plan.texture}, ${plan.allergies}, ${plan.fluidTargetMl}, ${plan.fluidLimitMl}, ${plan.calorieTarget},
         ${plan.mealRhythm}, ${plan.assistance}, ${plan.preferences}, ${plan.instructions}, TRUE, ${ctx.actor.id})`,
+    residentAudit(ctx.sql, ctx.actor, {
+      residentId,
+      entityType: "nutrition_plan",
+      entityId: id,
+      action: before[0] ? "replaced" : "created",
+      before: (before[0] as Record<string, unknown> | undefined) ?? null,
+      after: plan,
+    }),
   ]);
-  await writeAudit(ctx, "nutrition_plan", id, before[0] ? "replaced" : "created", before[0] ?? null, {
-    residentId,
-    ...plan,
-  });
   return id;
 }
 
@@ -241,10 +236,18 @@ export async function addFluid(ctx: ApiContext, body: Record<string, unknown>) {
     throw new ApiError("Bitte eine Trinkmenge zwischen 10 und 1500 ml angeben.");
   const id = randomUUID();
   const consumedAt = timestamp(body.consumedAt);
-  await ctx.sql`
-    INSERT INTO carecore_fluid_entries (id, resident_id, entered_by, consumed_at, amount_ml, beverage, note)
-    VALUES (${id}, ${residentId}, ${ctx.actor.id}, ${consumedAt}, ${amount as number}, ${text(body.beverage, 120) || null}, ${text(body.note, 1000) || null})`;
-  await writeAudit(ctx, "fluid_entry", id, "created", null, { residentId, amountMl: amount, consumedAt });
+  await ctx.sql.transaction([
+    ctx.sql`
+      INSERT INTO carecore_fluid_entries (id, resident_id, entered_by, consumed_at, amount_ml, beverage, note)
+      VALUES (${id}, ${residentId}, ${ctx.actor.id}, ${consumedAt}, ${amount as number}, ${text(body.beverage, 120) || null}, ${text(body.note, 1000) || null})`,
+    residentAudit(ctx.sql, ctx.actor, {
+      residentId,
+      entityType: "fluid_entry",
+      entityId: id,
+      action: "created",
+      after: { amountMl: amount, consumedAt },
+    }),
+  ]);
   return id;
 }
 
@@ -262,10 +265,18 @@ export async function addMeal(ctx: ApiContext, body: Record<string, unknown>) {
     );
   const id = randomUUID();
   const eatenAt = timestamp(body.eatenAt);
-  await ctx.sql`
-    INSERT INTO carecore_meal_entries (id, resident_id, entered_by, eaten_at, meal, portion_percent, note)
-    VALUES (${id}, ${residentId}, ${ctx.actor.id}, ${eatenAt}, ${meal}, ${portion as number}, ${note || null})`;
-  await writeAudit(ctx, "meal_entry", id, "created", null, { residentId, meal, portionPercent: portion, eatenAt });
+  await ctx.sql.transaction([
+    ctx.sql`
+      INSERT INTO carecore_meal_entries (id, resident_id, entered_by, eaten_at, meal, portion_percent, note)
+      VALUES (${id}, ${residentId}, ${ctx.actor.id}, ${eatenAt}, ${meal}, ${portion as number}, ${note || null})`,
+    residentAudit(ctx.sql, ctx.actor, {
+      residentId,
+      entityType: "meal_entry",
+      entityId: id,
+      action: "created",
+      after: { meal, portionPercent: portion, eatenAt },
+    }),
+  ]);
   return id;
 }
 
@@ -274,17 +285,27 @@ export async function hideEntry(ctx: ApiContext, kind: "fluid" | "meal", idInput
   const id = assertUuid(idInput, "Eintrag");
   const reason = text(reasonInput, 1000);
   if (!reason) throw new ApiError("Bitte den Grund für die Korrektur angeben.");
+  // Ausblenden und Protokoll in einer Anweisung; das Protokoll nennt den Bewohner für die Akte.
   const rows = (
     kind === "fluid"
       ? await ctx.sql`
-          UPDATE carecore_fluid_entries e SET deleted_at = NOW(), deleted_by = ${ctx.actor.id}, delete_reason = ${reason}
-          FROM carecore_residents r WHERE e.id = ${id} AND e.deleted_at IS NULL AND r.id = e.resident_id AND r.organization_id = ${ctx.actor.organizationId}
-          RETURNING e.id`
+          WITH h AS (
+            UPDATE carecore_fluid_entries e SET deleted_at = NOW(), deleted_by = ${ctx.actor.id}, delete_reason = ${reason}
+            FROM carecore_residents r WHERE e.id = ${id} AND e.deleted_at IS NULL AND r.id = e.resident_id AND r.organization_id = ${ctx.actor.organizationId}
+            RETURNING e.id, e.resident_id)
+          INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
+          SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'fluid_entry', h.id, 'hidden',
+            jsonb_build_object('residentId', h.resident_id, 'reason', ${reason}::text)
+          FROM h RETURNING entity_id`
       : await ctx.sql`
-          UPDATE carecore_meal_entries e SET deleted_at = NOW(), deleted_by = ${ctx.actor.id}, delete_reason = ${reason}
-          FROM carecore_residents r WHERE e.id = ${id} AND e.deleted_at IS NULL AND r.id = e.resident_id AND r.organization_id = ${ctx.actor.organizationId}
-          RETURNING e.id`
+          WITH h AS (
+            UPDATE carecore_meal_entries e SET deleted_at = NOW(), deleted_by = ${ctx.actor.id}, delete_reason = ${reason}
+            FROM carecore_residents r WHERE e.id = ${id} AND e.deleted_at IS NULL AND r.id = e.resident_id AND r.organization_id = ${ctx.actor.organizationId}
+            RETURNING e.id, e.resident_id)
+          INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
+          SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'meal_entry', h.id, 'hidden',
+            jsonb_build_object('residentId', h.resident_id, 'reason', ${reason}::text)
+          FROM h RETURNING entity_id`
   ) as Row[];
   if (!rows[0]) throw new ApiError("Eintrag nicht gefunden.", 404);
-  await writeAudit(ctx, `${kind}_entry`, id, "hidden", null, { reason });
 }

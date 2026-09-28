@@ -63,7 +63,20 @@ export async function writeAudit(
   before: unknown,
   after: unknown,
 ) {
-  await ctx.sql`
+  await auditStatement(ctx, entityType, entityId, action, before, after);
+}
+
+// Wie writeAudit, aber als nicht ausgeführte Abfrage für `ctx.sql.transaction([...])`, damit Änderung und
+// Protokoll gemeinsam gelingen oder scheitern.
+export function auditStatement(
+  ctx: ApiContext,
+  entityType: string,
+  entityId: string,
+  action: string,
+  before: unknown,
+  after: unknown,
+) {
+  return ctx.sql`
     INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, before_data, after_data)
     VALUES (${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, ${entityType}, ${entityId}, ${action},
       ${before === null ? null : JSON.stringify(before)}::jsonb, ${after === null ? null : JSON.stringify(after)}::jsonb)

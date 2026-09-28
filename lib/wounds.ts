@@ -1,16 +1,7 @@
 import { randomUUID } from "node:crypto";
-import {
-  ApiError,
-  assertResident,
-  assertUuid,
-  iso,
-  num,
-  text,
-  writeAudit,
-  type ApiContext,
-  type Row,
-} from "@/lib/api-context";
+import { ApiError, assertResident, assertUuid, iso, num, text, type ApiContext, type Row } from "@/lib/api-context";
 import { initials } from "@/lib/medication-shared";
+import { residentAudit } from "@/lib/resident-audit";
 import {
   EDGE_OPTIONS,
   ENTRY_TYPES,
@@ -162,6 +153,14 @@ async function loadWound(ctx: ApiContext, woundIdInput: unknown) {
   return wound;
 }
 
+// Verbandwechsel-Intervall in Tagen (1–14) oder leer; ungültige Werte werden nicht stillschweigend verworfen.
+function careInterval(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+  if (!Number.isInteger(value) || (value as number) < 1 || (value as number) > 14)
+    throw new ApiError("Das Intervall der Wundversorgung muss zwischen 1 und 14 Tagen liegen.");
+  return value as number;
+}
+
 export function parseWoundInput(body: Record<string, unknown>): WoundInput {
   const woundType = oneOf(WOUND_TYPES, body.woundType);
   if (!woundType) throw new ApiError("Bitte die Wundart wählen.");
@@ -176,12 +175,7 @@ export function parseWoundInput(body: Record<string, unknown>): WoundInput {
     diagnosis: text(body.diagnosis, 180),
     origin: body.origin === "inhouse" || body.origin === "external" ? body.origin : "unknown",
     discoveredOn: typeof body.discoveredOn === "string" && DATE.test(body.discoveredOn) ? body.discoveredOn : "",
-    careIntervalDays:
-      Number.isInteger(body.careIntervalDays) &&
-      (body.careIntervalDays as number) >= 1 &&
-      (body.careIntervalDays as number) <= 14
-        ? (body.careIntervalDays as number)
-        : null,
+    careIntervalDays: careInterval(body.careIntervalDays),
     treatmentPlan: text(body.treatmentPlan, 4000),
     responsibleId: typeof body.responsibleId === "string" && body.responsibleId ? body.responsibleId : null,
     bodyObservationId:
@@ -193,21 +187,27 @@ export function parseWoundInput(body: Record<string, unknown>): WoundInput {
   return input;
 }
 
+async function assertNotFuture(ctx: ApiContext, discoveredOn: string) {
+  const today = (
+    await ctx.sql`SELECT to_char(NOW() AT TIME ZONE timezone, 'YYYY-MM-DD') AS d FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}`
+  )[0].d as string;
+  if (discoveredOn > today) throw new ApiError("Das Feststellungsdatum liegt in der Zukunft.");
+}
+
 async function assertStaff(ctx: ApiContext, userId: string | null) {
   if (!userId) return;
-  const rows =
-    await ctx.sql`SELECT user_id FROM carecore_user_profiles WHERE user_id = ${assertUuid(userId, "Verantwortliche Person")} AND organization_id = ${ctx.actor.organizationId}`;
-  if (!rows[0]) throw new ApiError("Die verantwortliche Person gehört nicht zu dieser Organisation.");
+  const rows = await ctx.sql`
+    SELECT p.user_id FROM carecore_user_profiles p JOIN carecore_users u ON u.id = p.user_id AND u.active
+    WHERE p.user_id = ${assertUuid(userId, "Verantwortliche Person")} AND p.organization_id = ${ctx.actor.organizationId}`;
+  if (!rows[0])
+    throw new ApiError("Die verantwortliche Person gehört nicht zu dieser Organisation oder ist nicht aktiv.");
 }
 
 export async function createWound(ctx: ApiContext, body: Record<string, unknown>) {
   const input = parseWoundInput(body);
   const residentId = await assertResident(ctx, input.residentId);
   await assertStaff(ctx, input.responsibleId);
-  const today = (
-    await ctx.sql`SELECT to_char(NOW() AT TIME ZONE timezone, 'YYYY-MM-DD') AS d FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}`
-  )[0].d as string;
-  if (input.discoveredOn > today) throw new ApiError("Das Feststellungsdatum liegt in der Zukunft.");
+  await assertNotFuture(ctx, input.discoveredOn);
   const entry = body.initialEntry
     ? parseEntryInput({ ...(body.initialEntry as Record<string, unknown>), entryType: "Erstbeurteilung" })
     : null;
@@ -221,8 +221,14 @@ export async function createWound(ctx: ApiContext, body: Record<string, unknown>
         ${input.responsibleId}, ${input.woundType}, ${input.category}, ${input.origin}, ${input.careIntervalDays}, ${input.treatmentPlan || null})`,
     ...(entry ? [insertEntry(ctx, id, entry)] : []),
     ...linkStatements(ctx, id, input.bodyObservationId),
+    residentAudit(ctx.sql, ctx.actor, {
+      residentId,
+      entityType: "wound",
+      entityId: id,
+      action: "created",
+      after: { ...input, initialEntry: entry },
+    }),
   ]);
-  await writeAudit(ctx, "wound", id, "created", null, { ...input, initialEntry: entry });
   return id;
 }
 
@@ -230,6 +236,7 @@ export async function updateWound(ctx: ApiContext, woundId: unknown, body: Recor
   const before = await loadWound(ctx, woundId);
   if (before.status === "closed") throw new ApiError("Abgeschlossene Wunden bitte zuerst wieder eröffnen.", 409);
   const input = parseWoundInput({ ...body, residentId: before.residentId });
+  await assertNotFuture(ctx, input.discoveredOn);
   await assertStaff(ctx, input.responsibleId);
   await assertLinkable(ctx, before.id, before.residentId, input.bodyObservationId);
   await ctx.sql.transaction([
@@ -240,8 +247,26 @@ export async function updateWound(ctx: ApiContext, woundId: unknown, body: Recor
       treatment_plan = ${input.treatmentPlan || null}, updated_at = NOW()
     WHERE id = ${before.id}`,
     ...linkStatements(ctx, before.id, input.bodyObservationId),
+    residentAudit(ctx.sql, ctx.actor, {
+      residentId: before.residentId,
+      entityType: "wound",
+      entityId: before.id,
+      action: "updated",
+      before: {
+        title: before.title,
+        bodyLocation: before.bodyLocation,
+        woundType: before.woundType,
+        category: before.category,
+        diagnosis: before.diagnosis,
+        origin: before.origin,
+        careIntervalDays: before.careIntervalDays,
+        treatmentPlan: before.treatmentPlan,
+        responsibleId: before.responsibleId,
+        bodyObservationId: before.bodyObservation?.id ?? null,
+      },
+      after: input,
+    }),
   ]);
-  await writeAudit(ctx, "wound", before.id, "updated", before, input);
 }
 
 // A body map marker can be linked to one wound of the same resident. Checked before
@@ -278,19 +303,22 @@ export async function setWoundStatus(ctx: ApiContext, woundId: unknown, status: 
   if (status === "closed" && !reason)
     throw new ApiError("Bitte den Grund für den Abschluss angeben, z. B. „vollständig epithelisiert“.");
   const before = await loadWound(ctx, woundId);
-  await ctx.sql`
-    UPDATE carecore_wounds SET status = ${status},
-      closed_at = CASE WHEN ${status} = 'closed' THEN NOW() ELSE NULL END,
-      closed_reason = CASE WHEN ${status} = 'closed' THEN ${reason} ELSE NULL END, updated_at = NOW()
-    WHERE id = ${before.id}`;
-  await writeAudit(
-    ctx,
-    "wound",
-    before.id,
-    `status_${status}`,
-    { status: before.status },
-    { status, reason: reason || null },
-  );
+  if (before.status === status) return;
+  await ctx.sql.transaction([
+    ctx.sql`
+      UPDATE carecore_wounds SET status = ${status},
+        closed_at = CASE WHEN ${status} = 'closed' THEN NOW() ELSE NULL END,
+        closed_reason = CASE WHEN ${status} = 'closed' THEN ${reason} ELSE NULL END, updated_at = NOW()
+      WHERE id = ${before.id}`,
+    residentAudit(ctx.sql, ctx.actor, {
+      residentId: before.residentId,
+      entityType: "wound",
+      entityId: before.id,
+      action: `status_${status}`,
+      before: { status: before.status },
+      after: { status, reason: reason || null },
+    }),
+  ]);
 }
 
 // ----------------------------------------------------------------- entries
@@ -354,8 +382,14 @@ export async function addEntry(ctx: ApiContext, woundId: unknown, body: Record<s
   await ctx.sql.transaction([
     insertEntry(ctx, wound.id, entry),
     ctx.sql`UPDATE carecore_wounds SET status = ${nextStatus}, updated_at = NOW() WHERE id = ${wound.id}`,
+    residentAudit(ctx.sql, ctx.actor, {
+      residentId: wound.residentId,
+      entityType: "wound_entry",
+      entityId: wound.id,
+      action: "documented",
+      after: { ...entry, woundStatus: nextStatus },
+    }),
   ]);
-  await writeAudit(ctx, "wound_entry", wound.id, "documented", null, { ...entry, woundStatus: nextStatus });
 }
 
 export async function listEntries(ctx: ApiContext, woundId: unknown) {
