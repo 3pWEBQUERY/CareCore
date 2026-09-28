@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { setCareResident } from "@/app/components/care-context";
+import { isTyping } from "@/app/components/keyboard-shortcuts";
 import type { ResidentRecordData } from "./resident-record-data";
 import { ResidentRow, residentStatusValues, toResident } from "./residents-utils";
 import { ResidentStatusFilter } from "./residents-utils";
@@ -69,7 +70,13 @@ export function useResidentsPage() {
         event.preventDefault();
         openSearch();
       }
-      if (event.key === "Escape") {
+      // Ein offener Dialog in der Akte schliesst sich zuerst (useEscapeClose); aus einem Eingabefeld
+      // heraus verlässt Escape nur das Feld, damit ungespeicherte Eingaben nicht verloren gehen.
+      if (event.key === "Escape" && !event.defaultPrevented) {
+        if (isTyping(event.target) && (event.target as HTMLElement).closest(".resident-record-layer")) {
+          (event.target as HTMLElement).blur();
+          return;
+        }
         setSearchOpen(false);
         setSelectedResident(null);
       }

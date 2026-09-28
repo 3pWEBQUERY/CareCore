@@ -117,6 +117,11 @@ export function BodyObservationDialog({ r }: { r: ResidentRecordState }) {
             />
           </label>
         </div>
+        {r.bodyError && (
+          <p className="appointment-editor-error" role="alert">
+            {r.bodyError}
+          </p>
+        )}
         <div className="body-observation-editor-actions">
           <button className="secondary-button" type="button" onClick={() => setBodyEditor(null)}>
             Abbrechen

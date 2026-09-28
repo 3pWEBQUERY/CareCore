@@ -104,10 +104,18 @@ export function appointmentDateLabel(value: string, options: Intl.DateTimeFormat
   return new Intl.DateTimeFormat("de-CH", { timeZone: "Europe/Zurich", ...options }).format(new Date(value));
 }
 
+// Neue Termine beginnen um 09:00, heute aber frühestens zur nächsten vollen Stunde (nicht in der Vergangenheit).
+function defaultStartTime(date: string) {
+  const now = appointmentLocalParts(new Date());
+  const hour = Number(now.time.slice(0, 2));
+  if (date !== now.date || hour < 9) return "09:00";
+  return `${String(Math.min(hour + 1, 22)).padStart(2, "0")}:00`;
+}
+
 export function initialAppointmentDraft(
   residentId = "",
   date = appointmentLocalParts(new Date()).date,
-  startTime = "09:00",
+  startTime = defaultStartTime(date),
 ): AppointmentDraft {
   const [hour, minute] = startTime.split(":").map(Number);
   const endMinutes = Math.min(23 * 60 + 45, hour * 60 + minute + 60);

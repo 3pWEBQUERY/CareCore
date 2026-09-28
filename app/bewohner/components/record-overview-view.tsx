@@ -26,6 +26,9 @@ import {
 } from "@phosphor-icons/react";
 import type { ResidentRecordState } from "./use-resident-record";
 
+// Standardtext der Bewohnerliste, wenn weder ein klinischer Hinweis noch eine Notiz vorliegt.
+const NO_HINT = "Keine aktuellen Hinweise";
+
 export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
   const {
     resident,
@@ -338,10 +341,17 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
             </div>
             <div className={`record-clinical-alert ${resident.status}`}>
               <Pulse aria-hidden="true" />
-              <div>
-                <strong>{resident.note}</strong>
-                <p>Bitte im laufenden Dienst beachten und Veränderungen zeitnah dokumentieren.</p>
-              </div>
+              {resident.note === NO_HINT ? (
+                <div>
+                  <strong>Keine aktuellen Pflegehinweise</strong>
+                  <p>Beobachtungen und Veränderungen bitte in der Dokumentation erfassen.</p>
+                </div>
+              ) : (
+                <div>
+                  <strong>{resident.note}</strong>
+                  <p>Bitte im laufenden Dienst beachten und Veränderungen zeitnah dokumentieren.</p>
+                </div>
+              )}
             </div>
           </section>
 

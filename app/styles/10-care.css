@@ -541,8 +541,15 @@
   cursor: pointer;
 }
 .search-result:hover,
-.search-result:focus-visible {
+.search-result:focus-visible,
+.search-result.active {
   background: var(--brand-soft);
+}
+.search-empty {
+  margin: 0;
+  padding: 18px 12px;
+  color: var(--muted);
+  font-size: 13px;
 }
 .house-timeline ol {
   display: grid;

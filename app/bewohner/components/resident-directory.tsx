@@ -16,7 +16,15 @@ export function ResidentDirectory({ r }: { r: ResidentsPageState }) {
     setFiltersOpen,
     setSelectedResident,
     filteredResidents,
+    residents,
   } = r;
+  const filtered = unit !== "Alle" || statusFilter !== "Alle" || Boolean(query);
+  const activeFilters = Number(unit !== "Alle") + Number(statusFilter !== "Alle");
+  const resetFilters = () => {
+    setUnit("Alle");
+    setStatusFilter("Alle");
+    setQuery("");
+  };
   return (
     <section className="card resident-directory" aria-labelledby="directory-title">
       <div className="directory-toolbar">
@@ -24,7 +32,11 @@ export function ResidentDirectory({ r }: { r: ResidentsPageState }) {
           <h2 className="card-title" id="directory-title">
             Bewohnerverzeichnis
           </h2>
-          <p className="card-subtitle">{filteredResidents.length} Einträge aus der Datenbank</p>
+          <p className="card-subtitle">
+            {filtered
+              ? `${filteredResidents.length} von ${residents.length} Bewohnern${unit !== "Alle" ? ` · ${unit}` : ""}${statusFilter !== "Alle" ? ` · ${statusFilter}` : ""}`
+              : `${residents.length} Bewohner aus der Datenbank`}
+          </p>
         </div>
         <label className="resident-search">
           <Icon name="search" />
@@ -43,7 +55,7 @@ export function ResidentDirectory({ r }: { r: ResidentsPageState }) {
           onClick={() => setFiltersOpen((open) => !open)}
         >
           <Icon name="filter" />
-          {filtersOpen ? "Filter schliessen" : "Filter"}
+          {filtersOpen ? "Filter schliessen" : activeFilters ? `Filter (${activeFilters})` : "Filter"}
           <Icon name="caretDown" className="directory-filter-caret" />
         </button>
       </div>
@@ -85,16 +97,8 @@ export function ResidentDirectory({ r }: { r: ResidentsPageState }) {
               ))}
             </div>
           </div>
-          {(unit !== "Alle" || statusFilter !== "Alle" || query) && (
-            <button
-              className="resident-filter-reset"
-              type="button"
-              onClick={() => {
-                setUnit("Alle");
-                setStatusFilter("Alle");
-                setQuery("");
-              }}
-            >
+          {filtered && (
+            <button className="resident-filter-reset" type="button" onClick={resetFilters}>
               Filter zurücksetzen
             </button>
           )}
@@ -115,7 +119,7 @@ export function ResidentDirectory({ r }: { r: ResidentsPageState }) {
             className="resident-list-row"
             type="button"
             role="row"
-            key={resident.name}
+            key={resident.id ?? resident.name}
             onClick={() => setSelectedResident(resident)}
           >
             <span className="resident-person" role="cell">
@@ -143,7 +147,16 @@ export function ResidentDirectory({ r }: { r: ResidentsPageState }) {
           <div className="resident-empty">
             <Icon name="search" />
             <strong>Keine Bewohner gefunden</strong>
-            <p>Prüfe den Suchbegriff oder ändere den Wohnbereich.</p>
+            <p>
+              {residents.length
+                ? "Keine Bewohner passen zu Suche und Filter."
+                : "Es sind noch keine Bewohner erfasst. Über „Bewohner aufnehmen“ legst du die erste Akte an."}
+            </p>
+            {filtered && residents.length > 0 && (
+              <button className="secondary-button" type="button" onClick={resetFilters}>
+                Alle {residents.length} Bewohner anzeigen
+              </button>
+            )}
           </div>
         )}
       </div>

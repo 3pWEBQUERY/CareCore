@@ -1,5 +1,7 @@
 "use client";
 
+import type { Confirm } from "@/app/components/confirm-dialog";
+import { useEscapeClose } from "@/app/components/use-escape-close";
 import { useEffect, useState, type FormEvent } from "react";
 import { type BodyPoint } from "./body-map-3d";
 import { BodyObservation, ObservationDraft } from "./resident-record-data";
@@ -8,9 +10,11 @@ import type { ResidentRecordData } from "./resident-record-data";
 export function useRecordBody({
   resident,
   onAction,
+  confirm,
 }: {
   resident: ResidentRecordData;
   onAction: (message: string) => void;
+  confirm: Confirm;
 }) {
   const [activeBodyObservationId, setActiveBodyObservationId] = useState<string | null>(null);
   const [bodyObservations, setBodyObservations] = useState<BodyObservation[]>([]);
@@ -20,14 +24,7 @@ export function useRecordBody({
   const [bodyEditor, setBodyEditor] = useState<{ id: string | null; draft: ObservationDraft } | null>(null);
   const [bodySaving, setBodySaving] = useState(false);
 
-  useEffect(() => {
-    if (!bodyEditor) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setBodyEditor(null);
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [bodyEditor]);
+  useEscapeClose(() => !bodySaving && setBodyEditor(null), Boolean(bodyEditor));
 
   useEffect(() => {
     if (!resident.id) return;
@@ -110,11 +107,19 @@ export function useRecordBody({
   }
 
   async function archiveBodyObservation(observation: BodyObservation) {
-    if (!resident.id || !window.confirm(`${observation.label} an ${observation.location} archivieren?`)) return;
+    if (
+      !resident.id ||
+      !(await confirm({
+        title: "Körperbefund archivieren",
+        message: `${observation.label} an ${observation.location} wird archiviert und nicht mehr am Körpermodell angezeigt.`,
+        confirmLabel: "Archivieren",
+      }))
+    )
+      return;
     const response = await fetch(`/api/residents/${resident.id}/body-observations/${observation.id}`, {
       method: "DELETE",
-    });
-    if (!response.ok) {
+    }).catch(() => null);
+    if (!response?.ok) {
       setBodyError("Befund konnte nicht archiviert werden.");
       return;
     }

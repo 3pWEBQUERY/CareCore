@@ -238,7 +238,9 @@ export async function recordTimeline(ctx: ApiContext, residentIdInput: unknown):
   const entries: TimelineEntry[] = [
     ...docs.map((row) => ({
       id: `doc-${row.id}`,
-      category: "Pflege" as const,
+      // Einträge der Kategorien Medikation und Vitalwerte erscheinen auch unter diesen Filtern im Verlauf.
+      category: (row.category === "Medikation" || row.category === "Vitalwerte" ? row.category : "Pflege") as
+        "Pflege" | "Medikation" | "Vitalwerte",
       occurredAt: iso(row.occurred_at) ?? "",
       title: String(row.title ?? row.category),
       description: String(row.body),

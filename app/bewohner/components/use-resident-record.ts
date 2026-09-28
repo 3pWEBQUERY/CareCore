@@ -13,6 +13,7 @@ import {
   HistoryFilter,
   DocumentationEntry,
 } from "./resident-record-data";
+import { useConfirmDialog } from "@/app/components/confirm-dialog";
 import { useRecordLive } from "./use-record-live";
 import { useRecordBody } from "./use-record-body";
 import { useRecordContacts } from "./use-record-contacts";
@@ -51,6 +52,7 @@ export function useResidentRecord({
     nextAppointment,
     appointmentEditorResidents,
   } = useRecordAppointments({ resident });
+  const { confirm, confirmDialog } = useConfirmDialog();
   const {
     supplies,
     setSupplies,
@@ -67,7 +69,7 @@ export function useResidentRecord({
     openSupplyEditor,
     saveSupply,
     deleteSupply,
-  } = useRecordSupplies({ resident, onAction });
+  } = useRecordSupplies({ resident, onAction, confirm });
   const {
     biography,
     setBiography,
@@ -95,7 +97,7 @@ export function useResidentRecord({
     openContactEditor,
     saveContact,
     deleteContact,
-  } = useRecordContacts({ resident, onAction });
+  } = useRecordContacts({ resident, onAction, confirm });
   const {
     activeBodyObservationId,
     setActiveBodyObservationId,
@@ -115,7 +117,7 @@ export function useResidentRecord({
     editBodyObservation,
     saveBodyObservation,
     archiveBodyObservation,
-  } = useRecordBody({ resident, onAction });
+  } = useRecordBody({ resident, onAction, confirm });
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const residentPhotoInputRef = useRef<HTMLInputElement>(null);
   const {
@@ -306,6 +308,7 @@ export function useResidentRecord({
     }
   }
   return {
+    confirmDialog,
     navigation,
     historyEntries,
     live,

@@ -1,5 +1,6 @@
 "use client";
 
+import type { Confirm } from "@/app/components/confirm-dialog";
 import { useEffect, useState, type FormEvent } from "react";
 import { ResidentContact, ContactDraft, emptyContact } from "./resident-record-data";
 import type { ResidentRecordData } from "./resident-record-data";
@@ -7,9 +8,11 @@ import type { ResidentRecordData } from "./resident-record-data";
 export function useRecordContacts({
   resident,
   onAction,
+  confirm,
 }: {
   resident: ResidentRecordData;
   onAction: (message: string) => void;
+  confirm: Confirm;
 }) {
   const [contacts, setContacts] = useState<ResidentContact[]>([]);
   const [contactsLoading, setContactsLoading] = useState(Boolean(resident.id));
@@ -82,9 +85,13 @@ export function useRecordContacts({
         return;
       }
       setContacts((current) => {
+        // Es gibt nur einen Hauptkontakt; der Server hat die anderen bereits zurückgesetzt.
+        const others = data.contact.is_primary
+          ? current.map((contact) => ({ ...contact, is_primary: false }))
+          : current;
         const updated = contactEditor.id
-          ? current.map((contact) => (contact.id === contactEditor.id ? data.contact : contact))
-          : [...current, data.contact];
+          ? others.map((contact) => (contact.id === contactEditor.id ? data.contact : contact))
+          : [...others, data.contact];
         return [...updated].sort(
           (a, b) =>
             Number(b.is_primary) - Number(a.is_primary) ||
@@ -102,7 +109,15 @@ export function useRecordContacts({
   }
 
   async function deleteContact(contact: ResidentContact) {
-    if (!resident.id || !window.confirm(`${contact.full_name} wirklich aus den Kontaktpersonen entfernen?`)) return;
+    if (
+      !resident.id ||
+      !(await confirm({
+        title: "Kontaktperson entfernen",
+        message: `${contact.full_name} wird aus den Kontaktpersonen von ${resident.name} entfernt.`,
+        confirmLabel: "Entfernen",
+      }))
+    )
+      return;
     setContactsError("");
     try {
       const response = await fetch(`/api/residents/${resident.id}/contacts/${contact.id}`, { method: "DELETE" });

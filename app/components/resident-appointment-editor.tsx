@@ -15,6 +15,7 @@ import {
   type AppointmentResident,
   type ResidentAppointment,
 } from "@/lib/resident-appointments";
+import { useEscapeClose } from "@/app/components/use-escape-close";
 
 const times = Array.from(
   { length: 96 },
@@ -45,6 +46,7 @@ export default function ResidentAppointmentEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  useEscapeClose(() => !saving && onClose());
   const residentOptions = residents.map((item) => ({
     ...item,
     label: `${item.name} · ${item.room_name || item.care_unit_name || "ohne Zimmer"}`,

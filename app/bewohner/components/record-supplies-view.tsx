@@ -63,7 +63,9 @@ export function RecordSuppliesView({ r }: { r: ResidentRecordState }) {
             <span className="record-section-label">Individueller Bedarf</span>
             <h3>Materialien und Hilfsmittel</h3>
           </div>
-          <span>{supplies.length} Einträge</span>
+          <span>
+            {supplies.length} {supplies.length === 1 ? "Eintrag" : "Einträge"}
+          </span>
         </div>
         <div className="supplies-table-head">
           <span>Artikel</span>

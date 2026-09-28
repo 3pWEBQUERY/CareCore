@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CalendarDots, Check, ClipboardText, PencilSimple, Plus, Trash, User } from "@phosphor-icons/react";
 import { formatDate, formatDateTime, requestJson } from "@/app/components/workspace-ui";
+import { CareOptionSelect } from "@/app/components/care-form-controls";
 import { LANGUAGES, MARITAL_STATUSES, type MasterData, type RecordSummary } from "@/lib/resident-record-shared";
 import type { ResidentRecordState } from "./use-resident-record";
 
@@ -183,52 +184,48 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
               </label>
               <label>
                 <span>Geburtsdatum</span>
-                <input type="date" {...field("dateOfBirth")} />
+                {editable ? (
+                  <input type="date" {...field("dateOfBirth")} />
+                ) : (
+                  <input readOnly value={values.dateOfBirth ? formatDate(values.dateOfBirth) : ""} />
+                )}
               </label>
               <label>
                 <span>Geschlecht</span>
-                <select
+                <CareOptionSelect
+                  label="Geschlecht"
                   value={values.gender ?? "unspecified"}
-                  onChange={(event) => set("gender", event.target.value)}
+                  onChange={(value) => set("gender", value)}
                   disabled={!editable}
-                >
-                  {Object.entries(GENDERS).map(([value, label]) => (
-                    <option value={value} key={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
+                  options={Object.entries(GENDERS).map(([value, label]) => ({ value, label }))}
+                />
               </label>
               <label>
                 <span>Zivilstand</span>
-                <select
+                <CareOptionSelect
+                  label="Zivilstand"
                   value={values.maritalStatus ?? ""}
-                  onChange={(event) => set("maritalStatus", event.target.value || null)}
+                  onChange={(value) => set("maritalStatus", value || null)}
                   disabled={!editable}
-                >
-                  <option value="">Nicht erfasst</option>
-                  {MARITAL_STATUSES.map((status) => (
-                    <option key={status}>{status}</option>
-                  ))}
-                </select>
+                  options={[
+                    { value: "", label: "Nicht erfasst" },
+                    ...MARITAL_STATUSES.map((status) => ({ value: status, label: status })),
+                  ]}
+                />
               </label>
               <label>
                 <span>Bevorzugte Sprache</span>
-                <select
+                <CareOptionSelect
+                  label="Bevorzugte Sprache"
                   value={values.language ?? "de-CH"}
-                  onChange={(event) => set("language", event.target.value)}
+                  onChange={(value) => set("language", value)}
                   disabled={!editable}
-                >
-                  {Object.entries(LANGUAGES).map(([value, label]) => (
-                    <option value={value} key={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
+                  options={Object.entries(LANGUAGES).map(([value, label]) => ({ value, label }))}
+                />
               </label>
               <label>
                 <span>AHV-Nummer</span>
-                <input placeholder="756.XXXX.XXXX.XX" {...field("socialSecurityNumber")} />
+                <input placeholder={editable ? "756.XXXX.XXXX.XX" : undefined} {...field("socialSecurityNumber")} />
               </label>
               <label>
                 <span>Konfession</span>
@@ -263,26 +260,28 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
               </label>
               <label>
                 <span>Bezugspflege</span>
-                <select
+                <CareOptionSelect
+                  label="Bezugspflege"
                   value={values.primaryNurseId ?? ""}
-                  onChange={(event) => set("primaryNurseId", event.target.value || null)}
+                  onChange={(value) => set("primaryNurseId", value || null)}
                   disabled={!editable}
-                >
-                  <option value="">Nicht festgelegt</option>
-                  {(summary?.staff ?? []).map((person) => (
-                    <option value={person.id} key={person.id}>
-                      {person.name}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: "", label: "Nicht festgelegt" },
+                    ...(summary?.staff ?? []).map((person) => ({ value: person.id, label: person.name })),
+                  ]}
+                />
               </label>
               <label>
                 <span>Eintrittsdatum</span>
-                <input type="date" {...field("admittedOn")} />
+                {editable ? (
+                  <input type="date" {...field("admittedOn")} />
+                ) : (
+                  <input readOnly value={values.admittedOn ? formatDate(values.admittedOn) : ""} />
+                )}
               </label>
               <label>
                 <span>Eintrittsgrund</span>
-                <input placeholder="z. B. Langzeitpflege" {...field("admissionReason")} />
+                <input placeholder={editable ? "z. B. Langzeitpflege" : undefined} {...field("admissionReason")} />
               </label>
             </div>
           </section>
