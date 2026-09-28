@@ -584,3 +584,88 @@
 .handover-saved svg {
   width: 14px;
 }
+
+/* Offline-Betrieb: Zustand unten links neben der Seitenleiste (Meldungen erscheinen rechts), nur sichtbar, wenn
+   es etwas zu melden gibt. */
+.offline-status {
+  width: max-content;
+  max-width: min(460px, calc(100vw - 150px));
+  position: fixed;
+  left: 102px;
+  bottom: 24px;
+  z-index: 79;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 11px 14px;
+  border-radius: 6px;
+  color: white;
+  background: #12376b;
+  box-shadow: 0 14px 38px rgba(15, 42, 82, 0.24);
+  font-size: 13px;
+  font-weight: 650;
+  animation: fade-in 180ms ease;
+}
+.offline-status.offline {
+  background: #5b3a00;
+}
+.offline-status-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #93c5fd;
+}
+.offline-status.offline .offline-status-dot {
+  background: #fcd34d;
+}
+.offline-status > span:nth-child(2) {
+  flex: 1 1 auto;
+}
+.offline-status button {
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 5px;
+  color: white;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.offline-status-list {
+  width: 100%;
+  max-height: 240px;
+  margin: 4px 0 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+.offline-status-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+.offline-status-list strong,
+.offline-status-list small {
+  display: block;
+}
+.offline-status-list small {
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 500;
+}
+/* Handy: oben unter der Kopfzeile, damit Meldungen und Navigation unten frei bleiben. */
+@media (max-width: 960px) {
+  .offline-status {
+    width: auto;
+    top: 76px;
+    right: 14px;
+    bottom: auto;
+    left: 14px;
+    max-width: none;
+  }
+}

@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, Eye, EyeSlash, LockKey, Pulse, ShieldCheck, User } from "@phosphor-icons/react";
+import { clearOfflineData } from "./components/offline-queue";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,6 +28,8 @@ export default function LoginPage() {
         setError(result.error ?? "Anmeldung fehlgeschlagen.");
         return;
       }
+      // Seiten und Daten einer früheren Anmeldung auf diesem Gerät verwerfen.
+      clearOfflineData();
       const requestedPath = new URLSearchParams(window.location.search).get("next");
       const startPath = result.startPath?.startsWith("/c") ? result.startPath : "/c";
       router.replace(requestedPath?.startsWith("/c") ? requestedPath : startPath);

@@ -6,6 +6,7 @@ import { EditorDialog, formatDateTime, requestJson, timeInZurich, todayInZurich 
 import { zurichTimeToIso } from "@/lib/resident-appointments";
 import { DOC_CATEGORIES, IMPORTANCE, TEMPLATES, type DocEntry, type Importance } from "@/lib/documentation-shared";
 import { useCareResident } from "@/app/components/care-context";
+import { sendOrQueue } from "@/app/components/offline-queue";
 
 export type ResidentOption = { id: string; name: string; room: string };
 
@@ -27,17 +28,22 @@ export const newDraft = (residentId = ""): EntryDraft => ({
   time: timeInZurich(),
 });
 
-export async function saveDraft(draft: EntryDraft) {
-  return requestJson<{ id: string }>("/api/documentation", {
-    method: "POST",
-    body: {
+// Ohne Verbindung wird der Eintrag auf dem Gerät vorgemerkt und später mit dem erfassten Zeitpunkt gesendet.
+export async function saveDraft(draft: EntryDraft, residentName: string) {
+  const result = await sendOrQueue<{ id: string }>(
+    "/api/documentation",
+    {
       residentId: draft.residentId,
       category: draft.category,
       importance: draft.importance,
       body: draft.body,
       occurredAt: zurichTimeToIso(draft.date, draft.time),
     },
-  });
+    `Dokumentation ${draft.category} · ${residentName}`,
+  );
+  return result.queued
+    ? "Offline gespeichert – wird gesendet, sobald die Verbindung zurück ist"
+    : "Dokumentation gespeichert";
 }
 
 // Fields of a documentation entry, used inline (quick documentation) and in the dialog.
@@ -166,8 +172,7 @@ export function EntryDialog({
         setSaving(true);
         setError("");
         try {
-          await saveDraft(draft);
-          onSaved("Dokumentation gespeichert");
+          onSaved(await saveDraft(draft, residents.find((r) => r.id === draft.residentId)?.name ?? "Bewohner"));
         } catch (cause) {
           setError(cause instanceof Error ? cause.message : "Speichern fehlgeschlagen.");
           setSaving(false);

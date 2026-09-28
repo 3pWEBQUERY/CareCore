@@ -23,6 +23,7 @@ import {
   type ResidentNutrition,
 } from "@/lib/nutrition-shared";
 import { FluidDialog, MealDialog } from "./nutrition-dialogs";
+import { sendOrQueue } from "@/app/components/offline-queue";
 
 const QUICK_AMOUNTS = [100, 150, 200, 250];
 
@@ -65,11 +66,14 @@ export default function DayPanel({
   const quickAdd = async (amountMl: number) => {
     setBusy(true);
     try {
-      await requestJson("/api/nutrition/fluids", {
-        method: "POST",
-        body: { residentId: resident.id, amountMl, beverage: "Wasser" },
-      });
-      done(`${resident.name}: ${amountMl} ml Wasser erfasst`);
+      const result = await sendOrQueue(
+        "/api/nutrition/fluids",
+        { residentId: resident.id, amountMl, beverage: "Wasser", consumedAt: new Date().toISOString() },
+        `Trinkmenge ${amountMl} ml · ${resident.name}`,
+      );
+      done(
+        `${resident.name}: ${amountMl} ml Wasser erfasst${result.queued ? " (offline – wird gesendet, sobald die Verbindung zurück ist)" : ""}`,
+      );
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Speichern fehlgeschlagen.");
     } finally {

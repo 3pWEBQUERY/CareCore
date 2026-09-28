@@ -24,6 +24,7 @@ import {
 } from "@/lib/vitals-shared";
 import { initials } from "@/lib/medication-shared";
 import { residentAudit } from "@/lib/resident-audit";
+import { receiptStatements, withReceipt } from "@/lib/request-receipts";
 
 const severity: Record<VitalStatus, number> = { normal: 0, attention: 1, critical: 2 };
 
@@ -137,7 +138,11 @@ export async function vitalsOverview(ctx: ApiContext) {
 
 type MeasurementInput = { value?: unknown; secondary?: unknown };
 
-export async function recordMeasurements(ctx: ApiContext, body: Record<string, unknown>) {
+export async function recordMeasurements(
+  ctx: ApiContext,
+  body: Record<string, unknown>,
+  requestId: string | null = null,
+) {
   const residentId = await assertResident(ctx, body.residentId);
   const note = text(body.note, 2000);
   const measuredAt =
@@ -175,20 +180,23 @@ export async function recordMeasurements(ctx: ApiContext, body: Record<string, u
   if (!rows.length) throw new ApiError("Bitte mindestens einen Messwert eingeben.");
   const at = measuredAt.toISOString();
   const ids = rows.map(() => randomUUID());
-  await ctx.sql.transaction([
-    ...rows.map(
-      (row, index) => ctx.sql`
+  await withReceipt(() =>
+    ctx.sql.transaction([
+      ...rows.map(
+        (row, index) => ctx.sql`
         INSERT INTO carecore_vital_measurements (id, resident_id, measured_by, measured_at, metric, value, unit, secondary_value, status, note)
         VALUES (${ids[index]}, ${residentId}, ${ctx.actor.id}, ${at}, ${row.metric}, ${row.value}, ${row.unit}, ${row.secondary}, ${row.status}, ${note || null})`,
-    ),
-    residentAudit(ctx.sql, ctx.actor, {
-      residentId,
-      entityType: "vital_measurements",
-      entityId: residentId,
-      action: "recorded",
-      after: { measuredAt: at, rows, note: note || null },
-    }),
-  ]);
+      ),
+      residentAudit(ctx.sql, ctx.actor, {
+        residentId,
+        entityType: "vital_measurements",
+        entityId: residentId,
+        action: "recorded",
+        after: { measuredAt: at, rows, note: note || null },
+      }),
+      ...receiptStatements(ctx, requestId),
+    ]),
+  );
   return rows.map(({ metric, status }) => ({ metric, status }));
 }
 

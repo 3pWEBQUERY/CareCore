@@ -9,6 +9,8 @@ import {
   type ApiContext,
   type Row,
 } from "@/lib/api-context";
+import { residentAudit } from "@/lib/resident-audit";
+import { receiptStatements, withReceipt } from "@/lib/request-receipts";
 import { DOC_CATEGORIES, IMPORTANCE, type DocEntry, type DocStats, type Importance } from "@/lib/documentation-shared";
 
 const UUID = /^[0-9a-f-]{36}$/i;
@@ -125,21 +127,29 @@ function parseEntry(body: Record<string, unknown>) {
   return { category, content, importance, occurredAt: occurredAt.toISOString() };
 }
 
-export async function createEntry(ctx: ApiContext, body: Record<string, unknown>) {
+// Mit `requestId` (Offline-Warteschlange) wird eine wiederholte Anfrage nicht erneut gespeichert (Ergebnis null).
+export async function createEntry(ctx: ApiContext, body: Record<string, unknown>, requestId: string | null = null) {
   const residentId = await assertResident(ctx, body.residentId);
   const entry = parseEntry(body);
   const id = randomUUID();
-  await ctx.sql`
-    INSERT INTO carecore_documentation_entries (id, resident_id, care_unit_id, author_user_id, category, title, body, occurred_at, importance)
-    SELECT ${id}, ${residentId},
-      (SELECT care_unit_id FROM carecore_resident_stays WHERE resident_id = ${residentId} AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1),
-      ${ctx.actor.id}, ${entry.category}, ${entry.category}, ${entry.content}, ${entry.occurredAt}, ${entry.importance}`;
-  await writeAudit(ctx, "documentation_entry", id, "created", null, {
-    residentId,
-    category: entry.category,
-    importance: entry.importance,
-  });
-  return id;
+  const { repeated } = await withReceipt(() =>
+    ctx.sql.transaction([
+      ctx.sql`
+        INSERT INTO carecore_documentation_entries (id, resident_id, care_unit_id, author_user_id, category, title, body, occurred_at, importance)
+        SELECT ${id}, ${residentId},
+          (SELECT care_unit_id FROM carecore_resident_stays WHERE resident_id = ${residentId} AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1),
+          ${ctx.actor.id}, ${entry.category}, ${entry.category}, ${entry.content}, ${entry.occurredAt}, ${entry.importance}`,
+      residentAudit(ctx.sql, ctx.actor, {
+        residentId,
+        entityType: "documentation_entry",
+        entityId: id,
+        action: "created",
+        after: { category: entry.category, importance: entry.importance },
+      }),
+      ...receiptStatements(ctx, requestId),
+    ]),
+  );
+  return repeated ? null : id;
 }
 
 // A correction is a new entry referencing the original; the original stays unchanged and visible.

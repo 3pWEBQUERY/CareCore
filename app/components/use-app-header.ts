@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { clearOfflineData } from "./offline-queue";
 import type { CareUnit, ContextResident, WorkContext } from "@/lib/work-context";
 import { loadWorkContext, useCareResident, useCareUnit, useResidentPickerRequests } from "./care-context";
 import { HeaderNotification } from "./header-parts";
@@ -159,6 +160,8 @@ export function useAppHeader({
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
+      // Zwischengespeicherte Seiten und Daten gehören nicht auf ein Gerät, an dem sich jemand anderes anmeldet.
+      clearOfflineData();
       router.replace("/");
       router.refresh();
     }
