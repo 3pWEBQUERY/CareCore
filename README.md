@@ -39,7 +39,9 @@ Das Dienstplan-Modul (Spezifikation: `docs/specs/dienstplan.md`, Entscheidungen 
 - **Mein Dienst › Mein Dienstplan** (`/c/mein-dienstplan`): eigene veröffentlichte Dienste mit Stempeln und Pause, Teamplan der Wohngruppe (Abwesenheiten anderer nur als „Abwesend“), Anträge (Wunschfrei, Abwesenheit, Dienstwunsch, Tausch, Korrekturen) und Zeiten.
 - „Dienst starten/beenden“ unter **Mein Dienst › Heute** stempelt in derselben Zeiterfassung.
 
-Geplant wird wie im PEP: Kürzel direkt in die Zellen tippen, Bereiche markieren, kopieren und einfügen (auch aus Excel), mit der Dienst-Palette stempeln und Musterwochen übertragen.
+Geplant wird wie im PEP: Kürzel direkt in die Zellen tippen, Bereiche markieren, kopieren und einfügen (auch aus Excel), mit der Dienst-Palette stempeln und Musterwochen übertragen; Strg+Z/Strg+Y macht Zellen-Änderungen rückgängig bzw. wiederholt sie.
+
+Der Monatsplan (auch der Teamplan) lässt sich über „Drucken / PDF“ als A4-Querformat drucken oder als PDF speichern. Unter Arbeitszeit exportiert die Leitung „CSV Summen“ (je Person) und „CSV Einträge“ (alle Zeiteinträge) für die Lohnbuchhaltung (`/api/dienstplan/time/export`, Semikolon, Dezimalkomma, UTF-8 mit BOM für Excel).
 
 Jede Änderung läuft serverseitig durch die Regel-Engine (`lib/roster/rules.ts`): Blocker verhindern das Speichern, Warnungen müssen mit Begründung bestätigt werden. Das Regelwerk enthält Beispielwerte nach Schweizer ArG und muss von der Leitung unter Einstellungen geprüft und bestätigt werden.
 

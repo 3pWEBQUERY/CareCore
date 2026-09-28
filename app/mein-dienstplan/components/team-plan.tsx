@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CaretLeft, CaretRight, MagnifyingGlass, Warning } from "@phosphor-icons/react";
+import { CaretLeft, CaretRight, MagnifyingGlass, Printer, Warning } from "@phosphor-icons/react";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { useRosterData } from "@/app/dienstplan/components/roster-api";
 import { RosterGrid } from "@/app/dienstplan/components/roster-grid";
@@ -91,6 +91,18 @@ export default function TeamPlan() {
                 <h1>Teamplan {data?.unit.name ?? ""}</h1>
                 <p>Wer arbeitet wann? Veröffentlichte Dienste der Wohngruppe, Abwesenheiten ohne Grund.</p>
               </div>
+              {data && published && (
+                <div className="roster-heading-actions">
+                  <a
+                    className="secondary-button"
+                    href={`/c/mein-dienstplan/team/drucken?monat=${month}&einheit=${data.unit.id}`}
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    <Printer className="button-icon" /> Drucken / PDF
+                  </a>
+                </div>
+              )}
             </header>
             <section className="roster-toolbar" aria-label="Zeitraum">
               <div className="roster-nav">

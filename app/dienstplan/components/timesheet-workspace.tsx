@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CaretLeft, CaretRight, LockSimple, LockSimpleOpen, Warning } from "@phosphor-icons/react";
+import { CaretLeft, CaretRight, DownloadSimple, LockSimple, LockSimpleOpen, Warning } from "@phosphor-icons/react";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { CorrectionDialog, DecisionDialog } from "@/app/mein-dienstplan/components/request-forms";
 import type { TimesheetEntry, TimesheetRow } from "@/lib/roster/time-service";
@@ -68,6 +68,12 @@ export default function TimesheetWorkspace({ own }: { own?: boolean }) {
   const deviates = (entry: TimesheetEntry) =>
     Math.abs(entry.startDeviationMinutes ?? 0) > threshold || Math.abs(entry.endDeviationMinutes ?? 0) > threshold;
   const own_row = own ? data?.rows[0] : undefined;
+  const exportUrl = (art: "summen" | "eintraege") => {
+    const next = new URLSearchParams(query);
+    if (data?.unitId) next.set("einheit", data.unitId);
+    next.set("art", art);
+    return `/api/dienstplan/time/export?${next}`;
+  };
 
   return (
     <ModulePageShell pageClass="roster-page">
@@ -122,9 +128,15 @@ export default function TimesheetWorkspace({ own }: { own?: boolean }) {
                     : "Soll, Plan und Ist je Person, Abweichungen und Korrekturen. Abgeschlossene Monate sind gesperrt."}
                 </p>
               </div>
-              {!own && data?.period && (
+              {!own && data && (
                 <div className="roster-heading-actions">
-                  {locked ? (
+                  <a className="secondary-button" href={exportUrl("summen")} download>
+                    <DownloadSimple className="button-icon" /> CSV Summen
+                  </a>
+                  <a className="secondary-button" href={exportUrl("eintraege")} download>
+                    <DownloadSimple className="button-icon" /> CSV Einträge
+                  </a>
+                  {!data.period ? null : locked ? (
                     <button className="secondary-button" type="button" onClick={() => setDialog({ kind: "unlock" })}>
                       <LockSimpleOpen className="button-icon" /> Monat wieder öffnen
                     </button>

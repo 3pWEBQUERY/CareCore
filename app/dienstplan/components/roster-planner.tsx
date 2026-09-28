@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  ArrowClockwise,
+  ArrowCounterClockwise,
   ArrowsLeftRight,
   CalendarDots,
   CaretLeft,
@@ -13,6 +15,7 @@ import {
   CopySimple,
   MagnifyingGlass,
   Plus,
+  Printer,
   Sparkle,
   UsersThree,
   Warning,
@@ -20,6 +23,7 @@ import {
 import ModulePageShell from "@/app/components/module-page-shell";
 import { addDays, monthLabel, shiftMonth, weekStart } from "@/lib/roster/time";
 import type { RuleCode } from "@/lib/roster/types";
+import { revertCells, undoEntry, type UndoEntry } from "@/lib/roster/undo";
 import type { CommitResult, GridShift, SchedulePayload } from "@/lib/roster/view-types";
 import { AiPlanningPanel } from "./ai-panel";
 import { PublishPanel } from "./publish-panel";
@@ -42,6 +46,33 @@ type Dialog =
   | { kind: "publish" | "analyze" }
   | { kind: "ai" }
   | { kind: "copy-week" };
+
+type History = { key: string; undo: UndoEntry[]; redo: UndoEntry[] };
+const HISTORY_LIMIT = 50;
+const isTyping = (target: EventTarget | null) =>
+  target instanceof HTMLElement &&
+  (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
+
+// Strg+Z / Strg+Y (bzw. Strg+Umschalt+Z, auf dem Mac ⌘) für die Planung; Textfelder behalten ihr eigenes Rückgängig.
+function UndoKeys({ enabled, onUndo, onRedo }: { enabled: boolean; onUndo: () => void; onRedo: () => void }) {
+  useEffect(() => {
+    if (!enabled) return;
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (event.defaultPrevented || !(event.ctrlKey || event.metaKey) || event.altKey || isTyping(event.target)) return;
+      const key = event.key.toLowerCase();
+      if (key === "z" && !event.shiftKey) {
+        event.preventDefault();
+        onUndo();
+      } else if (key === "y" || (key === "z" && event.shiftKey)) {
+        event.preventDefault();
+        onRedo();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [enabled, onUndo, onRedo]);
+  return null;
+}
 
 const zurichMonth = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Zurich" }).format(new Date()).slice(0, 7);
@@ -75,6 +106,11 @@ export default function RosterPlanner() {
   const [qualificationFilter, setQualificationFilter] = useState("");
   const [conflictsOnly, setConflictsOnly] = useState(false);
   const [employeeFilter, setEmployeeFilter] = useState<Set<string> | null>(null);
+  // Verlauf der Zellen-Änderungen dieses Monats und Wohnbereichs (Rückgängig/Wiederholen).
+  const [history, setHistory] = useState<History>({ key: "", undo: [], redo: [] });
+  const historyKey = data ? `${data.unit.id}|${data.year}-${data.month}` : "";
+  const undoStack = history.key === historyKey ? history.undo : [];
+  const redoStack = history.key === historyKey ? history.redo : [];
 
   const navigate = useCallback(
     (changes: Record<string, string | null>) => {
@@ -140,9 +176,14 @@ export default function RosterPlanner() {
     <ModulePageShell pageClass="roster-page">
       {(showToast) => {
         // Runs a change; asks for confirmation of warnings, shows blockers, reloads on stale data.
-        const run = async (operation: (ack: Ack) => Promise<CommitResult | unknown>, success: string) => {
+        const run = async (
+          operation: (ack: Ack) => Promise<CommitResult | unknown>,
+          success: string,
+          onDone?: () => void,
+        ) => {
           try {
             await operation({});
+            onDone?.();
             showToast(success);
             reload();
           } catch (cause) {
@@ -158,6 +199,7 @@ export default function RosterPlanner() {
                 violations: cause.violations,
                 confirm: async (acknowledged, reason) => {
                   await operation({ acknowledgedWarnings: acknowledged, overrideReason: reason });
+                  onDone?.();
                   showToast(success);
                   reload();
                 },
@@ -231,7 +273,7 @@ export default function RosterPlanner() {
         };
 
         // Mehrere Zellen auf einmal (Kürzel, Stempel, Einfügen, Woche übertragen) – eine Regelprüfung.
-        const applyCells = (cells: CellValue[], label: string) =>
+        const putCells = (cells: CellValue[], label: string, onDone?: () => void) =>
           run(
             (ack) =>
               rosterRequest("/api/dienstplan/cells", {
@@ -239,7 +281,57 @@ export default function RosterPlanner() {
                 body: { unitId: data!.unit.id, cells, ...ack },
               }),
             label,
+            onDone,
           );
+        const applyCells = (cells: CellValue[], label: string) => {
+          const entry = undoEntry(data!, cells, label);
+          return putCells(cells, label, () =>
+            setHistory((current) =>
+              entry
+                ? {
+                    key: historyKey,
+                    undo: [...(current.key === historyKey ? current.undo : []), entry].slice(-HISTORY_LIMIT),
+                    redo: [],
+                  }
+                : current,
+            ),
+          );
+        };
+        // Rückgängig/Wiederholen läuft durch dieselbe Regelprüfung wie jede andere Änderung.
+        const step = (direction: "undo" | "redo") => {
+          const stack = direction === "undo" ? undoStack : redoStack;
+          const entry = stack.at(-1);
+          if (!data || !entry || !data.canEdit) return;
+          // Die Änderung ist noch nicht neu geladen – kurz warten statt mit veralteten Zellen zu vergleichen.
+          if (entry.basis === data) return;
+          const pop = (current: History): History =>
+            direction === "undo"
+              ? { ...current, undo: current.undo.slice(0, -1) }
+              : { ...current, redo: current.redo.slice(0, -1) };
+          const target = revertCells(data, entry, direction);
+          if ("conflict" in target) {
+            setHistory({ key: historyKey, undo: [], redo: [] });
+            showToast(
+              `„${entry.label}“ kann nicht mehr rückgängig gemacht werden – die Zellen wurden inzwischen geändert.`,
+            );
+            return;
+          }
+          const name = `${direction === "undo" ? "Rückgängig" : "Wiederholt"}: ${entry.label}`;
+          if (!target.cells.length) {
+            setHistory(pop);
+            showToast(name);
+            return;
+          }
+          void putCells(target.cells, name, () =>
+            setHistory((current) => {
+              const next = pop(current);
+              const moved = { ...entry, basis: data };
+              return direction === "undo"
+                ? { ...next, redo: [...next.redo, moved] }
+                : { ...next, undo: [...next.undo, moved] };
+            }),
+          );
+        };
 
         const drop = (shift: GridShift, employeeId: string, date: string) => {
           const occupant = data!.shifts.find(
@@ -317,6 +409,16 @@ export default function RosterPlanner() {
                   >
                     <Sparkle className="button-icon" /> Mit KI planen
                   </button>
+                )}
+                {data && (
+                  <a
+                    className="secondary-button"
+                    href={`/c/dienstplan/drucken?monat=${month}&einheit=${data.unit.id}`}
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    <Printer className="button-icon" /> Drucken / PDF
+                  </a>
                 )}
                 {data?.lead && (
                   <button className="secondary-button" type="button" onClick={() => setDialog({ kind: "analyze" })}>
@@ -597,6 +699,26 @@ export default function RosterPlanner() {
                       <button
                         type="button"
                         className="roster-palette-action"
+                        onClick={() => step("undo")}
+                        disabled={!undoStack.length}
+                        title={
+                          undoStack.length ? `Rückgängig: ${undoStack.at(-1)!.label} (Strg+Z)` : "Rückgängig (Strg+Z)"
+                        }
+                      >
+                        <ArrowCounterClockwise aria-hidden="true" /> Rückgängig
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => step("redo")}
+                        disabled={!redoStack.length}
+                        title={
+                          redoStack.length ? `Wiederholen: ${redoStack.at(-1)!.label} (Strg+Y)` : "Wiederholen (Strg+Y)"
+                        }
+                      >
+                        <ArrowClockwise aria-hidden="true" /> Wiederholen
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setDialog({ kind: "copy-week" })}
                         disabled={!employees.length}
                       >
@@ -619,7 +741,7 @@ export default function RosterPlanner() {
                   />
                   <p className="roster-legend">
                     {data.canEdit
-                      ? "Zelle anklicken und Kürzel tippen (Enter übernimmt), Entf leert, Shift+Pfeile oder Ziehen markiert einen Bereich, Strg+C/V kopiert und fügt ein (auch aus Excel). Doppelklick öffnet, Dienst ziehen verschiebt."
+                      ? "Zelle anklicken und Kürzel tippen (Enter übernimmt), Entf leert, Shift+Pfeile oder Ziehen markiert einen Bereich, Strg+C/V kopiert und fügt ein (auch aus Excel), Strg+Z macht rückgängig. Doppelklick öffnet, Dienst ziehen verschiebt."
                       : "Tastatur: Pfeiltasten, Enter öffnet."}
                     {data.shiftTypes.map((type) => (
                       <span key={type.id}>
@@ -756,6 +878,11 @@ export default function RosterPlanner() {
               />
             )}
             {prompt && <ViolationDialog prompt={prompt} onClose={() => setPrompt(null)} />}
+            <UndoKeys
+              enabled={!!data?.canEdit && !dialog && !prompt}
+              onUndo={() => step("undo")}
+              onRedo={() => step("redo")}
+            />
           </main>
         );
       }}
