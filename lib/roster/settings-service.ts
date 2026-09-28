@@ -51,7 +51,7 @@ export type SettingsPayload = {
     qualificationId: string | null;
   }>;
   holidays: Array<{ id: string; date: string; name: string }>;
-  qualifications: Array<{ id: string; code: string; name: string }>;
+  qualifications: Array<{ id: string; code: string; name: string; grantsMedication: boolean }>;
   employees: Array<{
     id: string;
     name: string;
@@ -91,7 +91,7 @@ export async function getSettings(ctx: RosterContext, requestedUnit: string | nu
       WHERE organization_id = ${org} AND date >= date_trunc('year', NOW()) - INTERVAL '1 year' ORDER BY date` as Promise<
       Row[]
     >,
-    ctx.sql`SELECT id, code, name FROM carecore_qualifications WHERE organization_id = ${org} ORDER BY code` as Promise<
+    ctx.sql`SELECT id, code, name, grants_medication FROM carecore_qualifications WHERE organization_id = ${org} ORDER BY code` as Promise<
       Row[]
     >,
   ]);
@@ -125,6 +125,7 @@ export async function getSettings(ctx: RosterContext, requestedUnit: string | nu
       id: String(row.id),
       code: String(row.code),
       name: String(row.name),
+      grantsMedication: Boolean(row.grants_medication),
     })),
     employees: Object.values(employees)
       .sort((a, b) => a.name.localeCompare(b.name, "de-CH"))
@@ -522,9 +523,25 @@ export async function saveQualification(ctx: RosterContext, body: Body) {
   if (!ctx.access.isAdmin && !managedUnitIds(ctx.access).length) throw forbidden();
   const code = text(body.code, "Kürzel", 24, true)!.toUpperCase();
   const name = text(body.name, "Bezeichnung", 120, true)!;
+  // Berechtigt die Qualifikation in Rollen wie „Pflege“ zur Medikation (Standard: HF und FaGe)?
+  if (body.grantsMedication !== undefined && typeof body.grantsMedication !== "boolean")
+    throw invalid("Medikationsberechtigung ist ungültig.");
+  const grantsMedication = body.grantsMedication === true;
+  const [before] = (await ctx.sql`
+    SELECT id, grants_medication FROM carecore_qualifications WHERE organization_id = ${ctx.actor.organizationId} AND code = ${code}`) as Row[];
   const rows = (await ctx.sql`
-    INSERT INTO carecore_qualifications (organization_id, code, name) VALUES (${ctx.actor.organizationId}, ${code}, ${name})
-    ON CONFLICT (organization_id, code) DO UPDATE SET name = EXCLUDED.name RETURNING id`) as Row[];
-  await audit(ctx, "saved", "qualification", String(rows[0].id), null, null, { code, name });
+    INSERT INTO carecore_qualifications (organization_id, code, name, grants_medication)
+    VALUES (${ctx.actor.organizationId}, ${code}, ${name}, ${grantsMedication})
+    ON CONFLICT (organization_id, code) DO UPDATE SET name = EXCLUDED.name, grants_medication = EXCLUDED.grants_medication
+    RETURNING id`) as Row[];
+  await audit(
+    ctx,
+    "saved",
+    "qualification",
+    String(rows[0].id),
+    null,
+    before ? { grantsMedication: Boolean(before.grants_medication) } : null,
+    { code, name, grantsMedication },
+  );
   return { id: String(rows[0].id) };
 }

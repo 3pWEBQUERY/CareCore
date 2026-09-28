@@ -176,7 +176,8 @@ async function main() {
   // Grunddaten (wie Migration 0023 / ensureRosterDefaults).
   await sql`INSERT INTO carecore_rule_sets (organization_id, timezone) VALUES (${org}, ${TZ}) ON CONFLICT DO NOTHING`;
   for (const q of DEFAULT_QUALIFICATIONS)
-    await sql`INSERT INTO carecore_qualifications (organization_id, code, name) VALUES (${org}, ${q.code}, ${q.name})
+    await sql`INSERT INTO carecore_qualifications (organization_id, code, name, grants_medication)
+      VALUES (${org}, ${q.code}, ${q.name}, ${q.grantsMedication})
       ON CONFLICT (organization_id, code) DO NOTHING`;
   for (const t of DEFAULT_SHIFT_TYPES)
     await sql`INSERT INTO carecore_shift_types (organization_id, name, code, category, absence_kind, start_time, end_time,

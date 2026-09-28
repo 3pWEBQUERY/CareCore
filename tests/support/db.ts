@@ -130,3 +130,12 @@ export async function createResident(f: Fixture, name = "Erna Muster") {
   );
   return id;
 }
+
+// Qualifikation (z. B. HF, FAGE, SRK) einer Person der Fixture zuweisen.
+export async function qualify(f: Fixture, person: string, code: string, validFrom = "2000-01-01", validUntil?: string) {
+  await q(
+    `INSERT INTO carecore_employee_qualifications (user_id, qualification_id, valid_from, valid_until)
+     SELECT $1, id, $3::date, $4::date FROM carecore_qualifications WHERE organization_id = $2 AND code = $5`,
+    [f.people[person], f.org, validFrom, validUntil ?? null, code],
+  );
+}

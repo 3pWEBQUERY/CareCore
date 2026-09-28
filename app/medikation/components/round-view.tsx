@@ -120,6 +120,12 @@ export default function RoundView({ showToast }: { showToast: ShowToast }) {
         </section>
       )}
       {error && <LoadError message={error} onRetry={reload} />}
+      {permissions.data && !canManage && (
+        <p className="med-reserve-note med-round-readonly">
+          <strong>Nur Ansicht.</strong> Gaben dokumentieren dürfen die Leitung, Fachpersonen Gesundheit (FaGe) und
+          diplomierte Pflegefachpersonen mit hinterlegter Qualifikation.
+        </p>
+      )}
       <section className="card med-round-card">
         <div className="med-round-toolbar">
           <div>

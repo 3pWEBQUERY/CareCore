@@ -23,6 +23,8 @@ export type ManagedRole = {
   name: string;
   description: string;
   permissions: string[];
+  // Medikation nur für Personen mit einer dazu berechtigenden Qualifikation (z. B. HF, FaGe).
+  medicationRequiresQualification: boolean;
   systemRole: boolean;
   userCount: number;
   createdAt: string;
@@ -126,12 +128,13 @@ export async function listManagedUsers(actorId: string): Promise<{
 export async function listManagedRoles(): Promise<ManagedRole[]> {
   const sql = database();
   const rows =
-    (await sql`SELECT r.id, r.key, r.name, r.description, r.permissions, r.system_role, r.created_at, COUNT(u.id)::int AS user_count FROM carecore_roles r LEFT JOIN carecore_users u ON u.role = r.key GROUP BY r.id ORDER BY r.system_role DESC, r.name`) as unknown as Array<{
+    (await sql`SELECT r.id, r.key, r.name, r.description, r.permissions, r.medication_requires_qualification, r.system_role, r.created_at, COUNT(u.id)::int AS user_count FROM carecore_roles r LEFT JOIN carecore_users u ON u.role = r.key GROUP BY r.id ORDER BY r.system_role DESC, r.name`) as unknown as Array<{
       id: string;
       key: string;
       name: string;
       description: string;
       permissions: string[];
+      medication_requires_qualification: boolean;
       system_role: boolean;
       created_at: string;
       user_count: number;
@@ -142,6 +145,7 @@ export async function listManagedRoles(): Promise<ManagedRole[]> {
     name: role.name,
     description: role.description,
     permissions: Array.isArray(role.permissions) ? role.permissions : [],
+    medicationRequiresQualification: Boolean(role.medication_requires_qualification),
     systemRole: role.system_role,
     userCount: Number(role.user_count),
     createdAt: role.created_at,
@@ -261,7 +265,13 @@ function normalizePermissions(value: unknown) {
 
 export async function createManagedRole(
   actorId: string,
-  input: { key: string; name: string; description?: string; permissions?: unknown },
+  input: {
+    key: string;
+    name: string;
+    description?: string;
+    permissions?: unknown;
+    medicationRequiresQualification?: boolean;
+  },
 ) {
   const sql = database();
   const key = input.key.trim().toLowerCase().slice(0, 40);
@@ -270,27 +280,31 @@ export async function createManagedRole(
     throw new Error("INVALID_ROLE_INPUT");
   const id = randomUUID();
   const permissions = normalizePermissions(input.permissions);
-  await sql`INSERT INTO carecore_roles (id, key, name, description, permissions, created_by) VALUES (${id}, ${key}, ${name}, ${input.description?.trim().slice(0, 500) ?? ""}, ${JSON.stringify(permissions)}::jsonb, ${actorId})`;
-  await auditRole(actorId, id, "created", { key, name, permissions });
+  const medicationRequiresQualification = input.medicationRequiresQualification === true;
+  await sql`INSERT INTO carecore_roles (id, key, name, description, permissions, medication_requires_qualification, created_by) VALUES (${id}, ${key}, ${name}, ${input.description?.trim().slice(0, 500) ?? ""}, ${JSON.stringify(permissions)}::jsonb, ${medicationRequiresQualification}, ${actorId})`;
+  await auditRole(actorId, id, "created", { key, name, permissions, medicationRequiresQualification });
   return listManagedRoles();
 }
 
 export async function updateManagedRole(
   actorId: string,
   roleId: string,
-  input: { name: string; description?: string; permissions?: unknown },
+  input: { name: string; description?: string; permissions?: unknown; medicationRequiresQualification?: boolean },
 ) {
   const sql = database();
   const name = input.name.trim().slice(0, 100);
   if (!name) throw new Error("INVALID_ROLE_INPUT");
   const permissions = normalizePermissions(input.permissions);
+  // Ohne Angabe bleibt die bisherige Einstellung erhalten.
+  const medicationRequiresQualification =
+    typeof input.medicationRequiresQualification === "boolean" ? input.medicationRequiresQualification : null;
   // The admin role always keeps every permission so administrators cannot lock themselves out.
   const updated =
-    (await sql`UPDATE carecore_roles SET name = ${name}, description = ${input.description?.trim().slice(0, 500) ?? ""}, permissions = CASE WHEN key = 'admin' THEN ${JSON.stringify(roleKeys)}::jsonb ELSE ${JSON.stringify(permissions)}::jsonb END, updated_at = NOW() WHERE id = ${roleId} RETURNING id`) as unknown as Array<{
+    (await sql`UPDATE carecore_roles SET name = ${name}, description = ${input.description?.trim().slice(0, 500) ?? ""}, permissions = CASE WHEN key = 'admin' THEN ${JSON.stringify(roleKeys)}::jsonb ELSE ${JSON.stringify(permissions)}::jsonb END, medication_requires_qualification = CASE WHEN key = 'admin' THEN FALSE ELSE COALESCE(${medicationRequiresQualification}::boolean, medication_requires_qualification) END, updated_at = NOW() WHERE id = ${roleId} RETURNING id`) as unknown as Array<{
       id: string;
     }>;
   if (!updated[0]) throw new Error("ROLE_NOT_FOUND");
-  await auditRole(actorId, roleId, "updated", { name, permissions });
+  await auditRole(actorId, roleId, "updated", { name, permissions, medicationRequiresQualification });
   return listManagedRoles();
 }
 

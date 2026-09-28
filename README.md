@@ -36,6 +36,15 @@ Für Vercel müssen `DATABASE_URL` und `CARECORE_ADMIN_PASSWORD` in den Umgebung
 - **Änderungsprotokoll:** Jede Änderung an der Akte (Stammdaten, Kontakte, Biografie, Bewohnerbild, Körperbefunde, Pflegebedarf, Dokumente sowie Einträge aus Dokumentation, Medikation, Vitalwerten und Wunden) wird in `carecore_audit_log` festgehalten – in derselben Transaktion wie die Änderung (`lib/resident-audit.ts`). Unter Bewohnerakte › Verlauf › „Änderungsprotokoll“ sieht die Leitung (Rollen mit `team.manage` oder `administration.manage`), wer wann was geändert hat. Biografie-Inhalte, AHV- und Versichertennummer werden nicht im Klartext protokolliert.
 - **Überleitungsbogen:** Im Kopf der Akte erzeugt „Überleitungsbogen“ eine A4-Druckansicht für Spitaleinweisung oder Verlegung (Stammdaten, Kontakte, Allergien, Risiken, aktuelle Medikation inkl. Reserve, Wunden/Befunde, Vitalwerte, Ernährung, Pflegeziele, Verlauf der letzten 72 Stunden). Das Erstellen wird protokolliert.
 
+## Medikationsrecht
+
+Medikation (`medication.manage`: Gaben dokumentieren, Verordnungen, Bestände, BtM, Zweitunterschrift) dürfen Administration, Leitung und Ärztlicher Dienst. In der Rolle „Pflege“ gilt das Recht nur für Personen mit einer gültigen Qualifikation, die zur Medikation berechtigt – standardmäßig Pflegefachperson HF und Fachperson Gesundheit (FaGe), nicht Pflegehelfer:in SRK (Migration `0027_medication_qualification.sql`).
+
+- Welche Qualifikationen berechtigen, legt die Leitung unter Dienstplan › Einstellungen › Qualifikationen fest (z. B. zusätzlich „FH“); Änderungen werden protokolliert.
+- Qualifikationen mit Gültigkeitszeitraum werden je Person unter Dienstplan › Einstellungen › Personal hinterlegt.
+- Ob eine Rolle das Recht nur mit Qualifikation erhält, ist unter Mitarbeitende › Profile & Rollen einstellbar.
+- Maßgeblich ist die Datenbankfunktion `carecore_effective_permissions`, die Anmeldung, Navigation und Zweitunterschrift gleichermaßen verwenden.
+
 ## Betäubungsmittel (BtM)
 
 Unter Medikation › „BtM-Kontrolle“ (`/medikation/btm`) werden als BtM gekennzeichnete Präparate mit lückenlosem Bestandsbuch geführt (Migration `0026_btm.sql`, `lib/medication-btm.ts`). Welche Präparate als BtM gelten und in welchen Abständen kontrolliert wird, legt die Einrichtung fest; CareCore gibt dafür keine Regeln vor.

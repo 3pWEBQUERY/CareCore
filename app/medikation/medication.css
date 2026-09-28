@@ -307,3 +307,7 @@
 .btm-print-sheet .btm-book .number {
   text-align: right;
 }
+
+.med-round-readonly {
+  margin: 0 0 18px;
+}

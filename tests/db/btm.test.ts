@@ -5,7 +5,7 @@ import { ApiError } from "@/lib/api-context";
 import { hashPassword } from "@/lib/auth";
 import { btmBook, btmOverview, countStock, setControlled } from "@/lib/medication-btm";
 import { correctStock, receiveStock } from "@/lib/medication-stock";
-import { apiContextFor, createResident, fixture, q, type Fixture } from "../support/db";
+import { apiContextFor, createResident, fixture, q, qualify, type Fixture } from "../support/db";
 
 const PASSWORD = "Zeugin-Test-2026";
 
@@ -18,8 +18,12 @@ const failure = async (promise: Promise<unknown>) =>
     }),
   );
 
-// Zeuginnen und Zeugen melden sich mit Benutzername und Passwort an.
+// Zeuginnen und Zeugen melden sich mit Benutzername und Passwort an. Max (FaGe) und Lea (HF) dürfen
+// Medikation; Sam (Pflegehelfer SRK) nicht.
 async function withPasswords(f: Fixture) {
+  await qualify(f, "max", "FAGE");
+  await qualify(f, "lea", "HF");
+  await qualify(f, "sam", "SRK");
   const hash = await hashPassword(PASSWORD);
   await q(`UPDATE carecore_users SET password_hash = $1 WHERE id = ANY($2::uuid[])`, [hash, Object.values(f.people)]);
   const usernames = await q<{ id: string; username: string }>(
@@ -56,20 +60,24 @@ test("BtM-Eingang: nur mit gültiger Zweitunterschrift einer berechtigten andere
   assert.match((await failure(receipt({}))).message, /Zweitunterschrift/);
   assert.equal((await failure(receipt({ witness: witness("max", "falsch") }))).status, 403);
   assert.match((await failure(receipt({ witness: witness("anna") }))).message, /anderen Person/);
-  // Die Leitung hat im Testmandanten keine Medikationsberechtigung.
-  assert.match((await failure(receipt({ witness: witness("leadA") }))).message, /nicht für Medikation berechtigt/);
+  // Pflege ohne berechtigende Qualifikation (Pflegehelfer SRK) zählt nicht.
+  assert.match((await failure(receipt({ witness: witness("sam") }))).message, /nicht für Medikation berechtigt/);
+  assert.match((await failure(receipt({ witness: witness("ben") }))).message, /nicht für Medikation berechtigt/);
   // Eine Person einer anderen Organisation zählt nicht.
   const other = await fixture();
   const otherWitness = await withPasswords(other);
   assert.match((await failure(receipt({ witness: otherWitness("max") }))).message, /Organisation/);
 
+  // Die Leitung darf Medikation und kann bezeugen.
+  await receipt({ witness: witness("leadA") });
   await receipt({ witness: witness("max") });
   const [row] = await q<{ quantity: string }>(`SELECT quantity FROM carecore_medication_stock WHERE id = $1`, [stock]);
-  assert.equal(Number(row.quantity), 15);
+  assert.equal(Number(row.quantity), 20);
   const book = await btmBook(ctx, stock);
   assert.equal(book.entries[0].kind, "receipt");
   assert.equal(book.entries[0].witness, "Max Meier");
-  assert.equal(book.entries[0].balance, 15);
+  assert.equal(book.entries[0].balance, 20);
+  assert.equal(book.entries[1].witness, "Laura Leitung");
   assert.equal(book.opening, 10, "Bestand vor der ersten Buchung wird als Übertrag ausgewiesen");
 });
 

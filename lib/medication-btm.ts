@@ -26,9 +26,8 @@ export async function verifyWitness(ctx: ApiContext, input: unknown): Promise<Wi
   }
   if (user.id === ctx.actor.id) throw new ApiError("Die Zweitunterschrift muss von einer anderen Person stammen.", 403);
   const rows = (await ctx.sql`
-    SELECT r.permissions FROM carecore_user_profiles p
+    SELECT COALESCE(carecore_effective_permissions(u.id), '[]'::jsonb) AS permissions FROM carecore_user_profiles p
     JOIN carecore_users u ON u.id = p.user_id AND u.active AND u.archived_at IS NULL
-    JOIN carecore_roles r ON r.key = u.role
     WHERE p.user_id = ${user.id} AND p.organization_id = ${ctx.actor.organizationId}`) as Row[];
   const permissions = Array.isArray(rows[0]?.permissions) ? (rows[0].permissions as string[]) : null;
   if (!permissions) throw new ApiError("Die zweite Person gehört nicht zu dieser Organisation.", 403);
