@@ -70,9 +70,12 @@ function QuickView({ showToast }: { showToast: ShowToast }) {
     setSaving(true);
     setError("");
     try {
-      await saveDraft(effective);
+      const saved = await saveDraft(
+        effective,
+        residents.find((r) => r.id === effective.residentId)?.name ?? "Bewohner",
+      );
       const next = andNext ? navigation.next() : null;
-      showToast(next ? `Dokumentation gespeichert · weiter mit ${next.name}` : "Dokumentation gespeichert");
+      showToast(next ? `${saved} · weiter mit ${next.name}` : saved);
       setDraft(newDraft(next?.id ?? effective.residentId));
       reload();
     } catch (cause) {

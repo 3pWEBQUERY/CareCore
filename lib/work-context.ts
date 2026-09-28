@@ -15,6 +15,8 @@ export type ContextResident = {
 };
 export type WorkContext = {
   profile: {
+    // Für die Offline-Warteschlange: Einträge werden nur mit der Sitzung derselben Person gesendet.
+    userId: string;
     displayName: string;
     jobTitle: string;
     phone: string;
@@ -78,6 +80,7 @@ export async function getWorkContext(userId: string): Promise<WorkContext> {
   if (!profile) throw new Error("PROFILE_NOT_FOUND");
   return {
     profile: {
+      userId,
       displayName: profile.display_name,
       jobTitle: profile.job_title,
       phone: profile.phone,

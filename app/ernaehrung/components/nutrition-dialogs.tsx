@@ -14,6 +14,7 @@ import {
   TEXTURES,
   type NutritionPlan,
 } from "@/lib/nutrition-shared";
+import { sendOrQueue } from "@/app/components/offline-queue";
 
 type Base = { residentId: string; residentName: string; onClose: () => void; onSaved: (message: string) => void };
 const NONE = "Nicht festgelegt";
@@ -26,8 +27,9 @@ function useSave(onSaved: (message: string) => void) {
     setSaving(true);
     setError("");
     try {
-      await request();
-      onSaved(message);
+      const result = await request();
+      const queued = !!result && typeof result === "object" && "queued" in result && result.queued === true;
+      onSaved(queued ? `${message} (offline gespeichert – wird gesendet, sobald die Verbindung zurück ist)` : message);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Speichern fehlgeschlagen.");
       setSaving(false);
@@ -193,10 +195,11 @@ export function FluidDialog({ residentId, residentName, onClose, onSaved }: Base
       onSubmit={() =>
         save(
           () =>
-            requestJson("/api/nutrition/fluids", {
-              method: "POST",
-              body: { residentId, amountMl: Number(amount), beverage, note, consumedAt: zurichTimeToIso(date, time) },
-            }),
+            sendOrQueue(
+              "/api/nutrition/fluids",
+              { residentId, amountMl: Number(amount), beverage, note, consumedAt: zurichTimeToIso(date, time) },
+              `Trinkmenge ${amount} ml · ${residentName}`,
+            ),
           `${residentName}: ${amount} ml ${beverage} erfasst`,
         )
       }
@@ -256,10 +259,11 @@ export function MealDialog({
       onSubmit={() =>
         save(
           () =>
-            requestJson("/api/nutrition/meals", {
-              method: "POST",
-              body: { residentId, meal, portionPercent: portion, note, eatenAt: zurichTimeToIso(date, time) },
-            }),
+            sendOrQueue(
+              "/api/nutrition/meals",
+              { residentId, meal, portionPercent: portion, note, eatenAt: zurichTimeToIso(date, time) },
+              `${meal} ${portion} % · ${residentName}`,
+            ),
           `${residentName}: ${meal} ${portion} % dokumentiert`,
         )
       }

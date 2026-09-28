@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ApiError, assertResident, assertUuid, iso, num, text, type ApiContext, type Row } from "@/lib/api-context";
 import { residentAudit } from "@/lib/resident-audit";
+import { receiptStatements, withReceipt } from "@/lib/request-receipts";
 import { initials } from "@/lib/medication-shared";
 import {
   ASSISTANCE,
@@ -229,29 +230,32 @@ function timestamp(input: unknown) {
   return at.toISOString();
 }
 
-export async function addFluid(ctx: ApiContext, body: Record<string, unknown>) {
+export async function addFluid(ctx: ApiContext, body: Record<string, unknown>, requestId: string | null = null) {
   const residentId = await assertResident(ctx, body.residentId);
   const amount = body.amountMl;
   if (!Number.isInteger(amount) || (amount as number) < 10 || (amount as number) > 1500)
     throw new ApiError("Bitte eine Trinkmenge zwischen 10 und 1500 ml angeben.");
   const id = randomUUID();
   const consumedAt = timestamp(body.consumedAt);
-  await ctx.sql.transaction([
-    ctx.sql`
+  const { repeated } = await withReceipt(() =>
+    ctx.sql.transaction([
+      ctx.sql`
       INSERT INTO carecore_fluid_entries (id, resident_id, entered_by, consumed_at, amount_ml, beverage, note)
       VALUES (${id}, ${residentId}, ${ctx.actor.id}, ${consumedAt}, ${amount as number}, ${text(body.beverage, 120) || null}, ${text(body.note, 1000) || null})`,
-    residentAudit(ctx.sql, ctx.actor, {
-      residentId,
-      entityType: "fluid_entry",
-      entityId: id,
-      action: "created",
-      after: { amountMl: amount, consumedAt },
-    }),
-  ]);
-  return id;
+      residentAudit(ctx.sql, ctx.actor, {
+        residentId,
+        entityType: "fluid_entry",
+        entityId: id,
+        action: "created",
+        after: { amountMl: amount, consumedAt },
+      }),
+      ...receiptStatements(ctx, requestId),
+    ]),
+  );
+  return repeated ? null : id;
 }
 
-export async function addMeal(ctx: ApiContext, body: Record<string, unknown>) {
+export async function addMeal(ctx: ApiContext, body: Record<string, unknown>, requestId: string | null = null) {
   const residentId = await assertResident(ctx, body.residentId);
   const meal = oneOf(MEALS, body.meal);
   if (!meal) throw new ApiError("Bitte die Mahlzeit wählen.");
@@ -265,19 +269,22 @@ export async function addMeal(ctx: ApiContext, body: Record<string, unknown>) {
     );
   const id = randomUUID();
   const eatenAt = timestamp(body.eatenAt);
-  await ctx.sql.transaction([
-    ctx.sql`
+  const { repeated } = await withReceipt(() =>
+    ctx.sql.transaction([
+      ctx.sql`
       INSERT INTO carecore_meal_entries (id, resident_id, entered_by, eaten_at, meal, portion_percent, note)
       VALUES (${id}, ${residentId}, ${ctx.actor.id}, ${eatenAt}, ${meal}, ${portion as number}, ${note || null})`,
-    residentAudit(ctx.sql, ctx.actor, {
-      residentId,
-      entityType: "meal_entry",
-      entityId: id,
-      action: "created",
-      after: { meal, portionPercent: portion, eatenAt },
-    }),
-  ]);
-  return id;
+      residentAudit(ctx.sql, ctx.actor, {
+        residentId,
+        entityType: "meal_entry",
+        entityId: id,
+        action: "created",
+        after: { meal, portionPercent: portion, eatenAt },
+      }),
+      ...receiptStatements(ctx, requestId),
+    ]),
+  );
+  return repeated ? null : id;
 }
 
 // Wrong entries are hidden with a reason, never deleted.

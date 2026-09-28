@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requestIdFrom } from "@/lib/request-receipts";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
 import { hasPermission } from "@/lib/server-data";
 import { createEntry, listEntries } from "@/lib/documentation";
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
     const ctx = await apiContext("documentation.write");
     if (ctx instanceof NextResponse) return ctx;
     return NextResponse.json(
-      { id: await createEntry(ctx, (await request.json()) as Record<string, unknown>) },
+      { id: await createEntry(ctx, (await request.json()) as Record<string, unknown>, requestIdFrom(request)) },
       { status: 201 },
     );
   } catch (error) {

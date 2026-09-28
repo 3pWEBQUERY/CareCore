@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
-import { EditorDialog, requestJson, timeInZurich, todayInZurich, useApiData } from "@/app/components/workspace-ui";
+import { EditorDialog, timeInZurich, todayInZurich, useApiData } from "@/app/components/workspace-ui";
 import { zurichTimeToIso } from "@/lib/resident-appointments";
 import {
   VITAL_METRICS,
@@ -14,6 +14,7 @@ import {
   type VitalStatus,
 } from "@/lib/vitals-shared";
 import { useCareResident } from "@/app/components/care-context";
+import { sendOrQueue } from "@/app/components/offline-queue";
 
 type Draft = Record<string, { value: string; secondary: string }>;
 const parse = (value: string) => (value.trim() ? Number(value.replace(",", ".")) : null);
@@ -72,10 +73,18 @@ export default function MeasurementDialog({
     setSaving(true);
     setError("");
     try {
-      const { results } = await requestJson<{ results: Array<{ metric: string; status: VitalStatus }> }>(
+      const result = await sendOrQueue<{ results: Array<{ metric: string; status: VitalStatus }> }>(
         "/api/vitals/measurements",
-        { method: "POST", body: { residentId, measuredAt: zurichTimeToIso(date, time), values, note } },
+        { residentId, measuredAt: zurichTimeToIso(date, time), values, note },
+        `Vitalwerte · ${resident?.name ?? "Bewohner"}`,
       );
+      if (result.queued) {
+        onSaved(
+          `${resident?.name}: Vitalwerte offline gespeichert – werden gesendet, sobald die Verbindung zurück ist`,
+        );
+        return;
+      }
+      const { results } = result.data;
       const abnormal = results.filter((r) => r.status !== "normal");
       onSaved(
         `${resident?.name}: ${results.length} Messwert${results.length === 1 ? "" : "e"} gespeichert` +
