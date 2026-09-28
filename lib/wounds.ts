@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { ApiError, assertResident, assertUuid, iso, num, text, type ApiContext, type Row } from "@/lib/api-context";
 import { initials } from "@/lib/medication-shared";
 import { residentAudit } from "@/lib/resident-audit";
+import { receiptStatements, withReceipt } from "@/lib/request-receipts";
 import {
   EDGE_OPTIONS,
   ENTRY_TYPES,
@@ -374,22 +375,30 @@ function insertEntry(ctx: ApiContext, woundId: string, entry: EntryInput) {
       ${entry.infectionSigns}, ${entry.painScore}, ${entry.treatment}, ${entry.note})`;
 }
 
-export async function addEntry(ctx: ApiContext, woundId: unknown, body: Record<string, unknown>) {
+export async function addEntry(
+  ctx: ApiContext,
+  woundId: unknown,
+  body: Record<string, unknown>,
+  requestId: string | null = null,
+) {
   const wound = await loadWound(ctx, woundId);
   if (wound.status === "closed") throw new ApiError("Die Wunde ist abgeschlossen. Bitte zuerst wieder eröffnen.", 409);
   const entry = parseEntryInput(body);
   const nextStatus = body.woundStatus === "healing" || body.woundStatus === "active" ? body.woundStatus : wound.status;
-  await ctx.sql.transaction([
-    insertEntry(ctx, wound.id, entry),
-    ctx.sql`UPDATE carecore_wounds SET status = ${nextStatus}, updated_at = NOW() WHERE id = ${wound.id}`,
-    residentAudit(ctx.sql, ctx.actor, {
-      residentId: wound.residentId,
-      entityType: "wound_entry",
-      entityId: wound.id,
-      action: "documented",
-      after: { ...entry, woundStatus: nextStatus },
-    }),
-  ]);
+  await withReceipt(() =>
+    ctx.sql.transaction([
+      insertEntry(ctx, wound.id, entry),
+      ctx.sql`UPDATE carecore_wounds SET status = ${nextStatus}, updated_at = NOW() WHERE id = ${wound.id}`,
+      residentAudit(ctx.sql, ctx.actor, {
+        residentId: wound.residentId,
+        entityType: "wound_entry",
+        entityId: wound.id,
+        action: "documented",
+        after: { ...entry, woundStatus: nextStatus },
+      }),
+      ...receiptStatements(ctx, requestId),
+    ]),
+  );
 }
 
 export async function listEntries(ctx: ApiContext, woundId: unknown) {

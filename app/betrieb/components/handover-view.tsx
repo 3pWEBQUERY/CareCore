@@ -17,6 +17,7 @@ import {
   type ShowToast,
 } from "@/app/components/workspace-ui";
 import type { HandoverEvent, HandoverNote, HandoverSource } from "@/lib/handover";
+import { sendOrQueue } from "@/app/components/offline-queue";
 
 type Payload = {
   since: string;
@@ -83,11 +84,18 @@ function HandoverContent({ lastShift, showToast }: { lastShift: boolean; showToa
   async function saveNote() {
     setSaving(true);
     try {
-      await requestJson("/api/handover", {
-        method: "POST",
-        body: { ...draft, careUnitId: draft.residentId ? null : unitId || null },
-      });
-      showToast("Übergabepunkt gespeichert");
+      const resident = residentOptions.find((option) => option.id === draft.residentId)?.label;
+      const result = await sendOrQueue(
+        "/api/handover",
+        { ...draft, careUnitId: draft.residentId ? null : unitId || null, notedAt: new Date().toISOString() },
+        `Übergabe${resident ? ` · ${resident}` : ""}`,
+        { field: "content", label: "Übergabepunkt" },
+      );
+      showToast(
+        result.queued
+          ? "Übergabepunkt offline gespeichert – wird gesendet, sobald die Verbindung zurück ist"
+          : "Übergabepunkt gespeichert",
+      );
       setDraft({ residentId: "", content: "", priority: "normal" });
       data.reload();
     } catch (error) {

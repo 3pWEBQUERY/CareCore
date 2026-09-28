@@ -26,6 +26,14 @@ test("Offline: Dokumentation wird vorgemerkt und nach der Rückkehr der Verbindu
   await expect(page.locator(".toast")).toContainText("Offline gespeichert");
   await expect(page.locator(".offline-status")).toContainText("1 Eintrag wartet");
 
+  // Vor dem Senden korrigieren.
+  const corrected = `${text} (korrigiert)`;
+  await page.locator(".offline-status").getByRole("button", { name: "Anzeigen" }).click();
+  await page.locator(".offline-status").getByRole("button", { name: "Bearbeiten" }).click();
+  await page.locator(".offline-status-edit textarea").fill(corrected);
+  await page.locator(".offline-status-edit").getByRole("button", { name: "Speichern" }).click();
+  await expect(page.locator(".offline-status-edit")).toHaveCount(0);
+
   // Neu laden ohne Verbindung: die Seite kommt aus dem Gerätespeicher.
   await page.reload();
   await expect(page.locator("h1").first()).toContainText("Schnelldokumentation");
@@ -37,7 +45,8 @@ test("Offline: Dokumentation wird vorgemerkt und nach der Rückkehr der Verbindu
 
   const response = await page.request.get("/api/documentation?days=1");
   const payload = (await response.json()) as { entries: Array<{ body: string }> };
-  expect(payload.entries.filter((entry) => entry.body === text)).toHaveLength(1);
+  expect(payload.entries.filter((entry) => entry.body === corrected)).toHaveLength(1);
+  expect(payload.entries.filter((entry) => entry.body === text)).toHaveLength(0);
 });
 
 test("Manifest und Service Worker sind erreichbar (installierbar)", async ({ page }) => {

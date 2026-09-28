@@ -77,6 +77,7 @@ export default function MeasurementDialog({
         "/api/vitals/measurements",
         { residentId, measuredAt: zurichTimeToIso(date, time), values, note },
         `Vitalwerte · ${resident?.name ?? "Bewohner"}`,
+        { field: "note", label: "Bemerkung" },
       );
       if (result.queued) {
         onSaved(

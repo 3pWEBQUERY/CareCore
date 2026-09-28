@@ -40,6 +40,7 @@ export async function saveDraft(draft: EntryDraft, residentName: string) {
       occurredAt: zurichTimeToIso(draft.date, draft.time),
     },
     `Dokumentation ${draft.category} · ${residentName}`,
+    { field: "body", label: "Eintrag" },
   );
   return result.queued
     ? "Offline gespeichert – wird gesendet, sobald die Verbindung zurück ist"

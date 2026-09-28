@@ -9,6 +9,7 @@ import {
   type ApiContext,
   type Row,
 } from "@/lib/api-context";
+import { capturedAt, receiptStatements, withReceipt } from "@/lib/request-receipts";
 
 export type HandoverTone = "critical" | "attention" | "info" | "stable";
 export type HandoverSource = "documentation" | "vitals" | "medication" | "wounds" | "assessments" | "nutrition";
@@ -190,7 +191,10 @@ export async function handoverData(ctx: ApiContext, params: URLSearchParams) {
   };
 }
 
-export async function createNote(ctx: ApiContext, body: Record<string, unknown>) {
+// Offline erfasste Punkte behalten ihren Erfassungszeitpunkt (`notedAt`); mit `requestId` wird eine wiederholte
+// Anfrage nicht erneut gespeichert (Ergebnis null).
+export async function createNote(ctx: ApiContext, body: Record<string, unknown>, requestId: string | null = null) {
+  const notedAt = capturedAt(body.notedAt);
   const content = text(body.content, 2000);
   if (content.length < 3) throw new ApiError("Bitte den Übergabepunkt formulieren.");
   const priority = body.priority === "high" || body.priority === "critical" ? body.priority : "normal";
@@ -207,15 +211,19 @@ export async function createNote(ctx: ApiContext, body: Record<string, unknown>)
     careUnitId = (stay[0]?.care_unit_id as string | null) ?? null;
   }
   const id = randomUUID();
-  await ctx.sql.transaction([
-    ctx.sql`
-      INSERT INTO carecore_handovers (id, organization_id, care_unit_id, resident_id, author_user_id, content, priority)
-      VALUES (${id}, ${ctx.actor.organizationId}, ${careUnitId}, ${residentId}, ${ctx.actor.id}, ${content}, ${priority})`,
-    // The author has obviously read the own note.
-    ctx.sql`INSERT INTO carecore_handover_reads (handover_id, user_id) VALUES (${id}, ${ctx.actor.id})`,
-    auditStatement(ctx, "handover", id, "created", null, { residentId, careUnitId, priority }),
-  ]);
-  return id;
+  const { repeated } = await withReceipt(() =>
+    ctx.sql.transaction([
+      ctx.sql`
+        INSERT INTO carecore_handovers (id, organization_id, care_unit_id, resident_id, author_user_id, content, priority, created_at)
+        VALUES (${id}, ${ctx.actor.organizationId}, ${careUnitId}, ${residentId}, ${ctx.actor.id}, ${content}, ${priority},
+          COALESCE(${notedAt}::timestamptz, NOW()))`,
+      // The author has obviously read the own note.
+      ctx.sql`INSERT INTO carecore_handover_reads (handover_id, user_id) VALUES (${id}, ${ctx.actor.id})`,
+      auditStatement(ctx, "handover", id, "created", null, { residentId, careUnitId, priority }),
+      ...receiptStatements(ctx, requestId),
+    ]),
+  );
+  return repeated ? null : id;
 }
 
 export async function markRead(ctx: ApiContext, noteIdInput: unknown) {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requestIdFrom } from "@/lib/request-receipts";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
 import { addEntry, listEntries } from "@/lib/wounds";
 
@@ -21,7 +22,7 @@ export async function POST(request: Request, { params }: Context) {
     const ctx = await apiContext("documentation.write");
     if (ctx instanceof NextResponse) return ctx;
     const { woundId } = await params;
-    await addEntry(ctx, woundId, (await request.json()) as Record<string, unknown>);
+    await addEntry(ctx, woundId, (await request.json()) as Record<string, unknown>, requestIdFrom(request));
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
     return apiErrorResponse(error, "Eintrag konnte nicht gespeichert werden.");

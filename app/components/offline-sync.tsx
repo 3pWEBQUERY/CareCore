@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   QUEUE_EVENT,
   discardWrite,
+  editWrite,
   flushQueue,
   offlineUser,
   queuedWrites,
@@ -60,6 +61,7 @@ export default function OfflineSync() {
   const [notice, setNotice] = useState("");
   const [signedOut, setSignedOut] = useState(false);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<{ id: string; value: string } | null>(null);
 
   const refresh = useCallback(async () => setItems(await queuedWrites(offlineUser()).catch(() => [])), []);
 
@@ -170,10 +172,52 @@ export default function OfflineSync() {
                   {item.error ? ` · abgelehnt: ${item.error}` : " · wartet auf Verbindung"}
                 </small>
               </span>
-              {item.error && (
-                <button type="button" onClick={() => void discardWrite(item.id)}>
-                  Verwerfen
-                </button>
+              <span className="offline-status-actions">
+                {item.editable && editing?.id !== item.id && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const body = (item.body ?? {}) as Record<string, unknown>;
+                      setEditing({ id: item.id, value: String(body[item.editable!.field] ?? "") });
+                    }}
+                  >
+                    Bearbeiten
+                  </button>
+                )}
+                {item.error && (
+                  <button type="button" onClick={() => void discardWrite(item.id)}>
+                    Verwerfen
+                  </button>
+                )}
+              </span>
+              {item.editable && editing?.id === item.id && (
+                <form
+                  className="offline-status-edit"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void editWrite(item, editing.value).then(() => {
+                      setEditing(null);
+                      void flush();
+                    });
+                  }}
+                >
+                  <label>
+                    <span>{item.editable.label}</span>
+                    <textarea
+                      rows={3}
+                      value={editing.value}
+                      onChange={(event) => setEditing({ id: item.id, value: event.target.value })}
+                    />
+                  </label>
+                  <span className="offline-status-actions">
+                    <button type="button" onClick={() => setEditing(null)}>
+                      Abbrechen
+                    </button>
+                    <button type="submit" disabled={editing.value.trim().length < 3}>
+                      Speichern
+                    </button>
+                  </span>
+                </form>
               )}
             </li>
           ))}

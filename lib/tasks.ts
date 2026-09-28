@@ -9,6 +9,7 @@ import {
   type ApiContext,
   type Row,
 } from "@/lib/api-context";
+import { capturedAt } from "@/lib/request-receipts";
 import { listCareUnits } from "@/lib/medication";
 import { hasPermission } from "@/lib/server-data";
 import {
@@ -279,10 +280,12 @@ export async function setTaskStatus(ctx: ApiContext, taskIdInput: unknown, body:
 
   if (status === "completed") {
     const note = text(body.note, 10000);
+    // Offline erledigt: der Zeitpunkt der Erledigung, nicht der Übertragung.
+    const completedAt = capturedAt(body.completedAt);
     if (task.documentOnCompletion && note.length < 3)
       throw new ApiError("Diese Aufgabe verlangt eine Dokumentation. Bitte kurz beschreiben, was durchgeführt wurde.");
     const statements = [
-      sql`UPDATE carecore_tasks SET status = 'completed', completed_at = NOW(), completed_by = ${actor.id},
+      sql`UPDATE carecore_tasks SET status = 'completed', completed_at = COALESCE(${completedAt}::timestamptz, NOW()), completed_by = ${actor.id},
         completion_note = ${note || null}, updated_at = NOW() WHERE id = ${task.id}`,
     ];
     if (note && task.residentId && task.documentOnCompletion)
@@ -290,7 +293,8 @@ export async function setTaskStatus(ctx: ApiContext, taskIdInput: unknown, body:
         INSERT INTO carecore_documentation_entries (id, resident_id, care_unit_id, author_user_id, category, title, body, occurred_at, importance)
         SELECT ${randomUUID()}, ${task.residentId},
           (SELECT care_unit_id FROM carecore_resident_stays WHERE resident_id = ${task.residentId} AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1),
-          ${actor.id}, ${TASK_DOC_CATEGORY[task.category] ?? "Pflege"}, ${task.title}, ${`${task.title}: ${note}`}, NOW(), 'standard'`);
+          ${actor.id}, ${TASK_DOC_CATEGORY[task.category] ?? "Pflege"}, ${task.title}, ${`${task.title}: ${note}`},
+          COALESCE(${completedAt}::timestamptz, NOW()), 'standard'`);
     let followUpId: string | null = null;
     if (task.recurrence !== "none" && task.dueAt) {
       followUpId = randomUUID();
