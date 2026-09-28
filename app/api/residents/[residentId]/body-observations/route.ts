@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
+import { residentAudit } from "@/lib/resident-audit";
 import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
@@ -56,8 +57,17 @@ export async function POST(request: Request, context: { params: Promise<{ reside
       ![x, y, z].every((value) => Number.isFinite(value) && Math.abs(value) <= 3)
     )
       return NextResponse.json({ error: "Bitte Befund und Körperstelle vollständig angeben." }, { status: 400 });
-    const rows =
-      await allowed.sql`INSERT INTO carecore_body_observations (id, resident_id, kind, label, location, status, notes, body_x, body_y, body_z, created_by, updated_by) VALUES (${randomUUID()}, ${residentId}, ${kind}, ${label}, ${location}, ${status || "Beobachten"}, ${notes}, ${x}, ${y}, ${z}, ${allowed.actor.id}, ${allowed.actor.id}) RETURNING id, kind, label, location, status, notes, body_x, body_y, body_z, created_at, updated_at`;
+    const id = randomUUID();
+    const [rows] = await allowed.sql.transaction([
+      allowed.sql`INSERT INTO carecore_body_observations (id, resident_id, kind, label, location, status, notes, body_x, body_y, body_z, created_by, updated_by) VALUES (${id}, ${residentId}, ${kind}, ${label}, ${location}, ${status || "Beobachten"}, ${notes}, ${x}, ${y}, ${z}, ${allowed.actor.id}, ${allowed.actor.id}) RETURNING id, kind, label, location, status, notes, body_x, body_y, body_z, created_at, updated_at`,
+      residentAudit(allowed.sql, allowed.actor, {
+        residentId,
+        entityType: "body_observation",
+        entityId: id,
+        action: "created",
+        after: { kind, label, location, status: status || "Beobachten", notes },
+      }),
+    ]);
     return NextResponse.json({ observation: { ...rows[0], author: allowed.actor.display_name } }, { status: 201 });
   } catch (error) {
     console.error("Body observations POST failed", error);

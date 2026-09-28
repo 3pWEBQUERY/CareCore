@@ -1,0 +1,127 @@
+// Lesbare Darstellung der Protokolleinträge einer Bewohnerakte (Server und Browser).
+
+export type ResidentAuditEntry = {
+  id: string;
+  createdAt: string;
+  actor: string;
+  entityType: string;
+  action: string;
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
+};
+
+const ENTITY_LABELS: Record<string, string> = {
+  resident: "Stammdaten",
+  resident_contact: "Kontaktperson",
+  resident_biography: "Biografie",
+  resident_photo: "Bewohnerbild",
+  body_observation: "Körperbefund",
+  resident_supply: "Pflegebedarf",
+  resident_document: "Dokument",
+  documentation_entry: "Pflegedokumentation",
+  care_plan: "Pflegeplan",
+  care_goal: "Pflegeziel",
+  intervention: "Massnahme",
+  wound: "Wunde",
+  wound_entry: "Wunddokumentation",
+  wound_photo: "Wundfoto",
+  vital_measurements: "Vitalwerte",
+  vital_threshold: "Vitalwert-Grenzwert",
+  medication_order: "Verordnung",
+  medication_administration: "Medikamentengabe",
+  assessment_record: "Einschätzung",
+  fluid_entry: "Trinkprotokoll",
+  meal_entry: "Ernährung",
+  resident_stay: "Aufenthalt",
+};
+
+const ACTION_LABELS: Record<string, string> = {
+  created: "angelegt",
+  updated: "geändert",
+  deleted: "entfernt",
+  archived: "archiviert",
+  uploaded: "hochgeladen",
+  hidden: "ausgeblendet",
+  recorded: "erfasst",
+  documented: "dokumentiert",
+  completed: "abgeschlossen",
+  cancelled: "beendet",
+  saved: "gespeichert",
+  removed: "entfernt",
+  issued: "gebucht",
+  admitted: "aufgenommen",
+  master_data_updated: "geändert",
+  gender_updated: "Geschlecht geändert",
+  medication_allergies_updated: "Allergien geändert",
+  prn_administered: "Reservegabe erfasst",
+};
+
+const FIELD_LABELS: Record<string, string> = {
+  fullName: "Name",
+  relationship: "Beziehung",
+  phone: "Telefon",
+  email: "E-Mail",
+  isPrimary: "Hauptkontakt",
+  isEmergencyContact: "Notfallkontakt",
+  kind: "Art",
+  label: "Bezeichnung",
+  location: "Körperstelle",
+  status: "Status",
+  notes: "Hinweis",
+  itemName: "Artikel",
+  category: "Kategorie",
+  unit: "Einheit",
+  currentQuantity: "Bestand",
+  targetQuantity: "Sollbestand",
+  gender: "Geschlecht",
+  firstName: "Vorname",
+  lastName: "Nachname",
+  primaryNurseId: "Bezugspflege",
+  gpName: "Hausarzt",
+  lifeStory: "Lebensgeschichte",
+  importantPeople: "Wichtige Menschen",
+  dailyRoutines: "Gewohnheiten",
+  preferences: "Vorlieben",
+  strengths: "Stärken",
+  sensitiveTopics: "Sensible Themen",
+};
+
+const NAME_KEYS = ["fullName", "label", "itemName", "title", "name", "metric", "medication", "file"];
+
+function nameOf(data: Record<string, unknown> | null) {
+  for (const key of NAME_KEYS) if (typeof data?.[key] === "string" && data[key]) return String(data[key]);
+  return "";
+}
+
+// Leere Texte und fehlende Werte gelten als gleich (Formulare senden "", die Datenbank speichert NULL).
+const normalize = (value: unknown) => (value === "" || value === undefined ? null : value);
+const same = (a: unknown, b: unknown) => JSON.stringify(normalize(a)) === JSON.stringify(normalize(b));
+
+export function describeAudit(entry: ResidentAuditEntry) {
+  const entity = ENTITY_LABELS[entry.entityType] ?? entry.entityType.replace(/_/g, " ");
+  const action = ACTION_LABELS[entry.action] ?? entry.action.replace(/_/g, " ");
+  const name = nameOf(entry.after) || nameOf(entry.before);
+  const details: string[] = [];
+  const sections = entry.after?.changedSections;
+  if (Array.isArray(sections))
+    details.push(
+      sections.length
+        ? `Abschnitte: ${sections.map((key) => FIELD_LABELS[String(key)] ?? String(key)).join(", ")}`
+        : "keine inhaltliche Änderung",
+    );
+  else if (entry.before && entry.after) {
+    const changed = Object.keys(entry.after).filter(
+      // Nur Felder, die vorher ebenfalls festgehalten wurden (ältere Einträge enthalten nicht alle Felder).
+      (key) =>
+        key !== "residentId" &&
+        key in FIELD_LABELS &&
+        entry.before !== null &&
+        key in entry.before &&
+        !same(entry.before[key], entry.after?.[key]),
+    );
+    if (changed.length) details.push(`Geändert: ${changed.map((key) => FIELD_LABELS[key]).join(", ")}`);
+  }
+  if (entry.entityType === "resident_supply" && entry.action === "issued" && entry.after?.quantity)
+    details.push(`${entry.after.quantity} ${entry.after.unit ?? ""}`.trim());
+  return { title: `${entity} ${action}`, name, detail: details.join(" · ") };
+}

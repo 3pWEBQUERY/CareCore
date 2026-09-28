@@ -369,6 +369,18 @@
   .body-observation-links a {
     font-size: 11.5px;
   }
+  .transfer-head p {
+    font-size: 12px;
+  }
+  .transfer-sheet th {
+    font-size: 12px;
+  }
+  .transfer-notes span {
+    font-size: 12px;
+  }
+  .transfer-foot {
+    font-size: 11.5px;
+  }
   .clinical-body-toolbar span {
     font-size: 12px;
   }

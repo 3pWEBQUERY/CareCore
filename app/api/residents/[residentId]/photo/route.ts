@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { residentAudit } from "@/lib/resident-audit";
 import { carecoreActor, carecoreDb, forbidden, hasPermission, type Permission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
@@ -12,7 +13,7 @@ async function access(residentId: string, permission: Permission) {
   const sql = carecoreDb();
   const rows =
     await sql`SELECT id FROM carecore_residents WHERE id = ${residentId} AND organization_id = ${actor.organizationId} LIMIT 1`;
-  return rows[0] ? sql : null;
+  return rows[0] ? { sql, actor } : null;
 }
 
 function hasValidImageSignature(bytes: Buffer, mimeType: string) {
@@ -30,9 +31,10 @@ function hasValidImageSignature(bytes: Buffer, mimeType: string) {
 export async function GET(request: Request, context: { params: Promise<{ residentId: string }> }) {
   try {
     const { residentId } = await context.params;
-    const sql = await access(residentId, "residents.read");
-    if (!sql) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
-    if (sql === "forbidden") return forbidden();
+    const allowed = await access(residentId, "residents.read");
+    if (!allowed) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (allowed === "forbidden") return forbidden();
+    const { sql } = allowed;
     const rows =
       await sql`SELECT photo_base64, photo_mime_type, photo_updated_at FROM carecore_residents WHERE id = ${residentId} LIMIT 1`;
     const resident = rows[0];
@@ -68,9 +70,10 @@ export async function GET(request: Request, context: { params: Promise<{ residen
 export async function PUT(request: Request, context: { params: Promise<{ residentId: string }> }) {
   try {
     const { residentId } = await context.params;
-    const sql = await access(residentId, "residents.write");
-    if (!sql) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
-    if (sql === "forbidden") return forbidden();
+    const allowed = await access(residentId, "residents.write");
+    if (!allowed) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (allowed === "forbidden") return forbidden();
+    const { sql, actor } = allowed;
     const input = (await request.json()) as { photoDataUrl?: unknown };
     if (typeof input.photoDataUrl !== "string")
       return NextResponse.json({ error: "Bitte ein Bild auswählen." }, { status: 400 });
@@ -83,8 +86,16 @@ export async function PUT(request: Request, context: { params: Promise<{ residen
     if (!hasValidImageSignature(image, match[1]))
       return NextResponse.json({ error: "Die Bilddatei ist ungültig." }, { status: 400 });
     const base64 = image.toString("base64");
-    const rows =
-      await sql`UPDATE carecore_residents SET photo_base64 = ${base64}, photo_mime_type = ${match[1]}, photo_updated_at = NOW(), updated_at = NOW() WHERE id = ${residentId} RETURNING photo_updated_at`;
+    const [rows] = await sql.transaction([
+      sql`UPDATE carecore_residents SET photo_base64 = ${base64}, photo_mime_type = ${match[1]}, photo_updated_at = NOW(), updated_at = NOW() WHERE id = ${residentId} RETURNING photo_updated_at`,
+      residentAudit(sql, actor, {
+        residentId,
+        entityType: "resident_photo",
+        entityId: residentId,
+        action: "updated",
+        after: { mimeType: match[1], bytes: image.length },
+      }),
+    ]);
     if (!rows[0]) return NextResponse.json({ error: "Bewohnerakte nicht gefunden." }, { status: 404 });
     return NextResponse.json({
       photoDataUrl: `data:${match[1]};base64,${base64}`,
@@ -99,10 +110,14 @@ export async function PUT(request: Request, context: { params: Promise<{ residen
 export async function DELETE(_request: Request, context: { params: Promise<{ residentId: string }> }) {
   try {
     const { residentId } = await context.params;
-    const sql = await access(residentId, "residents.write");
-    if (!sql) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
-    if (sql === "forbidden") return forbidden();
-    await sql`UPDATE carecore_residents SET photo_base64 = NULL, photo_mime_type = NULL, photo_updated_at = NULL, updated_at = NOW() WHERE id = ${residentId}`;
+    const allowed = await access(residentId, "residents.write");
+    if (!allowed) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (allowed === "forbidden") return forbidden();
+    const { sql, actor } = allowed;
+    await sql.transaction([
+      sql`UPDATE carecore_residents SET photo_base64 = NULL, photo_mime_type = NULL, photo_updated_at = NULL, updated_at = NOW() WHERE id = ${residentId}`,
+      residentAudit(sql, actor, { residentId, entityType: "resident_photo", entityId: residentId, action: "deleted" }),
+    ]);
     return NextResponse.json({ photoDataUrl: null });
   } catch (error) {
     console.error("Resident photo DELETE failed", error);

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { residentAudit } from "@/lib/resident-audit";
 import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
@@ -13,8 +14,20 @@ export async function PATCH(request: Request, context: { params: Promise<{ resid
     if (typeof body.gender !== "string" || !["male", "female", "diverse", "unspecified"].includes(body.gender))
       return NextResponse.json({ error: "Ungültiges Geschlecht." }, { status: 400 });
     const sql = carecoreDb();
-    const rows =
-      await sql`UPDATE carecore_residents SET gender = ${body.gender}, updated_at = NOW() WHERE id = ${residentId} AND organization_id = ${actor.organizationId} RETURNING gender`;
+    const current =
+      await sql`SELECT gender FROM carecore_residents WHERE id = ${residentId} AND organization_id = ${actor.organizationId}`;
+    if (!current[0]) return NextResponse.json({ error: "Bewohnerakte nicht gefunden." }, { status: 404 });
+    const [rows] = await sql.transaction([
+      sql`UPDATE carecore_residents SET gender = ${body.gender}, updated_at = NOW() WHERE id = ${residentId} AND organization_id = ${actor.organizationId} RETURNING gender`,
+      residentAudit(sql, actor, {
+        residentId,
+        entityType: "resident",
+        entityId: residentId,
+        action: "gender_updated",
+        before: { gender: current[0].gender },
+        after: { gender: body.gender },
+      }),
+    ]);
     if (!rows[0]) return NextResponse.json({ error: "Bewohnerakte nicht gefunden." }, { status: 404 });
     return NextResponse.json({ gender: rows[0].gender });
   } catch (error) {

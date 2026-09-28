@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { residentAudit } from "@/lib/resident-audit";
 import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
@@ -58,11 +59,19 @@ export async function POST(request: Request, context: { params: Promise<{ reside
     if (!hasPermission(active.actor, "residents.write")) return forbidden();
     const input = contactValues((await request.json()) as ContactInput);
     if (!input.fullName) return NextResponse.json({ error: "Bitte gib einen Namen an." }, { status: 400 });
-    if (input.isPrimary)
-      await active.sql`UPDATE carecore_resident_contacts SET is_primary = FALSE, updated_at = NOW() WHERE resident_id = ${residentId}`;
-    const rows =
-      await active.sql`INSERT INTO carecore_resident_contacts (id, resident_id, full_name, relationship, phone, email, is_primary, is_emergency_contact) VALUES (${randomUUID()}, ${residentId}, ${input.fullName}, ${input.relationship || null}, ${input.phone || null}, ${input.email || null}, ${input.isPrimary}, ${input.isEmergencyContact}) RETURNING id, full_name, relationship, phone, email, is_primary, is_emergency_contact, updated_at`;
-    return NextResponse.json({ contact: rows[0] }, { status: 201 });
+    const id = randomUUID();
+    const results = await active.sql.transaction([
+      active.sql`UPDATE carecore_resident_contacts SET is_primary = FALSE, updated_at = NOW() WHERE resident_id = ${residentId} AND ${input.isPrimary}`,
+      active.sql`INSERT INTO carecore_resident_contacts (id, resident_id, full_name, relationship, phone, email, is_primary, is_emergency_contact) VALUES (${id}, ${residentId}, ${input.fullName}, ${input.relationship || null}, ${input.phone || null}, ${input.email || null}, ${input.isPrimary}, ${input.isEmergencyContact}) RETURNING id, full_name, relationship, phone, email, is_primary, is_emergency_contact, updated_at`,
+      residentAudit(active.sql, active.actor, {
+        residentId,
+        entityType: "resident_contact",
+        entityId: id,
+        action: "created",
+        after: input,
+      }),
+    ]);
+    return NextResponse.json({ contact: results[1][0] }, { status: 201 });
   } catch (error) {
     console.error("Contacts POST failed", error);
     return NextResponse.json({ error: "Kontaktperson konnte nicht gespeichert werden." }, { status: 500 });
