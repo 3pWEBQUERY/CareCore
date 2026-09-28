@@ -18,6 +18,7 @@ export function RoleEditor({
     [key, setKey] = useState(role?.key ?? ""),
     [description, setDescription] = useState(role?.description ?? ""),
     [selected, setSelected] = useState<string[]>(role?.permissions ?? []),
+    [needsQualification, setNeedsQualification] = useState(role?.medicationRequiresQualification ?? false),
     [error, setError] = useState(""),
     [saving, setSaving] = useState(false);
   const toggle = (v: string) =>
@@ -32,8 +33,14 @@ export function RoleEditor({
           method === "DELETE"
             ? { roleId: role?.id }
             : role
-              ? { roleId: role.id, name, description, permissions: selected }
-              : { name, key, description, permissions: selected },
+              ? {
+                  roleId: role.id,
+                  name,
+                  description,
+                  permissions: selected,
+                  medicationRequiresQualification: needsQualification,
+                }
+              : { name, key, description, permissions: selected, medicationRequiresQualification: needsQualification },
         ),
       });
       const payload = (await r.json()) as { roles?: ManagedRole[]; error?: string };
@@ -96,6 +103,23 @@ export function RoleEditor({
               ))}
             </div>
           </fieldset>
+          {selected.includes("medication.manage") && role?.key !== "admin" && (
+            <fieldset className="user-editor-role">
+              <legend>Medikation</legend>
+              <div>
+                <button
+                  type="button"
+                  className={needsQualification ? "active" : ""}
+                  aria-pressed={needsQualification}
+                  onClick={() => setNeedsQualification((value) => !value)}
+                >
+                  <strong>Nur mit Qualifikation</strong>
+                  <small>Medikation nur für Personen mit berechtigender Qualifikation (z. B. HF, FaGe)</small>
+                  {needsQualification && <ModuleIcon name="check" />}
+                </button>
+              </div>
+            </fieldset>
+          )}
           {error && <p className="user-editor-error">{error}</p>}
           <footer className="user-editor-footer">
             {role && !role.systemRole && (

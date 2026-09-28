@@ -57,6 +57,7 @@ export async function POST(request: Request) {
           name: body.name,
           description: typeof body.description === "string" ? body.description : undefined,
           permissions: body.permissions,
+          medicationRequiresQualification: body.medicationRequiresQualification === true,
         }),
       },
       { status: 201 },
@@ -78,6 +79,8 @@ export async function PATCH(request: Request) {
         name: body.name,
         description: typeof body.description === "string" ? body.description : undefined,
         permissions: body.permissions,
+        medicationRequiresQualification:
+          typeof body.medicationRequiresQualification === "boolean" ? body.medicationRequiresQualification : undefined,
       }),
     });
   } catch (error) {

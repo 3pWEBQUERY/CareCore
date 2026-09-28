@@ -1040,7 +1040,7 @@ type Person = SettingsPayload["employees"][number];
 
 function PeopleTab({ data, reload, showToast }: TabProps) {
   const [editing, setEditing] = useState<Person | null>(null);
-  const [qualification, setQualification] = useState({ code: "", name: "" });
+  const [qualification, setQualification] = useState({ code: "", name: "", grantsMedication: false });
   const qualificationCodes = (person: Person) =>
     person.qualifications
       .map((q) => data.qualifications.find((x) => x.id === q.qualificationId)?.code ?? "?")
@@ -1106,7 +1106,11 @@ function PeopleTab({ data, reload, showToast }: TabProps) {
         <div className="roster-section-head">
           <div>
             <h2>Qualifikationen</h2>
-            <p>{data.qualifications.map((q) => `${q.code} (${q.name})`).join(" · ")}</p>
+            <p>
+              {data.qualifications
+                .map((q) => `${q.code} (${q.name}${q.grantsMedication ? ", Medikation" : ""})`)
+                .join(" · ")}
+            </p>
           </div>
         </div>
         <div className="roster-form-grid">
@@ -1115,7 +1119,15 @@ function PeopleTab({ data, reload, showToast }: TabProps) {
             <input
               value={qualification.code}
               maxLength={24}
-              onChange={(e) => setQualification({ ...qualification, code: e.target.value })}
+              onChange={(e) => {
+                // Bekanntes Kürzel: Bezeichnung und Medikationsrecht übernehmen, damit nichts unbemerkt zurückgesetzt wird.
+                const known = data.qualifications.find((q) => q.code === e.target.value.trim().toUpperCase());
+                setQualification(
+                  known
+                    ? { code: e.target.value, name: known.name, grantsMedication: known.grantsMedication }
+                    : { ...qualification, code: e.target.value },
+                );
+              }}
             />
           </label>
           <label>
@@ -1125,6 +1137,14 @@ function PeopleTab({ data, reload, showToast }: TabProps) {
               maxLength={120}
               onChange={(e) => setQualification({ ...qualification, name: e.target.value })}
             />
+          </label>
+          <label className="area-editor-wide roster-checkbox">
+            <input
+              type="checkbox"
+              checked={qualification.grantsMedication}
+              onChange={(e) => setQualification({ ...qualification, grantsMedication: e.target.checked })}
+            />
+            <span>Berechtigt zur Medikation (Rollen wie „Pflege“ erhalten das Medikationsrecht nur damit)</span>
           </label>
         </div>
         <div className="roster-form-actions">
@@ -1138,7 +1158,7 @@ function PeopleTab({ data, reload, showToast }: TabProps) {
                 "Qualifikation gespeichert",
                 reload,
                 showToast,
-              ).then(() => setQualification({ code: "", name: "" }))
+              ).then(() => setQualification({ code: "", name: "", grantsMedication: false }))
             }
           >
             Qualifikation speichern

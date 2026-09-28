@@ -140,7 +140,10 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
                           <ModuleIcon name="med" />
                         </span>
                         <span>
-                          <strong>{`${order.name} ${order.strength}`.trim()}</strong>
+                          <strong>
+                            {`${order.name} ${order.strength}`.trim()}
+                            {order.controlled && <em className="btm-badge">BtM</em>}
+                          </strong>
                           <small>{[order.form, order.route].filter(Boolean).join(" · ")}</small>
                         </span>
                         <span>

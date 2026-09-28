@@ -3,9 +3,9 @@
 import type { AbsenceKind, ShiftCategory } from "./types";
 
 export const DEFAULT_QUALIFICATIONS = [
-  { code: "HF", name: "Pflegefachperson HF" },
-  { code: "FAGE", name: "Fachperson Gesundheit" },
-  { code: "SRK", name: "Pflegehelfer:in SRK" },
+  { code: "HF", name: "Pflegefachperson HF", grantsMedication: true },
+  { code: "FAGE", name: "Fachperson Gesundheit", grantsMedication: true },
+  { code: "SRK", name: "Pflegehelfer:in SRK", grantsMedication: false },
 ] as const;
 
 export const DEFAULT_SHIFT_TYPES: Array<{

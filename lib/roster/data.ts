@@ -58,8 +58,8 @@ export async function ensureRosterDefaults(ctx: RosterContext) {
     ctx.sql`INSERT INTO carecore_rule_sets (organization_id, timezone)
       SELECT id, timezone FROM carecore_organizations WHERE id = ${org} ON CONFLICT DO NOTHING`,
     ...DEFAULT_QUALIFICATIONS.map(
-      (q) => ctx.sql`INSERT INTO carecore_qualifications (organization_id, code, name)
-        VALUES (${org}, ${q.code}, ${q.name}) ON CONFLICT (organization_id, code) DO NOTHING`,
+      (q) => ctx.sql`INSERT INTO carecore_qualifications (organization_id, code, name, grants_medication)
+        VALUES (${org}, ${q.code}, ${q.name}, ${q.grantsMedication}) ON CONFLICT (organization_id, code) DO NOTHING`,
     ),
     ...DEFAULT_SHIFT_TYPES.map(
       (

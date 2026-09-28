@@ -114,6 +114,7 @@ export async function transferSheet(ctx: ApiContext, residentIdInput: unknown): 
       : null,
     medication: orders.map((order) => ({
       name: [order.name, order.strength].filter(Boolean).join(" "),
+      controlled: order.controlled,
       form: order.form,
       route: order.route,
       amount: order.amount,

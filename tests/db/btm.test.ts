@@ -3,9 +3,10 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { ApiError } from "@/lib/api-context";
 import { hashPassword } from "@/lib/auth";
-import { btmBook, btmOverview, countStock, setControlled } from "@/lib/medication-btm";
+import { btmBook, btmOverview, countStock, createBtmReminders, setControlled } from "@/lib/medication-btm";
+import { saveSetting } from "@/lib/settings";
 import { correctStock, receiveStock } from "@/lib/medication-stock";
-import { apiContextFor, createResident, fixture, q, type Fixture } from "../support/db";
+import { apiContextFor, createResident, fixture, q, qualify, type Fixture } from "../support/db";
 
 const PASSWORD = "Zeugin-Test-2026";
 
@@ -18,8 +19,12 @@ const failure = async (promise: Promise<unknown>) =>
     }),
   );
 
-// Zeuginnen und Zeugen melden sich mit Benutzername und Passwort an.
+// Zeuginnen und Zeugen melden sich mit Benutzername und Passwort an. Max (FaGe) und Lea (HF) dürfen
+// Medikation; Sam (Pflegehelfer SRK) nicht.
 async function withPasswords(f: Fixture) {
+  await qualify(f, "max", "FAGE");
+  await qualify(f, "lea", "HF");
+  await qualify(f, "sam", "SRK");
   const hash = await hashPassword(PASSWORD);
   await q(`UPDATE carecore_users SET password_hash = $1 WHERE id = ANY($2::uuid[])`, [hash, Object.values(f.people)]);
   const usernames = await q<{ id: string; username: string }>(
@@ -56,20 +61,24 @@ test("BtM-Eingang: nur mit gültiger Zweitunterschrift einer berechtigten andere
   assert.match((await failure(receipt({}))).message, /Zweitunterschrift/);
   assert.equal((await failure(receipt({ witness: witness("max", "falsch") }))).status, 403);
   assert.match((await failure(receipt({ witness: witness("anna") }))).message, /anderen Person/);
-  // Die Leitung hat im Testmandanten keine Medikationsberechtigung.
-  assert.match((await failure(receipt({ witness: witness("leadA") }))).message, /nicht für Medikation berechtigt/);
+  // Pflege ohne berechtigende Qualifikation (Pflegehelfer SRK) zählt nicht.
+  assert.match((await failure(receipt({ witness: witness("sam") }))).message, /nicht für Medikation berechtigt/);
+  assert.match((await failure(receipt({ witness: witness("ben") }))).message, /nicht für Medikation berechtigt/);
   // Eine Person einer anderen Organisation zählt nicht.
   const other = await fixture();
   const otherWitness = await withPasswords(other);
   assert.match((await failure(receipt({ witness: otherWitness("max") }))).message, /Organisation/);
 
+  // Die Leitung darf Medikation und kann bezeugen.
+  await receipt({ witness: witness("leadA") });
   await receipt({ witness: witness("max") });
   const [row] = await q<{ quantity: string }>(`SELECT quantity FROM carecore_medication_stock WHERE id = $1`, [stock]);
-  assert.equal(Number(row.quantity), 15);
+  assert.equal(Number(row.quantity), 20);
   const book = await btmBook(ctx, stock);
   assert.equal(book.entries[0].kind, "receipt");
   assert.equal(book.entries[0].witness, "Max Meier");
-  assert.equal(book.entries[0].balance, 15);
+  assert.equal(book.entries[0].balance, 20);
+  assert.equal(book.entries[1].witness, "Laura Leitung");
   assert.equal(book.opening, 10, "Bestand vor der ersten Buchung wird als Übertrag ausgewiesen");
 });
 
@@ -186,4 +195,64 @@ test("BtM-Kennzeichnung: Aufheben nur mit Begründung, beides protokolliert", as
     (await failure(setControlled(await apiContextFor(other, "anna"), medication, { controlled: true }))).status,
     404,
   );
+});
+
+test("BtM-Kontrollintervall: ohne festgelegten Wert keine Fälligkeit, danach Erinnerung je Kontrollzyklus", async () => {
+  const f = await fixture();
+  const witness = await withPasswords(f);
+  const ctx = await apiContextFor(f, "anna");
+  const med = { ...ctx, actor: { ...ctx.actor, permissions: [...ctx.actor.permissions, "medication.manage"] } };
+  const { stock } = await btmStock(f);
+  const reminders = async () =>
+    q<{ title: string; body: string }>(
+      `SELECT title, body FROM carecore_notifications WHERE user_id = $1 AND type = 'btm_count_due' ORDER BY created_at`,
+      [f.people.anna],
+    );
+
+  // Die Einrichtung legt das Intervall fest; ohne Wert lässt es sich nicht einschalten.
+  assert.equal((await btmOverview(ctx)).countInterval, null);
+  assert.equal((await btmOverview(ctx)).items[0].countDue, null);
+  assert.match((await failure(saveSetting(ctx, "btmCountInterval", { enabled: true }))).message, /Wert/);
+  await createBtmReminders(med);
+  assert.equal((await reminders()).length, 0, "ohne Intervall keine Erinnerung");
+
+  await saveSetting(ctx, "btmCountInterval", { enabled: true, value: 7 });
+  let overview = await btmOverview(ctx);
+  assert.equal(overview.countInterval, 7);
+  assert.deepEqual(overview.items[0].countDue, { at: null, due: true }, "nie kontrolliert: sofort fällig");
+
+  // Nur Personen mit Medikationsrecht, und je Zyklus nur einmal.
+  await createBtmReminders(ctx);
+  assert.equal((await reminders()).length, 0);
+  await createBtmReminders(med);
+  await createBtmReminders(med);
+  assert.equal((await reminders()).length, 1);
+  assert.match((await reminders())[0].body, /noch nie kontrolliert/);
+
+  await countStock(ctx, stock, { counted: 10, witness: witness("max") });
+  overview = await btmOverview(ctx);
+  assert.equal(overview.items[0].countDue?.due, false);
+  await createBtmReminders(med);
+  assert.equal((await reminders()).length, 1, "nach der Kontrolle nicht fällig");
+
+  // Kontrolle liegt 8 Tage zurück (die erste Erinnerung davor): wieder fällig, neue Erinnerung.
+  await q(`UPDATE carecore_notifications SET created_at = NOW() - INTERVAL '9 days' WHERE user_id = $1`, [
+    f.people.anna,
+  ]);
+  await q(`ALTER TABLE carecore_btm_counts DISABLE TRIGGER carecore_btm_count_guard`);
+  await q(`UPDATE carecore_btm_counts SET created_at = NOW() - INTERVAL '8 days' WHERE stock_id = $1`, [stock]);
+  await q(`ALTER TABLE carecore_btm_counts ENABLE TRIGGER carecore_btm_count_guard`);
+  assert.equal((await btmOverview(ctx)).items[0].countDue?.due, true);
+  await createBtmReminders(med);
+  assert.equal((await reminders()).length, 2);
+  assert.match((await reminders())[1].body, /letzte Kontrolle am/);
+
+  // Personen mit anderem Stammwohnbereich erhalten keine Erinnerung für diesen Bestand.
+  const ben = await apiContextFor(f, "ben");
+  await createBtmReminders({ ...ben, actor: { ...ben.actor, permissions: ["medication.manage"] } });
+  const [benCount] = await q<{ n: number }>(
+    `SELECT COUNT(*)::int AS n FROM carecore_notifications WHERE user_id = $1 AND type = 'btm_count_due'`,
+    [f.people.ben],
+  );
+  assert.equal(benCount.n, 0);
 });

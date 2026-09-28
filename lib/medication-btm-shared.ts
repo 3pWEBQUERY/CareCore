@@ -12,10 +12,13 @@ export type BtmStockItem = {
   quantity: number;
   unit: string;
   lastMovementAt: string | null;
+  // null, solange kein Kontrollintervall festgelegt ist; at = null: noch nie kontrolliert (sofort fällig).
+  countDue: { at: string | null; due: boolean } | null;
   lastCount: { at: string; expected: number; counted: number; countedBy: string | null; witness: string | null } | null;
 };
 
 export type BtmOverview = {
+  countInterval: number | null;
   items: BtmStockItem[];
   medications: Array<{ id: string; name: string; form: string; controlled: boolean; hasStock: boolean }>;
 };

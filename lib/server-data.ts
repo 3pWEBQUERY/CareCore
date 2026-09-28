@@ -31,7 +31,7 @@ export async function carecoreActor() {
   const rows = await sql`
     SELECT
       (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${user.id} LIMIT 1) AS organization_id,
-      (SELECT permissions FROM carecore_roles WHERE key = ${user.role} LIMIT 1) AS permissions
+      carecore_effective_permissions(${user.id}) AS permissions
   `;
   const permissions = Array.isArray(rows[0]?.permissions) ? (rows[0].permissions as string[]) : [];
   return { ...user, organizationId: rows[0]?.organization_id as string | undefined, permissions };

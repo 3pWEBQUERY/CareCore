@@ -41,6 +41,8 @@ export type TransferSheet = {
   carePlan: { focus: string | null; goals: Array<{ category: string; statement: string }> } | null;
   medication: Array<{
     name: string;
+    // Betäubungsmittel
+    controlled: boolean;
     form: string;
     route: string;
     amount: string;

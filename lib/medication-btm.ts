@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { authenticate, isLoginThrottled, recordFailedLogin } from "./auth";
 import { ApiError, assertUuid, iso, text, writeAudit, type ApiContext, type Row } from "./api-context";
 import type { BtmBook, BtmBookEntry, BtmOverview } from "./medication-btm-shared";
+import { readSettings } from "./settings";
 
 // Betäubungsmittel (BtM): Buchungen brauchen eine zweite Person (Zeugin/Zeuge), die sich mit ihrem
 // eigenen Passwort bestätigt. Fehlversuche zählen wie fehlgeschlagene Anmeldungen.
@@ -26,9 +27,8 @@ export async function verifyWitness(ctx: ApiContext, input: unknown): Promise<Wi
   }
   if (user.id === ctx.actor.id) throw new ApiError("Die Zweitunterschrift muss von einer anderen Person stammen.", 403);
   const rows = (await ctx.sql`
-    SELECT r.permissions FROM carecore_user_profiles p
+    SELECT COALESCE(carecore_effective_permissions(u.id), '[]'::jsonb) AS permissions FROM carecore_user_profiles p
     JOIN carecore_users u ON u.id = p.user_id AND u.active AND u.archived_at IS NULL
-    JOIN carecore_roles r ON r.key = u.role
     WHERE p.user_id = ${user.id} AND p.organization_id = ${ctx.actor.organizationId}`) as Row[];
   const permissions = Array.isArray(rows[0]?.permissions) ? (rows[0].permissions as string[]) : null;
   if (!permissions) throw new ApiError("Die zweite Person gehört nicht zu dieser Organisation.", 403);
@@ -48,8 +48,49 @@ export async function witnessFor(ctx: ApiContext, medicationId: string, input: u
   return (await isControlledMedication(ctx, medicationId)) ? verifyWitness(ctx, input) : null;
 }
 
+// Kontrollintervall in Tagen aus Leitung › Konfiguration (null, solange es nicht festgelegt und eingeschaltet ist).
+export async function btmCountInterval(ctx: ApiContext) {
+  const setting = (await readSettings(ctx)).btmCountInterval;
+  return setting.enabled && setting.value ? setting.value : null;
+}
+
+// Erinnerung beim Laden der Benachrichtigungen: fällige BtM-Kontrollen für Personen mit Medikationsrecht,
+// je Bestand einmal pro Kontrollzyklus. Mit Stammwohnbereich nur dessen Stations- und Bewohnerbestände.
+export async function createBtmReminders(ctx: ApiContext) {
+  if (!ctx.actor.permissions.includes("medication.manage")) return;
+  const interval = await btmCountInterval(ctx);
+  if (interval === null) return;
+  await ctx.sql`
+    WITH home AS (SELECT primary_care_unit_id AS unit FROM carecore_user_profiles WHERE user_id = ${ctx.actor.id}),
+    due AS (
+      SELECT st.id, TRIM(CONCAT_WS(' ', m.name, m.strength)) AS medication,
+        CASE WHEN st.resident_id IS NOT NULL THEN r.first_name || ' ' || r.last_name ELSE COALESCE(cu.name, 'Ohne Wohnbereich') END AS owner,
+        last_count.created_at AS last_count_at
+      FROM carecore_medication_stock st
+      JOIN carecore_medications m ON m.id = st.medication_id AND m.is_controlled
+      LEFT JOIN carecore_care_units cu ON cu.id = st.care_unit_id
+      LEFT JOIN carecore_residents r ON r.id = st.resident_id
+      LEFT JOIN LATERAL (SELECT care_unit_id FROM carecore_resident_stays WHERE resident_id = st.resident_id AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1) stay ON TRUE
+      LEFT JOIN LATERAL (SELECT created_at FROM carecore_btm_counts c WHERE c.stock_id = st.id ORDER BY c.created_at DESC LIMIT 1) last_count ON TRUE
+      CROSS JOIN (SELECT (SELECT unit FROM home) AS unit) h
+      WHERE st.organization_id = ${ctx.actor.organizationId}
+        AND (h.unit IS NULL OR COALESCE(stay.care_unit_id, st.care_unit_id) = h.unit)
+        AND (last_count.created_at IS NULL OR last_count.created_at + make_interval(days => ${interval}::int) <= NOW())
+    )
+    INSERT INTO carecore_notifications (id, user_id, title, body, type, priority, link_url, entity_type, entity_id)
+    SELECT gen_random_uuid(), ${ctx.actor.id}, 'BtM-Kontrolle fällig: ' || due.medication,
+      due.owner || CASE WHEN due.last_count_at IS NULL THEN ' · noch nie kontrolliert.' ELSE ' · letzte Kontrolle am ' ||
+        to_char(due.last_count_at AT TIME ZONE COALESCE((SELECT timezone FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}), 'Europe/Zurich'), 'DD.MM.YYYY') || '.' END,
+      'btm_count_due', 'normal', '/c/medikation/btm', 'btm_stock', due.id
+    FROM due
+    WHERE NOT EXISTS (SELECT 1 FROM carecore_notifications n
+      WHERE n.user_id = ${ctx.actor.id} AND n.type = 'btm_count_due' AND n.entity_type = 'btm_stock' AND n.entity_id = due.id
+        AND n.created_at > COALESCE(due.last_count_at, '-infinity'::timestamptz))`;
+}
+
 export async function btmOverview(ctx: ApiContext): Promise<BtmOverview> {
   const { sql, actor } = ctx;
+  const interval = await btmCountInterval(ctx);
   const [stock, medications] = (await Promise.all([
     sql`
       SELECT st.id, st.medication_id, m.name, COALESCE(m.strength, '') AS strength, COALESCE(m.form, '') AS form,
@@ -57,7 +98,8 @@ export async function btmOverview(ctx: ApiContext): Promise<BtmOverview> {
         (st.resident_id IS NOT NULL) AS is_resident, COALESCE(st.storage_location, '') AS location, st.quantity, st.unit,
         last_count.created_at AS last_count_at, last_count.expected_quantity AS last_expected, last_count.counted_quantity AS last_counted,
         cb.display_name AS last_counted_by, wb.display_name AS last_witness,
-        (SELECT MAX(created_at) FROM carecore_medication_stock_movements mv WHERE mv.stock_id = st.id) AS last_movement_at
+        (SELECT MAX(created_at) FROM carecore_medication_stock_movements mv WHERE mv.stock_id = st.id) AS last_movement_at,
+        last_count.created_at + make_interval(days => ${interval}::int) AS count_due_at
       FROM carecore_medication_stock st
       JOIN carecore_medications m ON m.id = st.medication_id AND m.is_controlled
       LEFT JOIN carecore_care_units cu ON cu.id = st.care_unit_id
@@ -74,6 +116,7 @@ export async function btmOverview(ctx: ApiContext): Promise<BtmOverview> {
       ORDER BY m.is_controlled DESC, m.name, m.strength`,
   ])) as [Row[], Row[]];
   return {
+    countInterval: interval,
     items: stock.map((row) => ({
       id: String(row.id),
       medicationId: String(row.medication_id),
@@ -86,6 +129,11 @@ export async function btmOverview(ctx: ApiContext): Promise<BtmOverview> {
       quantity: Number(row.quantity),
       unit: String(row.unit),
       lastMovementAt: iso(row.last_movement_at),
+      // Mit festgelegtem Intervall: nie kontrollierte Bestände sind sofort fällig.
+      countDue:
+        interval === null
+          ? null
+          : { at: iso(row.count_due_at), due: !row.count_due_at || new Date(String(row.count_due_at)) <= new Date() },
       lastCount: row.last_count_at
         ? {
             at: iso(row.last_count_at) ?? "",

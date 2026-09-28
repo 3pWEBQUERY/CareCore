@@ -24,6 +24,8 @@ export async function saveSetting(ctx: ApiContext, key: unknown, body: Record<st
       );
     value = number;
   }
+  if (enabled && definition.unit && value === null)
+    throw new ApiError(`Bitte zuerst einen Wert in ${definition.unit} festlegen.`);
   const next = { ...before, [settingKey]: { enabled, value } };
   await ctx.sql`
     UPDATE carecore_organizations

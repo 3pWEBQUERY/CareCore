@@ -28,7 +28,7 @@ export async function listRound(
   const rows = (await sql`
     SELECT o.id AS order_id, r.id AS resident_id, r.first_name, r.last_name, r.medication_allergies,
       COALESCE(ro.name, '') AS room, COALESCE(cu.name, '') AS care_unit,
-      TRIM(CONCAT_WS(' ', m.name, m.strength)) AS medication, COALESCE(o.dosage->>'amount', '') AS amount, COALESCE(o.route, '') AS route,
+      TRIM(CONCAT_WS(' ', m.name, m.strength)) AS medication, COALESCE(m.is_controlled, FALSE) AS controlled, COALESCE(o.dosage->>'amount', '') AS amount, COALESCE(o.route, '') AS route,
       o.updated_at > NOW() - INTERVAL '48 hours' AS changed_recently,
       slot.scheduled_at, to_char(slot.scheduled_at AT TIME ZONE org.tz, 'HH24:MI') AS time,
       COALESCE(a.status, 'scheduled') AS status, a.administered_at, a.note, u.display_name AS administered_by
@@ -64,6 +64,7 @@ export async function listRound(
         careUnit: String(row.care_unit),
         allergies: (row.medication_allergies as string | null) ?? null,
         medication: String(row.medication) || "Unbekanntes Präparat",
+        controlled: Boolean(row.controlled),
         amount: String(row.amount),
         route: String(row.route),
         scheduledAt: iso(row.scheduled_at) ?? "",

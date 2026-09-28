@@ -58,6 +58,8 @@ export type MedOrder = {
   name: string;
   strength: string;
   form: string;
+  // Betäubungsmittel (BtM-Kennzeichnung des Präparats).
+  controlled: boolean;
   route: string;
   amount: string;
   // Units deducted from stock per dose (e.g. 1 for „1 Tablette“); null = no stock booking.
@@ -111,6 +113,7 @@ export type RoundDose = {
   careUnit: string;
   allergies: string | null;
   medication: string;
+  controlled: boolean;
   amount: string;
   route: string;
   scheduledAt: string;
