@@ -36,6 +36,16 @@ Für Vercel müssen `DATABASE_URL` und `CARECORE_ADMIN_PASSWORD` in den Umgebung
 - **Änderungsprotokoll:** Jede Änderung an der Akte (Stammdaten, Kontakte, Biografie, Bewohnerbild, Körperbefunde, Pflegebedarf, Dokumente sowie Einträge aus Dokumentation, Medikation, Vitalwerten und Wunden) wird in `carecore_audit_log` festgehalten – in derselben Transaktion wie die Änderung (`lib/resident-audit.ts`). Unter Bewohnerakte › Verlauf › „Änderungsprotokoll“ sieht die Leitung (Rollen mit `team.manage` oder `administration.manage`), wer wann was geändert hat. Biografie-Inhalte, AHV- und Versichertennummer werden nicht im Klartext protokolliert.
 - **Überleitungsbogen:** Im Kopf der Akte erzeugt „Überleitungsbogen“ eine A4-Druckansicht für Spitaleinweisung oder Verlegung (Stammdaten, Kontakte, Allergien, Risiken, aktuelle Medikation inkl. Reserve, Wunden/Befunde, Vitalwerte, Ernährung, Pflegeziele, Verlauf der letzten 72 Stunden). Das Erstellen wird protokolliert.
 
+## Betäubungsmittel (BtM)
+
+Unter Medikation › „BtM-Kontrolle“ (`/medikation/btm`) werden als BtM gekennzeichnete Präparate mit lückenlosem Bestandsbuch geführt (Migration `0026_btm.sql`, `lib/medication-btm.ts`). Welche Präparate als BtM gelten und in welchen Abständen kontrolliert wird, legt die Einrichtung fest; CareCore gibt dafür keine Regeln vor.
+
+- **Kennzeichnung:** Personen mit `medication.manage` kennzeichnen Präparate als BtM. Das Aufheben verlangt eine Begründung; beides wird protokolliert.
+- **Zweitunterschrift:** Eingang, Entsorgung, Bestandskorrektur und Bestandskontrolle eines BtM verlangen eine zweite Person. Sie bestätigt mit eigenem Benutzernamen und Passwort; sie muss aktiv, in derselben Organisation und für Medikation berechtigt sein. Fehlversuche werden wie bei der Anmeldung gedrosselt. Gaben aus der Medikamentenrunde werden mit der verabreichenden Person gebucht, ohne Zweitunterschrift.
+- **Bestandskontrolle:** Gezählter und erwarteter Bestand werden gegenübergestellt. Eine Differenz muss begründet werden und wird als Korrekturbuchung im selben Schritt gebucht.
+- **Unveränderlichkeit:** Buchungen von BtM und Bestandskontrollen können per Datenbank-Trigger weder geändert noch gelöscht werden; Fehler werden durch neue Buchungen korrigiert.
+- **BtM-Buch:** Pro Bestand alle Buchungen mit laufendem Bestand, Person und Zweitunterschrift, als Seitenpanel und als A4-Druckansicht (`/medikation/btm/buch?stock=…`, PDF über den Druckdialog).
+
 ## Dienstplan
 
 Das Dienstplan-Modul (Spezifikation: `docs/specs/dienstplan.md`, Entscheidungen und Stand: `docs/dienstplan/`) ersetzt die frühere Dienstplanung. Es besteht aus:

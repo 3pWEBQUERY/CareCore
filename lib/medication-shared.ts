@@ -137,6 +137,8 @@ export type StockItem = {
   expiresOn: string | null;
   batch: string;
   updatedAt: string;
+  // Betäubungsmittel: Buchungen nur mit Zweitunterschrift (BtM-Kontrolle).
+  controlled: boolean;
 };
 
 export type StockMovement = {

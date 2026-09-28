@@ -1731,6 +1731,21 @@
   :root .nutrition-week small {
     font-size: 12px;
   }
+  :root .btm-actions button {
+    font-size: 11px;
+  }
+  :root .btm-medications li strong {
+    font-size: 12px;
+  }
+  :root .btm-medications li small {
+    font-size: 11px;
+  }
+  :root .btm-book th {
+    font-size: 11px;
+  }
+  :root .btm-print-sheet .btm-book {
+    font-size: 12px;
+  }
   :root .team-channel-bar small {
     font-size: 11.5px;
   }

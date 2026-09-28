@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import type { StockItem } from "@/lib/medication-shared";
 import { EditorDialog, formatNumber, requestJson, todayInZurich } from "@/app/components/workspace-ui";
+import { WitnessFields, emptyWitness } from "./btm-witness";
 
 const UNITS = ["Tabletten", "Kapseln", "Stk.", "Amp.", "ml", "Beutel", "Pens", "Pflaster", "Hübe", "Zäpfchen"];
 
@@ -22,6 +23,7 @@ export function ReceiptDialog({
   careUnits,
   residents,
   preset,
+  controlledNames = [],
   onClose,
   onSaved,
 }: {
@@ -29,6 +31,8 @@ export function ReceiptDialog({
   careUnits: Array<{ id: string; name: string }>;
   residents: Array<{ id: string; name: string }>;
   preset?: ReceiptPreset;
+  // Namen der Betäubungsmittel (klein geschrieben): ein neuer Bestand davon braucht die Zweitunterschrift.
+  controlledNames?: string[];
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
@@ -55,6 +59,14 @@ export function ReceiptDialog({
   const labelOf = (item: StockItem) =>
     `${item.name} ${item.strength} · ${item.owner}${item.batch ? ` · Charge ${item.batch}` : ""} (${formatNumber(item.quantity)} ${item.unit})`;
   const selected = items.find((item) => item.id === stockId);
+  const [witness, setWitness] = useState(emptyWitness);
+  // Meldet der Server ein Betäubungsmittel, erscheinen die Felder für die Zweitunterschrift.
+  const [witnessRequested, setWitnessRequested] = useState(false);
+  const needsWitness =
+    witnessRequested ||
+    (mode === "existing"
+      ? Boolean(selected?.controlled)
+      : controlledNames.includes(form.name.trim().toLocaleLowerCase("de-CH")));
 
   async function save() {
     const quantity = Number(form.quantity.replace(",", "."));
@@ -63,7 +75,7 @@ export function ReceiptDialog({
     try {
       const body =
         mode === "existing"
-          ? { stockId, quantity, note: form.note }
+          ? { stockId, quantity, note: form.note, ...(needsWitness ? { witness } : {}) }
           : {
               ...form,
               quantity,
@@ -71,11 +83,14 @@ export function ReceiptDialog({
               expiresOn: form.expiresOn || null,
               residentId: owner === "resident" ? residentId : null,
               careUnitId: owner === "unit" ? careUnitId : null,
+              ...(needsWitness ? { witness } : {}),
             };
       await requestJson("/api/medication/stock", { method: "POST", body });
       onSaved(`Wareneingang gebucht: ${mode === "existing" ? selected?.name : form.name} +${formatNumber(quantity)}`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Wareneingang konnte nicht gebucht werden.");
+      const message = cause instanceof Error ? cause.message : "Wareneingang konnte nicht gebucht werden.";
+      if (/Zweitunterschrift/.test(message)) setWitnessRequested(true);
+      setError(message);
       setSaving(false);
     }
   }
@@ -245,6 +260,7 @@ export function ReceiptDialog({
           placeholder="z. B. Lieferung Apotheke"
         />
       </label>
+      {needsWitness && <WitnessFields value={witness} onChange={setWitness} />}
     </EditorDialog>
   );
 }
@@ -267,6 +283,8 @@ export function CorrectionDialog({
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [witness, setWitness] = useState(emptyWitness);
+  const changesQuantity = Number(quantity.replace(",", ".")) !== item.quantity;
 
   async function save() {
     setSaving(true);
@@ -281,6 +299,7 @@ export function CorrectionDialog({
           location,
           note,
           reason,
+          ...(item.controlled && changesQuantity ? { witness } : {}),
         },
       });
       onSaved(`${item.name}: Bestand aktualisiert`);
@@ -358,6 +377,7 @@ export function CorrectionDialog({
           placeholder="Pflicht bei Mengenänderung, z. B. Monatsinventur oder abgelaufene Charge"
         />
       </label>
+      {item.controlled && changesQuantity && <WitnessFields value={witness} onChange={setWitness} />}
     </EditorDialog>
   );
 }
