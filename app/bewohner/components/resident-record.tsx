@@ -3,7 +3,7 @@
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import ResidentAppointmentEditor from "@/app/components/resident-appointment-editor";
-import { Camera, CaretDown, CaretUp, X } from "@phosphor-icons/react";
+import { Camera, CaretDown, CaretUp, Printer, X } from "@phosphor-icons/react";
 import { ResidentRecordProps, recordTabs } from "./resident-record-data";
 import { useResidentRecord } from "./use-resident-record";
 import { RecordOverviewView } from "./record-overview-view";
@@ -112,6 +112,18 @@ export function ResidentRecord(props: ResidentRecordProps) {
                   <CaretDown aria-hidden="true" />
                 </button>
               </span>
+            )}
+            {resident.id && (
+              <a
+                className="record-transfer-link"
+                href={`/c/bewohner/ueberleitung?resident=${resident.id}`}
+                target="_blank"
+                rel="noopener"
+                title="Überleitungsbogen für Spitaleinweisung oder Verlegung drucken"
+              >
+                <Printer aria-hidden="true" />
+                <span>Überleitungsbogen</span>
+              </a>
             )}
             <span className={`status-badge ${resident.status}`}>{resident.statusLabel}</span>
             <button

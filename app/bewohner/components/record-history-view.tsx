@@ -16,6 +16,7 @@ import { formatDateTime } from "@/app/components/workspace-ui";
 import { appointmentDateLabel, appointmentLocalParts } from "@/lib/resident-appointments";
 import { HistoryFilter } from "./resident-record-data";
 import type { ResidentRecordState } from "./use-resident-record";
+import { RecordAuditCard } from "./record-audit-card";
 
 export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
   const {
@@ -229,6 +230,7 @@ export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
           </section>
         </aside>
       </div>
+      {resident.id && live.summary.data?.canWrite && <RecordAuditCard residentId={resident.id} />}
     </main>
   );
 }

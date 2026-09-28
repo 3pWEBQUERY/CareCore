@@ -187,6 +187,42 @@
   color: #ffe6ad;
   background: rgba(150, 101, 0, 0.38);
 }
+.record-transfer-link {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.record-transfer-link:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+.record-transfer-link svg {
+  width: 15px;
+  height: 15px;
+}
+@media (max-width: 760px) {
+  .record-transfer-link span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .record-transfer-link {
+    width: 34px;
+    justify-content: center;
+    padding: 0;
+  }
+}
 .record-close-button {
   width: 44px;
   height: 44px;
@@ -734,4 +770,271 @@
 .body-observation-links svg {
   width: 12px;
   height: 12px;
+}
+.record-audit-card {
+  margin-top: 20px;
+}
+.record-audit-list {
+  padding: 6px 18px 16px;
+}
+.record-audit-list ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.record-audit-list li {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid #edf1f5;
+}
+.record-audit-list li:last-child {
+  border-bottom: 0;
+}
+.record-audit-list time {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.record-audit-list strong {
+  display: block;
+  color: var(--ink);
+  font-size: 12px;
+}
+.record-audit-list strong span {
+  font-weight: 500;
+}
+.record-audit-list small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.record-audit-list em {
+  color: #53687d;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  text-align: right;
+}
+.record-audit-list > .secondary-button {
+  margin-top: 10px;
+}
+@media (max-width: 640px) {
+  .record-audit-list li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+  }
+  .record-audit-list em {
+    text-align: left;
+  }
+}
+
+/* Überleitungsbogen (A4 hoch, PDF über den Druckdialog). */
+.transfer-print {
+  min-height: 100vh;
+  padding: 16px;
+  color: #0f172a;
+  background: #fff;
+}
+.transfer-sheet {
+  max-width: 820px;
+  margin: 0 auto;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.transfer-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #0f172a;
+}
+.transfer-head p {
+  margin: 0;
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.transfer-head h1 {
+  margin: 2px 0;
+  font-size: 22px;
+}
+.transfer-head span {
+  color: #475569;
+}
+.transfer-facility {
+  display: grid;
+  align-content: start;
+  gap: 1px;
+  text-align: right;
+}
+.transfer-sheet h2 {
+  margin: 14px 0 6px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid #cbd5e1;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.transfer-sheet h3 {
+  margin: 10px 0 4px;
+  font-size: 11px;
+}
+.transfer-allergies {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+.transfer-allergies.known {
+  border-color: #dc2626;
+  color: #7f1d1d;
+  background: #fef2f2;
+  font-weight: 700;
+}
+.transfer-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.transfer-sheet dl {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 3px 8px;
+  margin: 0;
+}
+.transfer-sheet dt {
+  color: #64748b;
+}
+.transfer-sheet dd {
+  margin: 0;
+  font-weight: 600;
+}
+.transfer-sheet table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.transfer-sheet th,
+.transfer-sheet td {
+  padding: 4px 6px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  vertical-align: top;
+}
+.transfer-sheet th {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+}
+.transfer-sheet td small {
+  display: block;
+  color: #64748b;
+}
+.transfer-sheet .transfer-paused {
+  color: #b45309;
+  font-weight: 700;
+}
+.transfer-list {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding-left: 16px;
+}
+.transfer-list small {
+  margin-left: 6px;
+  color: #64748b;
+}
+.transfer-list .critical {
+  color: #b91c1c;
+}
+.transfer-list .attention {
+  color: #b45309;
+}
+.transfer-notes {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.transfer-notes span {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+}
+.transfer-notes p {
+  margin: 1px 0 0;
+  white-space: pre-line;
+}
+.transfer-notes .important span {
+  color: #b91c1c;
+}
+.transfer-empty {
+  margin: 0;
+  color: #64748b;
+}
+.transfer-foot {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-top: 18px;
+  padding-top: 8px;
+  border-top: 1px solid #cbd5e1;
+  color: #64748b;
+  font-size: 9.5px;
+}
+.transfer-foot > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+.transfer-signature {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: end;
+}
+.transfer-signature span {
+  padding-top: 26px;
+  border-bottom: 1px solid #94a3b8;
+}
+@media (max-width: 700px) {
+  .transfer-head,
+  .transfer-columns,
+  .transfer-foot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .transfer-facility {
+    text-align: left;
+  }
+}
+@media print {
+  .transfer-print {
+    min-height: 0;
+    padding: 0;
+  }
+  .transfer-print .roster-print-bar {
+    display: none;
+  }
+  .transfer-sheet {
+    max-width: none;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .transfer-sheet section,
+  .transfer-sheet tr,
+  .transfer-notes li {
+    break-inside: avoid;
+  }
+  .transfer-sheet h2 {
+    break-after: avoid;
+  }
 }

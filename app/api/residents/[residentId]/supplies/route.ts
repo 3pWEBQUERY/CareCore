@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { residentAudit } from "@/lib/resident-audit";
 import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
@@ -104,6 +105,13 @@ export async function POST(request: Request, context: { params: Promise<{ reside
           SELECT ${transactionId}, ${residentId}, product.id, upserted.id, ${quantity}, 'issued', NULLIF(${notes}, ''), ${active.actor.id}
           FROM upserted JOIN product ON product.id = upserted.product_id
           RETURNING id
+        ), audited AS (
+          INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
+          SELECT gen_random_uuid(), ${active.actor.organizationId}, ${active.actor.id}, 'resident_supply', upserted.id, 'issued',
+            jsonb_build_object('residentId', ${residentId}::text, 'productId', upserted.product_id, 'itemName', upserted.item_name,
+              'quantity', ${quantity}::int, 'unit', upserted.unit, 'notes', NULLIF(${notes}, ''))
+          FROM upserted
+          RETURNING id
         ), stocked AS (
           -- Issuing to a resident takes the quantity from the house stock of the catalog.
           UPDATE carecore_care_supply_products
@@ -130,8 +138,17 @@ export async function POST(request: Request, context: { params: Promise<{ reside
     }
     const input = supplyValues(body);
     if (!input.itemName) return NextResponse.json({ error: "Bitte gib eine Bezeichnung an." }, { status: 400 });
-    const rows =
-      await active.sql`INSERT INTO carecore_resident_supplies (id, resident_id, item_name, category, unit, current_quantity, target_quantity, status, notes, updated_by) VALUES (${randomUUID()}, ${residentId}, ${input.itemName}, ${input.category}, ${input.unit}, ${input.currentQuantity}, ${input.targetQuantity}, ${input.status}, ${input.notes || null}, ${active.actor.id}) RETURNING id, item_name, category, unit, current_quantity, target_quantity, status, notes, updated_at`;
+    const id = randomUUID();
+    const [rows] = await active.sql.transaction([
+      active.sql`INSERT INTO carecore_resident_supplies (id, resident_id, item_name, category, unit, current_quantity, target_quantity, status, notes, updated_by) VALUES (${id}, ${residentId}, ${input.itemName}, ${input.category}, ${input.unit}, ${input.currentQuantity}, ${input.targetQuantity}, ${input.status}, ${input.notes || null}, ${active.actor.id}) RETURNING id, item_name, category, unit, current_quantity, target_quantity, status, notes, updated_at`,
+      residentAudit(active.sql, active.actor, {
+        residentId,
+        entityType: "resident_supply",
+        entityId: id,
+        action: "created",
+        after: input,
+      }),
+    ]);
     return NextResponse.json({ supply: rows[0] }, { status: 201 });
   } catch (error) {
     console.error("Supplies POST failed", error);

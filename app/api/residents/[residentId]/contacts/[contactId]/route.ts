@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { residentAudit } from "@/lib/resident-audit";
 import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
@@ -34,6 +35,22 @@ function contactValues(input: ContactInput) {
   };
 }
 
+async function contactSnapshot(sql: ReturnType<typeof carecoreDb>, contactId: string) {
+  const rows =
+    await sql`SELECT full_name, relationship, phone, email, is_primary, is_emergency_contact FROM carecore_resident_contacts WHERE id = ${contactId}`;
+  const row = rows[0];
+  return row
+    ? {
+        fullName: row.full_name,
+        relationship: row.relationship,
+        phone: row.phone,
+        email: row.email,
+        isPrimary: row.is_primary,
+        isEmergencyContact: row.is_emergency_contact,
+      }
+    : null;
+}
+
 export async function PATCH(request: Request, context: { params: Promise<{ residentId: string; contactId: string }> }) {
   try {
     const { residentId, contactId } = await context.params;
@@ -42,11 +59,20 @@ export async function PATCH(request: Request, context: { params: Promise<{ resid
     if (!hasPermission(active.actor, "residents.write")) return forbidden();
     const input = contactValues((await request.json()) as ContactInput);
     if (!input.fullName) return NextResponse.json({ error: "Bitte gib einen Namen an." }, { status: 400 });
-    if (input.isPrimary)
-      await active.sql`UPDATE carecore_resident_contacts SET is_primary = FALSE, updated_at = NOW() WHERE resident_id = ${residentId} AND id <> ${contactId}`;
-    const rows =
-      await active.sql`UPDATE carecore_resident_contacts SET full_name = ${input.fullName}, relationship = ${input.relationship || null}, phone = ${input.phone || null}, email = ${input.email || null}, is_primary = ${input.isPrimary}, is_emergency_contact = ${input.isEmergencyContact}, updated_at = NOW() WHERE id = ${contactId} RETURNING id, full_name, relationship, phone, email, is_primary, is_emergency_contact, updated_at`;
-    return NextResponse.json({ contact: rows[0] });
+    const before = await contactSnapshot(active.sql, contactId);
+    const results = await active.sql.transaction([
+      active.sql`UPDATE carecore_resident_contacts SET is_primary = FALSE, updated_at = NOW() WHERE resident_id = ${residentId} AND id <> ${contactId} AND ${input.isPrimary}`,
+      active.sql`UPDATE carecore_resident_contacts SET full_name = ${input.fullName}, relationship = ${input.relationship || null}, phone = ${input.phone || null}, email = ${input.email || null}, is_primary = ${input.isPrimary}, is_emergency_contact = ${input.isEmergencyContact}, updated_at = NOW() WHERE id = ${contactId} RETURNING id, full_name, relationship, phone, email, is_primary, is_emergency_contact, updated_at`,
+      residentAudit(active.sql, active.actor, {
+        residentId,
+        entityType: "resident_contact",
+        entityId: contactId,
+        action: "updated",
+        before,
+        after: input,
+      }),
+    ]);
+    return NextResponse.json({ contact: results[1][0] });
   } catch (error) {
     console.error("Contacts PATCH failed", error);
     return NextResponse.json({ error: "Kontaktperson konnte nicht aktualisiert werden." }, { status: 500 });
@@ -62,7 +88,17 @@ export async function DELETE(
     const active = await contactContext(residentId, contactId);
     if (!active) return NextResponse.json({ error: "Kontaktperson nicht verfügbar." }, { status: 404 });
     if (!hasPermission(active.actor, "residents.write")) return forbidden();
-    await active.sql`DELETE FROM carecore_resident_contacts WHERE id = ${contactId}`;
+    const before = await contactSnapshot(active.sql, contactId);
+    await active.sql.transaction([
+      active.sql`DELETE FROM carecore_resident_contacts WHERE id = ${contactId}`,
+      residentAudit(active.sql, active.actor, {
+        residentId,
+        entityType: "resident_contact",
+        entityId: contactId,
+        action: "deleted",
+        before,
+      }),
+    ]);
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Contacts DELETE failed", error);

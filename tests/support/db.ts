@@ -1,6 +1,7 @@
 // Hilfen für die DB-Integrationstests: eigene Organisation pro Test und ein RosterContext wie im Betrieb.
 import { randomUUID } from "node:crypto";
 import pg from "pg";
+import type { ApiContext } from "@/lib/api-context";
 import { carecoreDb } from "@/lib/server-data";
 import { accessFor, type RosterContext } from "@/lib/roster/context";
 import { ensureRosterDefaults } from "@/lib/roster/data";
@@ -99,4 +100,33 @@ export async function fixture(): Promise<Fixture> {
       ])
     )[0].id;
   return { org, units, people, ctx, type };
+}
+
+// ApiContext (Bewohnerakte, Medikation …) für eine Person der Fixture.
+export async function apiContextFor(f: Fixture, person: string): Promise<ApiContext> {
+  const ctx = await f.ctx(person);
+  return { actor: ctx.actor, sql: ctx.sql } as unknown as ApiContext;
+}
+
+// Bewohnerin im Wohnbereich A mit eigenem Zimmer.
+export async function createResident(f: Fixture, name = "Erna Muster") {
+  const id = randomUUID();
+  const room = randomUUID();
+  const [first, last] = name.split(" ");
+  await q(`INSERT INTO carecore_residents (id, organization_id, first_name, last_name) VALUES ($1, $2, $3, $4)`, [
+    id,
+    f.org,
+    first,
+    last,
+  ]);
+  await q(`INSERT INTO carecore_rooms (id, care_unit_id, name) VALUES ($1, $2, $3)`, [
+    room,
+    f.units.a,
+    `Zimmer ${id.slice(0, 4)}`,
+  ]);
+  await q(
+    `INSERT INTO carecore_resident_stays (id, resident_id, care_unit_id, room_id, started_at) VALUES ($1, $2, $3, $4, NOW() - INTERVAL '30 days')`,
+    [randomUUID(), id, f.units.a, room],
+  );
+  return id;
 }

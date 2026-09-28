@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { changedFields, residentAudit } from "@/lib/resident-audit";
 import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
@@ -81,12 +82,36 @@ export async function PUT(request: Request, context: { params: Promise<{ residen
     const preferences = value("preferences");
     const strengths = value("strengths");
     const sensitiveTopics = value("sensitiveTopics");
-    const rows = await active.sql`
+    const previous =
+      await active.sql`SELECT life_story, important_people, daily_routines, preferences, strengths, sensitive_topics FROM carecore_resident_biographies WHERE resident_id = ${residentId}`;
+    const old = previous[0];
+    // Biografische Inhalte sind besonders schützenswert: protokolliert wird nur, welche Abschnitte sich änderten.
+    const fields = changedFields(
+      old && {
+        lifeStory: old.life_story,
+        importantPeople: old.important_people,
+        dailyRoutines: old.daily_routines,
+        preferences: old.preferences,
+        strengths: old.strengths,
+        sensitiveTopics: old.sensitive_topics,
+      },
+      { lifeStory, importantPeople, dailyRoutines, preferences, strengths, sensitiveTopics },
+    );
+    const [rows] = await active.sql.transaction([
+      active.sql`
       INSERT INTO carecore_resident_biographies (resident_id, life_story, important_people, daily_routines, preferences, strengths, sensitive_topics, updated_by)
       VALUES (${residentId}, ${lifeStory}, ${importantPeople}, ${dailyRoutines}, ${preferences}, ${strengths}, ${sensitiveTopics}, ${active.actor.id})
       ON CONFLICT (resident_id) DO UPDATE SET life_story = EXCLUDED.life_story, important_people = EXCLUDED.important_people, daily_routines = EXCLUDED.daily_routines, preferences = EXCLUDED.preferences, strengths = EXCLUDED.strengths, sensitive_topics = EXCLUDED.sensitive_topics, updated_by = EXCLUDED.updated_by, updated_at = NOW()
       RETURNING updated_at
-    `;
+    `,
+      residentAudit(active.sql, active.actor, {
+        residentId,
+        entityType: "resident_biography",
+        entityId: residentId,
+        action: old ? "updated" : "created",
+        after: { changedSections: fields },
+      }),
+    ]);
     return NextResponse.json({
       biography: {
         lifeStory,

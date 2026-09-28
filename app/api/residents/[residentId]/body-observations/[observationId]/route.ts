@@ -1,8 +1,21 @@
 import { NextResponse } from "next/server";
+import { residentAudit } from "@/lib/resident-audit";
 import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ residentId: string; observationId: string }> };
+
+// Aktiver Befund dieser Akte (Organisation geprüft) als Ausgangszustand für das Protokoll.
+async function observationSnapshot(
+  sql: ReturnType<typeof carecoreDb>,
+  organizationId: string,
+  residentId: string,
+  observationId: string,
+) {
+  const rows =
+    await sql`SELECT o.kind, o.label, o.location, o.status, o.notes FROM carecore_body_observations o JOIN carecore_residents r ON r.id = o.resident_id WHERE o.id = ${observationId} AND o.resident_id = ${residentId} AND o.archived_at IS NULL AND r.organization_id = ${organizationId}`;
+  return (rows[0] as Record<string, unknown> | undefined) ?? null;
+}
 
 export async function PATCH(request: Request, context: Context) {
   try {
@@ -31,8 +44,19 @@ export async function PATCH(request: Request, context: Context) {
     )
       return NextResponse.json({ error: "Ungültige Befundangaben." }, { status: 400 });
     const sql = carecoreDb();
-    const rows =
-      await sql`UPDATE carecore_body_observations o SET kind = ${kind}, label = ${label}, location = ${location}, status = ${status || "Beobachten"}, notes = ${notes}, body_x = ${x}, body_y = ${y}, body_z = ${z}, updated_by = ${actor.id}, updated_at = NOW() FROM carecore_residents r WHERE o.id = ${observationId} AND o.resident_id = ${residentId} AND o.archived_at IS NULL AND r.id = o.resident_id AND r.organization_id = ${actor.organizationId} RETURNING o.id, o.kind, o.label, o.location, o.status, o.notes, o.body_x, o.body_y, o.body_z, o.created_at, o.updated_at, o.wound_id`;
+    const before = await observationSnapshot(sql, actor.organizationId, residentId, observationId);
+    if (!before) return NextResponse.json({ error: "Befund nicht gefunden." }, { status: 404 });
+    const [rows] = await sql.transaction([
+      sql`UPDATE carecore_body_observations o SET kind = ${kind}, label = ${label}, location = ${location}, status = ${status || "Beobachten"}, notes = ${notes}, body_x = ${x}, body_y = ${y}, body_z = ${z}, updated_by = ${actor.id}, updated_at = NOW() FROM carecore_residents r WHERE o.id = ${observationId} AND o.resident_id = ${residentId} AND o.archived_at IS NULL AND r.id = o.resident_id AND r.organization_id = ${actor.organizationId} RETURNING o.id, o.kind, o.label, o.location, o.status, o.notes, o.body_x, o.body_y, o.body_z, o.created_at, o.updated_at, o.wound_id`,
+      residentAudit(sql, actor, {
+        residentId,
+        entityType: "body_observation",
+        entityId: observationId,
+        action: "updated",
+        before,
+        after: { kind, label, location, status: status || "Beobachten", notes },
+      }),
+    ]);
     if (!rows[0]) return NextResponse.json({ error: "Befund nicht gefunden." }, { status: 404 });
     return NextResponse.json({ observation: { ...rows[0], author: actor.display_name } });
   } catch (error) {
@@ -48,8 +72,18 @@ export async function DELETE(_request: Request, context: Context) {
     if (!hasPermission(actor, "documentation.write")) return forbidden();
     const { residentId, observationId } = await context.params;
     const sql = carecoreDb();
-    const rows =
-      await sql`UPDATE carecore_body_observations o SET archived_at = NOW(), updated_by = ${actor.id}, updated_at = NOW() FROM carecore_residents r WHERE o.id = ${observationId} AND o.resident_id = ${residentId} AND o.archived_at IS NULL AND r.id = o.resident_id AND r.organization_id = ${actor.organizationId} RETURNING o.id`;
+    const before = await observationSnapshot(sql, actor.organizationId, residentId, observationId);
+    if (!before) return NextResponse.json({ error: "Befund nicht gefunden." }, { status: 404 });
+    const [rows] = await sql.transaction([
+      sql`UPDATE carecore_body_observations o SET archived_at = NOW(), updated_by = ${actor.id}, updated_at = NOW() FROM carecore_residents r WHERE o.id = ${observationId} AND o.resident_id = ${residentId} AND o.archived_at IS NULL AND r.id = o.resident_id AND r.organization_id = ${actor.organizationId} RETURNING o.id`,
+      residentAudit(sql, actor, {
+        residentId,
+        entityType: "body_observation",
+        entityId: observationId,
+        action: "archived",
+        before,
+      }),
+    ]);
     if (!rows[0]) return NextResponse.json({ error: "Befund nicht gefunden." }, { status: 404 });
     return NextResponse.json({ archived: true });
   } catch (error) {
