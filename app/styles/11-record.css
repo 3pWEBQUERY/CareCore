@@ -1038,3 +1038,14 @@
     break-after: avoid;
   }
 }
+.resident-own-unit {
+  display: block;
+  width: fit-content;
+  margin-top: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+  font-size: 10px;
+  font-weight: 700;
+}

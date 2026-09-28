@@ -45,6 +45,8 @@ export type RecordSummary = {
   documentsCount: number;
   staff: Array<{ id: string; name: string }>;
   canWrite: boolean;
+  // Änderungsprotokoll: nur für die Leitung (Rollen mit team.manage oder administration.manage).
+  canViewAudit: boolean;
 };
 
 export type TimelineCategory = "Pflege" | "Vitalwerte" | "Medikation" | "Termine";

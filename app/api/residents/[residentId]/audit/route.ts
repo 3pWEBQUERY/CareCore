@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
 import type { ResidentAuditEntry } from "@/lib/resident-audit-labels";
-import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
+import { canViewResidentAudit } from "@/lib/resident-record";
+import { carecoreActor, carecoreDb, forbidden } from "@/lib/server-data";
 
 export const runtime = "nodejs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Änderungsprotokoll einer Bewohnerakte (neueste zuerst). Sichtbar für alle, die die Akte bearbeiten dürfen.
+// Änderungsprotokoll einer Bewohnerakte (neueste zuerst). Nur für die Leitung sichtbar.
 export async function GET(request: Request, context: { params: Promise<{ residentId: string }> }) {
   try {
     const actor = await carecoreActor();
     if (!actor?.organizationId) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
-    if (!hasPermission(actor, "residents.write")) return forbidden();
+    if (!canViewResidentAudit(actor)) return forbidden("Das Änderungsprotokoll ist der Leitung vorbehalten.");
     const { residentId } = await context.params;
     if (!UUID.test(residentId)) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
     const sql = carecoreDb();
