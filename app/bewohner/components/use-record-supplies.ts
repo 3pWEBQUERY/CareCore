@@ -1,5 +1,6 @@
 "use client";
 
+import type { Confirm } from "@/app/components/confirm-dialog";
 import { useEffect, useState, type FormEvent } from "react";
 import { CareSupplyProduct, ResidentSupply, SupplyDraft, emptySupply } from "./resident-record-data";
 import type { ResidentRecordData } from "./resident-record-data";
@@ -7,9 +8,11 @@ import type { ResidentRecordData } from "./resident-record-data";
 export function useRecordSupplies({
   resident,
   onAction,
+  confirm,
 }: {
   resident: ResidentRecordData;
   onAction: (message: string) => void;
+  confirm: Confirm;
 }) {
   const [supplies, setSupplies] = useState<ResidentSupply[]>([]);
   const [careSupplyProducts, setCareSupplyProducts] = useState<CareSupplyProduct[]>([]);
@@ -111,9 +114,19 @@ export function useRecordSupplies({
     }
   }
   async function deleteSupply(supply: ResidentSupply) {
-    if (!resident.id || !window.confirm(`${supply.item_name} wirklich entfernen?`)) return;
-    const response = await fetch(`/api/residents/${resident.id}/supplies/${supply.id}`, { method: "DELETE" });
-    if (response.ok) {
+    if (
+      !resident.id ||
+      !(await confirm({
+        title: "Pflegebedarf entfernen",
+        message: `${supply.item_name} wird aus dem Pflegebedarf von ${resident.name} entfernt.`,
+        confirmLabel: "Entfernen",
+      }))
+    )
+      return;
+    const response = await fetch(`/api/residents/${resident.id}/supplies/${supply.id}`, { method: "DELETE" }).catch(
+      () => null,
+    );
+    if (response?.ok) {
       setSupplies((current) => current.filter((item) => item.id !== supply.id));
       onAction("Pflegebedarf entfernt");
     } else setSuppliesError("Pflegebedarf konnte nicht entfernt werden.");

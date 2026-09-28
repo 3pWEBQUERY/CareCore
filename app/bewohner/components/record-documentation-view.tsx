@@ -100,7 +100,7 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
                   readOnly
                     ? (selectedEntry?.author ?? "Unbekannt")
                     : profile
-                      ? [profile.displayName, profile.jobTitle].filter(Boolean).join(" · ")
+                      ? [...new Set([profile.displayName, profile.jobTitle].filter(Boolean))].join(" · ")
                       : "…"
                 }
                 readOnly
@@ -236,8 +236,14 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
               {readOnly ? "Neuer Eintrag" : "Abbrechen"}
             </button>
             {canWrite && !readOnly && r.navigation && (
-              <button className="secondary-button" type="submit" data-next="true" disabled={documentationSaving}>
-                Speichern &amp; nächster Bewohner
+              <button
+                className="secondary-button"
+                type="submit"
+                data-next="true"
+                disabled={documentationSaving}
+                title="Speichern und die nächste Bewohnerakte öffnen"
+              >
+                Speichern &amp; weiter
               </button>
             )}
             {canWrite && (

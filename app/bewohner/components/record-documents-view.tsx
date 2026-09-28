@@ -146,7 +146,10 @@ export function RecordDocumentsView({ r }: { r: ResidentRecordState }) {
           </span>
           <p>
             <small>Arztberichte</small>
-            <strong>{all.filter((d) => d.category === "Arztberichte").length} Berichte</strong>
+            <strong>
+              {all.filter((d) => d.category === "Arztberichte").length} Bericht
+              {all.filter((d) => d.category === "Arztberichte").length === 1 ? "" : "e"}
+            </strong>
           </p>
         </div>
         <div>

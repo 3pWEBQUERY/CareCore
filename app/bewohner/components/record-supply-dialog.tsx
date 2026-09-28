@@ -2,10 +2,12 @@
 
 import { CareSelect } from "@/app/components/care-form-controls";
 import { Check, ClipboardText } from "@phosphor-icons/react";
+import { useEscapeClose } from "@/app/components/use-escape-close";
 import type { ResidentRecordState } from "./use-resident-record";
 
 export function SupplyEditorDialog({ r }: { r: ResidentRecordState }) {
   const { resident, careSupplyProducts, supplyEditor, setSupplyEditor, supplySaving, saveSupply } = r;
+  useEscapeClose(() => !supplySaving && setSupplyEditor(null), Boolean(supplyEditor));
   if (!supplyEditor) return null;
   return (
     <div
@@ -224,6 +226,12 @@ export function SupplyEditorDialog({ r }: { r: ResidentRecordState }) {
               </>
             )}
           </div>
+
+          {r.suppliesError && (
+            <p className="appointment-editor-error" role="alert">
+              {r.suppliesError}
+            </p>
+          )}
 
           <div className="duty-assignment-summary">
             <span>

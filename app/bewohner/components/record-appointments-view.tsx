@@ -100,7 +100,9 @@ export function RecordAppointmentsView({ r }: { r: ResidentRecordState }) {
                   <span className="record-section-label">Chronik</span>
                   <h3>Frühere und abgesagte Termine</h3>
                 </div>
-                <span>{pastAppointments.length} Einträge</span>
+                <span>
+                  {pastAppointments.length} {pastAppointments.length === 1 ? "Eintrag" : "Einträge"}
+                </span>
               </div>
               <div className="resident-appointment-list">
                 {[...pastAppointments].reverse().map((item) => (

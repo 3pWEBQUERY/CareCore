@@ -418,6 +418,20 @@
   background: #f6f8fb;
   cursor: default;
 }
+.master-data-form-grid .area-select-trigger {
+  min-height: 42px;
+  height: 42px;
+  padding: 0 11px;
+  font-size: 12px;
+}
+.master-data-form-grid .area-select-trigger:disabled {
+  color: #455b70;
+  background: #f6f8fb;
+  cursor: default;
+}
+.master-data-form-grid .area-select-trigger:disabled svg {
+  display: none;
+}
 .master-data-form-grid input:not([readonly]):focus,
 .master-data-form-grid select:not(:disabled):focus {
   outline: 3px solid rgba(37, 99, 235, 0.12);

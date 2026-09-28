@@ -691,12 +691,16 @@
 }
 .documentation-form-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 9px;
   margin: 22px -20px -20px;
   padding: 15px 20px;
   border-top: 1px solid var(--line);
   background: #f9fbfd;
+}
+.documentation-form-actions button {
+  white-space: nowrap;
 }
 .documentation-form-actions svg {
   width: 16px;
@@ -712,7 +716,7 @@
 .documentation-recent > div:last-child > button {
   width: 100%;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
+  grid-template-columns: 62px minmax(0, 1fr);
   gap: 9px;
   padding: 11px 9px;
   border: 0;

@@ -189,6 +189,7 @@ export function ResidentRecord(props: ResidentRecordProps) {
         />
       )}
       {supplyEditor && <SupplyEditorDialog r={r} />}
+      {r.confirmDialog}
     </div>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useApiData } from "@/app/components/workspace-ui";
+import { todayInZurich, useApiData } from "@/app/components/workspace-ui";
+import { useEscapeClose } from "@/app/components/use-escape-close";
 import { CARE_LEVELS, NOT_ASSESSED } from "@/lib/care-levels";
 import { CareDatePicker, CareSelect, formatCareDate } from "../../components/care-form-controls";
 import { Icon } from "./residents-utils";
@@ -29,7 +30,7 @@ function IntakeForm({ onClose, onSuccess }: Props) {
   const [lastName, setLastName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState("Weiblich");
-  const [admissionDate, setAdmissionDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [admissionDate, setAdmissionDate] = useState(todayInZurich);
   const [chosenUnitId, setUnitId] = useState<string | null>(null);
   const [room, setRoom] = useState("");
   const [careLevel, setCareLevel] = useState(NOT_ASSESSED);
@@ -44,6 +45,7 @@ function IntakeForm({ onClose, onSuccess }: Props) {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  useEscapeClose(() => !saving && onClose());
   async function submitIntake(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
@@ -106,7 +108,7 @@ function IntakeForm({ onClose, onSuccess }: Props) {
             </span>
             <div>
               <strong>Neue Bewohnerakte</strong>
-              <p>Pflichtangaben können später in den Stammdaten ergänzt und bearbeitet werden.</p>
+              <p>Weitere Angaben wie Hausarzt, Kontakte und Versicherung folgen danach in den Stammdaten.</p>
             </div>
             <span className="duty-assignment-status">
               <i />

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from
 import { Check, X } from "@phosphor-icons/react";
 import { type ModuleIconName } from "@/app/components/module-icon";
 import { ModuleIcon } from "@/app/components/module-icon";
+import { useEscapeClose } from "./use-escape-close";
 import "./workspace-ui.css";
 
 export type ShowToast = (message: string) => void;
@@ -188,6 +189,7 @@ export function EditorDialog({
     event.preventDefault();
     void onSubmit();
   };
+  useEscapeClose(() => !saving && onClose());
   return (
     <div
       className="area-editor-overlay"

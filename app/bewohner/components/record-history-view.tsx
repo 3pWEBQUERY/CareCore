@@ -111,7 +111,9 @@ export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
               <span className="record-section-label">Chronologie</span>
               <h3 id="history-timeline-title">Aktivitäten und Ereignisse</h3>
             </div>
-            <span>{visibleHistoryEntries.length} Einträge</span>
+            <span>
+              {visibleHistoryEntries.length} {visibleHistoryEntries.length === 1 ? "Eintrag" : "Einträge"}
+            </span>
           </div>
           <div className="history-filters" aria-label="Verlauf filtern">
             {(["Alle", "Pflege", "Vitalwerte", "Medikation", "Termine"] as HistoryFilter[]).map((filter) => (

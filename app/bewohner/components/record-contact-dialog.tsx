@@ -1,10 +1,12 @@
 "use client";
 
 import { Check, X } from "@phosphor-icons/react";
+import { useEscapeClose } from "@/app/components/use-escape-close";
 import type { ResidentRecordState } from "./use-resident-record";
 
 export function ContactEditorDialog({ r }: { r: ResidentRecordState }) {
-  const { resident, contactEditor, setContactEditor, contactSaving, saveContact } = r;
+  const { resident, contactEditor, setContactEditor, contactSaving, saveContact, contactsError } = r;
+  useEscapeClose(() => !contactSaving && setContactEditor(null), Boolean(contactEditor));
   if (!contactEditor) return null;
   return (
     <div
@@ -121,6 +123,11 @@ export function ContactEditorDialog({ r }: { r: ResidentRecordState }) {
               </i>
             </label>
           </fieldset>
+          {contactsError && (
+            <p className="appointment-editor-error" role="alert">
+              {contactsError}
+            </p>
+          )}
           <footer>
             <button className="secondary-button" type="button" onClick={() => setContactEditor(null)}>
               Abbrechen
