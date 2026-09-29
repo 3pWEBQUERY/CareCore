@@ -32,7 +32,7 @@ export async function readPreferences(userId: string): Promise<UserPreferences> 
 // `tokenHash` markiert die aktuelle Sitzung; ohne Angabe wird sie aus dem Sitzungs-Cookie bestimmt.
 export async function userSettings(actor: CarecoreActor, tokenHash?: string | null): Promise<UserSettings> {
   const sql = carecoreDb();
-  const [profileRows, sessions, currentHash] = await Promise.all([
+  const [profileRows, sessions, currentHash, mfaRows] = await Promise.all([
     sql`
       SELECT u.display_name, u.username, u.password_changed_at, COALESCE(p.job_title, '') AS job_title,
         COALESCE(p.phone, '') AS phone, p.preferences, cu.name AS care_unit, COALESCE(r.name, u.role) AS role_name
@@ -45,6 +45,7 @@ export async function userSettings(actor: CarecoreActor, tokenHash?: string | nu
       SELECT id, token_hash, user_agent, created_at, expires_at FROM carecore_sessions
       WHERE user_id = ${actor.id} AND expires_at > NOW() ORDER BY created_at DESC`,
     tokenHash === undefined ? currentTokenHash() : tokenHash,
+    sql`SELECT 1 FROM carecore_user_mfa WHERE user_id = ${actor.id} AND confirmed_at IS NOT NULL`,
   ]);
   const row = (profileRows[0] ?? {}) as Row;
   return {
@@ -67,6 +68,7 @@ export async function userSettings(actor: CarecoreActor, tokenHash?: string | nu
         expiresAt: iso(session.expires_at) ?? "",
         current: session.token_hash === currentHash,
       })),
+      mfa: (mfaRows as Row[]).length > 0,
     },
   };
 }

@@ -31,6 +31,7 @@ import {
 import SettingsSelect from "./settings-select";
 import PasswordChangePopover from "./password-change-popover";
 import PushControl from "./push-control";
+import MfaControl from "./mfa-control";
 
 export type SettingsView =
   "overview" | "profile" | "notifications" | "security" | "appearance" | "privacy" | "organization";
@@ -50,6 +51,7 @@ type Item = {
     | { kind: "password"; text: string }
     | { kind: "sessions"; text: string }
     | { kind: "push"; text: string }
+    | { kind: "mfa"; text: string }
     | { kind: "toggle"; text: string; label: string; checked: boolean; note?: string; save: (value: boolean) => void }
     | { kind: "quiet"; text: string; value: QuietHours; save: (value: QuietHours) => Promise<boolean> }
     | { kind: "action"; text: string; label: string; danger?: boolean; run: () => void }
@@ -84,7 +86,7 @@ const VIEWS: Record<SettingsView, { title: string; eyebrow: string; description:
   security: {
     eyebrow: "Einstellungen · Sicherheit",
     title: "Sicherheit & Zugriff",
-    description: "Passwort und angemeldete Geräte.",
+    description: "Passwort, Zwei-Faktor-Anmeldung und angemeldete Geräte.",
   },
   appearance: {
     eyebrow: "Einstellungen · Darstellung",
@@ -335,6 +337,7 @@ export default function SettingsWorkspaceDetail({ view }: { view: SettingsView }
                           onProfile={() => setProfileOpen(true)}
                           onPassword={() => setPasswordOpen(true)}
                           onMessage={showToast}
+                          onChanged={settings.reload}
                           onToggle={(category, value) =>
                             savePreferences(
                               { notify: { ...data.preferences.notify, [category]: value } },
@@ -403,6 +406,7 @@ function DetailControl({
   onToggle,
   onEndSessions,
   onMessage,
+  onChanged,
 }: {
   item: Item;
   data: UserSettings;
@@ -410,6 +414,7 @@ function DetailControl({
   onProfile: () => void;
   onPassword: () => void;
   onMessage: (message: string) => void;
+  onChanged: () => void;
   onToggle: (category: NotifyCategory, value: boolean) => void;
   onEndSessions: (id: string | null) => void;
 }) {
@@ -454,6 +459,7 @@ function DetailControl({
       </label>
     );
   if (detail.kind === "push") return <PushControl onMessage={onMessage} />;
+  if (detail.kind === "mfa") return <MfaControl onMessage={onMessage} onChanged={onChanged} />;
   if (detail.kind === "toggle")
     return (
       <>
@@ -877,6 +883,17 @@ function itemsFor(
         detail: {
           kind: "password",
           text: "Wähle ein Passwort mit mindestens 10 Zeichen, das du nirgends sonst verwendest.",
+        },
+      },
+      {
+        id: "sec-mfa",
+        title: "Zwei-Faktor-Anmeldung",
+        description: "Zusätzlicher Code aus einer Authenticator-App",
+        value: security.mfa ? "Ein" : "Aus",
+        icon: "quality",
+        detail: {
+          kind: "mfa",
+          text: "Nach dem Passwort fragt CareCore nach einem 6-stelligen Code aus der App auf deinem Handy. Das schützt dein Konto, auch wenn jemand dein Passwort kennt.",
         },
       },
       {

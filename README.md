@@ -66,6 +66,14 @@ Alle drei laufen in der CI bei jedem Pull Request.
 
 `GET /api/health` braucht keine Anmeldung und eignet sich für Überwachung und Load-Balancer (`lib/health.ts`). Die Antwort nennt `status` (`ok`, `degraded` bei ausstehenden Migrationen, `down` ohne Datenbank), die Erreichbarkeit und Antwortzeit der Datenbank sowie die zuletzt angewendete und die noch ausstehenden Migrationen. HTTP 200 bei `ok` und `degraded`, 503 bei `down`. Sie enthält keine Geheimnisse, keine Personendaten und keine Fehlermeldungen der Datenbank und wird weder vom Browser noch vom Service Worker zwischengespeichert.
 
+## Zwei-Faktor-Anmeldung (TOTP)
+
+Jede Person kann unter Einstellungen → Sicherheit eine Authenticator-App verbinden (`lib/mfa.ts`, Migration `0042_mfa.sql`). Nach dem Passwort fragt die Anmeldung dann nach dem 6-stelligen Code oder einem der zehn einmaligen Wiederherstellungscodes. Fehlversuche zählen zur Anmeldedrossel.
+
+- **Einrichten:** Einen zufälligen Schlüssel mit 32 Bytes erzeugen (z. B. `openssl rand -base64 32`) und als `CARECORE_MFA_KEY` in den Umgebungsvariablen setzen. Damit wird das Geheimnis jeder Person verschlüsselt (AES-256-GCM) gespeichert; Wiederherstellungscodes nur als Hash. Fehlt der Schlüssel, lässt sich die Zwei-Faktor-Anmeldung nicht einschalten und die Einstellungen sagen das.
+- **Schlüssel nicht wechseln:** Ein neuer Schlüssel macht bestehende Einrichtungen unlesbar; die Personen müssen dann neu einrichten.
+- **Verlorenes Handy:** Die Administration setzt die Zwei-Faktor-Anmeldung in der Mitarbeiterverwaltung zurück (protokolliert).
+
 ## Drossel für schreibende Anfragen
 
 Schreibende API-Anfragen (POST, PATCH, PUT, DELETE) werden in `proxy.ts` gezählt (`lib/rate-limit.ts`, Migration `0036_rate_limits.sql`): je Anmeldung, ohne Anmeldung je IP-Adresse, jeweils pro Minute. Gespeichert wird nur ein Hash, kein Token und keine Adresse im Klartext. Über der Grenze antwortet die API mit 429 und `Retry-After`; die Offline-Warteschlange wartet dann und sendet später erneut. Die Grenze von 240 Änderungen pro Minute ist ein technischer Schutz gegen Skripte und Fehlschleifen, kein fachlicher Grenzwert, und lässt sich mit `CARECORE_WRITE_LIMIT_PER_MINUTE` anpassen. Anmeldung (eigene Drossel) und der Push-Zeitplan sind ausgenommen; kann die Zählung nicht erfolgen, wird die Anfrage nicht blockiert.

@@ -18,6 +18,8 @@ export type ManagedUser = {
   lastSeenAt: string | null;
   // Heute gültige Qualifikationen (z. B. HF, FaGe); sie entscheiden in Rollen wie „Pflege“ über das Medikationsrecht.
   qualificationIds: string[];
+  // Zwei-Faktor-Anmeldung eingeschaltet (die Administration kann sie zurücksetzen).
+  mfa: boolean;
 };
 export type AdminQualification = { id: string; code: string; name: string; grantsMedication: boolean };
 export type AdminCareUnit = { id: string; name: string; detail: string };
@@ -73,7 +75,7 @@ export async function listManagedUsers(actorId: string): Promise<{
 }> {
   const sql = database();
   const users =
-    (await sql`SELECT u.id, u.username, u.display_name, u.role, u.active, u.archived_at, u.created_at, p.job_title, p.phone, p.primary_care_unit_id, p.last_seen_at, cu.name AS primary_care_unit_name FROM carecore_users u LEFT JOIN carecore_user_profiles p ON p.user_id = u.id LEFT JOIN carecore_care_units cu ON cu.id = p.primary_care_unit_id WHERE p.organization_id IS NULL OR p.organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}) ORDER BY u.archived_at NULLS FIRST, u.active DESC, u.display_name ASC`) as unknown as Array<{
+    (await sql`SELECT u.id, u.username, u.display_name, u.role, u.active, u.archived_at, u.created_at, p.job_title, p.phone, p.primary_care_unit_id, p.last_seen_at, cu.name AS primary_care_unit_name, EXISTS (SELECT 1 FROM carecore_user_mfa m WHERE m.user_id = u.id AND m.confirmed_at IS NOT NULL) AS mfa FROM carecore_users u LEFT JOIN carecore_user_profiles p ON p.user_id = u.id LEFT JOIN carecore_care_units cu ON cu.id = p.primary_care_unit_id WHERE p.organization_id IS NULL OR p.organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}) ORDER BY u.archived_at NULLS FIRST, u.active DESC, u.display_name ASC`) as unknown as Array<{
       id: string;
       username: string;
       display_name: string;
@@ -86,6 +88,7 @@ export async function listManagedUsers(actorId: string): Promise<{
       primary_care_unit_id: string | null;
       last_seen_at: string | null;
       primary_care_unit_name: string | null;
+      mfa: boolean;
     }>;
   const careUnits =
     (await sql`SELECT cu.id, cu.name, COALESCE(cu.floor, '') AS floor FROM carecore_care_units cu JOIN carecore_sites si ON si.id = cu.site_id WHERE cu.active = TRUE AND si.organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}) ORDER BY cu.name`) as unknown as Array<{
@@ -130,6 +133,7 @@ export async function listManagedUsers(actorId: string): Promise<{
       createdAt: user.created_at,
       lastSeenAt: user.last_seen_at,
       qualificationIds: held.filter((row) => row.user_id === user.id).map((row) => row.qualification_id),
+      mfa: Boolean(user.mfa),
     })),
     qualifications: qualifications.map((q) => ({
       id: q.id,

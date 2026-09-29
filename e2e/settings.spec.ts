@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN, FAGE, login, watchErrors } from "./support";
+import { ADMIN, FAGE, SRK, login, watchErrors } from "./support";
+import { totpCode, totpStep } from "../lib/mfa-core";
 
 // Persönliche Einstellungen und Einstellungen der Einrichtung: gespeichert in der Datenbank, sofort angewendet.
 test.describe.configure({ mode: "serial" });
@@ -106,4 +107,57 @@ test("Einrichtung: Administration ändert eine Einstellung für alle, protokolli
   await page.reload();
   await expect(page.locator(".settings-list button", { hasText: "Erinnerung Vitalwerte" })).toContainText("5 Tage");
   expect(errors).toEqual([]);
+});
+
+test("Zwei-Faktor-Anmeldung: einrichten, mit Code anmelden, Administration setzt zurück", async ({ page }) => {
+  await login(page, SRK);
+  let errors = watchErrors(page, [/^400 POST \/api\/me\/mfa$/]);
+  await page.goto("/c/einstellungen/security");
+  const detail = page.locator(".settings-detail");
+  await page.locator(".settings-list button", { hasText: "Zwei-Faktor-Anmeldung" }).click();
+  await detail.getByRole("button", { name: "Einrichten" }).click();
+  await expect(detail.getByRole("img", { name: "QR-Code für die Authenticator-App" })).toBeVisible();
+  const secret = (await detail.getByLabel("Schlüssel zum Abtippen").innerText()).replace(/\s/g, "");
+  const code = detail.locator(".settings-mfa-code input");
+  await code.fill("000000");
+  await detail.getByRole("button", { name: "Bestätigen und einschalten" }).click();
+  await expect(detail.getByRole("alert")).toContainText("Der Code stimmt nicht");
+  const step = totpStep();
+  await code.fill(totpCode(secret, step));
+  await detail.getByRole("button", { name: "Bestätigen und einschalten" }).click();
+  await expect(detail.getByRole("list", { name: "Wiederherstellungscodes" }).locator("li")).toHaveCount(10);
+  await detail.getByRole("button", { name: "Codes sind notiert" }).click();
+  await expect(detail).toContainText("Eingeschaltet");
+  await expect(page.locator(".settings-list button", { hasText: "Zwei-Faktor-Anmeldung" })).toContainText("Ein");
+  expect(errors).toEqual([]);
+
+  // Anmeldung über das Formular: nach dem Passwort folgt der Code.
+  await page.context().clearCookies();
+  errors = watchErrors(page, [/^401 POST \/api\/auth\/mfa$/]);
+  await page.goto("/");
+  await page.getByLabel("Benutzername").fill(SRK.username);
+  await page.getByLabel("Passwort", { exact: true }).fill(SRK.password);
+  await page.getByRole("button", { name: /Sicher anmelden/ }).click();
+  const mfa = page.getByLabel("Bestätigungscode");
+  await expect(mfa).toBeVisible();
+  await mfa.fill("111111");
+  await page.getByRole("button", { name: /Sicher anmelden/ }).click();
+  await expect(page.locator(".login-error")).toContainText("Der Code stimmt nicht");
+  await mfa.fill(totpCode(secret, step + 1));
+  await page.getByRole("button", { name: /Sicher anmelden/ }).click();
+  await expect(page).toHaveURL(/\/c/);
+  expect(errors).toEqual([]);
+
+  // Verlorenes Handy: die Administration setzt zurück, danach genügt wieder das Passwort.
+  await page.context().clearCookies();
+  await login(page, ADMIN);
+  const users = (await (await page.request.get("/api/admin/users")).json()) as {
+    users: Array<{ id: string; username: string; mfa: boolean }>;
+  };
+  const carla = users.users.find((user) => user.username === SRK.username)!;
+  expect(carla.mfa).toBe(true);
+  const reset = await page.request.patch("/api/admin/users", { data: { userId: carla.id, action: "resetMfa" } });
+  expect(reset.status()).toBe(200);
+  await page.context().clearCookies();
+  await login(page, SRK);
 });

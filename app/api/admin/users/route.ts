@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { carecoreActor, hasPermission } from "@/lib/server-data";
+import { carecoreActor, carecoreDb, hasPermission } from "@/lib/server-data";
+import { resetMfa } from "@/lib/mfa";
 import { createManagedUser, deleteManagedUser, listManagedUsers, updateManagedUser } from "@/lib/admin-users";
 
 export const runtime = "nodejs";
@@ -92,6 +93,10 @@ export async function PATCH(request: Request) {
       action?: unknown;
     };
     if (typeof body.userId !== "string") return NextResponse.json({ error: "Benutzer fehlt." }, { status: 400 });
+    if (body.action === "resetMfa") {
+      await resetMfa(carecoreDb(), actor, body.userId);
+      return NextResponse.json(await listManagedUsers(actor.id));
+    }
     const action = body.action === "lock" || body.action === "restore" ? body.action : undefined;
     return NextResponse.json(
       await updateManagedUser(actor, body.userId, {
