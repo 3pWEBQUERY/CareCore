@@ -72,7 +72,9 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - [x] **Audit mit Sitzung und Gerät** (Sitzungs-ID, User-Agent).
 - [x] **Feinere Medikationsrechte:** verabreichen vs. Verordnung bearbeiten.
 - [x] **Lernen:** Quiz mit Bestehensgrenze (von der Einrichtung festgelegt) und Compliance-Übersicht je Team.
-- [ ] **Dokumente:** Lesebestätigung bei neuer Version erneut anfordern (prüfen, ergänzen).
+- [x] **Dokumente:** Lesebestätigung bei neuer Version erneut anfordern. War bereits so gebaut (jede Version eigene
+      Zeile, Benachrichtigung „Standard aktualisiert“), jetzt mit Test; ergänzt: nachträglich verlangte Bestätigung
+      benachrichtigt alle, die noch nicht bestätigt haben.
 - [ ] **Trendhinweise Ernährung:** Hinweis, wenn eine von der Einrichtung gesetzte Grenze für Gewicht oder
       Trinkmenge unterschritten wird. Keine erfundenen Werte.
 - [ ] **Wunden:** Verbandsmaterial je Versorgung aus dem Materialkatalog.

@@ -117,13 +117,17 @@ function parseMeta(kind: DocumentKind, input: { get: (key: string) => unknown })
   };
 }
 
-function notifyStandard(ctx: ApiContext, id: string, title: string, versionNo: number) {
+// Neue Fassung = neue Zeile: frühere Bestätigungen gelten nicht weiter, alle werden erneut um Bestätigung gebeten.
+function notifyStandard(ctx: ApiContext, id: string, title: string, versionNo: number, ackRequested = false) {
+  const heading = ackRequested ? "Bestätigung nötig" : versionNo > 1 ? "Standard aktualisiert" : "Neuer Standard";
   return ctx.sql`
     INSERT INTO carecore_notifications (id, user_id, title, body, type, priority, link_url)
-    SELECT gen_random_uuid(), u.id, ${`${versionNo > 1 ? "Standard aktualisiert" : "Neuer Standard"}: ${title}`},
+    SELECT gen_random_uuid(), u.id, ${`${heading}: ${title}`},
       'Bitte lesen und mit „Gelesen & verstanden“ bestätigen.', 'standard', 'high', ${`/c/personal/dokumente/standards?document=${id}`}
     FROM carecore_users u JOIN carecore_user_profiles p ON p.user_id = u.id
-    WHERE p.organization_id = ${ctx.actor.organizationId} AND u.active AND u.id <> ${ctx.actor.id}`;
+    WHERE p.organization_id = ${ctx.actor.organizationId} AND u.active AND u.id <> ${ctx.actor.id}
+      AND NOT EXISTS (SELECT 1 FROM carecore_document_reads r WHERE r.document_id = ${id} AND r.user_id = u.id
+        AND r.acknowledged_at IS NOT NULL)`;
 }
 
 export async function createDocument(ctx: ApiContext, form: FormData) {
@@ -248,6 +252,10 @@ export async function documentAction(ctx: ApiContext, idInput: unknown, body: Re
         },
         meta,
       ),
+      // Wird die Bestätigung nachträglich verlangt, erfahren es alle, die den gültigen Standard noch nicht bestätigt haben.
+      ...(doc.kind === "standard" && doc.status === "active" && meta.requiresAck && !doc.requiresAck
+        ? [notifyStandard(ctx, doc.id, meta.title, doc.versionNo, true)]
+        : []),
     ]);
     return;
   }

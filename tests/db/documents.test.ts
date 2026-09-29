@@ -93,6 +93,47 @@ test("Standards: je Dokument nur eine Folgeversion, nie zwei gültige Fassungen"
   assert.equal((await failure(documentAction(other, v2, { action: "read" }))).status, 404);
 });
 
+test("Standards: neue Version fordert die Lesebestätigung erneut an", async () => {
+  const f = await fixture();
+  const lead = quality(await apiContextFor(f, "leadA"));
+  const anna = await apiContextFor(f, "anna");
+  const title = `Händehygiene ${f.org.slice(0, 6)}`;
+  const standards = async () => (await listDocuments(anna, new URLSearchParams({ kind: "standard" }))).documents;
+  const notes = (id: string) =>
+    q<{ user_id: string; title: string }>(
+      `SELECT user_id, title FROM carecore_notifications WHERE type = 'standard' AND link_url LIKE $1`,
+      [`%${id}`],
+    );
+
+  const v1 = await createDocument(
+    lead,
+    form({ kind: "standard", title, category: "Pflegestandard", requiresAck: "true" }),
+  );
+  await documentAction(anna, v1, { action: "ack" });
+  assert.ok((await standards()).find((doc) => doc.id === v1)?.acknowledgedAt);
+
+  const v2 = await newVersion(lead, v1, form({ changeNote: "Neue Einwirkzeit" }));
+  const current = (await standards()).find((doc) => doc.id === v2);
+  assert.equal(current?.requiresAck, true);
+  assert.equal(current?.acknowledgedAt, null, "Bestätigung der alten Fassung gilt nicht für die neue");
+  assert.ok(
+    (await notes(v2)).some((n) => n.user_id === f.people.anna && n.title === `Standard aktualisiert: ${title}`),
+  );
+
+  // Nachträglich verlangte Bestätigung: nur wer noch nicht bestätigt hat, wird erinnert.
+  const plain = await createDocument(lead, form({ kind: "standard", title: `${title} B`, category: "Pflegestandard" }));
+  assert.equal((await notes(plain)).length, 0);
+  await documentAction(anna, plain, { action: "read" });
+  const meta = { title: `${title} B`, category: "Pflegestandard" };
+  await documentAction(lead, plain, { action: "update", ...meta, requiresAck: true });
+  const requested = await notes(plain);
+  assert.equal(requested.length, 6);
+  assert.ok(requested.every((n) => n.title === `Bestätigung nötig: ${title} B`));
+  // Erneutes Speichern ohne Änderung der Bestätigungspflicht benachrichtigt nicht noch einmal.
+  await documentAction(lead, plain, { action: "update", ...meta, requiresAck: true });
+  assert.equal((await notes(plain)).length, 6);
+});
+
 test("Bewohnerakte: nur PDFs und Bilder, keine Office-Dateien", async () => {
   const f = await fixture();
   const ctx = await apiContextFor(f, "anna");
