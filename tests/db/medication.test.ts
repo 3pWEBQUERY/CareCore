@@ -168,7 +168,7 @@ test("Reservegabe: Mindestabstand, Maximaldosis und Bestand werden eingehalten",
 test("Wirkungskontrolle: Termin aus der Verordnung, Erinnerung einmal, Ergebnis in der Dokumentation", async () => {
   const f = await fixture();
   const base = await api(f, "anna");
-  const ctx = { ...base, actor: { ...base.actor, permissions: [...base.actor.permissions, "medication.manage"] } };
+  const ctx = { ...base, actor: { ...base.actor, permissions: [...base.actor.permissions, "medication.administer"] } };
   const residentId = await resident(f);
   const order = (effectCheckMinutes?: number) =>
     parseOrderInput({

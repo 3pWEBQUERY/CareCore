@@ -8,6 +8,7 @@ export type Permission =
   | "residents.read"
   | "residents.write"
   | "documentation.write"
+  | "medication.administer"
   | "medication.manage"
   | "schedule.manage"
   | "team.manage"

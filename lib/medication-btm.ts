@@ -33,7 +33,7 @@ export async function verifyWitness(ctx: ApiContext, input: unknown): Promise<Wi
     WHERE p.user_id = ${user.id} AND p.organization_id = ${ctx.actor.organizationId}`) as Row[];
   const permissions = Array.isArray(rows[0]?.permissions) ? (rows[0].permissions as string[]) : null;
   if (!permissions) throw new ApiError("Die zweite Person gehört nicht zu dieser Organisation.", 403);
-  if (!permissions.includes("medication.manage"))
+  if (!permissions.includes("medication.administer") && !permissions.includes("medication.manage"))
     throw new ApiError("Die zweite Person ist nicht für Medikation berechtigt.", 403);
   return { id: user.id, name: user.display_name };
 }

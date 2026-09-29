@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 // Wirkungskontrolle einer Reservegabe erfassen: { result: effective|partial|none, note? }
 export async function POST(request: Request, { params }: { params: Promise<{ administrationId: string }> }) {
   try {
-    const ctx = await apiContext("medication.manage");
+    const ctx = await apiContext("medication.administer");
     if (ctx instanceof NextResponse) return ctx;
     const { administrationId } = await params;
     await recordEffectCheck(ctx, administrationId, (await request.json()) as Record<string, unknown>);

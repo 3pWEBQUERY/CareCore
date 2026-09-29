@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const ctx = await apiContext("medication.manage");
+    const ctx = await apiContext("medication.administer");
     if (ctx instanceof NextResponse) return ctx;
     return NextResponse.json(await documentScheduledDose(ctx, (await request.json()) as Record<string, unknown>));
   } catch (error) {
