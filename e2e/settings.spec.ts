@@ -255,3 +255,45 @@ test("FHIR-Schlüssel: erstellen, damit lesen, widerrufen", async ({ page, playw
   }
   expect(errors).toEqual([]);
 });
+
+// Webhooks: nur https-Adressen; Geheimnis erscheint einmal, danach Entfernen.
+test("Webhooks: anlegen mit Geheimnis, interne oder http-Adressen abgelehnt, entfernen", async ({ page }) => {
+  await login(page, ADMIN);
+  // Die abgelehnte interne Adresse antwortet absichtlich mit 400.
+  const errors = watchErrors(page, [/^400 POST \/api\/admin\/webhooks$/]);
+  const name = `Spital ${Date.now()}`;
+  await page.goto("/c/leitung/administration/konfiguration");
+  const card = page.locator(".admin-webhooks-card");
+  try {
+    await card.getByRole("button", { name: "Webhook anlegen" }).click();
+    const create = page.getByRole("dialog", { name: "Webhook anlegen" });
+    await create.getByLabel("Name", { exact: true }).fill(name);
+    await create.getByLabel("Adresse (https)").fill("https://127.0.0.1/hook");
+    await create.getByLabel("Personendaten geändert (Name, Geburtsdatum, Geschlecht, Status …)").check();
+    await create.getByRole("button", { name: "Anlegen" }).click();
+    await expect(create.getByRole("alert")).toContainText("internen Netz");
+    await create.getByLabel("Adresse (https)").fill("https://example.org/carecore");
+    await create.getByRole("button", { name: "Anlegen" }).click();
+    const shown = page.getByRole("dialog", { name: `Geheimnis für „${name}“` });
+    expect(await shown.getByLabel("Geheimnis").inputValue()).toMatch(/^whsec_/);
+    await shown.getByRole("button", { name: "Fertig" }).click();
+    const row = card.locator(".admin-retention-row", { hasText: name });
+    await expect(row).toContainText("https://example.org/carecore");
+    await expect(row).toContainText("noch keine Meldung");
+
+    await row.getByRole("button", { name: "Entfernen" }).click();
+    await page
+      .getByRole("dialog", { name: `„${name}“ entfernen` })
+      .getByRole("button", { name: "Entfernen" })
+      .click();
+    await expect(page.locator(".toast")).toContainText("entfernt");
+    await expect(card).not.toContainText(name);
+  } finally {
+    const list = (await (await page.request.get("/api/admin/webhooks")).json()) as {
+      webhooks: Array<{ id: string; name: string }>;
+    };
+    for (const hook of list.webhooks.filter((item) => item.name === name))
+      await page.request.delete("/api/admin/webhooks", { data: { webhookId: hook.id } });
+  }
+  expect(errors).toEqual([]);
+});

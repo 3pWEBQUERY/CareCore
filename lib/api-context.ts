@@ -10,6 +10,7 @@ import {
   type Permission,
 } from "@/lib/server-data";
 import { schedulePush } from "@/lib/push";
+import { scheduleWebhooks } from "@/lib/webhooks";
 import { auditOrigin } from "@/lib/audit-origin";
 
 // Shared helpers for the module APIs (medication, vital signs, ...).
@@ -35,8 +36,9 @@ export async function apiContext(permission?: Permission): Promise<ApiContext | 
   if (!actor) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
   if (!actor.organizationId) return NextResponse.json({ error: "Keine Organisation zugeordnet." }, { status: 400 });
   if (permission && !hasPermission(actor, permission)) return forbidden();
-  // Benachrichtigungen, die diese Anfrage erzeugt, gehen nach der Antwort als Push hinaus.
+  // Benachrichtigungen, die diese Anfrage erzeugt, gehen nach der Antwort als Push hinaus, Webhooks ebenso.
   schedulePush();
+  scheduleWebhooks();
   return { actor: actor as ApiContext["actor"], sql: carecoreDb() };
 }
 
