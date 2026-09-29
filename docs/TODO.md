@@ -29,7 +29,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | KI-Assistenten               | 🟡    | Übergabe, Risiken, Dokumentation, freie Frage, Dienstplan-KI; Entwürfe mit Prüfung. Keine Planungs- oder Such-Assistenz.                     |
 | Globale Suche ⌘K             | ✅    | `global-search-dialog.tsx`, Tastenkürzel.                                                                                                    |
 | Benachrichtigungen           | ✅    | Klassen Kritisch / Handlung / Info / Sozial, Bündelung, Push mit Ruhezeiten.                                                                 |
-| Mobile                       | 🟡    | Untere Navigation, Hauptmenü. **Kein Schnellaktions-Knopf (FAB).**                                                                           |
+| Mobile                       | 🟡    | Untere Navigation, Hauptmenü, Schnellaktions-Knopf (FAB).                                                                                    |
 | Dark Mode                    | ❌    | Keine dunkle Darstellung.                                                                                                                    |
 | Barrierefreiheit WCAG 2.2 AA | 🟡    | Tastatur, Fokusfalle, Schriftgrösse, Kontrast-Einstellung. `--muted` erreicht nur 4,4:1.                                                     |
 | IAM                          | 🟡    | Passwort, Login-Drossel, Sitzungen mit Gerät, automatische Abmeldung. **SSO, MFA und Passkeys fehlen.**                                      |
@@ -63,7 +63,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 
 ## Mittel
 
-- [ ] **Mobile Schnellaktionen (FAB):** Doku, Vitalwert, Reservegabe, Notiz für den gewählten Bewohner.
+- [x] **Mobile Schnellaktionen (FAB):** Doku, Vitalwert, Trinkmenge, Reservegabe, Wundverlauf, Übergabenotiz für den gewählten Bewohner.
 - [ ] **Health-Endpunkt** `/api/health` (DB-Verbindung, Migrationsstand, ohne Geheimnisse).
 - [ ] **Allgemeine API-Drossel** für schreibende Anfragen.
 - [ ] **Offline:** lokalen Speicher verschlüsseln (Schlüssel an die Sitzung gebunden) und Konflikte anzeigen, wenn

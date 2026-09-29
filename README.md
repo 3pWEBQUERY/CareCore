@@ -43,6 +43,10 @@ Benachrichtigungen (fällige Aufgaben, BtM-Kontrollen, Dienstplan, Schulungen, k
 - **Klassen und Bündelung:** Der Posteingang ordnet jeden Hinweis einer Klasse zu (`lib/notification-classes.ts`): Kritisch (Priorität „critical“), Handlung nötig (z. B. fällige Aufgaben, Wirkungskontrollen, Tauschanfragen, Erwähnungen), Sozial (Direktnachrichten, Team-Neuigkeiten) und Information. Jede Klasse ist ein Filter mit Zähler der ungelesenen Hinweise. Ab drei gleichartigen Hinweisen am selben Tag erscheint eine gebündelte Zeile („3 × Aufgabe fällig“), die sich aufklappen und gesamt als gelesen markieren lässt; kritische Hinweise werden nie gebündelt.
 - **Datenschutz:** Ein Abonnement gehört zu einer Anmeldung. Abmelden, „Gerät abmelden“ oder eine abgelaufene Sitzung beendet auch die Push-Nachrichten; erloschene Abonnements werden entfernt.
 
+## Schnellaktionen auf dem Handy
+
+Auf dem Handy (bis 960 px Breite) sitzt rechts über der unteren Leiste ein „+“-Knopf. Er öffnet die Schnellaktionen für den Bewohner aus der Kopfzeile: Dokumentation, Vitalwerte, Trinkmenge, Reservegabe, Wundverlauf und Übergabenotiz – jeweils nur, wenn die Person das Modul nutzen darf. Ist kein Bewohner gewählt, führt „Bewohner wählen“ zur Auswahl der Kopfzeile. Auf der Startseite bleibt an dieser Stelle der Knopf „Notiz erstellen“, im Messenger entfällt der Knopf (Eingabefeld). In der Desktop-Ansicht erscheint er nicht.
+
 ## Barrierefreiheit
 
 - **Seitenpanels und Dialoge** (`app/components/dialog-focus.tsx`): Beim Öffnen springt der Fokus ins Panel, Tab bleibt im Panel, Escape schliesst, danach steht der Fokus wieder auf dem auslösenden Element.
