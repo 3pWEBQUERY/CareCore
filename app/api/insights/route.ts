@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
 import { careInsights, leadershipInsights, workforceInsights } from "@/lib/insights";
+import { residentInsights } from "@/lib/resident-insights";
 
 export const runtime = "nodejs";
 
-const views = { care: careInsights, leadership: leadershipInsights, workforce: workforceInsights };
+const views = {
+  care: careInsights,
+  leadership: leadershipInsights,
+  workforce: workforceInsights,
+  residents: residentInsights,
+};
 
 export async function GET(request: Request) {
   try {

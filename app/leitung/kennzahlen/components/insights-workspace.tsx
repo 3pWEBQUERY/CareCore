@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { setCareResident } from "@/app/components/care-context";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { LoadError, useApiData } from "@/app/components/workspace-ui";
@@ -10,11 +12,12 @@ import {
   type CareInsights,
   type Indicator,
   type LeadershipInsights,
+  type ResidentInsights,
   type WorkforceInsights,
 } from "@/lib/insights-shared";
 import { LeadershipHeading, LeadershipKpis, initialsOf, type Kpi } from "../../components/leadership-page-parts";
 
-export type InsightsView = "care" | "leadership" | "workforce";
+export type InsightsView = "care" | "residents" | "leadership" | "workforce";
 
 const pages: Record<InsightsView, { child: string; title: string; description: string; pageClass: string }> = {
   care: {
@@ -22,6 +25,12 @@ const pages: Record<InsightsView, { child: string; title: string; description: s
     title: "Pflegekennzahlen",
     description: "Versorgungsqualität und Pflegeindikatoren als Entscheidungsgrundlage – live aus der Dokumentation.",
     pageClass: "careInsights",
+  },
+  residents: {
+    child: "Bewohner",
+    title: "Bewohnerübersicht",
+    description: "Resident 360: der Stand jedes Bewohners über alle Module – die dringendsten zuerst.",
+    pageClass: "residentInsights",
   },
   leadership: {
     child: "Leitung",
@@ -100,6 +109,117 @@ function CareView({ data }: { data: CareInsights }) {
         </Link>
       </aside>
     </div>
+  );
+}
+
+const RESIDENT_FILTERS = [
+  { id: "all", label: "Alle" },
+  { id: "critical", label: "Kritisch" },
+  { id: "attention", label: "Wichtig" },
+  { id: "info", label: "Routine" },
+  { id: "stable", label: "Stabil" },
+] as const;
+
+const dateTime = (value: string) =>
+  new Date(value).toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+function ResidentsView({ data }: { data: ResidentInsights }) {
+  const [filter, setFilter] = useState<(typeof RESIDENT_FILTERS)[number]["id"]>("all");
+  const count = (id: (typeof RESIDENT_FILTERS)[number]["id"]) =>
+    id === "all" ? data.residents.length : data.residents.filter((resident) => resident.tone === id).length;
+  const residents = filter === "all" ? data.residents : data.residents.filter((resident) => resident.tone === filter);
+  return (
+    <section className="card resident-insights-card">
+      <div className="card-header">
+        <div>
+          <p className="eyebrow">Resident 360</p>
+          <h2 className="card-title">Alle Bewohner</h2>
+          <p className="card-subtitle">
+            Heute fällig · Wunden · Ereignisse der letzten {data.eventDays} Tage · Ernährung
+          </p>
+        </div>
+        <div className="worklist-filters" role="group" aria-label="Bewohner filtern">
+          {RESIDENT_FILTERS.map((item) => (
+            <button
+              className={filter === item.id ? "active" : ""}
+              type="button"
+              key={item.id}
+              aria-pressed={filter === item.id}
+              onClick={() => setFilter(item.id)}
+            >
+              {item.label} {count(item.id)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="resident-insights-list">
+        {residents.map((resident) => (
+          <Link
+            className="resident-insights-row"
+            href={`/c/bewohner?resident=${resident.id}`}
+            key={resident.id}
+            onClick={() => setCareResident(resident.id)}
+          >
+            <span className={`resident-avatar ${resident.tone === "critical" ? "critical" : ""}`}>
+              {resident.initials}
+            </span>
+            <span className="resident-insights-person">
+              <strong>{resident.name}</strong>
+              <small>{[resident.room, resident.careUnit].filter(Boolean).join(" · ")}</small>
+            </span>
+            <span className="resident-insights-cell">
+              <small>Heute</small>
+              <strong>
+                {resident.today.critical + resident.today.attention + resident.today.info
+                  ? [
+                      resident.today.critical && `${resident.today.critical} kritisch`,
+                      resident.today.attention && `${resident.today.attention} wichtig`,
+                      resident.today.info && `${resident.today.info} Routine`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")
+                  : "nichts offen"}
+              </strong>
+              {resident.today.labels.length > 0 && <em>{resident.today.labels.join(", ")}</em>}
+            </span>
+            <span className="resident-insights-cell">
+              <small>Wunden</small>
+              <strong>
+                {resident.wounds.active
+                  ? `${resident.wounds.active} aktiv${resident.wounds.critical ? ` · ${resident.wounds.critical} kritisch` : ""}`
+                  : "keine"}
+              </strong>
+            </span>
+            <span className="resident-insights-cell">
+              <small>Ereignisse</small>
+              <strong>
+                {resident.events.total
+                  ? `${resident.events.total}${resident.events.falls ? ` (davon ${resident.events.falls} ${resident.events.falls === 1 ? "Sturz" : "Stürze"})` : ""}`
+                  : "keine"}
+              </strong>
+              {resident.events.open > 0 && <em>{resident.events.open} in Bearbeitung</em>}
+            </span>
+            <span className="resident-insights-cell">
+              <small>Ernährung</small>
+              <strong>
+                {resident.trends.length
+                  ? `${resident.trends.length} Hinweis${resident.trends.length === 1 ? "" : "e"}`
+                  : "unauffällig"}
+              </strong>
+              {resident.trends.length > 0 && <em>{resident.trends.join(" · ")}</em>}
+            </span>
+            <span className="resident-insights-cell">
+              <small>Letzte Doku</small>
+              <strong>{resident.lastDocumentation ? dateTime(resident.lastDocumentation) : "keine"}</strong>
+            </span>
+            <span className={`status-badge ${resident.tone}`}>
+              {RESIDENT_FILTERS.find((item) => item.id === resident.tone)?.label}
+            </span>
+          </Link>
+        ))}
+        {!residents.length && <p className="list-hint">Keine Bewohner in dieser Stufe.</p>}
+      </div>
+    </section>
   );
 }
 
@@ -293,7 +413,9 @@ function WorkforceView({ data }: { data: WorkforceInsights }) {
 
 export default function InsightsWorkspace({ view }: { view: InsightsView }) {
   const page = pages[view];
-  const data = useApiData<CareInsights | LeadershipInsights | WorkforceInsights>(`/api/insights?view=${view}`);
+  const data = useApiData<CareInsights | ResidentInsights | LeadershipInsights | WorkforceInsights>(
+    `/api/insights?view=${view}`,
+  );
   return (
     <ModulePageShell
       activeModule="insights"
@@ -319,6 +441,7 @@ export default function InsightsWorkspace({ view }: { view: InsightsView }) {
           <LeadershipKpis kpis={data.data?.kpis ?? LOADING} />
           {data.error && <LoadError message={data.error} onRetry={data.reload} />}
           {data.data && view === "care" && <CareView data={data.data as CareInsights} />}
+          {data.data && view === "residents" && <ResidentsView data={data.data as ResidentInsights} />}
           {data.data && view === "leadership" && <LeadershipView data={data.data as LeadershipInsights} />}
           {data.data && view === "workforce" && <WorkforceView data={data.data as WorkforceInsights} />}
         </main>
