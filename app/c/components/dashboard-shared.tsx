@@ -146,7 +146,14 @@ export type DashboardTask = {
 
 export type DashboardResident = { initials: string; name: string; room: string; risk: string; critical?: boolean };
 
-export type DashboardNote = { id: string; title: string; body: string; pinned: boolean; updated_at: string };
+export type DashboardNote = {
+  id: string;
+  title: string;
+  body: string;
+  pinned: boolean;
+  archived_at: string | null;
+  updated_at: string;
+};
 
 export type ResidentNews = {
   id: string;

@@ -49,6 +49,62 @@ test("Offline: Dokumentation wird vorgemerkt und nach der Rückkehr der Verbindu
   expect(payload.entries.filter((entry) => entry.body === text)).toHaveLength(0);
 });
 
+test("Meine Notizen: archivieren und wiederherstellen, auch ohne Verbindung", async ({ page, context }) => {
+  await login(page, ADMIN);
+  await page.goto("/c");
+  await page.waitForFunction(
+    () => navigator.serviceWorker?.controller !== null && navigator.serviceWorker?.controller !== undefined,
+  );
+  await page.reload();
+  const card = page.locator(".home-notes");
+  await expect(card.locator("h2")).toHaveText("Meine Notizen");
+  await page.waitForLoadState("networkidle");
+  const stamp = Date.now();
+  const archivedTitle = `Archiv-Test ${stamp}`;
+  const offlineTitle = `Offline-Notiz ${stamp}`;
+  const dialog = page.locator(".home-note-panel");
+
+  // Online: Notiz anlegen und ins Archiv verschieben.
+  await card.getByRole("button", { name: "Notiz erstellen", exact: true }).click();
+  await dialog.getByLabel("Titel").fill(archivedTitle);
+  await dialog.getByLabel("Notiz").fill("Wird gleich archiviert");
+  await dialog.getByRole("button", { name: "Notiz speichern" }).click();
+  await card.getByRole("button", { name: new RegExp(archivedTitle) }).click();
+  await dialog.getByRole("button", { name: "Archivieren" }).click();
+  await expect(card.getByRole("button", { name: new RegExp(archivedTitle) })).toHaveCount(0);
+  await card.getByRole("button", { name: /^Archiv \(\d+\)$/ }).click();
+  await expect(card.locator("h2")).toHaveText("Archivierte Notizen");
+  await expect(card.getByRole("button", { name: new RegExp(archivedTitle) })).toBeVisible();
+
+  // Offline: archivierte Notiz wiederherstellen und eine neue anlegen.
+  await context.setOffline(true);
+  await card.getByRole("button", { name: new RegExp(archivedTitle) }).click();
+  await dialog.getByRole("button", { name: "Wiederherstellen" }).click();
+  await expect(page.locator(".toast")).toContainText("offline vorgemerkt");
+  await card.getByRole("button", { name: "Aktuelle" }).click();
+  await expect(card.getByRole("button", { name: new RegExp(archivedTitle) })).toContainText("Nicht gesendet");
+  await card.getByRole("button", { name: "Notiz erstellen", exact: true }).click();
+  await dialog.getByLabel("Titel").fill(offlineTitle);
+  await dialog.getByLabel("Notiz").fill("Ohne Verbindung erfasst");
+  await dialog.getByRole("button", { name: "Notiz speichern" }).click();
+  await expect(card.getByRole("button", { name: new RegExp(offlineTitle) })).toContainText("Nicht gesendet");
+  await expect(page.locator(".offline-status")).toContainText("2 Einträge warten");
+
+  // Neu laden ohne Verbindung: beide Änderungen bleiben sichtbar.
+  await page.reload();
+  await expect(card.getByRole("button", { name: new RegExp(offlineTitle) })).toBeVisible();
+  await expect(card.getByRole("button", { name: new RegExp(archivedTitle) })).toBeVisible();
+
+  await context.setOffline(false);
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await expect(page.locator(".offline-status")).toContainText("gesendet", { timeout: 20_000 });
+  const saved = (await (await page.request.get("/api/dashboard/notes")).json()) as {
+    notes: Array<{ title: string; archived_at: string | null }>;
+  };
+  expect(saved.notes.filter((note) => note.title === offlineTitle)).toHaveLength(1);
+  expect(saved.notes.find((note) => note.title === archivedTitle)?.archived_at).toBeNull();
+});
+
 test("Manifest und Service Worker sind erreichbar (installierbar)", async ({ page }) => {
   const manifest = await page.request.get("/manifest.webmanifest");
   expect(manifest.status()).toBe(200);

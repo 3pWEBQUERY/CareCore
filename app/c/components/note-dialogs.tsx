@@ -4,7 +4,8 @@ import { Icon } from "./dashboard-shared";
 import type { DashboardState } from "./use-dashboard";
 
 export function NoteViewDialog({ r }: { r: DashboardState }) {
-  const { viewingNote, setViewingNote, openNote } = r;
+  const { viewingNote, setViewingNote, openNote, archiveNote } = r;
+  const archived = Boolean(viewingNote?.archived_at);
   if (!viewingNote) return null;
   return (
     <div
@@ -23,12 +24,16 @@ export function NoteViewDialog({ r }: { r: DashboardState }) {
             <p className="eyebrow">MEIN ARBEITSPLATZ · PRIVAT</p>
             <h2 id="home-note-view-title">{viewingNote.title}</h2>
             <p>
-              {viewingNote.pinned ? "Angeheftete Notiz" : "Persönliche Notiz"} · Aktualisiert am{" "}
-              {new Date(viewingNote.updated_at).toLocaleDateString("de-CH", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
+              {archived ? "Archivierte Notiz" : viewingNote.pinned ? "Angeheftete Notiz" : "Persönliche Notiz"} ·{" "}
+              {archived ? "Archiviert am " : "Aktualisiert am "}
+              {new Date((archived ? viewingNote.archived_at : null) ?? viewingNote.updated_at).toLocaleDateString(
+                "de-CH",
+                {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                },
+              )}
             </p>
           </div>
           <button
@@ -46,16 +51,33 @@ export function NoteViewDialog({ r }: { r: DashboardState }) {
             <button className="secondary-button" type="button" onClick={() => setViewingNote(null)}>
               Schliessen
             </button>
-            <button
-              className="primary-button"
-              type="button"
-              onClick={() => {
-                openNote(viewingNote);
-                setViewingNote(null);
-              }}
-            >
-              <Icon name="settings" /> Bearbeiten
-            </button>
+            <div>
+              {archived ? (
+                <button className="primary-button" type="button" onClick={() => void archiveNote(viewingNote, false)}>
+                  Wiederherstellen
+                </button>
+              ) : (
+                <>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={() => void archiveNote(viewingNote, true)}
+                  >
+                    Archivieren
+                  </button>
+                  <button
+                    className="primary-button"
+                    type="button"
+                    onClick={() => {
+                      openNote(viewingNote);
+                      setViewingNote(null);
+                    }}
+                  >
+                    <Icon name="settings" /> Bearbeiten
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -79,6 +101,7 @@ export function NoteEditorDialog({ r }: { r: DashboardState }) {
     setNoteConfirmDelete,
     saveNote,
     deleteNote,
+    archiveNote,
   } = r;
   if (!noteEditor) return null;
   return (
@@ -140,6 +163,16 @@ export function NoteEditorDialog({ r }: { r: DashboardState }) {
             )}
           </div>
           <div className="home-note-actions">
+            {noteEditor !== "new" && !noteEditor.archived_at && (
+              <button
+                className="home-note-archive"
+                type="button"
+                disabled={noteSaving}
+                onClick={() => void archiveNote(noteEditor, true)}
+              >
+                Archivieren
+              </button>
+            )}
             {noteEditor !== "new" && (
               <button
                 className="home-note-delete"

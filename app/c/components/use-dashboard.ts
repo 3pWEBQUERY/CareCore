@@ -42,6 +42,11 @@ export function useDashboard() {
   const [toast, setToast] = useState("");
   const {
     notes,
+    archivedNotes,
+    pendingNoteIds,
+    showArchive,
+    setShowArchive,
+    archiveNote,
     setNotes,
     notesLoading,
     setNotesLoading,
@@ -205,6 +210,11 @@ export function useDashboard() {
     newsError,
     setNewsError,
     notes,
+    archivedNotes,
+    pendingNoteIds,
+    showArchive,
+    setShowArchive,
+    archiveNote,
     setNotes,
     notesLoading,
     setNotesLoading,
