@@ -99,6 +99,7 @@ const ACTIONS: Record<string, string> = {
   prn_administered: "Reservegabe",
   medication_allergies_updated: "Allergien geändert",
   master_data_updated: "Stammdaten geändert",
+  resuscitation_updated: "Reanimationsstatus geändert",
   admitted: "aufgenommen",
   master_data_checked: "Stammdaten geprüft",
   stay_discharged: "Austritt",

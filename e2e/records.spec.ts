@@ -106,3 +106,35 @@ test("Körperübersicht: Klick auf die Figur öffnet direkt „Befund erfassen�
   await expect(dialog.getByRole("textbox", { name: "Körperstelle" })).toHaveValue(/bauch/i);
   expect(errors).toEqual([]);
 });
+
+test("Reanimationsstatus: in den Stammdaten erfassen, im Aktenkopf und im Überleitungsbogen sichtbar", async ({
+  page,
+}) => {
+  await login(page, ADMIN);
+  // Der absichtlich unvollständige Speicherversuch wird mit 400 abgewiesen.
+  const errors = watchErrors(page, [/^400 PATCH \/api\/residents\/[^/]+\/record$/]);
+  await page.goto("/c/bewohner");
+  await page.locator(".resident-list-row").nth(1).click();
+  const badge = page.locator(".record-resuscitation");
+  await expect(badge).toBeVisible();
+  await page.locator(".resident-record-tabs button", { hasText: "Stammdaten" }).click();
+  await page.getByRole("button", { name: "Stammdaten bearbeiten" }).click();
+  await page.getByRole("combobox", { name: "Reanimationsstatus" }).click();
+  await page.getByRole("option", { name: "Keine Reanimation (DNR)" }).click();
+  // Ohne Grundlage wird nicht gespeichert.
+  await page.getByLabel("Grundlage").fill("");
+  await page.getByRole("button", { name: "Stammdaten speichern" }).click();
+  await expect(page.locator(".record-master-data-view [role=alert]")).toContainText("Grundlage");
+  await page.getByLabel("Grundlage").fill("Patientenverfügung");
+  await page.getByRole("button", { name: "Stammdaten speichern" }).click();
+  await expect(page.getByRole("button", { name: "Stammdaten bearbeiten" })).toBeVisible();
+  await expect(badge).toHaveText("REA: Nein");
+  await expect(badge).toHaveClass(/critical/);
+
+  const href = await page.locator(".record-transfer-link").getAttribute("href");
+  await page.goto(href ?? "");
+  await expect(page.locator(".transfer-resuscitation")).toContainText(
+    "Keine Reanimation (DNR) · Grundlage: Patientenverfügung",
+  );
+  expect(errors).toEqual([]);
+});

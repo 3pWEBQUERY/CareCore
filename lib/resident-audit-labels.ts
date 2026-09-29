@@ -1,4 +1,5 @@
 // Lesbare Darstellung der Protokolleinträge einer Bewohnerakte (Server und Browser).
+import { RESUSCITATION_STATUSES, type ResuscitationStatus } from "./resident-record-shared";
 
 export type ResidentAuditEntry = {
   id: string;
@@ -53,6 +54,7 @@ const ACTION_LABELS: Record<string, string> = {
   issued: "gebucht",
   admitted: "aufgenommen",
   master_data_updated: "geändert",
+  resuscitation_updated: "Reanimationsstatus geändert",
   gender_updated: "Geschlecht geändert",
   medication_allergies_updated: "Allergien geändert",
   prn_administered: "Reservegabe erfasst",
@@ -141,7 +143,11 @@ export function describeAudit(entry: ResidentAuditEntry) {
         ? `Abschnitte: ${sections.map((key) => FIELD_LABELS[String(key)] ?? String(key)).join(", ")}`
         : "keine inhaltliche Änderung",
     );
-  else if (entry.before && entry.after) {
+  else if (entry.action === "resuscitation_updated") {
+    const status = entry.after?.status as ResuscitationStatus | null | undefined;
+    details.push(status && status in RESUSCITATION_STATUSES ? RESUSCITATION_STATUSES[status].label : "nicht erfasst");
+    if (entry.after?.source) details.push(`Grundlage: ${String(entry.after.source)}`);
+  } else if (entry.before && entry.after) {
     const changed = Object.keys(entry.after).filter(
       // Nur Felder, die vorher ebenfalls festgehalten wurden (ältere Einträge enthalten nicht alle Felder).
       (key) =>

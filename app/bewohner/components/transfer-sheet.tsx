@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Printer, X } from "@phosphor-icons/react";
 import { formatDate, formatDateTime, useApiData } from "@/app/components/workspace-ui";
-import { LANGUAGES } from "@/lib/resident-record-shared";
+import { LANGUAGES, RESUSCITATION_STATUSES } from "@/lib/resident-record-shared";
 import { ageOn, scheduleLabel, type TransferSheet } from "@/lib/resident-transfer-shared";
 
 const GENDERS: Record<string, string> = {
@@ -87,6 +87,23 @@ export default function TransferSheetPage() {
               </span>
             </div>
           </header>
+
+          <section
+            className={`transfer-allergies transfer-resuscitation ${data.master.resuscitationStatus === "dnr" ? "known" : ""}`}
+          >
+            <strong>Reanimationsstatus</strong>
+            <span>
+              {data.master.resuscitationStatus
+                ? [
+                    RESUSCITATION_STATUSES[data.master.resuscitationStatus].label,
+                    data.master.resuscitationSource && `Grundlage: ${data.master.resuscitationSource}`,
+                    data.master.resuscitationDecidedOn && `vom ${formatDate(data.master.resuscitationDecidedOn)}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
+                : "Nicht erfasst"}
+            </span>
+          </section>
 
           <section className={`transfer-allergies ${data.allergies.length ? "known" : ""}`}>
             <strong>Allergien / Unverträglichkeiten</strong>

@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { ApiError } from "@/lib/api-context";
 import { changedFields, residentAudit } from "@/lib/resident-audit";
 import { describeAudit, type ResidentAuditEntry } from "@/lib/resident-audit-labels";
-import { recordTimeline, updateMasterData } from "@/lib/resident-record";
+import { recordSummary, recordTimeline, updateMasterData } from "@/lib/resident-record";
 import { transferSheet } from "@/lib/resident-transfer";
 import { apiContextFor, createResident, fixture, q } from "../support/db";
 
@@ -73,6 +73,81 @@ test("Protokoll: Stammdaten ohne AHV- und Versichertennummer im Klartext", async
   assert.equal(row.after_data.socialSecurityNumber, "geändert");
   assert.equal(row.after_data.insuranceNumber, "geändert");
   assert.ok(!JSON.stringify(row).includes("756.1234.5678.97"));
+});
+
+test("Reanimationsstatus: Grundlage ist Pflicht, Änderungen werden eigens protokolliert", async () => {
+  const f = await fixture();
+  const ctx = await apiContextFor(f, "anna");
+  const residentId = await createResident(f);
+  const base = { firstName: "Erna", lastName: "Muster", gender: "female", language: "de-CH" };
+
+  // Ohne Eintrag gilt der Status als nicht erfasst und fehlt in der Akte.
+  let summary = await recordSummary(ctx, residentId);
+  assert.equal(summary.master.resuscitationStatus, null);
+  assert.ok(summary.missing.includes("Reanimationsstatus"));
+
+  assert.equal(await status(updateMasterData(ctx, residentId, { ...base, resuscitationStatus: "dnr" })), 400);
+  assert.equal(
+    await status(
+      updateMasterData(ctx, residentId, { ...base, resuscitationStatus: "vielleicht", resuscitationSource: "x" }),
+    ),
+    400,
+  );
+  assert.equal(
+    await status(
+      updateMasterData(ctx, residentId, {
+        ...base,
+        resuscitationStatus: "dnr",
+        resuscitationSource: "Patientenverfügung",
+        resuscitationDecidedOn: "2999-01-01",
+      }),
+    ),
+    400,
+  );
+
+  await updateMasterData(ctx, residentId, {
+    ...base,
+    resuscitationStatus: "dnr",
+    resuscitationSource: "Patientenverfügung",
+    resuscitationDecidedOn: "2026-03-02",
+  });
+  summary = await recordSummary(ctx, residentId);
+  assert.equal(summary.master.resuscitationStatus, "dnr");
+  assert.equal(summary.master.resuscitationSource, "Patientenverfügung");
+  assert.equal(summary.master.resuscitationDecidedOn, "2026-03-02");
+  assert.ok(!summary.missing.includes("Reanimationsstatus"));
+  assert.equal((await transferSheet(ctx, residentId)).master.resuscitationStatus, "dnr");
+
+  // Unverändert gespeichert: kein weiterer Eintrag. Zurücksetzen leert auch Grundlage und Datum.
+  await updateMasterData(ctx, residentId, {
+    ...base,
+    resuscitationStatus: "dnr",
+    resuscitationSource: "Patientenverfügung",
+    resuscitationDecidedOn: "2026-03-02",
+  });
+  await updateMasterData(ctx, residentId, { ...base, resuscitationStatus: "", resuscitationSource: "alt" });
+  const [row] = await q<{ resuscitation_source: string | null; resuscitation_decided_on: string | null }>(
+    "SELECT resuscitation_source, resuscitation_decided_on FROM carecore_residents WHERE id = $1",
+    [residentId],
+  );
+  assert.equal(row.resuscitation_source, null);
+  assert.equal(row.resuscitation_decided_on, null);
+
+  const entries = (await auditFor(f.org, residentId)).filter((entry) => entry.action === "resuscitation_updated");
+  assert.equal(entries.length, 2);
+  assert.deepEqual(entries[0].after_data, { status: "dnr", source: "Patientenverfügung", decidedOn: "2026-03-02" });
+  assert.equal(entries[1].after_data.status, null);
+  const described = describeAudit({
+    id: "1",
+    createdAt: "",
+    actor: "Anna",
+    entityType: "resident",
+    action: "resuscitation_updated",
+    before: null,
+    after: entries[0].after_data,
+  });
+  assert.equal(described.title, "Stammdaten Reanimationsstatus geändert");
+  assert.match(described.detail, /Keine Reanimation \(DNR\) · Grundlage: Patientenverfügung/);
 });
 
 test("Protokoll: lesbare Beschreibung der Einträge", () => {
