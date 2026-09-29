@@ -92,7 +92,7 @@ async function residentContext(ctx: ApiContext, residentIds: string[]) {
       WHERE resident_id = ANY(${residentIds}) AND status IN ('active', 'healing')`,
     ctx.sql`
       SELECT resident_id, title, priority, due_at FROM carecore_tasks
-      WHERE resident_id = ANY(${residentIds}) AND status IN ('open', 'in_progress') ORDER BY due_at NULLS LAST LIMIT 40`,
+      WHERE resident_id = ANY(${residentIds}) AND status IN ('open', 'in_progress', 'escalated') ORDER BY due_at NULLS LAST LIMIT 40`,
     ctx.sql`
       SELECT p.resident_id, g.category, g.statement, g.target_date FROM carecore_care_goals g
       JOIN carecore_care_plans p ON p.id = g.care_plan_id
@@ -167,7 +167,7 @@ export async function aiOverview(ctx: ApiContext, careUnitIdInput: string | null
     SELECT
       (SELECT name FROM carecore_care_units WHERE id = ${careUnitId}::uuid) AS unit,
       (SELECT COUNT(*) FROM res)::int AS residents,
-      (SELECT COUNT(*) FROM carecore_tasks WHERE resident_id IN (SELECT id FROM res) AND status IN ('open', 'in_progress'))::int AS tasks,
+      (SELECT COUNT(*) FROM carecore_tasks WHERE resident_id IN (SELECT id FROM res) AND status IN ('open', 'in_progress', 'escalated'))::int AS tasks,
       (SELECT COUNT(DISTINCT resident_id) FROM carecore_vital_measurements WHERE resident_id IN (SELECT id FROM res)
         AND status = 'critical' AND measured_at > NOW() - INTERVAL '24 hours')::int AS critical,
       (SELECT COUNT(*) FROM carecore_handovers h WHERE h.organization_id = ${ctx.actor.organizationId}

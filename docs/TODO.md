@@ -15,7 +15,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Plan                         | ✅    | Pflegeplanung mit Zielen, Massnahmen, Evaluation, Einschätzungen. Keine regelbasierten Vorschläge aus Einschätzungen.                                                |
 | Chart / Schnelldoku          | 🟡    | Doku, Nachträge, Schnelldokumentation. Aus Aufgaben kein ✓ △ ✕, keine Spracheingabe.                                                                                 |
 | Handover                     | ✅    | Übergabe, „Seit meinem letzten Dienst“, Lesebestätigung (`carecore_handover_reads`).                                                                                 |
-| Tasks                        | 🟡    | Status nur offen / in Bearbeitung / erledigt / abgebrochen. **Teilweise, übersprungen (mit Grund) und eskaliert fehlen.**                                            |
+| Tasks                        | ✅    | Offen, in Bearbeitung, eskaliert, erledigt, teilweise, nicht erledigt, abgebrochen; überfällig berechnet.                                                            |
 | Med                          | 🟡    | Runde, Reserve (PRN), BtM mit Zweitunterschrift, Bestand. Keine Wirkungskontrolle mit Termin nach PRN-Gabe. Interaktionen fehlen (braucht eine externe Datenquelle). |
 | Vitals                       | ✅    | Individuelle Grenzwerte je Bewohner (`carecore_vital_thresholds`).                                                                                                   |
 | Wounds                       | 🟡    | Verlauf, Fotos, Körperkarte, Erinnerungen. Verbandsmaterial ist nicht als Liste je Versorgung erfasst.                                                               |
@@ -53,8 +53,8 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 
 - [x] **Reanimationsstatus im Bewohner-Kopfbereich:** eigenes Feld (REA ja / nein / nicht erfasst, Grundlage, Datum), in Akte,
       Kopfzeile und Überleitungsbogen; mit Audit. Werte kommen aus der Patientenverfügung, keine Voreinstellung.
-- [ ] **Aufgabenstatus erweitern:** teilweise, übersprungen (Grund Pflicht), eskaliert; „überfällig“ berechnet.
-      Die Schnelldoku aus der Aufgabe bekommt ✓ △ ✕, und jede Auswahl erzeugt einen Doku-Eintrag.
+- [x] **Aufgabenstatus erweitern:** teilweise, übersprungen (Grund Pflicht), eskaliert; „überfällig“ berechnet.
+      Der Abschluss bietet ✓ △ ✕; Abweichungen (△ ✕) erzeugen immer einen Doku-Eintrag, ✓ bei Dokumentationspflicht.
 - [ ] **Wirkungskontrolle nach Reservegabe:** Kontrolle mit Termin und Erinnerung, Ergebnis dokumentiert. Den
       Zeitpunkt legt die Verordnung fest, es gibt kein erfundenes Standardintervall.
 - [ ] **Chat:** Reaktionen, @Erwähnungen mit Benachrichtigung, Push bei neuer Nachricht.

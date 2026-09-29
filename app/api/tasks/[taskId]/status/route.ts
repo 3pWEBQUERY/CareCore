@@ -4,7 +4,7 @@ import { setTaskStatus } from "@/lib/tasks";
 
 export const runtime = "nodejs";
 
-// { status: open|in_progress|completed|cancelled, note?, reason? }
+// { status: open|in_progress|escalated|completed|partial|skipped|cancelled, note?, reason? }
 export async function POST(request: Request, { params }: { params: Promise<{ taskId: string }> }) {
   try {
     const ctx = await apiContext("documentation.write");

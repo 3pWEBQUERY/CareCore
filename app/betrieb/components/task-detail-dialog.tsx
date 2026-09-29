@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { EditorDialog, ReasonDialog, formatDateTime, requestJson, type ShowToast } from "@/app/components/workspace-ui";
-import { TASK_PRIORITIES, TASK_RECURRENCE, type Task } from "@/lib/tasks-shared";
+import { TASK_PRIORITIES, TASK_RECURRENCE, TASK_STATUS, isActiveTask, type Task } from "@/lib/tasks-shared";
 import { notifyOperationsChanged } from "./operations-ui";
 import { statusLabel, statusTone } from "./task-utils";
 
@@ -26,6 +26,7 @@ export function TaskDetailDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [cancelling, setCancelling] = useState(false);
+  const [escalating, setEscalating] = useState(false);
   const setStatus = async (status: "open" | "in_progress", message: string) => {
     setSaving(true);
     setError("");
@@ -38,7 +39,26 @@ export function TaskDetailDialog({
       setSaving(false);
     }
   };
-  const active = task.status === "open" || task.status === "in_progress";
+  const active = isActiveTask(task.status);
+  const finished = !active && task.status !== "cancelled";
+  if (escalating)
+    return (
+      <ReasonDialog
+        eyebrow="CareCore Tasks"
+        title="Aufgabe eskalieren"
+        description={`„${task.title}“ bleibt offen. Die Leitung wird sofort benachrichtigt.`}
+        label="Grund"
+        placeholder="z. B. Bewohner verweigert wiederholt, Material fehlt, ärztliche Rücksprache nötig"
+        submitLabel="Eskalieren"
+        danger
+        onClose={() => setEscalating(false)}
+        onConfirm={async (reason) => {
+          await requestJson(`/api/tasks/${task.id}/status`, { method: "POST", body: { status: "escalated", reason } });
+          notifyOperationsChanged();
+          onChanged("Aufgabe eskaliert – die Leitung ist informiert");
+        }}
+      />
+    );
   if (cancelling)
     return (
       <ReasonDialog
@@ -67,17 +87,13 @@ export function TaskDetailDialog({
       onClose={onClose}
       onSubmit={() => {
         if (!canWrite || task.status === "cancelled") onClose();
-        else if (task.status === "completed") void setStatus("open", "Aufgabe wieder geöffnet");
+        else if (finished) void setStatus("open", "Aufgabe wieder geöffnet");
         else onToggle();
       }}
       saving={saving}
       error={error}
       submitLabel={
-        !canWrite || task.status === "cancelled"
-          ? "Schliessen"
-          : task.status === "completed"
-            ? "Wieder öffnen"
-            : "Als erledigt markieren"
+        !canWrite || task.status === "cancelled" ? "Schliessen" : finished ? "Wieder öffnen" : "Abschliessen"
       }
       extraActions={
         canWrite && active ? (
@@ -92,17 +108,22 @@ export function TaskDetailDialog({
                 Bearbeiten
               </button>
             )}
+            {task.status !== "escalated" && (
+              <button className="quiet-button" type="button" onClick={() => setEscalating(true)} disabled={saving}>
+                Eskalieren
+              </button>
+            )}
             <button
               className="quiet-button"
               type="button"
               disabled={saving}
               onClick={() =>
-                void (task.status === "open"
-                  ? setStatus("in_progress", "Aufgabe in Bearbeitung")
-                  : setStatus("open", "Aufgabe wieder offen"))
+                void (task.status === "in_progress"
+                  ? setStatus("open", "Aufgabe wieder offen")
+                  : setStatus("in_progress", "Aufgabe in Bearbeitung"))
               }
             >
-              {task.status === "open" ? "Beginnen" : "Zurück auf offen"}
+              {task.status === "in_progress" ? "Zurück auf offen" : "Beginnen"}
             </button>
           </>
         ) : null
@@ -157,9 +178,18 @@ export function TaskDetailDialog({
               .join(" · ")}
           </dd>
         </div>
+        {task.escalatedAt && (
+          <div className="wide">
+            <dt>Eskaliert</dt>
+            <dd>
+              {formatDateTime(task.escalatedAt)} · {task.escalatedByName ?? "unbekannt"}
+              {task.escalationReason ? ` – ${task.escalationReason}` : ""}
+            </dd>
+          </div>
+        )}
         {task.completedAt && (
           <div className="wide">
-            <dt>Erledigt</dt>
+            <dt>{finished ? TASK_STATUS[task.status] : "Erledigt"}</dt>
             <dd>
               {formatDateTime(task.completedAt)} · {task.completedByName ?? "unbekannt"}
               {task.completionNote ? ` – ${task.completionNote}` : ""}

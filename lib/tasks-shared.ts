@@ -35,10 +35,25 @@ export type TaskRecurrence = keyof typeof TASK_RECURRENCE;
 export const TASK_STATUS = {
   open: "Offen",
   in_progress: "In Bearbeitung",
+  escalated: "Eskaliert",
   completed: "Erledigt",
+  partial: "Teilweise erledigt",
+  skipped: "Nicht erledigt",
   cancelled: "Abgebrochen",
 } as const;
 export type TaskStatus = keyof typeof TASK_STATUS;
+
+// Noch zu erledigen (eskalierte Aufgaben bleiben offen, bis jemand sie abschliesst).
+export const ACTIVE_TASK_STATUSES = ["open", "in_progress", "escalated"] as const satisfies readonly TaskStatus[];
+export const isActiveTask = (status: TaskStatus) => (ACTIVE_TASK_STATUSES as readonly string[]).includes(status);
+
+// Ergebnis beim Abschluss: ✓ erledigt, △ teilweise, ✕ nicht erledigt. Teilweise und nicht erledigt brauchen eine Begründung.
+export const TASK_OUTCOMES = {
+  completed: { symbol: "✓", label: "Erledigt" },
+  partial: { symbol: "△", label: "Teilweise" },
+  skipped: { symbol: "✕", label: "Nicht erledigt" },
+} as const;
+export type TaskOutcome = keyof typeof TASK_OUTCOMES;
 
 export type Task = {
   id: string;
@@ -63,6 +78,9 @@ export type Task = {
   completedByName: string | null;
   completionNote: string | null;
   cancelReason: string | null;
+  escalatedAt: string | null;
+  escalatedByName: string | null;
+  escalationReason: string | null;
   teamVisible: boolean;
   remind: boolean;
   documentOnCompletion: boolean;

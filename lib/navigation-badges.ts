@@ -16,7 +16,7 @@ export async function navigationBadges(ctx: ApiContext): Promise<NavigationBadge
       SELECT
         (SELECT COUNT(*) FROM carecore_tasks t, carecore_organizations o
           WHERE o.id = t.organization_id AND t.organization_id = ${ctx.actor.organizationId}
-            AND t.assigned_to = ${ctx.actor.id} AND t.status IN ('open', 'in_progress')
+            AND t.assigned_to = ${ctx.actor.id} AND t.status IN ('open', 'in_progress', 'escalated')
             AND (t.due_at IS NULL OR t.due_at < ((NOW() AT TIME ZONE o.timezone)::date + 1) AT TIME ZONE o.timezone))::int AS tasks,
         (SELECT COUNT(*) FROM carecore_handovers h
           WHERE h.organization_id = ${ctx.actor.organizationId} AND h.created_at > NOW() - INTERVAL '72 hours'

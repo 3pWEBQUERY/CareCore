@@ -4,29 +4,57 @@ import { useState } from "react";
 import { EditorDialog, requestJson, type ShowToast } from "@/app/components/workspace-ui";
 import { notifyOperationsChanged } from "./operations-ui";
 import { sendOrQueue } from "@/app/components/offline-queue";
+import { TASK_OUTCOMES, type TaskOutcome } from "@/lib/tasks-shared";
 
-// Completion with a note; the note goes into the care record when the task asks for it.
+type OutcomeTask = { id: string; title: string; residentName: string | null; documentOnCompletion: boolean };
+
+const OUTCOME_HINTS: Record<TaskOutcome, { note: string; placeholder: string; done: string }> = {
+  completed: {
+    note: "Notiz (optional)",
+    placeholder: "Was wurde durchgeführt? Wirkung, Reaktion, Auffälligkeiten.",
+    done: "Aufgabe erledigt",
+  },
+  partial: {
+    note: "Was wurde erledigt, was bleibt offen?",
+    placeholder: "z. B. Grundpflege durchgeführt, Haarwäsche abgelehnt",
+    done: "Aufgabe als teilweise erledigt abgeschlossen",
+  },
+  skipped: {
+    note: "Grund",
+    placeholder: "z. B. Bewohnerin schläft, Termin beim Arzt, abgelehnt",
+    done: "Aufgabe als nicht erledigt abgeschlossen",
+  },
+};
+
+// Abschluss mit Ergebnis: ✓ erledigt, △ teilweise, ✕ nicht erledigt. Abweichungen brauchen eine Begründung und
+// werden bei Bewohneraufgaben in der Pflegedokumentation festgehalten.
 export function TaskCompleteDialog({
   task,
   onClose,
   onDone,
 }: {
-  task: { id: string; title: string; residentName: string | null; documentOnCompletion: boolean };
+  task: OutcomeTask;
   onClose: () => void;
   onDone: (message: string) => void;
 }) {
+  const [outcome, setOutcome] = useState<TaskOutcome>("completed");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const hint = OUTCOME_HINTS[outcome];
+  const required = outcome !== "completed" || task.documentOnCompletion;
+  const documented = Boolean(task.residentName) && (outcome !== "completed" || task.documentOnCompletion);
   return (
     <EditorDialog
       id="task-complete"
       eyebrow="CareCore Tasks · Abschluss"
       title={task.title}
       description={
-        task.documentOnCompletion
+        documented
           ? `Deine Notiz wird als Pflegedokumentation${task.residentName ? ` bei ${task.residentName}` : ""} gespeichert.`
-          : "Optional: kurz festhalten, was erledigt wurde."
+          : required
+            ? "Bitte kurz festhalten, was durchgeführt wurde."
+            : "Optional: kurz festhalten, was erledigt wurde."
       }
       onClose={onClose}
       onSubmit={async () => {
@@ -35,17 +63,17 @@ export function TaskCompleteDialog({
         try {
           const result = await sendOrQueue(
             `/api/tasks/${task.id}/status`,
-            { status: "completed", note, completedAt: new Date().toISOString() },
-            `Aufgabe erledigt · ${task.title}`,
-            { field: "note", label: "Notiz" },
+            { status: outcome, note, completedAt: new Date().toISOString() },
+            `Aufgabe ${TASK_OUTCOMES[outcome].label.toLowerCase()} · ${task.title}`,
+            { field: "note", label: outcome === "skipped" ? "Grund" : "Notiz" },
           );
           notifyOperationsChanged();
           onDone(
             result.queued
-              ? "Aufgabe offline als erledigt vorgemerkt – wird gesendet, sobald die Verbindung zurück ist"
-              : task.documentOnCompletion
-                ? "Aufgabe erledigt und dokumentiert"
-                : "Aufgabe erledigt",
+              ? "Abschluss offline vorgemerkt – wird gesendet, sobald die Verbindung zurück ist"
+              : documented
+                ? `${hint.done} und dokumentiert`
+                : hint.done,
           );
         } catch (cause) {
           setError(cause instanceof Error ? cause.message : "Speichern fehlgeschlagen.");
@@ -54,18 +82,34 @@ export function TaskCompleteDialog({
       }}
       saving={saving}
       error={error}
-      submitLabel="Als erledigt markieren"
+      submitLabel="Abschliessen"
     >
+      <fieldset className="area-editor-wide">
+        <legend>Ergebnis</legend>
+        <div className="operations-filter-buttons task-outcomes">
+          {(Object.keys(TASK_OUTCOMES) as TaskOutcome[]).map((key) => (
+            <button
+              className={outcome === key ? "active" : ""}
+              type="button"
+              key={key}
+              aria-pressed={outcome === key}
+              onClick={() => setOutcome(key)}
+            >
+              <span aria-hidden="true">{TASK_OUTCOMES[key].symbol}</span> {TASK_OUTCOMES[key].label}
+            </button>
+          ))}
+        </div>
+      </fieldset>
       <label className="area-editor-wide">
-        <span>{task.documentOnCompletion ? "Dokumentation" : "Notiz (optional)"}</span>
+        <span>{task.documentOnCompletion && outcome === "completed" ? "Dokumentation" : hint.note}</span>
         <textarea
           autoFocus
           rows={5}
           maxLength={10000}
-          required={task.documentOnCompletion}
+          required={required}
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          placeholder="Was wurde durchgeführt? Wirkung, Reaktion, Auffälligkeiten."
+          placeholder={hint.placeholder}
         />
       </label>
     </EditorDialog>
@@ -74,7 +118,7 @@ export function TaskCompleteDialog({
 
 // Toggles a task between done and open; tasks that need documentation open the completion dialog instead.
 export function useTaskToggle(showToast: ShowToast, onChanged: () => void) {
-  const [completing, setCompleting] = useState<Parameters<typeof TaskCompleteDialog>[0]["task"] | null>(null);
+  const [completing, setCompleting] = useState<OutcomeTask | null>(null);
   const toggle = async (task: {
     id: string;
     title: string;
@@ -120,5 +164,7 @@ export function useTaskToggle(showToast: ShowToast, onChanged: () => void) {
       }}
     />
   ) : null;
-  return { toggle, dialog };
+  // Abschluss mit Wahl des Ergebnisses (✓ △ ✕).
+  const finish = (task: OutcomeTask) => setCompleting(task);
+  return { toggle, finish, dialog };
 }

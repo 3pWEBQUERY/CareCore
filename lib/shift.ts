@@ -155,7 +155,7 @@ export async function residentCount({ sql, actor }: ApiContext, unitId: string |
 export async function openTaskCount({ sql, actor }: ApiContext) {
   const rows = (await sql`
     SELECT COUNT(*)::int AS n FROM carecore_tasks
-    WHERE organization_id = ${actor.organizationId} AND assigned_to = ${actor.id} AND status IN ('open', 'in_progress')
+    WHERE organization_id = ${actor.organizationId} AND assigned_to = ${actor.id} AND status IN ('open', 'in_progress', 'escalated')
       AND (due_at IS NULL OR due_at < NOW() + INTERVAL '12 hours')`) as Row[];
   return Number(rows[0]?.n ?? 0);
 }
