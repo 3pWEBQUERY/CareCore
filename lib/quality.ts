@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { assertEventType, readEventTypes } from "@/lib/quality-types";
 import {
   ApiError,
   assertResident,
@@ -16,7 +17,6 @@ import {
   ACTION_STATUS,
   EFFECTIVENESS,
   EVENT_STATUS,
-  EVENT_TYPES,
   SEVERITIES,
   type ActionStatus,
   type Effectiveness,
@@ -104,7 +104,7 @@ function mapEvent(row: Row): QualityEvent {
 
 export async function eventsData(ctx: ApiContext): Promise<QualityEventsPayload> {
   const manager = canManageQuality(ctx);
-  const [rows, stats, residents, careUnits, staff, workflowRows] = await Promise.all([
+  const [rows, stats, residents, careUnits, staff, workflowRows, eventTypes] = await Promise.all([
     ctx.sql`
       SELECT e.*, NULLIF(TRIM(r.first_name || ' ' || r.last_name), '') AS resident_name, cu.name AS care_unit,
         rep.display_name AS reported_by_name, own.display_name AS owner_name,
@@ -148,6 +148,7 @@ export async function eventsData(ctx: ApiContext): Promise<QualityEventsPayload>
     ctx.sql`
       SELECT event_type, COUNT(*)::int AS n FROM carecore_event_workflow_steps
       WHERE organization_id = ${ctx.actor.organizationId} GROUP BY event_type` as Promise<Row[]>,
+    readEventTypes(ctx),
   ]);
   const s = stats[0];
   const thisYear = Number(s.this_year);
@@ -170,12 +171,12 @@ export async function eventsData(ctx: ApiContext): Promise<QualityEventsPayload>
     staff,
     canManage: manager,
     workflowSteps: Object.fromEntries(workflowRows.map((row) => [String(row.event_type), Number(row.n)])),
+    eventTypes: { builtIn: eventTypes.builtIn, custom: eventTypes.custom },
   };
 }
 
 export async function reportEvent(ctx: ApiContext, body: Record<string, unknown>) {
-  const type = text(body.type, 100);
-  if (!(EVENT_TYPES as readonly string[]).includes(type)) throw new ApiError("Bitte die Art des Ereignisses wählen.");
+  const type = await assertEventType(ctx, text(body.type, 100), "Bitte die Art des Ereignisses wählen.");
   const severity = body.severity as Severity;
   if (!(severity in SEVERITIES)) throw new ApiError("Bitte den Schweregrad wählen.");
   const description = text(body.description, 4000);

@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ApiError, type ApiContext } from "@/lib/api-context";
 import { actionsData, createAction, eventsData, reportEvent, updateAction, updateEvent } from "@/lib/quality";
+import { readEventTypes, saveEventTypes } from "@/lib/quality-types";
 import { listWorkflows, saveWorkflow } from "@/lib/quality-workflows";
 import { apiContextFor, createResident, fixture, q } from "../support/db";
 
@@ -171,4 +172,48 @@ test("Ablaufkette Sturz: Folgeaufgaben nach den Schritten der Einrichtung, verkn
   assert.equal((await q(`SELECT 1 FROM carecore_tasks WHERE quality_event_id = $1`, [other])).length, 0);
   await saveWorkflow(lead, "Sturz", []);
   assert.deepEqual((await eventsData(lead)).workflowSteps, {});
+});
+
+test("Eigene Ereignisarten: festlegen, melden, Ablaufkette, Entfernen nimmt die Ablaufkette mit", async () => {
+  const f = await fixture();
+  const lead = manager(await apiContextFor(f, "leadA"));
+  const anna = await apiContextFor(f, "anna");
+  const residentId = await createResident(f);
+  assert.equal((await failure(saveEventTypes(anna, ["Weglaufen"]))).status, 403);
+  assert.match((await failure(saveEventTypes(lead, ["sturz"]))).message, /gibt es bereits/);
+  assert.match((await failure(saveEventTypes(lead, ["Weglaufen", "weglaufen"]))).message, /gibt es bereits/);
+  assert.equal((await failure(saveEventTypes(lead, ["ab"]))).status, 400);
+  assert.equal(
+    (
+      await failure(
+        reportEvent(anna, {
+          type: "Weglaufen",
+          severity: "attention",
+          description: "x",
+          occurredAt: new Date().toISOString(),
+          residentId,
+        }),
+      )
+    ).status,
+    400,
+  );
+
+  assert.deepEqual(await saveEventTypes(lead, ["Weglaufen"]), ["Weglaufen"]);
+  assert.deepEqual((await readEventTypes(lead)).custom, ["Weglaufen"]);
+  await saveWorkflow(lead, "Weglaufen", [
+    { title: "Angehörige informieren", category: "Organisation", priority: "high", dueOffsetMinutes: 60 },
+  ]);
+  const eventId = await reportEvent(anna, {
+    type: "Weglaufen",
+    severity: "attention",
+    description: "Im Garten gefunden",
+    occurredAt: new Date().toISOString(),
+    residentId,
+  });
+  assert.equal((await eventsData(lead)).events.find((event) => event.id === eventId)?.followUps, 1);
+  assert.deepEqual((await eventsData(lead)).eventTypes.custom, ["Weglaufen"]);
+
+  await saveEventTypes(lead, []);
+  assert.deepEqual(await listWorkflows(lead), {}, "Ablaufkette der entfernten Art entfällt");
+  assert.equal((await eventsData(lead)).events.find((event) => event.id === eventId)?.type, "Weglaufen");
 });

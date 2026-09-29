@@ -113,6 +113,8 @@ export type QualityEventsPayload = {
   canManage: boolean;
   // Ablaufketten je Ereignisart (Schrittanzahl), damit die Meldung zeigt, was daraus entsteht.
   workflowSteps: Record<string, number>;
+  // Eingebaute und eigene Ereignisarten der Einrichtung.
+  eventTypes: { builtIn: string[]; custom: string[] };
 };
 
 export type QualityActionsPayload = {

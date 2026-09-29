@@ -1,5 +1,5 @@
 import { ApiError, auditStatement, num, text, type ApiContext, type Row } from "@/lib/api-context";
-import { EVENT_TYPES } from "@/lib/quality-shared";
+import { assertEventType } from "@/lib/quality-types";
 import { TASK_CATEGORIES, TASK_PRIORITIES, type TaskPriority } from "@/lib/tasks-shared";
 import { hasPermission } from "@/lib/server-data";
 
@@ -17,12 +17,6 @@ export type WorkflowStep = {
   priority: TaskPriority;
   dueOffsetMinutes: number;
   documentOnCompletion: boolean;
-};
-
-const eventType = (value: unknown) => {
-  const type = typeof value === "string" ? value : "";
-  if (!(EVENT_TYPES as readonly string[]).includes(type)) throw new ApiError("Bitte die Ereignisart wählen.");
-  return type;
 };
 
 export async function listWorkflows(ctx: ApiContext): Promise<Record<string, WorkflowStep[]>> {
@@ -77,7 +71,7 @@ function parseSteps(input: unknown): WorkflowStep[] {
 export async function saveWorkflow(ctx: ApiContext, typeInput: unknown, stepsInput: unknown) {
   if (!hasPermission(ctx.actor, "quality.manage"))
     throw new ApiError("Ablaufketten legt das Qualitätsmanagement fest.", 403);
-  const type = eventType(typeInput);
+  const type = await assertEventType(ctx, typeInput, "Bitte die Ereignisart wählen.");
   const steps = parseSteps(stepsInput);
   const before = (await listWorkflows(ctx))[type] ?? [];
   await ctx.sql.transaction([

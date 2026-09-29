@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
+import { TermsTitle } from "./terms-title";
 
 export const metadata: Metadata = {
   title: "CareCore · Bewohner",
-  description: "Zentrale Bewohner- und Patientenakte im CareCore Pflegearbeitsplatz.",
+  description: "Zentrale Akte im CareCore Pflegearbeitsplatz.",
 };
 
 export default function ResidentsLayout({ children }: LayoutProps<"/bewohner">) {
-  return children;
+  return (
+    <>
+      <TermsTitle />
+      {children}
+    </>
+  );
 }

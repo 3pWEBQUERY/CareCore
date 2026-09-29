@@ -106,9 +106,13 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
         Assistenz, Administration, Einstellungen, Hilfe und Tastaturkürzel.
   - [x] Texte des Servers: Kennzahlen (mit fester ID für „Meine Kennzahlen“), Übersichten, Fehlermeldungen,
         RAI-Export und KI-Aufträge. Seltene Fehlermeldungen ohne Einrichtung sind neutral formuliert („Akte …“).
-  - [ ] Seitentitel im Browser-Tab (statische Metadaten, z. B. „CareCore · Bewohner“).
+  - [x] Seitentitel im Browser-Tab („CareCore · Patienten“).
   - [ ] Weitere Sprachen FR / IT / EN.
 - [ ] **Admin-Konfiguration:** Ereignistypen, Vitalparameter, Branding.
+  - [x] Ereignisarten: eigene Arten der Einrichtung (höchstens 20) neben den eingebauten; beim Melden und in den
+        Ablaufketten wählbar, protokolliert. Entfernen nimmt die Ablaufkette mit, gemeldete Ereignisse bleiben.
+  - [ ] Vitalparameter.
+  - [ ] Branding.
 - [ ] **Datenschutz:** Lösch- und Aufbewahrungskonzept für Bewohnerdaten. Fristen legt die Einrichtung fest.
 - [ ] **Echtzeit** (Server-Sent Events) statt Polling.
 - [ ] **Öffentliche API, Webhooks, FHIR.**

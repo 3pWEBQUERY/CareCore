@@ -114,3 +114,28 @@ test("Meine Kennzahlen: Kennzahlen auswählen, speichern und nach dem Neuladen s
   }
   expect(errors).toEqual([]);
 });
+
+// Admin-Konfiguration: eigene Ereignisart anlegen, beim Melden auswählbar, danach wieder entfernen.
+test("Qualität: eigene Ereignisart festlegen und beim Melden wählen", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  const name = `E2E Weglaufen ${Date.now()}`;
+  try {
+    await page.goto("/c/leitung/qualitaet");
+    await page.getByRole("button", { name: "Ereignisarten", exact: true }).click();
+    const editor = page.locator(".editor-dialog", { hasText: "Eigene Ereignisarten" });
+    await editor.getByRole("button", { name: "Ereignisart hinzufügen" }).click();
+    await editor.getByLabel("Eigene Ereignisart 1", { exact: true }).fill(name);
+    await editor.getByRole("button", { name: "Ereignisarten speichern" }).click();
+    await expect(page.locator(".toast")).toContainText("Ereignisarten gespeichert");
+    await expect(page.locator(".quality-workflow-card")).toContainText(`Eigene Ereignisarten: ${name}`);
+
+    await page.getByRole("button", { name: "Ereignis melden" }).click();
+    const report = page.locator(".editor-dialog", { hasText: "Ereignis melden" });
+    await report.getByRole("combobox", { name: "Art des Ereignisses" }).click();
+    await expect(page.getByRole("option", { name })).toBeVisible();
+  } finally {
+    expect((await page.request.put("/api/quality/event-types", { data: { custom: [] } })).status()).toBe(200);
+  }
+  expect(errors).toEqual([]);
+});

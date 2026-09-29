@@ -7,7 +7,6 @@ import { EditorDialog, requestJson, todayInZurich, timeInZurich } from "@/app/co
 import {
   EFFECTIVENESS,
   EVENT_STATUS,
-  EVENT_TYPES,
   SEVERITIES,
   type Effectiveness,
   type EventStatus,
@@ -68,12 +67,18 @@ export function ReportEventDialog({
   residents,
   careUnits,
   workflowSteps,
+  eventTypes,
   onClose,
   onSaved,
-}: DialogProps & { residents: Option[]; careUnits: Option[]; workflowSteps: Record<string, number> }) {
+}: DialogProps & {
+  residents: Option[];
+  careUnits: Option[];
+  workflowSteps: Record<string, number>;
+  eventTypes: string[];
+}) {
   const t = useTerms();
   const [form, setForm] = useState({
-    type: EVENT_TYPES[0] as string,
+    type: eventTypes[0] ?? "",
     severity: "attention" as Severity,
     title: "",
     date: todayInZurich(),
@@ -121,7 +126,7 @@ export function ReportEventDialog({
         <CareSelect
           label="Art des Ereignisses"
           value={form.type}
-          options={[...EVENT_TYPES]}
+          options={eventTypes}
           onChange={(v) => set("type", v)}
         />
       </label>

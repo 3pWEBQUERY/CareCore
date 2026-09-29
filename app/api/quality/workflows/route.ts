@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
+import { readEventTypes } from "@/lib/quality-types";
 import { listWorkflows, saveWorkflow } from "@/lib/quality-workflows";
 
 export const runtime = "nodejs";
@@ -9,7 +10,8 @@ export async function GET() {
   try {
     const ctx = await apiContext("documentation.write");
     if (ctx instanceof NextResponse) return ctx;
-    return NextResponse.json({ workflows: await listWorkflows(ctx) });
+    const [workflows, types] = await Promise.all([listWorkflows(ctx), readEventTypes(ctx)]);
+    return NextResponse.json({ workflows, eventTypes: types.all });
   } catch (error) {
     return apiErrorResponse(error, "Ablaufketten konnten nicht geladen werden.");
   }
