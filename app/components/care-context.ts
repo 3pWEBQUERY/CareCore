@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { termsFor, type Terms } from "@/lib/terminology";
+import { VITAL_METRICS } from "@/lib/vitals-shared";
 import type { WorkContext } from "@/lib/work-context";
 
 // Working context shared by all modules of a browser tab: the resident being
@@ -91,6 +92,12 @@ export function useWorkContext() {
 export function useTerms(): Terms {
   const context = useWorkContext();
   return termsFor(context?.terminology);
+}
+
+// Vitalparameter, die die Einrichtung erfasst (Leitung › Konfiguration); bis zum Laden alle.
+export function useVitalMetrics() {
+  const hidden = useWorkContext()?.hiddenVitals;
+  return hidden?.length ? VITAL_METRICS.filter((metric) => !hidden.includes(metric.key)) : VITAL_METRICS;
 }
 
 // Resident-centred pages show the resident chosen in the header. `missing` means the

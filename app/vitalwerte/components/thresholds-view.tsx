@@ -13,9 +13,9 @@ import {
   useApiData,
   type ShowToast,
 } from "@/app/components/workspace-ui";
-import { VITAL_METRICS, formatRange, metricByKey, type ThresholdRow, formatDecimal } from "@/lib/vitals-shared";
+import { formatRange, metricByKey, type ThresholdRow, formatDecimal } from "@/lib/vitals-shared";
 import type { VitalsOverview } from "./overview-view";
-import { useCareResident, useTerms } from "@/app/components/care-context";
+import { useCareResident, useTerms, useVitalMetrics } from "@/app/components/care-context";
 
 type ThresholdPayload = { house: ThresholdRow[]; personal: ThresholdRow[] };
 type Editing = { scope: "organization" | "resident"; row: ThresholdRow | null };
@@ -225,9 +225,10 @@ function ThresholdDialog({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
+  const metrics = useVitalMetrics();
   const t = useTerms();
   const row = editing.row;
-  const [metric, setMetric] = useState(row?.metric ?? VITAL_METRICS[0].key);
+  const [metric, setMetric] = useState(row?.metric ?? metrics[0].key);
   const [contextId] = useCareResident();
   const [residentId, setResidentId] = useState(
     row?.residentId ?? residents.find((r) => r.id === contextId)?.id ?? residents[0]?.id ?? "",
@@ -314,7 +315,7 @@ function ThresholdDialog({
         {row ? (
           <input value={metric} readOnly />
         ) : (
-          <CareSelect label="Messwert" value={metric} options={VITAL_METRICS.map((m) => m.key)} onChange={setMetric} />
+          <CareSelect label="Messwert" value={metric} options={metrics.map((m) => m.key)} onChange={setMetric} />
         )}
       </label>
       {field("targetLower", "Zielbereich ab")}

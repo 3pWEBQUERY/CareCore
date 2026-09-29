@@ -36,9 +36,12 @@ export default function LeadershipWorkspace({ view }: { view: LeadershipView }) 
   }, [view]);
   const organization = useApiData<OrganizationStructure>(view === "organization" ? "/api/organization" : null);
   const orgTotals = organization.data?.totals;
-  const configuration = useApiData<{ settings: AppSettings; system: SystemStatus; terminology: TerminologyKey }>(
-    view === "configuration" ? "/api/settings" : null,
-  );
+  const configuration = useApiData<{
+    settings: AppSettings;
+    system: SystemStatus;
+    terminology: TerminologyKey;
+    hiddenVitals: string[];
+  }>(view === "configuration" ? "/api/settings" : null);
   const config = configuration.data;
   const enabledSettings = config ? SETTING_KEYS.filter((key) => config.settings[key].enabled) : [];
   const disabledReminders = config

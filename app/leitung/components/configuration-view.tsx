@@ -6,11 +6,12 @@ import { EditorDialog, LoadError, formatDateTime, requestJson } from "@/app/comp
 import { loadWorkContext } from "@/app/components/care-context";
 import type { SystemStatus } from "@/lib/settings";
 import { TERMINOLOGIES, type TerminologyKey } from "@/lib/terminology";
+import { VITAL_METRICS } from "@/lib/vitals-shared";
 import { SETTING_DEFINITIONS, SETTING_KEYS, type AppSettings, type SettingKey } from "@/lib/settings-shared";
 import { notifyAdminChanged } from "./admin-board";
 
 export type ConfigurationData = {
-  data?: { settings: AppSettings; system: SystemStatus; terminology: TerminologyKey };
+  data?: { settings: AppSettings; system: SystemStatus; terminology: TerminologyKey; hiddenVitals: string[] };
   error?: string;
   loading: boolean;
   reload: () => void;
@@ -33,7 +34,7 @@ export function ConfigurationView({
   onCloseEditor: () => void;
 }) {
   const { data, error, reload } = configuration;
-  const [saving, setSaving] = useState<SettingKey | "terminology" | null>(null);
+  const [saving, setSaving] = useState<SettingKey | "terminology" | "vitals" | null>(null);
   if (error && !data) return <LoadError message={error} onRetry={reload} />;
 
   const save = async (key: SettingKey, change: { enabled?: boolean; value?: number }) => {
@@ -65,6 +66,24 @@ export function ConfigurationView({
       notifyAdminChanged();
       void loadWorkContext(true);
       showToast(`Bezeichnung „${TERMINOLOGIES[value].label}“ gespeichert – gilt nach dem Neuladen überall`);
+    } catch (reason) {
+      showToast((reason as Error).message);
+    } finally {
+      setSaving(null);
+    }
+  };
+  const toggleVital = async (key: string) => {
+    if (!data) return;
+    const hidden = data.hiddenVitals.includes(key)
+      ? data.hiddenVitals.filter((item) => item !== key)
+      : [...data.hiddenVitals, key];
+    setSaving("vitals");
+    try {
+      await requestJson("/api/settings/vitals", { method: "PATCH", body: { hidden } });
+      reload();
+      notifyAdminChanged();
+      void loadWorkContext(true);
+      showToast(`${key} ${hidden.includes(key) ? "wird nicht mehr erfasst" : "wird erfasst"}`);
     } catch (reason) {
       showToast((reason as Error).message);
     } finally {
@@ -185,6 +204,31 @@ export function ConfigurationView({
                 onClick={() => data?.terminology !== key && void saveTerminology(key)}
               >
                 {TERMINOLOGIES[key].label}
+              </button>
+            ))}
+          </div>
+        </section>
+        <section className="card admin-terminology-card" aria-labelledby="admin-vitals-title">
+          <div className="card-header">
+            <div>
+              <p className="eyebrow">Vitalwerte</p>
+              <h2 className="card-title" id="admin-vitals-title">
+                Erfasste Vitalparameter
+              </h2>
+              <p className="card-subtitle">Ausgeschaltete Werte erscheinen nicht mehr in Messung und Übersicht</p>
+            </div>
+          </div>
+          <div className="worklist-filters admin-terminology-options" role="group" aria-label="Vitalparameter wählen">
+            {VITAL_METRICS.map((metric) => (
+              <button
+                className={data && !data.hiddenVitals.includes(metric.key) ? "active" : ""}
+                type="button"
+                key={metric.key}
+                aria-pressed={!!data && !data.hiddenVitals.includes(metric.key)}
+                disabled={!data || saving === "vitals"}
+                onClick={() => void toggleVital(metric.key)}
+              >
+                {metric.key}
               </button>
             ))}
           </div>

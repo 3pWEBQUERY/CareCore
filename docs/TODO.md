@@ -111,7 +111,9 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - [ ] **Admin-Konfiguration:** Ereignistypen, Vitalparameter, Branding.
   - [x] Ereignisarten: eigene Arten der Einrichtung (höchstens 20) neben den eingebauten; beim Melden und in den
         Ablaufketten wählbar, protokolliert. Entfernen nimmt die Ablaufkette mit, gemeldete Ereignisse bleiben.
-  - [ ] Vitalparameter.
+  - [x] Vitalparameter: die Einrichtung schaltet eingebaute Messwerte aus (Messung, Übersicht, Entwicklung, Grenzwerte);
+        neue Messungen ausgeschalteter Werte werden abgelehnt, sie zählen nicht für den Status. Eigene Messwerte mit
+        Plausibilitäts- und Grenzwerten bräuchten fachlich festgelegte Werte und sind bewusst nicht Teil davon.
   - [ ] Branding.
 - [ ] **Datenschutz:** Lösch- und Aufbewahrungskonzept für Bewohnerdaten. Fristen legt die Einrichtung fest.
 - [ ] **Echtzeit** (Server-Sent Events) statt Polling.
