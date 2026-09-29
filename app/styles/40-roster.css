@@ -1432,3 +1432,32 @@ tr.self .roster-name {
     break-inside: avoid;
   }
 }
+
+/* Börse für offene Dienste: Interessierte je Dienst (Leitung) und eigener Verlauf (Mitarbeitende). */
+.roster-open-interests {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.roster-open-interests li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.roster-open-history {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 10px 18px 16px;
+  list-style: none;
+  font-size: 12px;
+}
+.roster-open-more {
+  display: flex;
+  justify-content: center;
+  padding: 10px 18px 14px;
+}

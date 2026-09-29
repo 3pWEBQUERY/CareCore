@@ -11,6 +11,12 @@ import { formatDate, localTime } from "@/lib/roster/time";
 import { PRIORITY_LABELS, SWAP_STATUS_LABELS, type Priority, type RuleCode, type Violation } from "@/lib/roster/types";
 import { RosterRequestError, rosterRequest, useRosterData } from "./roster-api";
 import { CareOptionSelect } from "@/app/components/care-form-controls";
+import {
+  OPEN_SHIFTS_PREVIEW,
+  ShowAllOpenShifts,
+  shiftLabel,
+  type OpenShiftsPayload,
+} from "@/app/mein-dienstplan/components/open-shifts";
 
 type Payload = {
   timeOff: RequestItem[];
@@ -35,6 +41,7 @@ type Payload = {
     requested: { clockIn: string | null; clockOut: string | null; breakMinutes: number | null };
     createdAt: string;
   }>;
+  openShifts: OpenShiftsPayload;
 };
 type Units = { units: Array<{ id: string; name: string; lead: boolean }> };
 type Decision = {
@@ -69,6 +76,7 @@ export default function RequestsWorkspace() {
   );
   const settings = useRosterData<Units>("/api/dienstplan/settings");
   const [decision, setDecision] = useState<Decision | null>(null);
+  const [allOpenShifts, setAllOpenShifts] = useState(false);
   // Wird vor jedem Absenden gesetzt; post() hängt bestätigte Warnungen samt Begründung an.
   const ack = useRef<{ acknowledgedWarnings?: RuleCode[]; overrideReason?: string }>({});
   const leadUnits = settings.data?.units.filter((u) => u.lead) ?? [];
@@ -121,6 +129,10 @@ export default function RequestsWorkspace() {
         });
 
         const pendingSwaps = data?.swaps.filter((s) => s.status === "PENDING_APPROVAL") ?? [];
+        // Dienste mit gemeldetem Interesse zuerst (stabile Sortierung behält die Datumsreihenfolge).
+        const openShifts = [...(data?.openShifts.shifts ?? [])].sort(
+          (a, b) => Number(b.interests.length > 0) - Number(a.interests.length > 0),
+        );
         const otherSwaps = data?.swaps.filter((s) => s.status !== "PENDING_APPROVAL") ?? [];
         return (
           <main className="workspace roster-workspace">
@@ -320,6 +332,116 @@ export default function RequestsWorkspace() {
                         </tbody>
                       </table>
                     </div>
+                  </section>
+
+                  <section className="card roster-card" aria-label="Offene Dienste">
+                    <div className="roster-section-head">
+                      <div>
+                        <h2>Offene Dienste</h2>
+                        <p>
+                          Fehlende Mindestbesetzung im veröffentlichten Plan. Beim Zuteilen wird der Dienst gegen alle
+                          Regeln geprüft.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="roster-table-wrap">
+                      <table className="roster-table">
+                        <thead>
+                          <tr>
+                            <th>Datum</th>
+                            <th>Dienst</th>
+                            <th>Wohnbereich</th>
+                            <th>Offen</th>
+                            <th>Interesse</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(allOpenShifts ? openShifts : openShifts.slice(0, OPEN_SHIFTS_PREVIEW)).map((shift) => (
+                            <tr key={shift.key}>
+                              <td>{formatDate(shift.date, true)}</td>
+                              <td>{shiftLabel(shift)}</td>
+                              <td>{shift.unit}</td>
+                              <td>
+                                {shift.open} von {shift.required}
+                              </td>
+                              <td>
+                                {shift.interests.length ? (
+                                  <ul className="roster-open-interests">
+                                    {shift.interests.map((interest) => (
+                                      <li key={interest.id}>
+                                        <span>
+                                          <strong>{interest.employee}</strong>
+                                          {interest.message ? (
+                                            <small className="roster-muted"> „{interest.message}“</small>
+                                          ) : null}
+                                        </span>
+                                        <div className="roster-row-actions">
+                                          <button
+                                            className="secondary-button"
+                                            type="button"
+                                            onClick={() =>
+                                              decide({
+                                                title: "Interesse ablehnen",
+                                                description: `${interest.employee} wird mit deinem Kommentar benachrichtigt.`,
+                                                submitLabel: "Ablehnen",
+                                                danger: true,
+                                                run: async (comment) => {
+                                                  await post(`/api/dienstplan/open-shifts/${interest.id}`, {
+                                                    decision: "DECLINED",
+                                                    comment,
+                                                  });
+                                                  return "Interesse abgelehnt";
+                                                },
+                                              })
+                                            }
+                                          >
+                                            Ablehnen
+                                          </button>
+                                          <button
+                                            className="primary-button"
+                                            type="button"
+                                            onClick={() =>
+                                              decide({
+                                                title: "Dienst zuteilen",
+                                                description: `${interest.employee}: ${shiftLabel(shift)} am ${formatDate(shift.date, true)} (${shift.unit})`,
+                                                submitLabel: "Zuteilen",
+                                                run: async (comment) => {
+                                                  await post(`/api/dienstplan/open-shifts/${interest.id}`, {
+                                                    decision: "ASSIGNED",
+                                                    comment,
+                                                  });
+                                                  return `Dienst ${interest.employee} zugeteilt`;
+                                                },
+                                              })
+                                            }
+                                          >
+                                            Zuteilen
+                                          </button>
+                                        </div>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <span className="roster-muted">Noch niemand</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                          {!data.openShifts.shifts.length && (
+                            <tr>
+                              <td colSpan={5} className="roster-muted">
+                                Keine offenen Dienste im veröffentlichten Plan.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                    <ShowAllOpenShifts
+                      total={openShifts.length}
+                      all={allOpenShifts}
+                      onToggle={() => setAllOpenShifts((current) => !current)}
+                    />
                   </section>
 
                   <section className="card roster-card">

@@ -72,3 +72,46 @@ test("Diensttausch: Kollegin nimmt an; ein Tausch gegen die Ruhezeit lässt sich
   await expect(swap.getByRole("button", { name: "Genehmigen" })).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test("Offene Dienste: Interesse melden, Leitung sieht es und lehnt mit Kommentar ab", async ({ page }) => {
+  await login(page, FAGE);
+  let errors = watchErrors(page);
+  await page.goto("/c/mein-dienstplan/antraege");
+  const card = page.getByRole("region", { name: "Offene Dienste" });
+  await expect(card.getByRole("heading", { name: "Offene Dienste" })).toBeVisible();
+  const showAll = card.getByRole("button", { name: /^Alle \d+ anzeigen$/ });
+  if (await showAll.count()) await showAll.click();
+  const row = card
+    .locator("tr")
+    .filter({ has: page.getByRole("button", { name: "Interesse melden" }) })
+    .first();
+  const date = (await row.locator("td").first().innerText()).trim();
+  const service = (await row.locator("td").nth(1).innerText()).trim();
+  await row.getByRole("button", { name: "Interesse melden" }).click();
+  await expect(page.locator(".toast")).toContainText("Interesse gemeldet");
+  const mine = card.locator("tr", { hasText: date }).filter({ hasText: service });
+  await expect(mine).toContainText("Interesse gemeldet");
+  expect(errors).toEqual([]);
+
+  await page.context().clearCookies();
+  await login(page, LEAD);
+  errors = watchErrors(page);
+  await page.goto("/c/dienstplan/antraege");
+  const lead = page.getByRole("region", { name: "Offene Dienste" });
+  const slot = lead.locator("tr", { hasText: date }).filter({ hasText: service });
+  const interest = slot.locator("li", { hasText: "Lena Bucher" });
+  await interest.getByRole("button", { name: "Ablehnen" }).click();
+  const dialog = page.locator("[role=dialog]");
+  await dialog.locator("textarea").fill("Bereits genug Stunden diese Woche");
+  await dialog.getByRole("button", { name: "Ablehnen", exact: true }).click();
+  await expect(page.locator(".toast")).toContainText("Interesse abgelehnt");
+  await expect(slot.locator("li", { hasText: "Lena Bucher" })).toHaveCount(0);
+  expect(errors).toEqual([]);
+
+  await page.context().clearCookies();
+  await login(page, FAGE);
+  await page.goto("/c/mein-dienstplan/antraege");
+  await expect(page.getByRole("region", { name: "Offene Dienste" }).locator(".roster-open-history")).toContainText(
+    "Nicht zugeteilt",
+  );
+});
