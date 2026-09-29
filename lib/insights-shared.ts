@@ -45,3 +45,24 @@ export type WorkforceInsights = {
 
 export const percent = (part: number, total: number) => (total ? Math.round((part / total) * 100) : null);
 export const formatPercent = (value: number | null) => (value === null ? "–" : `${value} %`);
+
+// Resident 360: Stand je Bewohner über alle Module (heute Fälliges, Wunden, Ereignisse, Ernährung, Dokumentation).
+export type ResidentOverview = {
+  id: string;
+  name: string;
+  initials: string;
+  room: string;
+  careUnit: string;
+  tone: InsightTone;
+  today: { critical: number; attention: number; info: number; labels: string[] };
+  wounds: { active: number; critical: number };
+  events: { total: number; falls: number; open: number };
+  trends: string[];
+  lastDocumentation: string | null;
+};
+
+export type ResidentInsights = {
+  kpis: Kpi[];
+  eventDays: number;
+  residents: ResidentOverview[];
+};

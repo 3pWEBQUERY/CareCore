@@ -1716,6 +1716,15 @@
   .learning-team em {
     font-size: 11px;
   }
+  .resident-insights-person small {
+    font-size: 12px;
+  }
+  .resident-insights-cell small {
+    font-size: 12px;
+  }
+  .resident-insights-cell em {
+    font-size: 12px;
+  }
   :root .operations-quick a {
     font-size: 11.5px;
   }

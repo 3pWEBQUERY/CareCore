@@ -47,3 +47,28 @@ test("Qualität: Ablaufkette festlegen, Sturz melden, Folgeaufgaben erscheinen a
   }
   expect(errors).toEqual([]);
 });
+
+// Resident 360: alle Bewohner mit Stand aus allen Modulen; Filter nach Stufe, Zeile öffnet die Akte.
+test("Kennzahlen Bewohner: Übersicht je Bewohner, Filter und Sprung in die Akte", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  await page.goto("/c/leitung/kennzahlen/bewohner");
+  await expect(page.getByRole("heading", { name: "Bewohnerübersicht" })).toBeVisible();
+  const rows = page.locator(".resident-insights-row");
+  const filters = page.getByRole("group", { name: "Bewohner filtern" });
+  const all = filters.getByRole("button", { name: /^Alle \d+$/ });
+  await expect(all).toBeVisible();
+  const total = Number((await all.textContent())?.replace(/\D/g, ""));
+  expect(total).toBeGreaterThan(0);
+  await expect(rows).toHaveCount(total);
+  const critical = filters.getByRole("button", { name: /^Kritisch \d+$/ });
+  const criticalCount = Number((await critical.textContent())?.replace(/\D/g, ""));
+  await critical.click();
+  await expect(rows).toHaveCount(criticalCount);
+  await all.click();
+  const name = (await rows.first().locator(".resident-insights-person strong").textContent()) ?? "";
+  await rows.first().click();
+  await expect(page).toHaveURL(/\/c\/bewohner\?resident=/);
+  await expect(page.locator(".resident-record-layer")).toContainText(name);
+  expect(errors).toEqual([]);
+});

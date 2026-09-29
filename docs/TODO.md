@@ -43,7 +43,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Mandanten                    | 🟡    | Organisation, Standort, Wohnbereich. Eigene Rollen gelten global.                                                                            |
 | Domain Events / Echtzeit     | ❌    | Polling, keine Ereignisse.                                                                                                                   |
 | Admin-Konfiguration          | 🟡    | Einstellungen der Einrichtung. Ereignistypen, Vitalparameter und Branding sind nicht konfigurierbar.                                         |
-| Insights / Resident 360      | 🟡    | Kennzahlen-Seite vorhanden. Keine Personal-Dashboards, keine 360-Ansicht.                                                                    |
+| Insights / Resident 360      | 🟡    | Kennzahlen und Bewohnerübersicht (Resident 360) vorhanden. Keine Personal-Dashboards.                                                        |
 | Smart Workflows              | ❌    | Kein Ablauf Sturz → Einschätzung → Vitalwerte → Arzt → Plan → Nachkontrolle → Qualität.                                                      |
 | Universal Action System      | ❌    | Aktionen sind je Modul gebaut.                                                                                                               |
 | Sprachen / Terminologie      | ❌    | Nur Deutsch, feste Bezeichnung „Bewohner“.                                                                                                   |
@@ -93,7 +93,9 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Schritte (Titel, Fälligkeit nach dem Ereignis, Priorität) legt das Qualitätsmanagement fest, ohne Vorgaben.
 - [x] **Home in Kritisch / Wichtig / Routine** gliedern, ohne das bestehende Aussehen zu verändern. Die Tagesliste
       filtert nach diesen drei Stufen, mit Anzahl je Stufe; Karten und Anordnung bleiben wie bisher.
-- [ ] **Resident 360** und Personal-Dashboards in Insights.
+- [x] **Resident 360** in Insights: „Kennzahlen Bewohner“ zeigt je Bewohner heute Fälliges (kritisch / wichtig /
+      Routine), Wunden, Ereignisse der letzten 90 Tage, Ernährungshinweise und die letzte Dokumentation.
+- [ ] **Personal-Dashboards** in Insights.
 - [ ] **Konfigurierbare Terminologie** (Bewohner / Patient / Klient), danach FR / IT / EN.
 - [ ] **Admin-Konfiguration:** Ereignistypen, Vitalparameter, Branding.
 - [ ] **Datenschutz:** Lösch- und Aufbewahrungskonzept für Bewohnerdaten. Fristen legt die Einrichtung fest.
