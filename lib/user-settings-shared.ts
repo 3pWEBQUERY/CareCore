@@ -51,8 +51,9 @@ export const autoLogoutLabel = (minutes: number) =>
       ? `Nach ${minutes} Minuten`
       : `Nach ${minutes / 60} Stunde${minutes === 60 ? "" : "n"}`;
 
-// Ruhezeit für Push-Nachrichten (Ortszeit der Einrichtung); kritische Hinweise kommen trotzdem.
-export type QuietHours = { enabled: boolean; from: string; to: string };
+// Ruhezeit für Push-Nachrichten (Ortszeit der Einrichtung). Kritische Hinweise kommen trotzdem, solange die Person
+// das nicht ausschaltet (`critical`).
+export type QuietHours = { enabled: boolean; from: string; to: string; critical: boolean };
 
 export type UserPreferences = {
   notify: Record<NotifyCategory, boolean>;
@@ -67,7 +68,7 @@ export type UserPreferences = {
 };
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
-const DEFAULT_QUIET: QuietHours = { enabled: false, from: "22:00", to: "06:00" };
+const DEFAULT_QUIET: QuietHours = { enabled: false, from: "22:00", to: "06:00", critical: true };
 
 export function resolvePreferences(stored: unknown): UserPreferences {
   const raw = stored && typeof stored === "object" ? (stored as Record<string, unknown>) : {};
@@ -90,14 +91,19 @@ export function resolvePreferences(stored: unknown): UserPreferences {
       ? (raw.autoLogout as AutoLogout)
       : 0,
     // Ungültige Uhrzeiten schalten die Ruhezeit aus, statt stillschweigend andere Zeiten zu verwenden.
-    quietHours: { enabled: quiet.enabled === true && from === quiet.from && to === quiet.to && from !== to, from, to },
+    quietHours: {
+      enabled: quiet.enabled === true && from === quiet.from && to === quiet.to && from !== to,
+      from,
+      to,
+      critical: quiet.critical !== false,
+    },
   };
 }
 
 export const DEFAULT_PREFERENCES = resolvePreferences(null);
 
 // Liegt die Uhrzeit (HH:MM) in der Ruhezeit? Über Mitternacht (22:00–06:00) wird richtig gerechnet.
-export function inQuietHours(quiet: QuietHours, time: string) {
+export function inQuietHours(quiet: Pick<QuietHours, "enabled" | "from" | "to">, time: string) {
   if (!quiet.enabled) return false;
   return quiet.from < quiet.to ? time >= quiet.from && time < quiet.to : time >= quiet.from || time < quiet.to;
 }

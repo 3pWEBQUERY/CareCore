@@ -132,12 +132,13 @@ export async function savePreferences(actor: CarecoreActor, body: Record<string,
     const quiet = { ...current.quietHours, ...input };
     if (
       typeof quiet.enabled !== "boolean" ||
+      typeof quiet.critical !== "boolean" ||
       ![quiet.from, quiet.to].every((time) => /^([01]\d|2[0-3]):[0-5]\d$/.test(String(time)))
     )
       throw new ApiError("Ruhezeit: Bitte Uhrzeiten im Format HH:MM angeben.");
     if (quiet.enabled && quiet.from === quiet.to)
       throw new ApiError("Ruhezeit: Beginn und Ende müssen sich unterscheiden.");
-    next.quietHours = { enabled: quiet.enabled, from: quiet.from, to: quiet.to };
+    next.quietHours = { enabled: quiet.enabled, from: quiet.from, to: quiet.to, critical: quiet.critical };
   }
   const resolved = resolvePreferences(next);
   await carecoreDb()`

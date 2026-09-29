@@ -49,11 +49,21 @@ export async function PATCH(request: Request) {
   try {
     const actor = await carecoreActor();
     if (!actor) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
-    const body = (await request.json()) as { id?: unknown; all?: unknown };
+    const body = (await request.json()) as { id?: unknown; ids?: unknown; all?: unknown };
+    const UUID = /^[0-9a-f-]{36}$/i;
+    // Mehrere auf einmal (Bündel im Posteingang).
+    const ids =
+      Array.isArray(body.ids) &&
+      body.ids.length <= 200 &&
+      body.ids.every((id) => typeof id === "string" && UUID.test(id))
+        ? (body.ids as string[])
+        : null;
     const sql = carecoreDb();
     if (body.all === true) {
       await sql`UPDATE carecore_notifications SET read_at = COALESCE(read_at, NOW()) WHERE user_id = ${actor.id}`;
-    } else if (typeof body.id === "string" && /^[0-9a-f-]{36}$/i.test(body.id)) {
+    } else if (ids?.length) {
+      await sql`UPDATE carecore_notifications SET read_at = COALESCE(read_at, NOW()) WHERE id = ANY(${ids}::uuid[]) AND user_id = ${actor.id}`;
+    } else if (typeof body.id === "string" && UUID.test(body.id)) {
       await sql`UPDATE carecore_notifications SET read_at = COALESCE(read_at, NOW()) WHERE id = ${body.id} AND user_id = ${actor.id}`;
     } else return NextResponse.json({ error: "Ungültige Benachrichtigung." }, { status: 400 });
     return NextResponse.json({ ok: true });

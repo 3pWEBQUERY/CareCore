@@ -28,7 +28,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Quality                      | ✅    | Ereignisse mit Massnahmen und Status.                                                                                                        |
 | KI-Assistenten               | 🟡    | Übergabe, Risiken, Dokumentation, freie Frage, Dienstplan-KI; Entwürfe mit Prüfung. Keine Planungs- oder Such-Assistenz.                     |
 | Globale Suche ⌘K             | ✅    | `global-search-dialog.tsx`, Tastenkürzel.                                                                                                    |
-| Benachrichtigungen           | 🟡    | Priorität und Push mit Ruhezeiten. Keine vier Klassen (Kritisch / Handlung / Info / Sozial), keine Bündelung.                                |
+| Benachrichtigungen           | ✅    | Klassen Kritisch / Handlung / Info / Sozial, Bündelung, Push mit Ruhezeiten.                                                                 |
 | Mobile                       | 🟡    | Untere Navigation, Hauptmenü. **Kein Schnellaktions-Knopf (FAB).**                                                                           |
 | Dark Mode                    | ❌    | Keine dunkle Darstellung.                                                                                                                    |
 | Barrierefreiheit WCAG 2.2 AA | 🟡    | Tastatur, Fokusfalle, Schriftgrösse, Kontrast-Einstellung. `--muted` erreicht nur 4,4:1.                                                     |
@@ -58,7 +58,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - [x] **Wirkungskontrolle nach Reservegabe:** Kontrolle mit Termin und Erinnerung, Ergebnis dokumentiert. Den
       Zeitpunkt legt die Verordnung fest, es gibt kein erfundenes Standardintervall.
 - [x] **Chat:** Reaktionen, @Erwähnungen mit Benachrichtigung, Push bei Direktnachricht und Erwähnung.
-- [ ] **Benachrichtigungsklassen** Kritisch / Handlung / Info / Sozial, mit Bündelung. Kritisches ignoriert die
+- [x] **Benachrichtigungsklassen** Kritisch / Handlung / Info / Sozial, mit Bündelung. Kritisches ignoriert die
       Ruhezeiten nur, wenn die Person es erlaubt.
 
 ## Mittel

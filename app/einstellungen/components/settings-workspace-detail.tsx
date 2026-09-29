@@ -568,6 +568,20 @@ function QuietHoursControl({ detail }: { detail: QuietDetail }) {
         />
         <i />
       </label>
+      <label className="settings-toggle">
+        <span>Kritische Hinweise auch in der Ruhezeit</span>
+        <input
+          type="checkbox"
+          checked={draft.critical}
+          disabled={saving}
+          onChange={(event) => {
+            const next = { ...draft, critical: event.target.checked };
+            setDraft(next);
+            void save(next);
+          }}
+        />
+        <i />
+      </label>
       <div className="settings-quiet-times">
         <label>
           <span>Von</span>

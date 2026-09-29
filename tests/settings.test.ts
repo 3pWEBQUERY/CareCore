@@ -59,7 +59,7 @@ test("new personal preferences: defaults, invalid values and quiet hours across 
   assert.equal(defaults.shortcuts, true);
   assert.equal(defaults.sound, false);
   assert.equal(defaults.autoLogout, 0);
-  assert.deepEqual(defaults.quietHours, { enabled: false, from: "22:00", to: "06:00" });
+  assert.deepEqual(defaults.quietHours, { enabled: false, from: "22:00", to: "06:00", critical: true });
   const custom = resolvePreferences({
     textSize: "xlarge",
     motion: "reduced",
@@ -75,7 +75,7 @@ test("new personal preferences: defaults, invalid values and quiet hours across 
   assert.ok((AUTO_LOGOUT_MINUTES as readonly number[]).includes(custom.autoLogout));
   const broken = resolvePreferences({ autoLogout: 7, quietHours: { enabled: true, from: "25:00", to: "25:00" } });
   assert.equal(broken.autoLogout, 0);
-  assert.deepEqual(broken.quietHours, { enabled: false, from: "22:00", to: "06:00" });
+  assert.deepEqual(broken.quietHours, { enabled: false, from: "22:00", to: "06:00", critical: true });
 
   const night = { enabled: true, from: "22:00", to: "06:00" };
   assert.equal(inQuietHours(night, "23:15"), true);
