@@ -86,15 +86,18 @@ export function useDashboardNotes({ setToast }: { setToast: (message: string) =>
     }
     const writes = await pendingWrites();
     setPendingIds(writes.map((write) => String((write.body as { id?: unknown }).id)));
-    setNotes((current) => applyQueued(loaded ?? current, loaded ? writes : []));
+    // Auch ohne geladene Liste (offline, nichts im Zwischenspeicher) bleiben vorgemerkte Änderungen sichtbar;
+    // applyQueued ist wiederholbar, bereits angewandte Änderungen doppeln sich nicht.
+    setNotes((current) => applyQueued(loaded ?? current, writes));
     if (loaded) setNotesError("");
     setNotesLoading(false);
   }, [pendingWrites]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadNotes(), 0);
-    // Nach dem Nachreichen offline erfasster Änderungen neu laden.
-    const onQueue = () => navigator.onLine && void loadNotes();
+    // Warteschlange geändert (nachgereicht, vorgemerkt oder Person erst jetzt bekannt): neu laden – ohne
+    // Verbindung kommt die Liste aus dem Zwischenspeicher, die vorgemerkten Änderungen werden erneut angewandt.
+    const onQueue = () => void loadNotes();
     window.addEventListener(QUEUE_EVENT, onQueue);
     return () => {
       window.clearTimeout(timer);

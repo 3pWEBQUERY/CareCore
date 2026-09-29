@@ -92,8 +92,12 @@ export async function overrideWrite(item: QueuedWrite) {
 
 // Angemeldete Person (von OfflineSync gesetzt), damit Einträge nur mit ihrer Sitzung gesendet werden.
 let currentUserId: string | null = null;
+// Sobald die Person feststeht (nach dem Neuladen ohne Verbindung oft erst nach der ersten Datenabfrage),
+// lesen die Ansichten ihre vorgemerkten Einträge neu.
 export const setOfflineUser = (userId: string | null) => {
+  if (currentUserId === userId) return;
   currentUserId = userId;
+  changed();
 };
 export const offlineUser = () => currentUserId;
 
