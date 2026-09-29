@@ -185,3 +185,25 @@ test("Branding: Logo der Einrichtung hochladen und in der Kopfzeile sehen", asyn
   }
   expect(errors).toEqual([]);
 });
+
+// Datenschutz: ohne Frist schlägt CareCore nichts vor; mit Frist zeigt die Karte den Stand.
+test("Löschfristen: Karte folgt der Aufbewahrungsfrist der Einrichtung", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  try {
+    await page.goto("/c/leitung/administration/konfiguration");
+    const card = page.locator(".admin-retention-card");
+    await expect(card).toContainText("Aufbewahrungsfrist ist noch nicht festgelegt");
+    expect(
+      (
+        await page.request.patch("/api/settings/residentRetentionYears", { data: { enabled: true, value: 10 } })
+      ).status(),
+    ).toBe(200);
+    await page.reload();
+    await expect(card).toContainText("10 Jahre nach dem Austritt");
+    await expect(card).toContainText("Keine Akte mit abgelaufener Frist.");
+  } finally {
+    await page.request.patch("/api/settings/residentRetentionYears", { data: { enabled: false } });
+  }
+  expect(errors).toEqual([]);
+});

@@ -116,7 +116,9 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
         Plausibilitäts- und Grenzwerten bräuchten fachlich festgelegte Werte und sind bewusst nicht Teil davon.
   - [x] Branding: Logo der Einrichtung (JPEG, PNG, WebP bis 300 KB, Inhalt geprüft, kein SVG) in der Kopfzeile neben
         dem Namen; ohne Logo bleibt das bisherige Symbol.
-- [ ] **Datenschutz:** Lösch- und Aufbewahrungskonzept für Bewohnerdaten. Fristen legt die Einrichtung fest.
+- [x] **Datenschutz:** Lösch- und Aufbewahrungskonzept für Bewohnerdaten. Fristen legt die Einrichtung fest.
+      Konzept in `docs/DATENSCHUTZ.md`; Einstellung „Aufbewahrungsfrist Akten“ (ohne Vorgabe), Karte „Löschfristen“ mit
+      Löschung nur auf Bestätigung durch die Administration.
 - [ ] **Echtzeit** (Server-Sent Events) statt Polling.
 - [ ] **Öffentliche API, Webhooks, FHIR.**
 - [ ] **Portale (Phase 6).**

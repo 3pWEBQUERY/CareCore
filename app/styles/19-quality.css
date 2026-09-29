@@ -647,3 +647,29 @@
   opacity: 0;
   cursor: pointer;
 }
+.admin-retention-list {
+  display: grid;
+  padding: 6px 18px 16px;
+}
+.admin-retention-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #edf1f5;
+}
+.admin-retention-row:last-child {
+  border-bottom: 0;
+}
+.admin-retention-row span {
+  display: grid;
+  gap: 2px;
+}
+.admin-retention-row strong {
+  font-size: 12.5px;
+}
+.admin-retention-row small {
+  color: var(--muted);
+  font-size: 11px;
+}

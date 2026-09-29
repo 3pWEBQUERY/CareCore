@@ -11,6 +11,7 @@ import { VITAL_METRICS } from "@/lib/vitals-shared";
 import { LOGO_MAX_BYTES } from "@/lib/branding-shared";
 import { SETTING_DEFINITIONS, SETTING_KEYS, type AppSettings, type SettingKey } from "@/lib/settings-shared";
 import { notifyAdminChanged } from "./admin-board";
+import { RetentionCard } from "./retention-card";
 
 export type ConfigurationData = {
   data?: {
@@ -316,6 +317,7 @@ export function ConfigurationView({
             )}
           </div>
         </section>
+        <RetentionCard showToast={showToast} />
       </div>
       {editorOpen && data && (
         <SettingEditor
