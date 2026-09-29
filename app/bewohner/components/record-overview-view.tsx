@@ -277,6 +277,7 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
                 observations={mapObservations}
                 selectedId={activeBodyObservationId}
                 placing={placingBodyPoint}
+                quickPlace
                 pending={bodyEditor && !bodyEditor.id ? bodyEditor.draft : null}
                 onSelect={(id) => {
                   setPlacingBodyPoint(false);
@@ -291,14 +292,6 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
                   : `${genderLabel}es Körpermodell`}{" "}
                 · 360° Ansicht
               </span>
-              <a
-                className="body-model-source"
-                href="https://github.com/slorksmo/Human-Atlas"
-                target="_blank"
-                rel="noreferrer"
-              >
-                3D-Referenz: Human Atlas · CC BY 4.0
-              </a>
             </div>
 
             <div className="body-observation-list" aria-label="Erfasste Körperstellen">
@@ -325,7 +318,7 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
                   <p>
                     {placingBodyPoint
                       ? "Körperstelle am Modell anklicken oder unter dem Modell aus der Liste wählen."
-                      : "Wunden, Rötungen und weitere Auffälligkeiten werden direkt am Körpermodell markiert; die Körperstelle wird dabei automatisch benannt."}
+                      : "Körperstelle am Modell anklicken, um einen Befund zu erfassen – Wunden, Rötungen und weitere Auffälligkeiten. Die Körperstelle wird dabei automatisch benannt."}
                   </p>
                   {!placingBodyPoint && (
                     <button className="secondary-button" type="button" onClick={() => setPlacingBodyPoint(true)}>

@@ -202,18 +202,6 @@
   margin-top: 10px;
   font-weight: 700;
 }
-.body-model-source {
-  display: block;
-  margin-top: 4px;
-  color: #73869b;
-  font-size: 9px;
-  text-align: center;
-  text-decoration: none;
-}
-.body-model-source:hover {
-  color: var(--brand-dark);
-  text-decoration: underline;
-}
 .body-observation-empty {
   padding: 26px 18px;
   color: var(--muted);
