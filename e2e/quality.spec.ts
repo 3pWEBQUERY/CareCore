@@ -72,3 +72,45 @@ test("Kennzahlen Bewohner: Übersicht je Bewohner, Filter und Sprung in die Akte
   await expect(page.locator(".resident-record-layer")).toContainText(name);
   expect(errors).toEqual([]);
 });
+
+// Persönliches Dashboard: Kennzahlen aus verschiedenen Auswertungen anheften, bleiben nach dem Neuladen.
+test("Meine Kennzahlen: Kennzahlen auswählen, speichern und nach dem Neuladen sehen", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  try {
+    await page.goto("/c/leitung/kennzahlen/meine");
+    await expect(page.getByRole("heading", { name: "Noch keine Kennzahlen gewählt" })).toBeVisible();
+    await page.getByRole("button", { name: "Kennzahlen auswählen" }).first().click();
+    const picker = page.locator(".editor-dialog", { hasText: "Kennzahlen auswählen" });
+    await picker
+      .getByRole("group", { name: "Kennzahlen Pflege" })
+      .getByRole("checkbox", { name: /^Dokumentation/ })
+      .check();
+    await picker
+      .getByRole("group", { name: "Kennzahlen Bewohner" })
+      .getByRole("checkbox", { name: /^Bewohner kritisch/ })
+      .check();
+    await expect(picker.locator(".my-insights-count")).toHaveText("2 von höchstens 16 gewählt");
+    await picker.getByRole("button", { name: "Auswahl speichern" }).click();
+    await expect(page.locator(".toast")).toContainText("Meine Kennzahlen gespeichert");
+    const check = async () => {
+      await expect(
+        page
+          .getByRole("region", { name: "Kennzahlen Pflege" })
+          .locator(".leadership-kpi", { hasText: "Dokumentation" }),
+      ).toBeVisible();
+      await expect(
+        page
+          .getByRole("region", { name: "Kennzahlen Bewohner" })
+          .locator(".leadership-kpi", { hasText: "Bewohner kritisch" }),
+      ).toBeVisible();
+      await expect(page.getByRole("region", { name: "Kennzahlen Leitung" })).toHaveCount(0);
+    };
+    await check();
+    await page.reload();
+    await check();
+  } finally {
+    expect((await page.request.patch("/api/me/settings", { data: { insightPins: [] } })).status()).toBe(200);
+  }
+  expect(errors).toEqual([]);
+});

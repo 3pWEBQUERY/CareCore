@@ -56,6 +56,19 @@ export const autoLogoutLabel = (minutes: number) =>
 // das nicht ausschaltet (`critical`).
 export type QuietHours = { enabled: boolean; from: string; to: string; critical: boolean };
 
+// „Meine Kennzahlen“: angeheftete Kennzahlen der Auswertungen als "<Ansicht>:<Bezeichnung>".
+export const INSIGHT_VIEWS = {
+  care: "Kennzahlen Pflege",
+  residents: "Kennzahlen Bewohner",
+  leadership: "Kennzahlen Leitung",
+  workforce: "Kennzahlen Personal",
+} as const;
+export type InsightViewId = keyof typeof INSIGHT_VIEWS;
+export const INSIGHT_PINS_MAX = 16;
+const INSIGHT_PIN = /^(care|residents|leadership|workforce):[^\n]{1,80}$/;
+export const isInsightPin = (value: unknown): value is string => typeof value === "string" && INSIGHT_PIN.test(value);
+export const insightPin = (view: InsightViewId, label: string) => `${view}:${label}`;
+
 export type UserPreferences = {
   notify: Record<NotifyCategory, boolean>;
   textSize: TextSize;
@@ -67,6 +80,7 @@ export type UserPreferences = {
   startPage: StartPage;
   autoLogout: AutoLogout;
   quietHours: QuietHours;
+  insightPins: string[];
 };
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -100,6 +114,9 @@ export function resolvePreferences(stored: unknown): UserPreferences {
       to,
       critical: quiet.critical !== false,
     },
+    insightPins: Array.isArray(raw.insightPins)
+      ? [...new Set(raw.insightPins.filter(isInsightPin))].slice(0, INSIGHT_PINS_MAX)
+      : [],
   };
 }
 

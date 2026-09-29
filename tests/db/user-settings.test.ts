@@ -42,6 +42,9 @@ test("Persönliche Einstellungen: speichern, ungültige Werte ablehnen, zurücks
   const partial = await savePreferences(actor, { contrast: "high" });
   assert.equal(partial.motion, "reduced");
   assert.equal(partial.contrast, "high");
+  const pinned = await savePreferences(actor, { insightPins: ["care:Dokumentation", "workforce:Besetzung"] });
+  assert.deepEqual(pinned.insightPins, ["care:Dokumentation", "workforce:Besetzung"]);
+  assert.equal(pinned.contrast, "high");
 
   for (const body of [
     { textSize: "riesig" },
@@ -50,9 +53,12 @@ test("Persönliche Einstellungen: speichern, ungültige Werte ablehnen, zurücks
     { quietHours: { enabled: true, from: "23:00", to: "23:00" } },
     { quietHours: { from: "7 Uhr" } },
     { shortcuts: "ja" },
+    { insightPins: "care:Dokumentation" },
+    { insightPins: ["fremd:Dokumentation"] },
+    { insightPins: Array.from({ length: 17 }, (_, index) => `care:Kennzahl ${index}`) },
   ])
     assert.equal(await status(savePreferences(actor, body)), 400, JSON.stringify(body));
-  assert.deepEqual(await readPreferences(actor.id), partial, "abgelehnte Änderungen speichern nichts");
+  assert.deepEqual(await readPreferences(actor.id), pinned, "abgelehnte Änderungen speichern nichts");
 
   assert.deepEqual(await resetPreferences(actor), DEFAULT_PREFERENCES);
   assert.deepEqual(await readPreferences(actor.id), DEFAULT_PREFERENCES);

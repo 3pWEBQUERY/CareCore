@@ -43,7 +43,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Mandanten                    | 🟡    | Organisation, Standort, Wohnbereich. Eigene Rollen gelten global.                                                                            |
 | Domain Events / Echtzeit     | ❌    | Polling, keine Ereignisse.                                                                                                                   |
 | Admin-Konfiguration          | 🟡    | Einstellungen der Einrichtung. Ereignistypen, Vitalparameter und Branding sind nicht konfigurierbar.                                         |
-| Insights / Resident 360      | 🟡    | Kennzahlen und Bewohnerübersicht (Resident 360) vorhanden. Keine Personal-Dashboards.                                                        |
+| Insights / Resident 360      | ✅    | Kennzahlen, Bewohnerübersicht (Resident 360) und persönliches Dashboard „Meine Kennzahlen“.                                                  |
 | Smart Workflows              | ❌    | Kein Ablauf Sturz → Einschätzung → Vitalwerte → Arzt → Plan → Nachkontrolle → Qualität.                                                      |
 | Universal Action System      | ❌    | Aktionen sind je Modul gebaut.                                                                                                               |
 | Sprachen / Terminologie      | ❌    | Nur Deutsch, feste Bezeichnung „Bewohner“.                                                                                                   |
@@ -95,7 +95,8 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       filtert nach diesen drei Stufen, mit Anzahl je Stufe; Karten und Anordnung bleiben wie bisher.
 - [x] **Resident 360** in Insights: „Kennzahlen Bewohner“ zeigt je Bewohner heute Fälliges (kritisch / wichtig /
       Routine), Wunden, Ereignisse der letzten 90 Tage, Ernährungshinweise und die letzte Dokumentation.
-- [ ] **Personal-Dashboards** in Insights.
+- [x] **Personal-Dashboards** in Insights: „Meine Kennzahlen“ – jede Person heftet Kennzahlen aus Pflege, Bewohnern,
+      Leitung und Personal an (höchstens 16), gespeichert in den persönlichen Einstellungen.
 - [ ] **Konfigurierbare Terminologie** (Bewohner / Patient / Klient), danach FR / IT / EN.
 - [ ] **Admin-Konfiguration:** Ereignistypen, Vitalparameter, Branding.
 - [ ] **Datenschutz:** Lösch- und Aufbewahrungskonzept für Bewohnerdaten. Fristen legt die Einrichtung fest.
