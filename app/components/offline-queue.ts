@@ -1,4 +1,4 @@
-// Offline erfasste Einträge (Dokumentation, Vitalwerte, Trinkmenge, Mahlzeit) warten auf diesem Gerät, bis die
+// Offline erfasste Einträge (Dokumentation, Vitalwerte, Trinkmenge, Mahlzeit, persönliche Notizen …) warten auf diesem Gerät, bis die
 // Verbindung zurück ist, und werden dann in der erfassten Reihenfolge gesendet. Jeder Eintrag trägt eine Kennung
 // (x-carecore-request-id); der Server speichert dieselbe Anfrage nie doppelt. Gesendet wird nur mit der Sitzung
 // der Person, die den Eintrag erfasst hat.
@@ -6,10 +6,14 @@
 export const REQUEST_ID_HEADER = "x-carecore-request-id";
 export const QUEUE_EVENT = "carecore-offline-queue";
 
+export type WriteMethod = "POST" | "PATCH" | "DELETE";
+
 export type QueuedWrite = {
   id: string;
   userId: string;
   url: string;
+  // Ohne Angabe POST; PATCH und DELETE z. B. für persönliche Notizen.
+  method?: WriteMethod;
   body: unknown;
   label: string;
   createdAt: string;
@@ -79,9 +83,9 @@ export const setOfflineUser = (userId: string | null) => {
 };
 export const offlineUser = () => currentUserId;
 
-async function post(url: string, body: unknown, requestId: string) {
+async function post(url: string, body: unknown, requestId: string, method: WriteMethod = "POST") {
   const response = await fetch(url, {
-    method: "POST",
+    method,
     cache: "no-store",
     headers: { "content-type": "application/json", [REQUEST_ID_HEADER]: requestId },
     body: JSON.stringify(body),
@@ -97,10 +101,11 @@ export async function sendOrQueue<T>(
   body: unknown,
   label: string,
   editable?: { field: string; label: string },
+  method: WriteMethod = "POST",
 ): Promise<{ queued: false; data: T } | { queued: true }> {
   const requestId = crypto.randomUUID();
   try {
-    const { response, payload } = await post(url, body, requestId);
+    const { response, payload } = await post(url, body, requestId, method);
     if (!response.ok) throw new Error(payload?.error || "Die Anfrage ist fehlgeschlagen.");
     return { queued: false, data: payload as T };
   } catch (error) {
@@ -111,6 +116,7 @@ export async function sendOrQueue<T>(
       id: requestId,
       userId: currentUserId,
       url,
+      method,
       body,
       label,
       createdAt: new Date().toISOString(),
@@ -122,14 +128,25 @@ export async function sendOrQueue<T>(
 
 // Sendet die vorgemerkten Einträge der angemeldeten Person der Reihe nach.
 // Ergebnis: gesendet, abgelehnt, und ob die Anmeldung abgelaufen ist.
-export async function flushQueue() {
+// Nur ein Sendevorgang gleichzeitig: sonst schicken zwei Auslöser (z. B. „online“ und Intervall) denselben Eintrag
+// doppelt, und der zweite scheitert an der bereits vergebenen Quittung.
+let flushing: Promise<{ sent: number; rejected: number; signedOut: boolean }> | null = null;
+
+export function flushQueue() {
+  flushing ??= sendQueued().finally(() => {
+    flushing = null;
+  });
+  return flushing;
+}
+
+async function sendQueued() {
   const result = { sent: 0, rejected: 0, signedOut: false };
   if (!currentUserId) return result;
   for (const item of await queuedWrites(currentUserId)) {
     if (item.error) continue;
     let outcome: Awaited<ReturnType<typeof post>>;
     try {
-      outcome = await post(item.url, item.body, item.id);
+      outcome = await post(item.url, item.body, item.id, item.method ?? "POST");
     } catch {
       break;
     }

@@ -9,6 +9,10 @@ export function HomeHero({ r }: { r: DashboardState }) {
     assignedResidents,
     changes,
     notes,
+    archivedNotes,
+    pendingNoteIds,
+    showArchive,
+    setShowArchive,
     notesLoading,
     notesError,
     setViewingNote,
@@ -101,23 +105,60 @@ export function HomeHero({ r }: { r: DashboardState }) {
           <div className="home-card-head">
             <div>
               <p className="eyebrow">Nur für dich sichtbar</p>
-              <h2 id="home-notes-title">Meine Notizen</h2>
+              <h2 id="home-notes-title">{showArchive ? "Archivierte Notizen" : "Meine Notizen"}</h2>
             </div>
-            <button type="button" aria-label="Notiz erstellen" onClick={() => openNote("new")}>
-              <Icon name="plus" />
-            </button>
+            <div className="home-notes-tools">
+              <button
+                type="button"
+                className={`home-notes-archive-toggle ${showArchive ? "active" : ""}`}
+                aria-pressed={showArchive}
+                onClick={() => setShowArchive(!showArchive)}
+              >
+                {showArchive ? "Aktuelle" : `Archiv (${archivedNotes.length})`}
+              </button>
+              <button type="button" aria-label="Notiz erstellen" onClick={() => openNote("new")}>
+                <Icon name="plus" />
+              </button>
+            </div>
           </div>
-          {notesError ? (
+          {notesError && !notes.length && !archivedNotes.length ? (
             <p className="home-card-message error">{notesError}</p>
           ) : notesLoading ? (
             <p className="home-card-message">Notizen werden geladen…</p>
+          ) : showArchive ? (
+            archivedNotes.length ? (
+              <div className="home-note-list archived">
+                {archivedNotes.map((note) => (
+                  <button type="button" key={note.id} onClick={() => setViewingNote(note)}>
+                    <span>
+                      <strong>{note.title}</strong>
+                      {pendingNoteIds.includes(note.id) && <small className="pending">Nicht gesendet</small>}
+                    </span>
+                    <p>{note.body}</p>
+                    <time>
+                      Archiviert{" "}
+                      {new Date(note.archived_at ?? note.updated_at).toLocaleDateString("de-CH", {
+                        day: "2-digit",
+                        month: "short",
+                      })}
+                    </time>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="home-card-message">Keine archivierten Notizen.</p>
+            )
           ) : notes.length ? (
             <div className="home-note-list">
               {notes.map((note) => (
                 <button type="button" key={note.id} onClick={() => setViewingNote(note)}>
                   <span>
                     <strong>{note.title}</strong>
-                    {note.pinned && <small>Fixiert</small>}
+                    {pendingNoteIds.includes(note.id) ? (
+                      <small className="pending">Nicht gesendet</small>
+                    ) : (
+                      note.pinned && <small>Fixiert</small>
+                    )}
                   </span>
                   <p>{note.body}</p>
                   <time>
