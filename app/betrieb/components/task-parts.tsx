@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { EditorDialog, requestJson, type ShowToast } from "@/app/components/workspace-ui";
 import { notifyOperationsChanged } from "./operations-ui";
@@ -37,6 +38,7 @@ export function TaskCompleteDialog({
   onClose: () => void;
   onDone: (message: string) => void;
 }) {
+  const t = useTerms();
   const [outcome, setOutcome] = useState<TaskOutcome>("completed");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
@@ -109,7 +111,7 @@ export function TaskCompleteDialog({
           required={required}
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          placeholder={hint.placeholder}
+          placeholder={hint.placeholder.replace("Bewohnerin", t.oneFemale)}
         />
       </label>
     </EditorDialog>

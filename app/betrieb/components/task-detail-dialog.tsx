@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { EditorDialog, ReasonDialog, formatDateTime, requestJson, type ShowToast } from "@/app/components/workspace-ui";
 import { TASK_PRIORITIES, TASK_RECURRENCE, TASK_STATUS, isActiveTask, type Task } from "@/lib/tasks-shared";
@@ -23,6 +24,7 @@ export function TaskDetailDialog({
   onChanged: (message: string) => void;
   showToast: ShowToast;
 }) {
+  const t = useTerms();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [cancelling, setCancelling] = useState(false);
@@ -48,7 +50,7 @@ export function TaskDetailDialog({
         title="Aufgabe eskalieren"
         description={`„${task.title}“ bleibt offen. Die Leitung wird sofort benachrichtigt.`}
         label="Grund"
-        placeholder="z. B. Bewohner verweigert wiederholt, Material fehlt, ärztliche Rücksprache nötig"
+        placeholder={`z. B. ${t.one} verweigert wiederholt, Material fehlt, ärztliche Rücksprache nötig`}
         submitLabel="Eskalieren"
         danger
         onClose={() => setEscalating(false)}
@@ -66,7 +68,7 @@ export function TaskDetailDialog({
         title="Aufgabe abbrechen"
         description={`„${task.title}“ wird nicht mehr durchgeführt. Die Aufgabe bleibt mit Begründung nachvollziehbar.`}
         label="Grund"
-        placeholder="z. B. ärztlich abgesetzt, Bewohner ausgetreten, doppelt erfasst"
+        placeholder={`z. B. ärztlich abgesetzt, ${t.one} ausgetreten, doppelt erfasst`}
         submitLabel="Aufgabe abbrechen"
         danger
         onClose={() => setCancelling(false)}
@@ -153,7 +155,7 @@ export function TaskDetailDialog({
           <dd>
             {task.residentName
               ? `${task.residentName}${task.room ? ` · ${task.room}` : ""}`
-              : (task.careUnit ?? "Ohne Bewohnerbezug")}
+              : (task.careUnit ?? `Ohne ${t.prefix}bezug`)}
           </dd>
         </div>
         <div>

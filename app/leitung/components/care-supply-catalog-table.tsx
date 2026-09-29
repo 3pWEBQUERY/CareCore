@@ -1,11 +1,13 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { Archive, Check, ClipboardText, PencilSimple, Plus, Prohibit, Sparkle } from "@phosphor-icons/react";
 import { SidebarTooltip } from "@/app/components/app-sidebar";
 import { needsReorder } from "./care-supply-catalog-model";
 import type { CareSupplyCatalogState } from "./use-care-supply-catalog";
 
 export function CatalogTable({ r }: { r: CareSupplyCatalogState }) {
+  const t = useTerms();
   const { products, loading, visibleProducts, openEditor, setProductStatus } = r;
   return (
     <div className="care-supply-table-wrap">
@@ -103,7 +105,7 @@ export function CatalogTable({ r }: { r: CareSupplyCatalogState }) {
           <p>
             {products.length
               ? "Passe Suche oder Filter an."
-              : "Lege die benötigten Pflegeprodukte an. Mitarbeitende können sie danach direkt Bewohnern zuweisen."}
+              : `Lege die benötigten Pflegeprodukte an. Mitarbeitende können sie danach direkt ${t.manyDative} zuweisen.`}
           </p>
           {!products.length && (
             <button className="secondary-button" type="button" onClick={() => openEditor()}>

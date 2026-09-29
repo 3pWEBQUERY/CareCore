@@ -1,5 +1,6 @@
 "use client";
 
+import { termsFor, type Terms } from "@/lib/terminology";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ModulePageShell from "@/app/components/module-page-shell";
@@ -231,6 +232,7 @@ export default function SettingsWorkspaceDetail({ view }: { view: SettingsView }
               organizationShortcuts: context?.settings.keyboardShortcuts.enabled ?? true,
               saveOrganization,
               actions,
+              terms: termsFor(context?.terminology),
             })
           : [];
         const selected = items.find((item) => item.id === selectedId) ?? items[0] ?? null;
@@ -674,6 +676,7 @@ type Extras = {
   organizationShortcuts: boolean;
   saveOrganization: (key: SettingKey, change: { enabled?: boolean; value?: number }) => Promise<boolean>;
   actions: Actions;
+  terms: Terms;
 };
 
 function itemsFor(
@@ -807,7 +810,11 @@ function itemsFor(
         detail: {
           kind: "info",
           text: "Deine Rolle bestimmt, welche Bereiche du siehst und bearbeiten darfst.",
-          lines: profile.permissions.map((permission) => PERMISSION_LABELS[permission] ?? permission),
+          lines: profile.permissions.map((permission) =>
+            permission.startsWith("residents.")
+              ? PERMISSION_LABELS[permission].replace("Bewohner", extras.terms.prefix)
+              : (PERMISSION_LABELS[permission] ?? permission),
+          ),
         },
       },
     ];
@@ -938,7 +945,7 @@ function itemsFor(
         icon: "docs",
         detail: {
           kind: "action",
-          text: "Enthält alles, was CareCore zu deinem Konto speichert: Profil, Einstellungen, Qualifikationen, angemeldete Geräte, Push-Abonnements und deine protokollierten Aktionen der letzten 12 Monate (ohne Inhalte von Bewohnerakten).",
+          text: `Enthält alles, was CareCore zu deinem Konto speichert: Profil, Einstellungen, Qualifikationen, angemeldete Geräte, Push-Abonnements und deine protokollierten Aktionen der letzten 12 Monate (ohne Inhalte von ${extras.terms.prefix}akten).`,
           label: "Herunterladen",
           run: extras.actions.exportData,
         },

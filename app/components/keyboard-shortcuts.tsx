@@ -4,21 +4,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Keyboard } from "@phosphor-icons/react";
 import { usePersonalPreferences } from "./appearance";
-import { useCareResident, useResidentNavigation, useWorkContext } from "./care-context";
+import { TERMINOLOGIES, type Terms } from "@/lib/terminology";
+import { useCareResident, useResidentNavigation, useTerms, useWorkContext } from "./care-context";
 
 // Keyboard shortcuts of the whole app. They apply when no text field is focused;
 // with a dialog open only J/K (inside the resident record) and "?" are active.
 
 type Shortcut = { keys: string[]; label: string; href?: string };
 
-export const SHORTCUT_GROUPS: Array<{ title: string; items: Shortcut[] }> = [
+export const shortcutGroups = (t: Terms): Array<{ title: string; items: Shortcut[] }> => [
   {
-    title: "Bewohner",
+    title: t.many,
     items: [
-      { keys: ["J"], label: "Nächster Bewohner" },
-      { keys: ["K"], label: "Vorheriger Bewohner" },
-      { keys: ["B"], label: "Bewohnerakte öffnen" },
-      { keys: ["Alt", "↑ / ↓"], label: "In der Bewohnerakte blättern" },
+      { keys: ["J"], label: `Nächster ${t.one}` },
+      { keys: ["K"], label: `Vorheriger ${t.one}` },
+      { keys: ["B"], label: `${t.prefix}akte öffnen` },
+      { keys: ["Alt", "↑ / ↓"], label: `In der ${t.prefix}akte blättern` },
     ],
   },
   {
@@ -54,7 +55,7 @@ export const SHORTCUT_GROUPS: Array<{ title: string; items: Shortcut[] }> = [
 ];
 
 const ROUTES: Record<string, string> = Object.fromEntries(
-  SHORTCUT_GROUPS.flatMap((group) =>
+  shortcutGroups(TERMINOLOGIES.resident).flatMap((group) =>
     group.items.filter((item) => item.href).map((item) => [item.keys[0].toLowerCase(), item.href!]),
   ),
 );
@@ -78,6 +79,7 @@ export function isTyping(target: EventTarget | null) {
 }
 
 export function KeyboardShortcutsMenu() {
+  const t = useTerms();
   const router = useRouter();
   const navigation = useResidentNavigation();
   const [residentId] = useCareResident();
@@ -144,7 +146,7 @@ export function KeyboardShortcutsMenu() {
             </small>
           </header>
           <div className="shortcut-groups">
-            {SHORTCUT_GROUPS.map((group) => (
+            {shortcutGroups(t).map((group) => (
               <div className="shortcut-group" key={group.title}>
                 <span>{group.title}</span>
                 <dl>

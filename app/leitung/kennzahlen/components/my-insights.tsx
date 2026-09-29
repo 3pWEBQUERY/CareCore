@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import Link from "next/link";
 import { useState } from "react";
 import ModulePageShell from "@/app/components/module-page-shell";
@@ -94,6 +95,7 @@ function PinPicker({
 
 // „Meine Kennzahlen“: persönliches Dashboard aus den Kennzahlen aller Auswertungen.
 export default function MyInsights() {
+  const t = useTerms();
   const settings = useApiData<UserSettings>("/api/me/settings");
   const [pinsOverride, setPinsOverride] = useState<string[] | null>(null);
   const [picking, setPicking] = useState(false);
@@ -133,7 +135,7 @@ export default function MyInsights() {
           <LeadershipHeading
             eyebrow="CareCore Insights"
             title="Meine Kennzahlen"
-            description="Dein persönliches Dashboard: die Kennzahlen aus Pflege, Bewohnern, Leitung und Personal, die du im Blick behalten willst."
+            description={`Dein persönliches Dashboard: die Kennzahlen aus Pflege, ${t.manyDative}, Leitung und Personal, die du im Blick behalten willst.`}
             action={{ label: "Kennzahlen auswählen", icon: "plus", onClick: () => setPicking(true) }}
           />
           {settings.error && <LoadError message={settings.error} onRetry={settings.reload} />}

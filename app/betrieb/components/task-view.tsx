@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ModuleIcon } from "@/app/components/module-icon";
@@ -37,6 +38,7 @@ export function TaskView({
   reload: () => void;
   onEdit: (task: Task) => void;
 }) {
+  const t = useTerms();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -142,7 +144,7 @@ export function TaskView({
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Titel, Bewohner oder Kategorie"
+                placeholder={`Titel, ${t.one} oder Kategorie`}
                 aria-label="Aufgaben durchsuchen"
               />
             </label>

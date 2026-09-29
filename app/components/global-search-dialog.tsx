@@ -81,7 +81,7 @@ export function GlobalSearchDialog({ onClose }: { onClose: () => void }) {
             onKeyDown={(event) => {
               if (event.key === "Enter" && results[0]) open(results[0]);
             }}
-            placeholder="Bewohner, Dokumente oder Funktionen suchen…"
+            placeholder={`${termsFor(context?.terminology).many}, Dokumente oder Funktionen suchen…`}
             aria-label="Suchbegriff"
           />
           <button type="button" onClick={onClose} aria-label="Suche schliessen">

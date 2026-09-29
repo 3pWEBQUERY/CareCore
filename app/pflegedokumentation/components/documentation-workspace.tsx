@@ -25,7 +25,7 @@ import {
   type EntryDraft,
   type ResidentOption,
 } from "./entry-parts";
-import { useCareResident, useResidentNavigation } from "@/app/components/care-context";
+import { useCareResident, useResidentNavigation, useTerms } from "@/app/components/care-context";
 
 export type DocumentationView = "quick" | "history";
 type EntriesPayload = { entries: DocEntry[]; canWrite: boolean };
@@ -42,6 +42,7 @@ function useResidents() {
 }
 
 function QuickView({ showToast }: { showToast: ShowToast }) {
+  const t = useTerms();
   const residents = useResidents();
   const today = useApiData<EntriesPayload>("/api/documentation?days=1");
   const stats = useApiData<DocStats>("/api/documentation/stats");
@@ -70,10 +71,7 @@ function QuickView({ showToast }: { showToast: ShowToast }) {
     setSaving(true);
     setError("");
     try {
-      const saved = await saveDraft(
-        effective,
-        residents.find((r) => r.id === effective.residentId)?.name ?? "Bewohner",
-      );
+      const saved = await saveDraft(effective, residents.find((r) => r.id === effective.residentId)?.name ?? t.one);
       const next = andNext ? navigation.next() : null;
       showToast(next ? `${saved} · weiter mit ${next.name}` : saved);
       setDraft(newDraft(next?.id ?? effective.residentId));
@@ -100,7 +98,7 @@ function QuickView({ showToast }: { showToast: ShowToast }) {
           {
             icon: "alert",
             value: stats.data?.withoutEntry.length ?? "–",
-            caption: "Bewohner ohne Eintrag seit 24 h",
+            caption: `${t.many} ohne Eintrag seit 24 h`,
             tone: "attention",
           },
           {
@@ -133,7 +131,7 @@ function QuickView({ showToast }: { showToast: ShowToast }) {
                     data-next="true"
                     disabled={saving || !effective.residentId}
                   >
-                    Speichern &amp; nächster Bewohner
+                    Speichern &amp; nächster {t.one}
                   </button>
                 )}
                 <button className="primary-button" type="submit" disabled={saving || !effective.residentId}>
@@ -182,7 +180,7 @@ function QuickView({ showToast }: { showToast: ShowToast }) {
               ))}
             </ul>
             {stats.data && !stats.data.withoutEntry.length && (
-              <p className="list-hint">Alle Bewohner wurden in den letzten 24 Stunden dokumentiert.</p>
+              <p className="list-hint">Alle {t.many} wurden in den letzten 24 Stunden dokumentiert.</p>
             )}
           </section>
           <section className="card documentation-period-card">
@@ -225,11 +223,11 @@ function QuickView({ showToast }: { showToast: ShowToast }) {
   );
 }
 
-const ALL_RESIDENTS = "Alle Bewohner";
 const ALL_CATEGORIES = "Alle Arten";
 const ALL_IMPORTANCE = "Jede Einordnung";
 
 function HistoryView({ showToast }: { showToast: ShowToast }) {
+  const t = useTerms();
   const residents = useResidents();
   const [residentId, setResidentId] = useState("");
   const [category, setCategory] = useState(ALL_CATEGORIES);
@@ -264,13 +262,13 @@ function HistoryView({ showToast }: { showToast: ShowToast }) {
       />
       <section className="card doc-filterbar">
         <CareSelect
-          label="Bewohner"
+          label={t.one}
           value={
             residents.find((r) => r.id === residentId)
               ? label(residents.find((r) => r.id === residentId)!)
-              : ALL_RESIDENTS
+              : `Alle ${t.many}`
           }
-          options={[ALL_RESIDENTS, ...residents.map(label)]}
+          options={[`Alle ${t.many}`, ...residents.map(label)]}
           onChange={(v) => setResidentId(residents.find((r) => label(r) === v)?.id ?? "")}
         />
         <CareSelect

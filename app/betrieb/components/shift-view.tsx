@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import Link from "next/link";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { LoadError, useApiData, type ShowToast } from "@/app/components/workspace-ui";
@@ -27,6 +28,7 @@ export function ShiftView({
   setFullDay: (value: boolean) => void;
   onCreateTask: () => void;
 }) {
+  const t = useTerms();
   const data = overview.data;
   const { toggle, dialog } = useTaskToggle(showToast, reload);
   const current = data?.current ?? null;
@@ -48,7 +50,7 @@ export function ShiftView({
           {
             icon: "residents",
             value: String(data?.stats.residents ?? "–"),
-            label: `Bewohner · ${data?.careUnit.name ?? ""}`,
+            label: `${t.many} · ${data?.careUnit.name ?? ""}`,
           },
           {
             icon: "tasks",

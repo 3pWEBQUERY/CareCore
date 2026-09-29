@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { CareSelect } from "@/app/components/care-form-controls";
 import { ModuleIcon } from "@/app/components/module-icon";
@@ -20,6 +21,7 @@ import { Overview, ALL, RISK_FILTERS, toneFor } from "./assessment-view-utils";
 import { HistoryPanel } from "./assessment-history-panel";
 
 export function OverviewView({ showToast }: { showToast: ShowToast }) {
+  const t = useTerms();
   const data = useApiData<Overview>("/api/assessments");
   const [instrument, setInstrument] = useState(ALL);
   const [risk, setRisk] = useState<(typeof RISK_FILTERS)[number]>("Alle");
@@ -65,7 +67,7 @@ export function OverviewView({ showToast }: { showToast: ShowToast }) {
           {
             icon: "residents",
             value: `${new Set(latest.map((r) => r.residentId)).size}/${residents.length}`,
-            caption: "Bewohner eingeschätzt",
+            caption: `${t.many} eingeschätzt`,
             tone: "info",
           },
         ]}
@@ -84,7 +86,7 @@ export function OverviewView({ showToast }: { showToast: ShowToast }) {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Bewohner oder Instrument"
+              placeholder={`${t.one} oder Instrument`}
               aria-label="Einschätzungen durchsuchen"
             />
           </label>
@@ -109,7 +111,7 @@ export function OverviewView({ showToast }: { showToast: ShowToast }) {
           </div>
         </div>
         <div className="assessment-table-head">
-          <span>Bewohner</span>
+          <span>{t.one}</span>
           <span>Instrument</span>
           <span>Ergebnis</span>
           <span>Eingeschätzt</span>

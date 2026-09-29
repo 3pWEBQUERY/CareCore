@@ -16,7 +16,7 @@ import {
 import type { CarePlan, PlanningResident } from "@/lib/care-planning-shared";
 import GoalCard from "./goal-card";
 import { usePlanningDialogs } from "./use-planning-dialogs";
-import { useCareResident, useHeaderResident } from "@/app/components/care-context";
+import { useCareResident, useHeaderResident, useTerms } from "@/app/components/care-context";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
 
 export type PlanningOverview = {
@@ -26,6 +26,7 @@ export type PlanningOverview = {
 };
 
 export default function PlanView({ showToast }: { showToast: ShowToast }) {
+  const t = useTerms();
   // ?resident=<id> (from the goal list or the evaluation) preselects a resident.
   const params = useSearchParams();
   const router = useRouter();
@@ -66,7 +67,7 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
       <PageHeading
         eyebrow="CareCore Plan"
         title="Pflegeplanung"
-        description="Probleme, Ressourcen, Ziele und Massnahmen je Bewohner – nachvollziehbar im Pflegeprozess."
+        description={`Probleme, Ressourcen, Ziele und Massnahmen je ${t.one} – nachvollziehbar im Pflegeprozess.`}
         action={
           canWrite && resident
             ? plan
@@ -150,7 +151,7 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
                     </dd>
                   </div>
                   <div>
-                    <dt>Bewohnerakte</dt>
+                    <dt>{t.prefix}akte</dt>
                     <dd>
                       <Link href={`/bewohner?resident=${resident.id}`}>Öffnen</Link>
                     </dd>

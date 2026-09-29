@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { CaretLeft, CaretRight, MagnifyingGlass } from "@phosphor-icons/react";
 import { CareSelect } from "@/app/components/care-form-controls";
 import { appointmentLocalParts, appointmentTargetLabel } from "@/lib/resident-appointments";
@@ -7,6 +8,7 @@ import { weekDayNames, dateFromKey, dateKey, monthStart, monthDays, dateHeading 
 import type { ResidentCalendarState } from "./use-resident-calendar";
 
 export function CalendarSidebar({ r }: { r: ResidentCalendarState }) {
+  const t = useTerms();
   const {
     today,
     focusDate,
@@ -91,7 +93,7 @@ export function CalendarSidebar({ r }: { r: ResidentCalendarState }) {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Termin, Aufgabe oder Bewohner suchen"
+            placeholder={`Termin, Aufgabe oder ${t.one} suchen`}
             aria-label="Termine suchen"
           />
         </label>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import Link from "next/link";
 import { useState } from "react";
 import { CareSelect } from "@/app/components/care-form-controls";
@@ -56,9 +57,10 @@ const sourceIcon: Record<HandoverSource, ModuleIconName> = {
 const priorityLabel = { normal: "Normal", high: "Wichtig", critical: "Kritisch" } as const;
 const priorityTone = { normal: "info", high: "attention", critical: "critical" } as const;
 const ALL_UNITS = "Alle Wohnbereiche";
-const NO_RESIDENT = "Allgemein (kein Bewohner)";
 
 function HandoverContent({ lastShift, showToast }: { lastShift: boolean; showToast: ShowToast }) {
+  const t = useTerms();
+  const noResident = `Allgemein (kein ${t.one})`;
   const [period, setPeriod] = useState(lastShift ? "last" : "8");
   const [unitId, setUnitId] = useState("");
   const [source, setSource] = useState<(typeof SOURCES)[number]["value"]>("all");
@@ -158,7 +160,7 @@ function HandoverContent({ lastShift, showToast }: { lastShift: boolean; showToa
           {
             icon: "residents",
             value: new Set(events.map((e) => e.residentId)).size,
-            caption: "betroffene Bewohner",
+            caption: `betroffene ${t.many}`,
             tone: "info",
           },
         ]}
@@ -252,9 +254,9 @@ function HandoverContent({ lastShift, showToast }: { lastShift: boolean; showToa
                 </div>
               </div>
               <CareSelect
-                label="Bewohner"
-                value={residentOptions.find((r) => r.id === draft.residentId)?.label ?? NO_RESIDENT}
-                options={[NO_RESIDENT, ...residentOptions.map((r) => r.label)]}
+                label={t.one}
+                value={residentOptions.find((r) => r.id === draft.residentId)?.label ?? noResident}
+                options={[noResident, ...residentOptions.map((r) => r.label)]}
                 onChange={(v) =>
                   setDraft({ ...draft, residentId: residentOptions.find((r) => r.label === v)?.id ?? "" })
                 }

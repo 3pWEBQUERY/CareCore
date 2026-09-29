@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { CareSelect } from "@/app/components/care-form-controls";
-import { useWorkContext } from "@/app/components/care-context";
+import { useWorkContext, useTerms } from "@/app/components/care-context";
 import { requestJson, todayInZurich } from "@/app/components/workspace-ui";
 import type { RaiWorkplace } from "@/lib/rai-shared";
 
@@ -23,6 +23,8 @@ export function RaiRefreshPopover({
   onDone: () => void;
   showToast: (message: string) => void;
 }) {
+  const t = useTerms();
+  const scopes: Record<Scope, string> = { ...SCOPES, new: `Nur neue ${t.many}` };
   const context = useWorkContext();
   const careUnits = context?.careUnits ?? [];
   const [scope, setScope] = useState<Scope>("all");
@@ -96,7 +98,7 @@ export function RaiRefreshPopover({
             <p className="eyebrow">CareCore RAI · Arbeitskorb</p>
             <h2 id="rai-refresh-title">Fälligkeiten aktualisieren</h2>
             <p>
-              Synchronisiere die RAI-Fälligkeiten mit dem aktuellen Bewohnerbestand und informiere die zuständigen RAI
+              Synchronisiere die RAI-Fälligkeiten mit dem aktuellen {t.prefix}bestand und informiere die zuständigen RAI
               Verantwortlichen.
             </p>
           </div>
@@ -129,10 +131,10 @@ export function RaiRefreshPopover({
               Aktualisierungsumfang
               <CareSelect
                 label="Aktualisierungsumfang"
-                value={SCOPES[scope]}
-                options={Object.values(SCOPES)}
+                value={scopes[scope]}
+                options={Object.values(scopes)}
                 onChange={(label) =>
-                  setScope((Object.keys(SCOPES) as Scope[]).find((key) => SCOPES[key] === label) ?? "all")
+                  setScope((Object.keys(SCOPES) as Scope[]).find((key) => scopes[key] === label) ?? "all")
                 }
               />
             </label>
@@ -175,7 +177,7 @@ export function RaiRefreshPopover({
                 <span>
                   <strong>Vorschau</strong>
                   <small>
-                    {SCOPES[scope]} · {PERIODS[days as keyof typeof PERIODS]}
+                    {scopes[scope]} · {PERIODS[days as keyof typeof PERIODS]}
                   </small>
                 </span>
               </div>

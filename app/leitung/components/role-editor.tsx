@@ -1,9 +1,10 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import type { ManagedRole } from "@/lib/admin-users";
-import { permissions, labels, Overlay } from "./admin-user-parts";
+import { permissions, permissionLabel, Overlay } from "./admin-user-parts";
 
 export function RoleEditor({
   role,
@@ -14,6 +15,7 @@ export function RoleEditor({
   onClose: () => void;
   onUpdated: (roles: ManagedRole[], message: string) => void;
 }) {
+  const t = useTerms();
   const [name, setName] = useState(role?.name ?? ""),
     [key, setKey] = useState(role?.key ?? ""),
     [description, setDescription] = useState(role?.description ?? ""),
@@ -96,7 +98,7 @@ export function RoleEditor({
                   className={selected.includes(p) ? "active" : ""}
                   onClick={() => toggle(p)}
                 >
-                  <strong>{labels[p]}</strong>
+                  <strong>{permissionLabel(p, t)}</strong>
                   <small>{p}</small>
                   {selected.includes(p) && <ModuleIcon name="check" />}
                 </button>

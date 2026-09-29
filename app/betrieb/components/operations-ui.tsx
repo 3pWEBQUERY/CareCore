@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useEffect, useRef, useState } from "react";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { type ModuleIconName } from "@/app/components/module-icon";
@@ -234,6 +235,7 @@ export function Summary({
   );
 }
 export function OperationsPulse({ showToast }: { showToast: ShowToast }) {
+  const t = useTerms();
   const pulse = useApiData<ShiftPulse>("/api/shift/pulse");
   const { reload } = pulse;
   useEffect(() => {
@@ -265,7 +267,7 @@ export function OperationsPulse({ showToast }: { showToast: ShowToast }) {
       >
         <span>
           <strong>{data?.residents ?? "–"}</strong>
-          <small>Bewohner</small>
+          <small>{t.many}</small>
         </span>
         <span>
           <strong>{data?.openTasks ?? "–"}</strong>

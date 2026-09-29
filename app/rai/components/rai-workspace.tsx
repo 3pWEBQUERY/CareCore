@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ModulePageShell from "@/app/components/module-page-shell";
@@ -13,6 +14,7 @@ import { DueView, ReportsView, downloadRaiReport } from "./rai-due-reports-views
 import { RaiRefreshPopover } from "./rai-refresh-popover";
 
 export default function RaiWorkspace({ view }: { view: RaiView }) {
+  const t = useTerms();
   const router = useRouter();
   const current = meta[view];
   const [refreshOpen, setRefreshOpen] = useState(false);
@@ -31,7 +33,7 @@ export default function RaiWorkspace({ view }: { view: RaiView }) {
               <div className="heading-copy">
                 <p className="eyebrow">CareCore RAI</p>
                 <h1 id="rai-title">{current.title}</h1>
-                <p>{current.description}</p>
+                <p>{current.description.replace("Bewohner", t.prefix)}</p>
               </div>
               <button
                 className="primary-button"

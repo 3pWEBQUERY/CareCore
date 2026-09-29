@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { Plus } from "@phosphor-icons/react";
 import ModulePageShell from "@/app/components/module-page-shell";
 import ResidentAppointmentEditor from "@/app/components/resident-appointment-editor";
@@ -9,6 +10,7 @@ import { CalendarSidebar } from "./resident-calendar-sidebar";
 import { CalendarBoard } from "./resident-calendar-board";
 
 export default function ResidentCalendar() {
+  const t = useTerms();
   const r = useResidentCalendar();
   const { residents, careUnits, editor, setEditor, create, saved } = r;
   return (
@@ -24,7 +26,7 @@ export default function ResidentCalendar() {
             <div className="heading-copy">
               <p className="eyebrow">CareCore One · Kalender</p>
               <h1>Kalender</h1>
-              <p>Bewohnertermine und geplante Aufgaben im Wohnbereich an einem Ort.</p>
+              <p>{t.prefix}termine und geplante Aufgaben im Wohnbereich an einem Ort.</p>
             </div>
             <button className="primary-button" type="button" onClick={() => create()}>
               <Plus className="button-icon" /> Termin erstellen

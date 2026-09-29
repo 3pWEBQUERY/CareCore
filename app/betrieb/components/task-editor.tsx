@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState, type FormEvent } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { requestJson, todayInZurich, useApiData } from "@/app/components/workspace-ui";
@@ -28,6 +29,8 @@ export function TaskEditor({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
+  const t = useTerms();
+  const noContext = `Ohne ${t.prefix}bezug`;
   const residentsData = useApiData<{ residents: ResidentRow[] }>("/api/residents");
   const optionsData = useApiData<TasksPayload>(options ? null : "/api/tasks?scope=mine");
   const people = options?.people ?? optionsData.data?.people ?? [];
@@ -58,7 +61,7 @@ export function TaskEditor({
   const ownerName = owner ? (people.find((p) => p.id === owner)?.name ?? "…") : UNASSIGNED;
   const resident = residents.find((r) => r.id === residentId);
   const unit = careUnits.find((u) => u.id === careUnitId);
-  const contextValue = resident ? residentLabel(resident) : unit ? unitLabel(unit) : NO_CONTEXT;
+  const contextValue = resident ? residentLabel(resident) : unit ? unitLabel(unit) : noContext;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -162,11 +165,11 @@ export function TaskEditor({
               />
             </label>
             <label className="area-editor-wide">
-              Bewohner oder Kontext
+              {t.one} oder Kontext
               <ScheduleSelect
-                label="Bewohner oder Kontext"
+                label={`${t.one} oder Kontext`}
                 value={contextValue}
-                options={[NO_CONTEXT, ...residents.map(residentLabel), ...careUnits.map(unitLabel)]}
+                options={[noContext, ...residents.map(residentLabel), ...careUnits.map(unitLabel)]}
                 onChange={(value) => {
                   const r = residents.find((item) => residentLabel(item) === value);
                   const u = careUnits.find((item) => unitLabel(item) === value);
@@ -237,7 +240,7 @@ export function TaskEditor({
                 </label>
                 <label
                   className={documentOnCompletion ? "selected" : ""}
-                  title={residentId ? undefined : "Nur mit Bewohnerbezug möglich"}
+                  title={residentId ? undefined : `Nur mit ${t.prefix}bezug möglich`}
                 >
                   <input
                     type="checkbox"
@@ -287,8 +290,6 @@ export function TaskEditor({
 }
 
 export type ResidentRow = { id: string; first_name: string; last_name: string; room: string; care_unit: string };
-
-export const NO_CONTEXT = "Ohne Bewohnerbezug";
 
 export const UNASSIGNED = "Nicht zugewiesen · Team";
 
