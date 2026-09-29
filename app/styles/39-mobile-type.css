@@ -1785,9 +1785,6 @@
   :root .documents-table article > a.quiet-button {
     font-size: 11px;
   }
-  :root .care-intervention-actions button {
-    font-size: 12px;
-  }
   :root .care-outcome-counts b {
     font-size: 12px;
   }
