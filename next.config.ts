@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // /api/health vergleicht die angewendeten Migrationen mit den Dateien im Deployment.
+  outputFileTracingIncludes: {
+    "/api/health": ["./database/migrations/*.sql"],
+  },
   // Der Service Worker muss immer frisch geladen werden, sonst bleiben Geräte auf einer alten Fassung.
   async headers() {
     return [

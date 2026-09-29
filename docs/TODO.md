@@ -37,7 +37,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Audit                        | ✅    | Atomar, pro Bewohner. Gerät und Sitzung werden nicht mitgeschrieben.                                                                         |
 | Datenschutz                  | 🟡    | Eigener Datenexport, Quittungen nach 30 Tagen gelöscht. Kein Lösch- oder Aufbewahrungskonzept für Bewohnerdaten.                             |
 | Sicherheit                   | 🟡    | Login-, Passwort- und KI-Drossel. Keine allgemeine API-Drossel.                                                                              |
-| Backups / Health             | ❌    | Kein Health-Endpunkt; Backups nur durch den Datenbank-Anbieter.                                                                              |
+| Backups / Health             | 🟡    | Health-Endpunkt `/api/health`; Backups durch den Datenbank-Anbieter.                                                                         |
 | Offline                      | 🟡    | Warteschlange mit Quittungen, Service Worker. **Lokaler Speicher unverschlüsselt**, keine Konfliktanzeige.                                   |
 | API / FHIR / Webhooks        | ❌    | Nur interne API.                                                                                                                             |
 | Mandanten                    | 🟡    | Organisation, Standort, Wohnbereich. Eigene Rollen gelten global.                                                                            |
@@ -64,7 +64,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 ## Mittel
 
 - [x] **Mobile Schnellaktionen (FAB):** Doku, Vitalwert, Trinkmenge, Reservegabe, Wundverlauf, Übergabenotiz für den gewählten Bewohner.
-- [ ] **Health-Endpunkt** `/api/health` (DB-Verbindung, Migrationsstand, ohne Geheimnisse).
+- [x] **Health-Endpunkt** `/api/health` (DB-Verbindung, Migrationsstand, ohne Geheimnisse).
 - [ ] **Allgemeine API-Drossel** für schreibende Anfragen.
 - [ ] **Offline:** lokalen Speicher verschlüsseln (Schlüssel an die Sitzung gebunden) und Konflikte anzeigen, wenn
       ein Eintrag inzwischen geändert wurde.
