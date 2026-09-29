@@ -85,6 +85,12 @@ Für Vercel müssen `DATABASE_URL` und `CARECORE_ADMIN_PASSWORD` in den Umgebung
 - **Hochgeladene Dateien:** Dokumente, Nachweise und Wundfotos werden am Inhalt geprüft, nicht nur am vom Browser gemeldeten Dateityp (`lib/file-signatures.ts`: PDF, JPEG, PNG, WebP, Text, Office). Passt der Inhalt nicht zum Typ, wird die Datei mit 415 abgelehnt. In der Bewohnerakte (Dokumente › „Dokument hochladen“) sind nur PDFs und Bilder (JPG, PNG, WebP) erlaubt; die Datei wird per Klick oder durch Hineinziehen gewählt und vor dem Hochladen mit Name, Typ und Grösse angezeigt.
 - **Überleitungsbogen:** Im Kopf der Akte erzeugt „Überleitungsbogen“ eine A4-Druckansicht für Spitaleinweisung oder Verlegung (Stammdaten, Kontakte, Allergien, Risiken, aktuelle Medikation inkl. Reserve, Wunden/Befunde, Vitalwerte, Ernährung, Pflegeziele, Verlauf der letzten 72 Stunden). Das Erstellen wird protokolliert.
 
+## Wundversorgung
+
+- **Fälligkeit:** Aus dem Verbandwechsel-Intervall einer Wunde und ihrem letzten Verlaufseintrag (sonst dem Feststellungsdatum) berechnet die Datenbank, wann die nächste Versorgung fällig ist (`lib/wounds.ts`).
+- **Überfällige Versorgungen:** Die Wundübersicht listet jede überfällige Versorgung mit Dauer („seit 2 Tagen“), Fälligkeitszeitpunkt und verantwortlicher Person. „Versorgung dokumentieren“ öffnet direkt den Verlaufseintrag; danach ist die Versorgung erledigt. „Nur überfällige zeigen“ filtert die Liste.
+- **Erinnerung:** Die verantwortliche Person erhält je Versorgungszyklus eine Benachrichtigung (hohe Priorität, auch als Push). Ohne Verantwortliche erhalten sie alle mit Dokumentationsrecht, deren fester Wohnbereich der Wohnbereich der Bewohnerin ist. Abschaltbar unter Einstellungen › Benachrichtigungen › „Wundversorgung“.
+
 ## Medikationsrecht
 
 Medikation (`medication.manage`: Gaben dokumentieren, Verordnungen, Bestände, BtM, Zweitunterschrift) dürfen Administration, Leitung und Ärztlicher Dienst. In der Rolle „Pflege“ gilt das Recht nur für Personen mit einer gültigen Qualifikation, die zur Medikation berechtigt – standardmäßig Pflegefachperson HF und Fachperson Gesundheit (FaGe), nicht Pflegehelfer:in SRK (Migration `0027_medication_qualification.sql`).

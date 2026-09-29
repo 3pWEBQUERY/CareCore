@@ -6,6 +6,7 @@ import { schedulePush } from "@/lib/push";
 import { createRosterReminders } from "@/lib/roster/reminders";
 import { createDueReminders } from "@/lib/tasks";
 import { readPreferences } from "@/lib/user-settings";
+import { createWoundReminders } from "@/lib/wounds";
 import { notifyCategory } from "@/lib/user-settings-shared";
 
 export const runtime = "nodejs";
@@ -22,6 +23,7 @@ export async function GET() {
         createRosterReminders(ctx),
         createLearningReminders(ctx),
         createBtmReminders(ctx),
+        createWoundReminders(ctx),
       ]).catch((error) => console.error("Reminders failed", error));
       schedulePush();
     }

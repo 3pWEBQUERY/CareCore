@@ -40,6 +40,62 @@ test("Wunde anlegen mit Erstbeurteilung und Verlauf dokumentieren", async ({ pag
   expect(errors).toEqual([]);
 });
 
+test("Überfällige Wundversorgung: direkt aus dem Hinweis dokumentieren, danach ist sie erledigt", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  // Wunde mit täglichem Verbandwechsel, festgestellt vor vier Tagen, noch ohne Verlaufseintrag: überfällig.
+  const payload = await (await page.request.get("/api/wounds")).json();
+  const resident = payload.residents[payload.residents.length - 1];
+  const discoveredOn = new Date(Date.now() - 4 * 86_400_000).toISOString().slice(0, 10);
+  const created = await page.request.post("/api/wounds", {
+    data: {
+      residentId: resident.id,
+      woundType: "Skin Tear",
+      bodyLocation: "Linker Handrücken",
+      discoveredOn,
+      careIntervalDays: 1,
+      origin: "inhouse",
+    },
+  });
+  expect(created.status(), await created.text()).toBe(201);
+
+  await page.goto("/c/wundmanagement");
+  const alert = page.locator(".wound-alert");
+  const item = alert.locator("li", { hasText: `${resident.name} · Linker Handrücken` });
+  await expect(item).toContainText(/Überfällig seit \d+ Tag/);
+  await item.getByRole("button", { name: "Versorgung dokumentieren" }).click();
+  const dialog = page.locator(".editor-dialog");
+  await field(page, "Durchgeführte Versorgung").fill("Steri-Strips erneuert, Wundrand reizlos");
+  await dialog.getByRole("button", { name: "Eintrag speichern" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator(".wound-alert li", { hasText: "Linker Handrücken" })).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("Wundübersicht folgt dem Bewohner aus der Kopfzeile – und umgekehrt", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  await page.goto("/c/wundmanagement");
+  const header = page.locator(".topbar .resident-context-trigger strong");
+  const sidebarName = page.locator(".wound-sidebar .wound-focus-card .card-title");
+
+  // Klick auf eine Wunde wählt auch den Bewohner in der Kopfzeile.
+  const row = page.locator(".wound-case-row").first();
+  const rowName = (await row.locator(".wound-case-main strong").innerText()).trim();
+  await row.click();
+  await expect(header).toHaveText(rowName);
+  await expect(sidebarName).toHaveText(rowName);
+
+  // Wechsel in der Kopfzeile: rechts steht sofort dieser Bewohner (mit Wunde oder „Keine offene Wunde“).
+  for (let step = 0; step < 3; step += 1) {
+    const before = (await header.innerText()).trim();
+    await page.locator(".topbar").getByRole("button", { name: "Nächster Bewohner" }).click();
+    await expect(header).not.toHaveText(before);
+    await expect(sidebarName).toHaveText((await header.innerText()).trim());
+  }
+  expect(errors).toEqual([]);
+});
+
 test("Pflegeplan anlegen, Ziel formulieren und evaluieren", async ({ page }) => {
   await login(page, ADMIN);
   const errors = watchErrors(page);

@@ -3,7 +3,15 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { ApiError } from "@/lib/api-context";
 import { hidePhoto, listPhotos, readPhoto, storePhoto } from "@/lib/wound-photos";
-import { addEntry, createWound, listEntries, setWoundStatus, updateWound, woundsOverview } from "@/lib/wounds";
+import {
+  addEntry,
+  createWound,
+  createWoundReminders,
+  listEntries,
+  setWoundStatus,
+  updateWound,
+  woundsOverview,
+} from "@/lib/wounds";
 import { apiContextFor, createResident, fixture, q } from "../support/db";
 
 const failure = async (promise: Promise<unknown>) =>
@@ -61,6 +69,61 @@ test("Wunde anlegen, bearbeiten, dokumentieren und abschliessen – alles im Än
     ["wound:created", "wound:updated", "wound_entry:documented", "wound:status_closed", "wound:status_active"],
     "gleicher Status wird nicht erneut protokolliert",
   );
+});
+
+test("Überfällige Wundversorgung: Erinnerung an die Verantwortlichen, je Versorgungszyklus einmal", async () => {
+  const f = await fixture();
+  const writer = async (person: string) => {
+    const ctx = await apiContextFor(f, person);
+    return { ...ctx, actor: { ...ctx.actor, permissions: [...ctx.actor.permissions, "documentation.write"] } };
+  };
+  const anna = await writer("anna");
+  const reminders = (person: string) =>
+    q<{ title: string; body: string; link_url: string; priority: string }>(
+      `SELECT title, body, link_url, priority FROM carecore_notifications WHERE user_id = $1 AND type = 'wound_overdue' ORDER BY created_at`,
+      [f.people[person]],
+    );
+  const residentId = await createResident(f, "Hans Müller");
+  // Intervall 2 Tage, festgestellt vor 3 Tagen, noch kein Verlaufseintrag: seit einem Tag überfällig.
+  const id = await createWound(
+    anna,
+    wound(residentId, { bodyLocation: "Rechter Ellenbogen", discoveredOn: isoDay(-3) }),
+  );
+  const [overview] = (await woundsOverview(anna, false)).wounds;
+  assert.equal(overview.overdue, true);
+
+  // Ohne Verantwortliche: alle mit Dokumentationsrecht und diesem festen Wohnbereich, nur einmal.
+  await createWoundReminders(anna);
+  await createWoundReminders(anna);
+  const [first] = await reminders("anna");
+  assert.equal((await reminders("anna")).length, 1);
+  assert.equal(first.title, "Wundversorgung überfällig: Hans Müller");
+  assert.match(first.body, /^Rechter Ellenbogen · fällig seit \d{2}\.\d{2}\.\d{4} \d{2}:\d{2} Uhr\.$/);
+  assert.equal(first.link_url, `/c/wundmanagement?wound=${id}`);
+  assert.equal(first.priority, "high");
+  await createWoundReminders(await writer("ben"));
+  assert.equal((await reminders("ben")).length, 0, "anderer Wohnbereich");
+  await createWoundReminders(await apiContextFor(f, "max"));
+  assert.equal((await reminders("max")).length, 0, "ohne Dokumentationsrecht");
+
+  // Mit Verantwortlicher geht die Erinnerung nur an sie.
+  await q(`UPDATE carecore_wounds SET responsible_user_id = $2 WHERE id = $1`, [id, f.people.lea]);
+  await createWoundReminders(await writer("max"));
+  await createWoundReminders(await writer("lea"));
+  assert.equal((await reminders("max")).length, 0);
+  assert.equal((await reminders("lea")).length, 1);
+
+  // Der Verlaufseintrag erledigt die Versorgung; erst der nächste überfällige Zyklus erinnert wieder.
+  await addEntry(anna, id, { note: "Verband gewechselt" });
+  assert.equal((await woundsOverview(anna, false)).wounds[0].overdue, false);
+  await createWoundReminders(await writer("lea"));
+  assert.equal((await reminders("lea")).length, 1);
+  await q(`UPDATE carecore_notifications SET created_at = NOW() - INTERVAL '5 days' WHERE user_id = $1`, [
+    f.people.lea,
+  ]);
+  await q(`UPDATE carecore_wound_entries SET observed_at = NOW() - INTERVAL '60 hours' WHERE wound_id = $1`, [id]);
+  await createWoundReminders(await writer("lea"));
+  assert.equal((await reminders("lea")).length, 2);
 });
 
 test("Wunde: ungültige Angaben werden abgelehnt statt stillschweigend verworfen", async () => {

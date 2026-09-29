@@ -18,6 +18,16 @@ export function statusText(wound: Wound) {
   return STATUS_LABELS[wound.status];
 }
 
+// „seit 3 Std.“ / „seit 2 Tagen“ – wie lange die Versorgung schon fällig ist.
+export function overdueSince(nextCareAt: string | null, now: number) {
+  if (!nextCareAt) return "";
+  const hours = Math.max(0, Math.floor((now - Date.parse(nextCareAt)) / 3_600_000));
+  if (hours < 1) return "seit weniger als 1 Std.";
+  if (hours < 24) return `seit ${hours} Std.`;
+  const days = Math.floor(hours / 24);
+  return `seit ${days} ${days === 1 ? "Tag" : "Tagen"}`;
+}
+
 export function nextCareLabel(wound: Wound) {
   if (wound.status === "closed") return `Abgeschlossen ${formatDate(wound.closedAt)}`;
   if (!wound.nextCareAt) return "Kein Intervall festgelegt";

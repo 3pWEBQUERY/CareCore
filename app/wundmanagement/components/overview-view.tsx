@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useCareResident } from "@/app/components/care-context";
 import { ModuleIcon } from "@/app/components/module-icon";
 import {
   EmptyState,
@@ -19,7 +20,7 @@ import {
 import { ORIGIN_LABELS, formatCm, healingProgress, sizeLabel, woundTone, type WoundEntry } from "@/lib/wounds-shared";
 import { EntryDialog, WoundDialog, type WoundsPayload } from "./wound-dialogs";
 import WoundPhotos from "./wound-photos";
-import { FILTERS, Dialog, statusText, nextCareLabel } from "./overview-utils";
+import { FILTERS, Dialog, statusText, nextCareLabel, overdueSince } from "./overview-utils";
 import { WoundTimeline } from "./wound-timeline";
 
 export default function OverviewView({ showToast }: { showToast: ShowToast }) {
@@ -55,13 +56,33 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
         (filter === "Abgeschlossen" && w.status === "closed")) &&
       `${w.residentName} ${w.room} ${w.title} ${w.bodyLocation}`.toLocaleLowerCase("de-CH").includes(needle),
   );
-  const selected = wounds.find((w) => w.id === selectedId) ?? filtered[0] ?? null;
+  // Die Seite folgt dem Bewohner aus der Kopfzeile: rechts steht dessen Wunde (bei mehreren die gewählte bzw.
+  // die dringendste). Ein Klick auf eine Wunde wählt auch den Bewohner in der Kopfzeile.
+  const [contextId, setContextId] = useCareResident();
+  const choose = (woundId: string, residentId: string) => {
+    setSelectedId(woundId);
+    setContextId(residentId);
+  };
+  // Link aus der Bewohnerakte (?wound=): Kopfzeile auf den Bewohner dieser Wunde setzen, sobald sie geladen ist.
+  const [linkedId] = useState(() => params.get("wound"));
+  const linkedResident = linkedId ? wounds.find((w) => w.id === linkedId)?.residentId : undefined;
+  useEffect(() => {
+    if (linkedResident) setContextId(linkedResident);
+  }, [linkedResident, setContextId]);
+  const residentWounds = contextId ? wounds.filter((w) => w.residentId === contextId) : [];
+  const selected =
+    residentWounds.find((w) => w.id === selectedId) ?? residentWounds[0] ?? (contextId ? null : (filtered[0] ?? null));
+  const contextName =
+    data.data?.residents.find((resident) => resident.id === contextId)?.name ?? "Ausgewählter Bewohner";
   const history = useApiData<{ entries: WoundEntry[] }>(selected ? `/api/wounds/${selected.id}/entries` : null);
   const overdue = open.filter((w) => w.overdue);
   const dueToday = open.filter((w) => w.dueToday);
   const progresses = open.map(healingProgress).filter((p): p is number => p !== null);
   const canWrite = data.data?.canWrite ?? false;
+  // Bezugszeit für „überfällig seit …“; nach jedem Speichern neu gesetzt.
+  const [now, setNow] = useState(() => Date.now());
   const done = (message: string) => {
+    setNow(Date.now());
     setDialog(null);
     showToast(message);
     data.reload();
@@ -104,10 +125,42 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
             <strong>
               {overdue.length} Versorgung{overdue.length === 1 ? "" : "en"} überfällig
             </strong>
-            <p>{overdue.map((w) => `${w.residentName} · ${w.bodyLocation}`).join(" · ")}</p>
+            <p>
+              Nach dem Verbandwechsel-Intervall fällig. Mit dem Verlaufseintrag ist die Versorgung erledigt; die
+              verantwortliche Person wird benachrichtigt.
+            </p>
+            <ul className="wound-overdue-list">
+              {overdue.map((wound) => (
+                <li key={wound.id}>
+                  <span>
+                    <b>
+                      {wound.residentName} · {wound.bodyLocation}
+                    </b>
+                    <small>
+                      Überfällig {overdueSince(wound.nextCareAt, now)} · fällig war {formatDateTime(wound.nextCareAt)}
+                      {" · "}
+                      {wound.responsibleName ? `Verantwortlich ${wound.responsibleName}` : "Niemand verantwortlich"}
+                    </small>
+                  </span>
+                  <button type="button" onClick={() => choose(wound.id, wound.residentId)}>
+                    Anzeigen
+                  </button>
+                  {canWrite && (
+                    <button type="button" className="primary" onClick={() => setDialog({ kind: "entry", wound })}>
+                      Versorgung dokumentieren
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
           </div>
-          <button className="secondary-button" type="button" onClick={() => setSelectedId(overdue[0].id)}>
-            Fall auswählen <ModuleIcon name="chevron" className="button-icon" />
+          <button
+            className="secondary-button"
+            type="button"
+            aria-pressed={filter === "Überfällig"}
+            onClick={() => setFilter(filter === "Überfällig" ? "Alle" : "Überfällig")}
+          >
+            {filter === "Überfällig" ? "Alle Wunden zeigen" : "Nur überfällige zeigen"}
           </button>
         </section>
       )}
@@ -162,7 +215,8 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
                   className={`wound-case-row ${selected?.id === wound.id ? "selected" : ""}`}
                   type="button"
                   key={wound.id}
-                  onClick={() => setSelectedId(wound.id)}
+                  aria-current={selected?.id === wound.id ? "true" : undefined}
+                  onClick={() => choose(wound.id, wound.residentId)}
                 >
                   <span className={`resident-avatar ${tone === "critical" ? "critical" : ""}`}>{wound.initials}</span>
                   <span className="wound-case-main">
@@ -345,6 +399,37 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
                 </div>
               </div>
               <WoundTimeline entries={history.data?.entries ?? []} loading={history.loading && !history.data} />
+            </section>
+          </aside>
+        )}
+        {!selected && contextId && data.data && (
+          <aside className="wound-sidebar">
+            <section className="card wound-focus-card" aria-live="polite">
+              <div className="card-header">
+                <div>
+                  <p className="eyebrow">Ausgewählter Bewohner</p>
+                  <h2 className="card-title">{contextName}</h2>
+                  <p className="card-subtitle">Gewählt in der Kopfzeile</p>
+                </div>
+              </div>
+              <EmptyState
+                icon="wounds"
+                title={filter === "Abgeschlossen" ? "Keine abgeschlossene Wunde" : "Keine offene Wunde"}
+                text={`Für ${contextName} ist ${filter === "Abgeschlossen" ? "keine abgeschlossene" : "keine offene"} Wunde erfasst.`}
+              />
+              {canWrite && filter !== "Abgeschlossen" && (
+                <div className="wound-focus-body">
+                  <div className="wound-focus-actions">
+                    <button
+                      className="primary-button"
+                      type="button"
+                      onClick={() => setDialog({ kind: "wound", wound: null, residentId: contextId })}
+                    >
+                      Wunde erfassen
+                    </button>
+                  </div>
+                </div>
+              )}
             </section>
           </aside>
         )}

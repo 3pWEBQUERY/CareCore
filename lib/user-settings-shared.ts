@@ -8,6 +8,7 @@ export const NOTIFY_CATEGORIES = {
   rai: { label: "RAI-Fälligkeiten", detail: "Fällige interRAI-Erfassungen", prefix: "rai_" },
   supply: { label: "Pflegebedarf", detail: "Produkte am Mindestbestand", prefix: "supply_" },
   btm: { label: "BtM-Kontrolle", detail: "Fällige Bestandskontrollen von Betäubungsmitteln", prefix: "btm_" },
+  wounds: { label: "Wundversorgung", detail: "Überfällige Verbandwechsel deiner Wunden", prefix: "wound_" },
 } as const;
 export type NotifyCategory = keyof typeof NOTIFY_CATEGORIES;
 

@@ -4,8 +4,10 @@ import { createBtmReminders } from "@/lib/medication-btm";
 import { dispatchPush, pushKeys, webPushSender, type PushSender } from "@/lib/push";
 import { createRosterReminders } from "@/lib/roster/reminders";
 import { createDueReminders } from "@/lib/tasks";
+import { createWoundReminders } from "@/lib/wounds";
 
-// Zeitgesteuerter Lauf (Cron): Erinnerungen (fällige Aufgaben, BtM-Kontrollen, Dienstplan, Schulungen) für alle
+// Zeitgesteuerter Lauf (Cron): Erinnerungen (fällige Aufgaben, BtM-Kontrollen, Wundversorgung, Dienstplan,
+// Schulungen) für alle
 // Personen mit Push-Abonnement erzeugen, auch wenn die App gerade geschlossen ist, und danach versenden.
 export async function runPushSchedule(sql: Sql, send?: PushSender) {
   const keys = pushKeys();
@@ -35,6 +37,7 @@ export async function runPushSchedule(sql: Sql, send?: PushSender) {
       createRosterReminders(ctx),
       createLearningReminders(ctx),
       createBtmReminders(ctx),
+      createWoundReminders(ctx),
     ]).catch((error) => console.error("Reminders failed", error));
   }
   return dispatchPush(sql, sender);
