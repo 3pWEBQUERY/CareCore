@@ -48,6 +48,10 @@ const today = localDate(now, TZ);
 const current = { year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) };
 const previous = shiftMonth(current.year, current.month, -1);
 const next = shiftMonth(current.year, current.month, 1);
+// In den letzten zwei Wochen des Monats ist auch der Folgemonat veröffentlicht (wie im Betrieb); Entwurf ist dann der
+// übernächste. So gibt es immer genug veröffentlichte künftige Dienste, etwa für Tausch-Anfragen.
+const lateInMonth = monthDays(current.year, current.month).at(-1)! < addDays(today, 14);
+const draft = lateInMonth ? shiftMonth(next.year, next.month, 1) : next;
 
 type Person = {
   key: string;
@@ -229,14 +233,17 @@ async function main() {
             ${qualified}, ${qualified ? qualification.HF : null})
           ON CONFLICT DO NOTHING`;
 
-  // Perioden: Vormonat abgeschlossen, aktueller Monat veröffentlicht, Folgemonat Entwurf.
+  // Perioden: Vormonat abgeschlossen, aktueller Monat veröffentlicht, Folgemonat Entwurf (in den letzten zwei Wochen
+  // des Monats veröffentlicht, dann ist der übernächste Monat der Entwurf).
   const periodId: Record<string, string> = {};
+  const periods: Array<readonly [string, { year: number; month: number }, "PUBLISHED" | "DRAFT", boolean]> = [
+    ["prev", previous, "PUBLISHED", true],
+    ["current", current, "PUBLISHED", false],
+    ["next", next, lateInMonth ? "PUBLISHED" : "DRAFT", false],
+    ...(lateInMonth ? [["draft", draft, "DRAFT", false] as const] : []),
+  ];
   for (const unit of UNITS)
-    for (const [label, month, status, locked] of [
-      ["prev", previous, "PUBLISHED", true],
-      ["current", current, "PUBLISHED", false],
-      ["next", next, "DRAFT", false],
-    ] as const) {
+    for (const [label, month, status, locked] of periods) {
       const key = `${unit.key}:${month.year}-${month.month}`;
       await sql`INSERT INTO carecore_schedule_periods (id, organization_id, care_unit_id, year, month, status, published_at, locked_at)
         VALUES (${id(`period:${key}`)}, ${org}, ${unitId[unit.key]}, ${month.year}, ${month.month}, ${status},
@@ -376,20 +383,56 @@ async function main() {
       VALUES (${id(`pref:${unit.key}:2`)}, ${org}, ${staff[6].id}, 'PREFER_WEEKDAY', 6) ON CONFLICT (id) DO NOTHING`;
 
     // Tausche in verschiedenen Status (auf künftigen Diensten derselben Wohngruppe).
-    const future = valid.filter(
-      (s) => s.unitKey === unit.key && s.date > addDays(today, 1) && s.label !== "prev" && s.code !== "U",
-    );
-    const pair = (offset: number) => {
-      const source = future.filter((s) => s.person.unitKeys.length === 1)[offset * 7];
-      const target =
-        source &&
-        future.find(
-          (s) => s.date === source.date && s.person.id !== source.person.id && s.person.unitKeys.length === 1,
-        );
-      return source && target ? { source, target } : null;
+    // Gezielt gewählt statt nach Position, damit die Demo an jedem Datum dieselben Fälle zeigt: eine gültige Anfrage
+    // (mit Spätdienst), eine abgelehnte und eine, die beim Genehmigen die Ruhezeit der Kollegin verletzt.
+    const published = (s: SeedShift) =>
+      s.unitKey === unit.key &&
+      s.date > addDays(today, 1) &&
+      (s.label === "current" || (s.label === "next" && lateInMonth)) &&
+      s.code !== "U" &&
+      s.code !== "K";
+    const working = (s: SeedShift) => s.code !== "U" && s.code !== "K";
+    const interval = (date: string, code: string) =>
+      plannedInterval(date, String(types[code].start_time), String(types[code].end_time), TZ);
+    // Hält `person` mit dem Dienst `code` am `date` die Ruhezeit zu den eigenen Diensten am Vor- und Folgetag ein?
+    const restOk = (person: Person, date: string, code: string) => {
+      const own = interval(date, code);
+      return valid
+        .filter(
+          (s) =>
+            s.person.id === person.id && working(s) && (s.date === addDays(date, -1) || s.date === addDays(date, 1)),
+        )
+        .every((s) => {
+          const other = interval(s.date, s.code);
+          const gap =
+            other.end <= own.start
+              ? own.start.getTime() - other.end.getTime()
+              : other.start.getTime() - own.end.getTime();
+          return gap >= 11 * 3_600_000;
+        });
     };
-    for (const [index, status] of (["PENDING_TARGET", "DECLINED", "PENDING_APPROVAL"] as const).entries()) {
-      const swap = pair(index);
+    const single = staff.filter((p) => p.unitKeys.length === 1);
+    const swapCase = (requester: Person | undefined, target: Person | undefined, kind: "valid" | "restBlocked") => {
+      if (!requester || !target) return null;
+      for (const source of valid.filter((s) => s.person.id === requester.id && published(s))) {
+        const other = valid.find((s) => s.person.id === target.id && s.date === source.date && published(s));
+        if (!other || other.code === source.code) continue;
+        const allowed = (person: Person, code: string) => code !== "N" || !person.excluded.includes("NIGHT");
+        if (!allowed(target, source.code) || !allowed(requester, other.code)) continue;
+        const targetOk = restOk(target, source.date, source.code);
+        const requesterOk = restOk(requester, source.date, other.code);
+        if (kind === "valid" && targetOk && requesterOk && (source.code === "S" || other.code === "S"))
+          return { source, target: other };
+        if (kind === "restBlocked" && !targetOk && requesterOk) return { source, target: other };
+      }
+      return null;
+    };
+    const swaps = [
+      ["PENDING_TARGET", swapCase(single[0], single[2], "valid")],
+      ["DECLINED", swapCase(single[3], single[5], "valid")],
+      ["PENDING_APPROVAL", swapCase(single[1], single[4], "restBlocked")],
+    ] as const;
+    for (const [status, swap] of swaps) {
       if (!swap) continue;
       await sql`INSERT INTO carecore_shift_swaps (id, organization_id, care_unit_id, requester_id, target_employee_id, source_shift_id,
           target_shift_id, source_shift_version, target_shift_version, status, message, responded_at)
