@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { auditOrigin, type AuditActor } from "@/lib/audit-origin";
 import { neon } from "@neondatabase/serverless";
 import { hashPassword } from "@/lib/auth";
 
@@ -200,7 +201,7 @@ async function assertRole(sql: ReturnType<typeof database>, role: string) {
 }
 
 export async function updateManagedUser(
-  actorId: string,
+  actorInput: string | AuditActor,
   userId: string,
   input: {
     displayName?: string;
@@ -213,6 +214,8 @@ export async function updateManagedUser(
     action?: "lock" | "restore";
   },
 ) {
+  const actorId = typeof actorInput === "string" ? actorInput : actorInput.id;
+  const who = { id: actorId, ...auditOrigin(actorInput) };
   const sql = database();
   await assertManagedUser(sql, actorId, userId);
   // Änderung und Protokoll gemeinsam.
@@ -221,12 +224,12 @@ export async function updateManagedUser(
     await sql.transaction([
       sql`UPDATE carecore_users SET active = FALSE, archived_at = NOW(), archived_by = ${actorId}, archive_reason = 'Zugriff durch Administration gesperrt', updated_at = NOW() WHERE id = ${userId}`,
       sql`DELETE FROM carecore_sessions WHERE user_id = ${userId}`,
-      auditStatement(sql, actorId, "user", userId, "lock", input),
+      auditStatement(sql, who, "user", userId, "lock", input),
     ]);
   } else if (input.action === "restore") {
     await sql.transaction([
       sql`UPDATE carecore_users SET active = TRUE, archived_at = NULL, archived_by = NULL, archive_reason = NULL, updated_at = NOW() WHERE id = ${userId}`,
-      auditStatement(sql, actorId, "user", userId, "restore", input),
+      auditStatement(sql, who, "user", userId, "restore", input),
     ]);
   } else {
     const name = input.displayName?.trim().slice(0, 120);
@@ -248,7 +251,7 @@ export async function updateManagedUser(
           ]
         : []),
       ...qualifications,
-      auditStatement(sql, actorId, "user", userId, "updated", input),
+      auditStatement(sql, who, "user", userId, "updated", input),
     ]);
   }
   return listManagedUsers(actorId);
@@ -296,7 +299,7 @@ async function qualificationChanges(
 }
 
 export async function createManagedUser(
-  actorId: string,
+  actorInput: string | AuditActor,
   input: {
     displayName: string;
     username: string;
@@ -307,6 +310,8 @@ export async function createManagedUser(
     primaryCareUnitId?: string | null;
   },
 ) {
+  const actorId = typeof actorInput === "string" ? actorInput : actorInput.id;
+  const who = { id: actorId, ...auditOrigin(actorInput) };
   const displayName = input.displayName.trim().slice(0, 120);
   const username = input.username.trim().slice(0, 80);
   const role = input.role.trim().slice(0, 40);
@@ -325,7 +330,7 @@ export async function createManagedUser(
           sql`INSERT INTO carecore_user_unit_assignments (user_id, care_unit_id, assignment_role, is_primary) VALUES (${id}, ${input.primaryCareUnitId}, 'Mitarbeitende:r', TRUE)`,
         ]
       : []),
-    auditStatement(sql, actorId, "user", id, "created", {
+    auditStatement(sql, who, "user", id, "created", {
       displayName,
       username,
       role,
@@ -335,12 +340,14 @@ export async function createManagedUser(
   return listManagedUsers(actorId);
 }
 
-export async function deleteManagedUser(actorId: string, userId: string) {
+export async function deleteManagedUser(actorInput: string | AuditActor, userId: string) {
+  const actorId = typeof actorInput === "string" ? actorInput : actorInput.id;
+  const who = { id: actorId, ...auditOrigin(actorInput) };
   if (userId === actorId) throw new Error("CANNOT_DELETE_SELF");
   const sql = database();
   await assertManagedUser(sql, actorId, userId);
   await sql.transaction([
-    auditStatement(sql, actorId, "user", userId, "deleted", { permanentlyDeleted: true }),
+    auditStatement(sql, who, "user", userId, "deleted", { permanentlyDeleted: true }),
     sql`DELETE FROM carecore_users WHERE id = ${userId}`,
   ]);
   return listManagedUsers(actorId);
@@ -352,7 +359,7 @@ function normalizePermissions(value: unknown) {
 }
 
 export async function createManagedRole(
-  actorId: string,
+  actorInput: string | AuditActor,
   input: {
     key: string;
     name: string;
@@ -361,6 +368,8 @@ export async function createManagedRole(
     medicationRequiresQualification?: boolean;
   },
 ) {
+  const actorId = typeof actorInput === "string" ? actorInput : actorInput.id;
+  const who = { id: actorId, ...auditOrigin(actorInput) };
   const sql = database();
   const key = input.key.trim().toLowerCase().slice(0, 40);
   const name = input.name.trim().slice(0, 100);
@@ -371,16 +380,18 @@ export async function createManagedRole(
   const medicationRequiresQualification = input.medicationRequiresQualification === true;
   await sql.transaction([
     sql`INSERT INTO carecore_roles (id, key, name, description, permissions, medication_requires_qualification, created_by) VALUES (${id}, ${key}, ${name}, ${input.description?.trim().slice(0, 500) ?? ""}, ${JSON.stringify(permissions)}::jsonb, ${medicationRequiresQualification}, ${actorId})`,
-    auditStatement(sql, actorId, "role", id, "created", { key, name, permissions, medicationRequiresQualification }),
+    auditStatement(sql, who, "role", id, "created", { key, name, permissions, medicationRequiresQualification }),
   ]);
   return listManagedRoles();
 }
 
 export async function updateManagedRole(
-  actorId: string,
+  actorInput: string | AuditActor,
   roleId: string,
   input: { name: string; description?: string; permissions?: unknown; medicationRequiresQualification?: boolean },
 ) {
+  const actorId = typeof actorInput === "string" ? actorInput : actorInput.id;
+  const who = { id: actorId, ...auditOrigin(actorInput) };
   const sql = database();
   const name = input.name.trim().slice(0, 100);
   if (!name) throw new Error("INVALID_ROLE_INPUT");
@@ -392,8 +403,9 @@ export async function updateManagedRole(
   const [updated] = (await sql.transaction([
     sql`UPDATE carecore_roles SET name = ${name}, description = ${input.description?.trim().slice(0, 500) ?? ""}, permissions = CASE WHEN key = 'admin' THEN ${JSON.stringify(roleKeys)}::jsonb ELSE ${JSON.stringify(permissions)}::jsonb END, medication_requires_qualification = CASE WHEN key = 'admin' THEN FALSE ELSE COALESCE(${medicationRequiresQualification}::boolean, medication_requires_qualification) END, updated_at = NOW() WHERE id = ${roleId} RETURNING id`,
     // Nur protokolliert, wenn die Rolle existiert.
-    sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
-      SELECT ${randomUUID()}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}), ${actorId}, 'role', id,
+    sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data)
+      SELECT ${randomUUID()}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}), ${actorId},
+        ${who.sessionId}, ${who.userAgent}, 'role', id,
         'updated', ${JSON.stringify({ name, permissions, medicationRequiresQualification })}::jsonb
       FROM carecore_roles WHERE id = ${roleId}`,
   ])) as unknown as Array<Array<{ id: string }>>;
@@ -401,7 +413,9 @@ export async function updateManagedRole(
   return listManagedRoles();
 }
 
-export async function deleteManagedRole(actorId: string, roleId: string) {
+export async function deleteManagedRole(actorInput: string | AuditActor, roleId: string) {
+  const actorId = typeof actorInput === "string" ? actorInput : actorInput.id;
+  const who = { id: actorId, ...auditOrigin(actorInput) };
   const sql = database();
   const role =
     (await sql`SELECT key, system_role FROM carecore_roles WHERE id = ${roleId} LIMIT 1`) as unknown as Array<{
@@ -417,7 +431,7 @@ export async function deleteManagedRole(actorId: string, roleId: string) {
   if (Number(users[0]?.count) > 0) throw new Error("ROLE_IN_USE");
   await sql.transaction([
     sql`DELETE FROM carecore_roles WHERE id = ${roleId}`,
-    auditStatement(sql, actorId, "role", roleId, "deleted", { key: role[0].key }),
+    auditStatement(sql, who, "role", roleId, "deleted", { key: role[0].key }),
   ]);
   return listManagedRoles();
 }
@@ -425,13 +439,13 @@ export async function deleteManagedRole(actorId: string, roleId: string) {
 // Protokolleintrag mit der Organisation der handelnden Person, für `sql.transaction([...])`.
 function auditStatement(
   sql: ReturnType<typeof database>,
-  actorId: string,
+  who: { id: string; sessionId: string | null; userAgent: string | null },
   entityType: "user" | "role",
   entityId: string,
   action: string,
   afterData: unknown,
 ) {
-  return sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
-    VALUES (${randomUUID()}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}), ${actorId},
-      ${entityType}, ${entityId}, ${action}, ${JSON.stringify(afterData)}::jsonb)`;
+  return sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data)
+    VALUES (${randomUUID()}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${who.id}), ${who.id},
+      ${who.sessionId}, ${who.userAgent}, ${entityType}, ${entityId}, ${action}, ${JSON.stringify(afterData)}::jsonb)`;
 }

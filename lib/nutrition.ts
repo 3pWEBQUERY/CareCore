@@ -16,6 +16,7 @@ import {
   type NutritionResident,
   type ResidentNutrition,
 } from "@/lib/nutrition-shared";
+import { auditOrigin } from "@/lib/audit-origin";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const oneOf = (options: readonly string[], value: unknown) =>
@@ -300,8 +301,8 @@ export async function hideEntry(ctx: ApiContext, kind: "fluid" | "meal", idInput
             UPDATE carecore_fluid_entries e SET deleted_at = NOW(), deleted_by = ${ctx.actor.id}, delete_reason = ${reason}
             FROM carecore_residents r WHERE e.id = ${id} AND e.deleted_at IS NULL AND r.id = e.resident_id AND r.organization_id = ${ctx.actor.organizationId}
             RETURNING e.id, e.resident_id)
-          INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
-          SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'fluid_entry', h.id, 'hidden',
+          INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data)
+          SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, ${auditOrigin(ctx.actor).sessionId}, ${auditOrigin(ctx.actor).userAgent}, 'fluid_entry', h.id, 'hidden',
             jsonb_build_object('residentId', h.resident_id, 'reason', ${reason}::text)
           FROM h RETURNING entity_id`
       : await ctx.sql`
@@ -309,8 +310,8 @@ export async function hideEntry(ctx: ApiContext, kind: "fluid" | "meal", idInput
             UPDATE carecore_meal_entries e SET deleted_at = NOW(), deleted_by = ${ctx.actor.id}, delete_reason = ${reason}
             FROM carecore_residents r WHERE e.id = ${id} AND e.deleted_at IS NULL AND r.id = e.resident_id AND r.organization_id = ${ctx.actor.organizationId}
             RETURNING e.id, e.resident_id)
-          INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
-          SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'meal_entry', h.id, 'hidden',
+          INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data)
+          SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, ${auditOrigin(ctx.actor).sessionId}, ${auditOrigin(ctx.actor).userAgent}, 'meal_entry', h.id, 'hidden',
             jsonb_build_object('residentId', h.resident_id, 'reason', ${reason}::text)
           FROM h RETURNING entity_id`
   ) as Row[];

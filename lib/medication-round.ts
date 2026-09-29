@@ -10,6 +10,7 @@ import {
 } from "@/lib/medication-shared";
 import { administrationWitness } from "./medication-btm";
 import { DATE } from "./medication";
+import { auditOrigin } from "@/lib/audit-origin";
 
 // -------------------------------------------------------------------- round
 
@@ -130,8 +131,8 @@ export async function documentScheduledDose(ctx: ApiContext, body: Record<string
         SET status = EXCLUDED.status, administered_at = EXCLUDED.administered_at, administered_by = EXCLUDED.administered_by, note = EXCLUDED.note,
           witness_user_id = EXCLUDED.witness_user_id, updated_at = NOW()
       RETURNING id)
-    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, before_data, after_data)
-    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'medication_administration', dose.id,
+    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, before_data, after_data)
+    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, ${auditOrigin(ctx.actor).sessionId}, ${auditOrigin(ctx.actor).userAgent}, 'medication_administration', dose.id,
       ${before[0] ? "corrected" : "documented"}, ${auditBefore}::jsonb, ${auditAfter}::jsonb
     FROM dose RETURNING entity_id AS id`;
   const quantity = num(((valid[0].dosage ?? {}) as Record<string, unknown>).quantity);
@@ -279,8 +280,8 @@ export async function administerPrn(ctx: ApiContext, body: Record<string, unknow
       FROM s CROSS JOIN a
       RETURNING id
     )
-    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
-    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'medication_administration', ${administrationId}, 'prn_administered',
+    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data)
+    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, ${auditOrigin(ctx.actor).sessionId}, ${auditOrigin(ctx.actor).userAgent}, 'medication_administration', ${administrationId}, 'prn_administered',
       ${JSON.stringify({ residentId: order.resident_id, orderId, quantity, note, witness: witness?.name ?? null })}::jsonb
     FROM m
     RETURNING id`) as Row[];

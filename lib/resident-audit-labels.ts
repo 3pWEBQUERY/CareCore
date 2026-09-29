@@ -5,6 +5,8 @@ export type ResidentAuditEntry = {
   id: string;
   createdAt: string;
   actor: string;
+  // Gerät, mit dem die Änderung erfasst wurde (z. B. „Safari · iPhone“); ältere Einträge ohne Angabe.
+  device?: string | null;
   entityType: string;
   action: string;
   before: Record<string, unknown> | null;

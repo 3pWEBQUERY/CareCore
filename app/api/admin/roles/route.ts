@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unvollständige Rollenangaben." }, { status: 400 });
     return NextResponse.json(
       {
-        roles: await createManagedRole(actor.id, {
+        roles: await createManagedRole(actor, {
           key: body.key,
           name: body.name,
           description: typeof body.description === "string" ? body.description : undefined,
@@ -75,7 +75,7 @@ export async function PATCH(request: Request) {
     if (typeof body.roleId !== "string" || typeof body.name !== "string")
       return NextResponse.json({ error: "Unvollständige Rollenangaben." }, { status: 400 });
     return NextResponse.json({
-      roles: await updateManagedRole(actor.id, body.roleId, {
+      roles: await updateManagedRole(actor, body.roleId, {
         name: body.name,
         description: typeof body.description === "string" ? body.description : undefined,
         permissions: body.permissions,
@@ -94,7 +94,7 @@ export async function DELETE(request: Request) {
     if (!actor) return NextResponse.json({ error: "Keine Administrationsberechtigung." }, { status: 403 });
     const body = (await request.json()) as { roleId?: unknown };
     if (typeof body.roleId !== "string") return NextResponse.json({ error: "Rolle fehlt." }, { status: 400 });
-    return NextResponse.json({ roles: await deleteManagedRole(actor.id, body.roleId) });
+    return NextResponse.json({ roles: await deleteManagedRole(actor, body.roleId) });
   } catch (error) {
     return fail(error);
   }

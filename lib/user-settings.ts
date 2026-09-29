@@ -13,6 +13,8 @@ import {
   type UserPreferences,
   type UserSettings,
 } from "@/lib/user-settings-shared";
+import { auditOrigin } from "@/lib/audit-origin";
+import { deviceLabel } from "@/lib/audit-origin";
 
 // Personal settings of the signed-in person: profile, notifications, appearance,
 // password and sessions.
@@ -20,35 +22,6 @@ import {
 async function currentTokenHash() {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   return token ? hashSessionToken(token) : null;
-}
-
-// Short device description from the browser's user agent, e.g. "Safari · iPhone".
-function device(userAgent: unknown) {
-  const ua = typeof userAgent === "string" ? userAgent : "";
-  if (!ua) return "Unbekanntes Gerät";
-  const browser = /Edg\//.test(ua)
-    ? "Edge"
-    : /Firefox\//.test(ua)
-      ? "Firefox"
-      : /Chrome\//.test(ua)
-        ? "Chrome"
-        : /Safari\//.test(ua)
-          ? "Safari"
-          : "Browser";
-  const system = /iPhone/.test(ua)
-    ? "iPhone"
-    : /iPad/.test(ua)
-      ? "iPad"
-      : /Android/.test(ua)
-        ? "Android"
-        : /Windows/.test(ua)
-          ? "Windows"
-          : /Mac OS X/.test(ua)
-            ? "Mac"
-            : /Linux/.test(ua)
-              ? "Linux"
-              : "";
-  return [browser, system].filter(Boolean).join(" · ");
 }
 
 export async function readPreferences(userId: string): Promise<UserPreferences> {
@@ -89,7 +62,7 @@ export async function userSettings(actor: CarecoreActor, tokenHash?: string | nu
       passwordChangedAt: iso(row.password_changed_at),
       sessions: (sessions as Row[]).map((session) => ({
         id: String(session.id),
-        device: device(session.user_agent),
+        device: deviceLabel(session.user_agent),
         createdAt: iso(session.created_at) ?? "",
         expiresAt: iso(session.expires_at) ?? "",
         current: session.token_hash === currentHash,
@@ -219,8 +192,8 @@ export async function changePassword(actor: CarecoreActor, body: Record<string, 
     sql`UPDATE carecore_users SET password_hash = ${await hashPassword(newPassword)}, password_changed_at = NOW(), updated_at = NOW()
       WHERE id = ${actor.id}`,
     sql`DELETE FROM carecore_sessions WHERE user_id = ${actor.id} AND token_hash IS DISTINCT FROM ${tokenHash}`,
-    sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action)
-      VALUES (gen_random_uuid(), ${actor.organizationId ?? null}, ${actor.id}, 'user', ${actor.id}, 'password_changed')`,
+    sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action)
+      VALUES (gen_random_uuid(), ${actor.organizationId ?? null}, ${actor.id}, ${auditOrigin(actor).sessionId}, ${auditOrigin(actor).userAgent}, 'user', ${actor.id}, 'password_changed')`,
   ]);
 }
 

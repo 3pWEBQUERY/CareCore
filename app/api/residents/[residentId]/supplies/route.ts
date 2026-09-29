@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { residentAudit } from "@/lib/resident-audit";
 import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
+import { auditOrigin } from "@/lib/audit-origin";
 
 export const runtime = "nodejs";
 
@@ -106,8 +107,8 @@ export async function POST(request: Request, context: { params: Promise<{ reside
           FROM upserted JOIN product ON product.id = upserted.product_id
           RETURNING id
         ), audited AS (
-          INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
-          SELECT gen_random_uuid(), ${active.actor.organizationId}, ${active.actor.id}, 'resident_supply', upserted.id, 'issued',
+          INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data)
+          SELECT gen_random_uuid(), ${active.actor.organizationId}, ${active.actor.id}, ${auditOrigin(active.actor).sessionId}, ${auditOrigin(active.actor).userAgent}, 'resident_supply', upserted.id, 'issued',
             jsonb_build_object('residentId', ${residentId}::text, 'productId', upserted.product_id, 'itemName', upserted.item_name,
               'quantity', ${quantity}::int, 'unit', upserted.unit, 'notes', NULLIF(${notes}, ''))
           FROM upserted

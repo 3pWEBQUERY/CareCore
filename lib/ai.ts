@@ -13,6 +13,7 @@ import {
 import { AI_TASKS, type AiDraft, type AiOverview, type AiTask } from "@/lib/ai-shared";
 import { createEntry } from "@/lib/documentation";
 import { createNote } from "@/lib/handover";
+import { auditOrigin } from "@/lib/audit-origin";
 
 // CareCore KI: drafts from Claude based on the care data of one resident or one care
 // unit. Drafts are never saved to the record automatically; staff review, edit and
@@ -317,8 +318,8 @@ export async function reviewDraft(ctx: ApiContext, idInput: string, body: Record
         reviewed_by = ${ctx.actor.id}, reviewed_at = NOW(), updated_at = NOW()
       WHERE id = ${id} AND status NOT IN ('accepted', 'discarded')
       RETURNING id)
-    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, before_data, after_data)
-    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'ai_draft', changed.id, ${status},
+    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, before_data, after_data)
+    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, ${auditOrigin(ctx.actor).sessionId}, ${auditOrigin(ctx.actor).userAgent}, 'ai_draft', changed.id, ${status},
       ${JSON.stringify({ status: before.status })}::jsonb, ${JSON.stringify({ status: action })}::jsonb
     FROM changed RETURNING entity_id`) as Row[];
   if (!claimed[0]) throw new ApiError("Der Entwurf wurde bereits bearbeitet.", 409);

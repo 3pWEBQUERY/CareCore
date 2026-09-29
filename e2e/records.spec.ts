@@ -138,3 +138,22 @@ test("Reanimationsstatus: in den Stammdaten erfassen, im Aktenkopf und im Überl
   );
   expect(errors).toEqual([]);
 });
+
+test("Änderungsprotokoll: Eintrag nennt Person und Gerät der Anmeldung", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  await page.goto("/c/bewohner");
+  await page.locator(".resident-list-row").nth(2).click();
+  await page.locator(".resident-record-tabs button", { hasText: "Stammdaten" }).click();
+  await page.getByRole("button", { name: "Stammdaten bearbeiten" }).click();
+  await page.getByRole("button", { name: "Stammdaten speichern" }).click();
+  await expect(page.getByRole("button", { name: "Stammdaten bearbeiten" })).toBeVisible();
+  await page.locator(".resident-record-tabs button", { hasText: "Verlauf" }).click();
+  const card = page.locator(".record-audit-card");
+  await card.getByRole("button", { name: /Anzeigen/ }).click();
+  const latest = card.locator("li").first();
+  await expect(latest).toContainText("Stammdaten geändert");
+  // Der Test-Browser meldet sich als Chrome (Betriebssystem je nach Playwright-Profil).
+  await expect(latest.locator("em")).toContainText(/ · Chrome · (Windows|Linux|Mac)$/);
+  expect(errors).toEqual([]);
+});

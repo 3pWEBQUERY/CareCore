@@ -3,6 +3,7 @@ import { type ApiContext, iso, type Row } from "./api-context";
 import { listOrders } from "./medication-orders";
 import { recordSummary } from "./resident-record";
 import type { TransferSheet } from "./resident-transfer-shared";
+import { auditOrigin } from "@/lib/audit-origin";
 
 const text = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : null);
 
@@ -158,8 +159,8 @@ export async function transferSheet(ctx: ApiContext, residentIdInput: unknown): 
   };
 
   await sql`
-    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
-    VALUES (${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'resident_transfer', ${residentId}, 'created',
+    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data)
+    VALUES (${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, ${auditOrigin(ctx.actor).sessionId}, ${auditOrigin(ctx.actor).userAgent}, 'resident_transfer', ${residentId}, 'created',
       ${JSON.stringify({ residentId, sections: ["Stammdaten", "Kontakte", "Medikation", "Risiken", "Befunde", "Vitalwerte"] })}::jsonb)`;
   return sheet;
 }

@@ -9,6 +9,7 @@ import {
   type Permission,
 } from "@/lib/server-data";
 import { schedulePush } from "@/lib/push";
+import { auditOrigin } from "@/lib/audit-origin";
 
 // Shared helpers for the module APIs (medication, vital signs, ...).
 
@@ -80,8 +81,8 @@ export function auditStatement(
   after: unknown,
 ) {
   return ctx.sql`
-    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, before_data, after_data)
-    VALUES (${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, ${entityType}, ${entityId}, ${action},
+    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, before_data, after_data)
+    VALUES (${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, ${auditOrigin(ctx.actor).sessionId}, ${auditOrigin(ctx.actor).userAgent}, ${entityType}, ${entityId}, ${action},
       ${before === null ? null : JSON.stringify(before)}::jsonb, ${after === null ? null : JSON.stringify(after)}::jsonb)
   `;
 }
