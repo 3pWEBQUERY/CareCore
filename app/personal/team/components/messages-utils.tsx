@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactionSummary } from "@/lib/messenger-shared";
+
 export type Member = { conversation_id: string; user_id: string; display_name: string; role: string };
 
 export type Person = { id: string; display_name: string; role: string; job_title: string; care_unit_name: string };
@@ -11,6 +13,8 @@ export type Message = {
   edited_at: string | null;
   author_user_id: string | null;
   author_name: string;
+  mentions: string[];
+  reactions: ReactionSummary[];
 };
 
 export type Conversation = {

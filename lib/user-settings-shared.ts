@@ -9,6 +9,11 @@ export const NOTIFY_CATEGORIES = {
   supply: { label: "Pflegebedarf", detail: "Produkte am Mindestbestand", prefix: "supply_" },
   btm: { label: "BtM-Kontrolle", detail: "Fällige Bestandskontrollen von Betäubungsmitteln", prefix: "btm_" },
   wounds: { label: "Wundversorgung", detail: "Überfällige Verbandwechsel deiner Wunden", prefix: "wound_" },
+  messages: {
+    label: "Nachrichten",
+    detail: "Direktnachrichten und Erwähnungen im Messenger",
+    prefix: "message_",
+  },
   effect: {
     label: "Wirkungskontrolle",
     detail: "Fällige Wirkungskontrollen nach deinen Reservegaben",
