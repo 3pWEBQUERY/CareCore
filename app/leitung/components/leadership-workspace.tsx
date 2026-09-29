@@ -41,6 +41,7 @@ export default function LeadershipWorkspace({ view }: { view: LeadershipView }) 
     system: SystemStatus;
     terminology: TerminologyKey;
     hiddenVitals: string[];
+    logoUpdatedAt: string | null;
   }>(view === "configuration" ? "/api/settings" : null);
   const config = configuration.data;
   const enabledSettings = config ? SETTING_KEYS.filter((key) => config.settings[key].enabled) : [];

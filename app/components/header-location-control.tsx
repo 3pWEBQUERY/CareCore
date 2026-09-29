@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { type RefObject } from "react";
 import { ModuleIcon } from "./module-icon";
 import type { AppHeaderState } from "./use-app-header";
@@ -39,8 +40,18 @@ export function HeaderLocationControl({
           setLocationOpen((value) => !value);
         }}
       >
-        <span className="location-icon">
-          <ModuleIcon name="building" />
+        <span className={`location-icon ${context?.profile.logoUpdatedAt ? "has-logo" : ""}`}>
+          {context?.profile.logoUpdatedAt ? (
+            <Image
+              src={`/api/branding/logo?v=${encodeURIComponent(context.profile.logoUpdatedAt)}`}
+              alt={`Logo ${context.profile.organizationName}`}
+              width={33}
+              height={33}
+              unoptimized
+            />
+          ) : (
+            <ModuleIcon name="building" />
+          )}
         </span>
         {!compact && (
           <span className="location-copy">

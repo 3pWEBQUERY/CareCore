@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { EditorDialog, LoadError, formatDateTime, requestJson } from "@/app/components/workspace-ui";
@@ -7,11 +8,18 @@ import { loadWorkContext } from "@/app/components/care-context";
 import type { SystemStatus } from "@/lib/settings";
 import { TERMINOLOGIES, type TerminologyKey } from "@/lib/terminology";
 import { VITAL_METRICS } from "@/lib/vitals-shared";
+import { LOGO_MAX_BYTES } from "@/lib/branding-shared";
 import { SETTING_DEFINITIONS, SETTING_KEYS, type AppSettings, type SettingKey } from "@/lib/settings-shared";
 import { notifyAdminChanged } from "./admin-board";
 
 export type ConfigurationData = {
-  data?: { settings: AppSettings; system: SystemStatus; terminology: TerminologyKey; hiddenVitals: string[] };
+  data?: {
+    settings: AppSettings;
+    system: SystemStatus;
+    terminology: TerminologyKey;
+    hiddenVitals: string[];
+    logoUpdatedAt: string | null;
+  };
   error?: string;
   loading: boolean;
   reload: () => void;
@@ -34,7 +42,7 @@ export function ConfigurationView({
   onCloseEditor: () => void;
 }) {
   const { data, error, reload } = configuration;
-  const [saving, setSaving] = useState<SettingKey | "terminology" | "vitals" | null>(null);
+  const [saving, setSaving] = useState<SettingKey | "terminology" | "vitals" | "logo" | null>(null);
   if (error && !data) return <LoadError message={error} onRetry={reload} />;
 
   const save = async (key: SettingKey, change: { enabled?: boolean; value?: number }) => {
@@ -84,6 +92,30 @@ export function ConfigurationView({
       notifyAdminChanged();
       void loadWorkContext(true);
       showToast(`${key} ${hidden.includes(key) ? "wird nicht mehr erfasst" : "wird erfasst"}`);
+    } catch (reason) {
+      showToast((reason as Error).message);
+    } finally {
+      setSaving(null);
+    }
+  };
+  const changeLogo = async (file: File | null) => {
+    setSaving("logo");
+    try {
+      if (file) {
+        if (file.size > LOGO_MAX_BYTES)
+          throw new Error(`Das Logo darf höchstens ${LOGO_MAX_BYTES / 1024} KB gross sein.`);
+        const logoDataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(new Error("Bild konnte nicht gelesen werden."));
+          reader.readAsDataURL(file);
+        });
+        await requestJson("/api/branding/logo", { method: "PUT", body: { logoDataUrl } });
+      } else await requestJson("/api/branding/logo", { method: "DELETE" });
+      reload();
+      notifyAdminChanged();
+      void loadWorkContext(true);
+      showToast(file ? "Logo gespeichert – gilt nach dem Neuladen überall" : "Logo entfernt");
     } catch (reason) {
       showToast((reason as Error).message);
     } finally {
@@ -231,6 +263,57 @@ export function ConfigurationView({
                 {metric.key}
               </button>
             ))}
+          </div>
+        </section>
+        <section className="card admin-terminology-card admin-branding-card" aria-labelledby="admin-branding-title">
+          <div className="card-header">
+            <div>
+              <p className="eyebrow">Branding</p>
+              <h2 className="card-title" id="admin-branding-title">
+                Logo der Einrichtung
+              </h2>
+              <p className="card-subtitle">
+                Erscheint in der Kopfzeile neben dem Namen · JPEG, PNG oder WebP, höchstens 300 KB
+              </p>
+            </div>
+          </div>
+          <div className="admin-branding-body">
+            <span className="admin-branding-preview">
+              {data?.logoUpdatedAt ? (
+                <Image
+                  src={`/api/branding/logo?v=${encodeURIComponent(data.logoUpdatedAt)}`}
+                  alt="Aktuelles Logo"
+                  width={48}
+                  height={48}
+                  unoptimized
+                />
+              ) : (
+                <ModuleIcon name="building" />
+              )}
+            </span>
+            <label className="secondary-button admin-branding-upload">
+              {data?.logoUpdatedAt ? "Logo ersetzen" : "Logo hochladen"}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={!data || saving === "logo"}
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0] ?? null;
+                  event.currentTarget.value = "";
+                  if (file) void changeLogo(file);
+                }}
+              />
+            </label>
+            {data?.logoUpdatedAt && (
+              <button
+                className="quiet-button"
+                type="button"
+                disabled={saving === "logo"}
+                onClick={() => void changeLogo(null)}
+              >
+                Logo entfernen
+              </button>
+            )}
           </div>
         </section>
       </div>

@@ -1,0 +1,68 @@
+import { ApiError, auditStatement, type ApiContext, type Row } from "@/lib/api-context";
+import { LOGO_MAX_BYTES } from "@/lib/branding-shared";
+import { detectImageType } from "@/lib/file-signatures";
+import { hasPermission } from "@/lib/server-data";
+
+// Logo der Einrichtung: JPEG, PNG oder WebP (kein SVG, das Skript enthalten kann), höchstens 300 KB.
+const LOGO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function requireAdmin(ctx: ApiContext) {
+  if (!hasPermission(ctx.actor, "administration.manage"))
+    throw new ApiError("Das Logo legt die Administration fest.", 403);
+}
+
+export async function readLogo(ctx: ApiContext) {
+  const rows = (await ctx.sql`
+    SELECT logo_base64, logo_mime_type, logo_updated_at FROM carecore_organizations
+    WHERE id = ${ctx.actor.organizationId}`) as Row[];
+  const row = rows[0];
+  if (!row?.logo_base64 || !LOGO_TYPES.has(String(row.logo_mime_type))) return null;
+  return {
+    bytes: Buffer.from(String(row.logo_base64), "base64"),
+    mimeType: String(row.logo_mime_type),
+    updatedAt: row.logo_updated_at instanceof Date ? row.logo_updated_at.toISOString() : String(row.logo_updated_at),
+  };
+}
+
+export async function logoUpdatedAt(ctx: ApiContext) {
+  const rows = (await ctx.sql`
+    SELECT logo_updated_at FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}`) as Row[];
+  const value = rows[0]?.logo_updated_at;
+  return value ? (value instanceof Date ? value.toISOString() : String(value)) : null;
+}
+
+export async function saveLogo(ctx: ApiContext, dataUrl: unknown) {
+  requireAdmin(ctx);
+  const match =
+    typeof dataUrl === "string"
+      ? /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl)
+      : null;
+  if (!match) throw new ApiError("Erlaubt sind JPEG-, PNG- und WebP-Bilder.");
+  const bytes = Buffer.from(match[2], "base64");
+  if (!bytes.length || bytes.length > LOGO_MAX_BYTES)
+    throw new ApiError(`Das Logo darf höchstens ${LOGO_MAX_BYTES / 1024} KB gross sein.`, 413);
+  if (detectImageType(bytes) !== match[1]) throw new ApiError("Die Bilddatei ist ungültig.");
+  const [rows] = (await ctx.sql.transaction([
+    ctx.sql`
+      UPDATE carecore_organizations
+      SET logo_base64 = ${bytes.toString("base64")}, logo_mime_type = ${match[1]}, logo_updated_at = NOW(), updated_at = NOW()
+      WHERE id = ${ctx.actor.organizationId} RETURNING logo_updated_at`,
+    auditStatement(ctx, "branding", ctx.actor.organizationId, "logo_updated", null, {
+      mimeType: match[1],
+      bytes: bytes.length,
+    }),
+  ])) as Row[][];
+  return String(
+    rows[0]?.logo_updated_at instanceof Date ? rows[0].logo_updated_at.toISOString() : rows[0]?.logo_updated_at,
+  );
+}
+
+export async function removeLogo(ctx: ApiContext) {
+  requireAdmin(ctx);
+  await ctx.sql.transaction([
+    ctx.sql`
+      UPDATE carecore_organizations SET logo_base64 = NULL, logo_mime_type = NULL, logo_updated_at = NULL, updated_at = NOW()
+      WHERE id = ${ctx.actor.organizationId}`,
+    auditStatement(ctx, "branding", ctx.actor.organizationId, "logo_removed", null, null),
+  ]);
+}
