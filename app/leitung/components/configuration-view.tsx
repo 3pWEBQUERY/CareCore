@@ -12,6 +12,7 @@ import { LOGO_MAX_BYTES } from "@/lib/branding-shared";
 import { SETTING_DEFINITIONS, SETTING_KEYS, type AppSettings, type SettingKey } from "@/lib/settings-shared";
 import { notifyAdminChanged } from "./admin-board";
 import { RetentionCard } from "./retention-card";
+import { ApiKeysCard } from "./api-keys-card";
 
 export type ConfigurationData = {
   data?: {
@@ -318,6 +319,7 @@ export function ConfigurationView({
           </div>
         </section>
         <RetentionCard showToast={showToast} />
+        <ApiKeysCard showToast={showToast} />
       </div>
       {editorOpen && data && (
         <SettingEditor
