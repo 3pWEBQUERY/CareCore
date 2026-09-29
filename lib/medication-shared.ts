@@ -69,6 +69,8 @@ export type MedOrder = {
   isPrn: boolean;
   maxDosesPer24h: number | null;
   minIntervalHours: number | null;
+  // Wirkungskontrolle nach einer Reservegabe (Minuten), von der Verordnung festgelegt; null = keine geplante Kontrolle.
+  effectCheckMinutes: number | null;
   prnInstructions: string;
   indication: string;
   prescribedBy: string;
@@ -97,6 +99,7 @@ export type OrderInput = {
   isPrn: boolean;
   maxDosesPer24h: number | null;
   minIntervalHours: number | null;
+  effectCheckMinutes: number | null;
   prnInstructions: string;
   indication: string;
   prescribedBy: string;
@@ -170,3 +173,24 @@ export function initials(name: string) {
     .slice(0, 2)
     .join("");
 }
+
+// Wirkungskontrolle nach Reservegabe.
+export const EFFECT_RESULTS = {
+  effective: "Wirksam",
+  partial: "Teilweise wirksam",
+  none: "Nicht wirksam",
+} as const;
+export type EffectResult = keyof typeof EFFECT_RESULTS;
+
+export type EffectCheck = {
+  administrationId: string;
+  residentId: string;
+  residentName: string;
+  room: string;
+  medication: string;
+  reason: string;
+  administeredAt: string;
+  administeredBy: string | null;
+  dueAt: string;
+  overdue: boolean;
+};

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useWorkContext } from "@/app/components/care-context";
 import { ModuleIcon } from "@/app/components/module-icon";
-import type { MedOrder } from "@/lib/medication-shared";
+import { EFFECT_RESULTS, type EffectCheck, type EffectResult, type MedOrder } from "@/lib/medication-shared";
 import {
   EmptyState,
   LoadError,
@@ -43,10 +43,13 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
   const { openCreate, openEdit, dialogs } = useOrderDialogs({ resident, showToast, onChanged: reloadAll });
   const [administer, setAdminister] = useState<MedOrder | null>(null);
   const [receipt, setReceipt] = useState<MedOrder | null>(null);
+  const [checking, setChecking] = useState<EffectCheck | null>(null);
   const reserves = (detail.data?.orders ?? []).filter((order) => order.isPrn);
+  const effectChecks = detail.data?.effectChecks ?? [];
   const done = (message: string) => {
     setAdminister(null);
     setReceipt(null);
+    setChecking(null);
     showToast(message);
     reloadAll();
   };
@@ -113,6 +116,48 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
                 <AllergyBadge allergies={resident.allergies} />
               </section>
               {detail.error && <LoadError message={detail.error} onRetry={detail.reload} />}
+              {effectChecks.length > 0 && (
+                <section className="card med-reserve-card med-effect-card" aria-labelledby="med-effect-title">
+                  <div className="card-header">
+                    <div>
+                      <p className="eyebrow">Nach Reservegabe</p>
+                      <h2 className="card-title" id="med-effect-title">
+                        Wirkungskontrolle
+                      </h2>
+                      <p className="card-subtitle">Zeitpunkt gemäss Verordnung; das Ergebnis wird dokumentiert.</p>
+                    </div>
+                  </div>
+                  <div className="med-reserve-list">
+                    {effectChecks.map((check) => (
+                      <article key={check.administrationId}>
+                        <div className="med-reserve-title">
+                          <span className="med-pill-icon">
+                            <ModuleIcon name="med" />
+                          </span>
+                          <span>
+                            <strong>{check.medication}</strong>
+                            <small>
+                              Gabe {formatDateTime(check.administeredAt)}
+                              {check.administeredBy ? ` · ${check.administeredBy}` : ""}
+                              {check.reason ? ` · ${check.reason}` : ""}
+                            </small>
+                          </span>
+                          <span className={`status-badge ${check.overdue ? "critical" : "info"}`}>
+                            {check.overdue ? "Fällig seit" : "Fällig um"} {timeInZurich(new Date(check.dueAt))} Uhr
+                          </span>
+                        </div>
+                        {canManage && (
+                          <div className="med-reserve-actions">
+                            <button type="button" onClick={() => setChecking(check)}>
+                              Wirkung erfassen
+                            </button>
+                          </div>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              )}
               <section className="card med-reserve-card">
                 <div className="card-header">
                   <div>
@@ -248,6 +293,7 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
           onSaved={done}
         />
       )}
+      {checking && <EffectCheckDialog check={checking} onClose={() => setChecking(null)} onSaved={done} />}
       {receipt && resident && (
         <ReceiptDialog
           items={[]}
@@ -310,7 +356,7 @@ function AdministerDialog({
       id="med-prn"
       eyebrow={`CareCore Med · ${residentName}`}
       title={`${order.name} ${order.strength}`.trim()}
-      description={`Einzeldosis ${order.amount} · max. ${order.maxDosesPer24h} Gaben / 24 h · Mindestabstand ${formatNumber(order.minIntervalHours ?? 0)} h · Indikation: ${order.indication}`}
+      description={`Einzeldosis ${order.amount} · max. ${order.maxDosesPer24h} Gaben / 24 h · Mindestabstand ${formatNumber(order.minIntervalHours ?? 0)} h · Indikation: ${order.indication}${order.effectCheckMinutes ? ` · Wirkungskontrolle nach ${order.effectCheckMinutes} Min.` : ""}`}
       onClose={onClose}
       onSubmit={save}
       saving={saving}
@@ -334,6 +380,78 @@ function AdministerDialog({
         <input required inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
       </label>
       {witnessRequired && <WitnessFields value={witness} onChange={setWitness} />}
+    </EditorDialog>
+  );
+}
+
+// Ergebnis der Wirkungskontrolle: wirksam, teilweise oder nicht wirksam (dann mit Beschreibung).
+function EffectCheckDialog({
+  check,
+  onClose,
+  onSaved,
+}: {
+  check: EffectCheck;
+  onClose: () => void;
+  onSaved: (message: string) => void;
+}) {
+  const [result, setResult] = useState<EffectResult>("effective");
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const save = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      await requestJson(`/api/medication/prn/${check.administrationId}/effect`, {
+        method: "POST",
+        body: { result, note },
+      });
+      onSaved(`${check.residentName}: Wirkungskontrolle dokumentiert`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Wirkungskontrolle konnte nicht gespeichert werden.");
+      setSaving(false);
+    }
+  };
+  return (
+    <EditorDialog
+      id="med-effect"
+      eyebrow={`CareCore Med · ${check.residentName}`}
+      title={`Wirkungskontrolle · ${check.medication}`}
+      description={`Gabe ${formatDateTime(check.administeredAt)}${check.reason ? ` · Anlass: ${check.reason}` : ""}`}
+      onClose={onClose}
+      onSubmit={save}
+      saving={saving}
+      error={error}
+      submitLabel="Wirkung dokumentieren"
+    >
+      <fieldset className="area-editor-wide">
+        <legend>Ergebnis</legend>
+        <div className="operations-filter-buttons">
+          {(Object.keys(EFFECT_RESULTS) as EffectResult[]).map((key) => (
+            <button
+              className={result === key ? "active" : ""}
+              type="button"
+              key={key}
+              aria-pressed={result === key}
+              onClick={() => setResult(key)}
+            >
+              {EFFECT_RESULTS[key]}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+      <label className="area-editor-wide">
+        <span>{result === "effective" ? "Beobachtung (optional)" : "Einschätzung und Massnahme"}</span>
+        <textarea
+          autoFocus
+          rows={3}
+          maxLength={2000}
+          required={result !== "effective"}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="z. B. Schmerzen NRS 2, schläft ruhig – oder: keine Besserung, Hausarzt informiert"
+        />
+      </label>
     </EditorDialog>
   );
 }

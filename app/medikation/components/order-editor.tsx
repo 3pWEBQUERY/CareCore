@@ -51,8 +51,10 @@ function draftFromOrder(order: MedOrder | null, isPrn: boolean): OrderInput {
       times: isPrn ? [] : ["08:00"],
       weekdays: [],
       isPrn,
-      maxDosesPer24h: isPrn ? 4 : null,
-      minIntervalHours: isPrn ? 6 : null,
+      // Grenzen und Kontrollzeitpunkt stammen aus der ärztlichen Verordnung: keine Vorgabewerte.
+      maxDosesPer24h: null,
+      minIntervalHours: null,
+      effectCheckMinutes: null,
       prnInstructions: "",
       indication: "",
       prescribedBy: "",
@@ -71,6 +73,7 @@ function draftFromOrder(order: MedOrder | null, isPrn: boolean): OrderInput {
     isPrn: order.isPrn,
     maxDosesPer24h: order.maxDosesPer24h,
     minIntervalHours: order.minIntervalHours,
+    effectCheckMinutes: order.effectCheckMinutes,
     prnInstructions: order.prnInstructions,
     indication: order.indication,
     prescribedBy: order.prescribedBy,
@@ -251,6 +254,18 @@ export default function OrderEditor({
               step={0.5}
               value={draft.minIntervalHours ?? ""}
               onChange={(e) => update("minIntervalHours", e.target.value ? Number(e.target.value) : null)}
+            />
+          </label>
+          <label>
+            <span>Wirkungskontrolle nach (Minuten)</span>
+            <input
+              type="number"
+              min={5}
+              max={1440}
+              step={5}
+              value={draft.effectCheckMinutes ?? ""}
+              onChange={(e) => update("effectCheckMinutes", e.target.value ? Number(e.target.value) : null)}
+              placeholder="gemäss Verordnung"
             />
           </label>
           <label className="area-editor-wide">
