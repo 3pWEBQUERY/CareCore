@@ -76,6 +76,23 @@
   text-align: left;
   cursor: pointer;
 }
+.notifications-bundle {
+  border-bottom: 1px solid #e9eef4;
+}
+.notifications-bundle:last-child {
+  border-bottom: 0;
+}
+.notifications-bundle > .notifications-page-row {
+  border-bottom: 0;
+}
+.notifications-bundle-items {
+  display: grid;
+  padding: 0 0 12px 28px;
+}
+.notifications-bundle-items > .secondary-button {
+  justify-self: start;
+  margin-top: 8px;
+}
 .notifications-page-row:last-child {
   border-bottom: 0;
 }

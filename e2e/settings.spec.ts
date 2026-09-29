@@ -49,7 +49,7 @@ test("Benachrichtigungen: Ruhezeit und Hinweiston werden gespeichert", async ({ 
   await expect(page.locator(".settings-list button", { hasText: "Hinweiston" })).toContainText("Ein");
 
   const saved = await (await page.request.get("/api/me/settings")).json();
-  expect(saved.preferences.quietHours).toEqual({ enabled: true, from: "21:30", to: "06:30" });
+  expect(saved.preferences.quietHours).toEqual({ enabled: true, from: "21:30", to: "06:30", critical: true });
   expect(saved.preferences.sound).toBe(true);
   expect(errors).toEqual([]);
 });

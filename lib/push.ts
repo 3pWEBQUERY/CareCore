@@ -125,7 +125,10 @@ export async function dispatchPush(sql: Sql, send: PushSender) {
     const personal = preferences.get(userId);
     const wanted = critical || !category || personal?.notify[category] !== false;
     // In der persönlichen Ruhezeit nur kritische Hinweise; die übrigen bleiben in der App sichtbar.
-    const quiet = !critical && !!personal && inQuietHours(personal.quietHours, localTime.get(userId) ?? "");
+    const quiet =
+      !!personal &&
+      (!critical || !personal.quietHours.critical) &&
+      inQuietHours(personal.quietHours, localTime.get(userId) ?? "");
     if (!wanted || quiet) continue;
     const message: PushMessage = {
       title: String(notification.title),

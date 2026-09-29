@@ -136,6 +136,15 @@ test("Ruhezeit: in der Ruhezeit nur kritische Push-Nachrichten", async () => {
     ["Sturz mit Verletzung"],
   );
 
+  // Wer auch kritische Hinweise in der Ruhezeit nicht als Push will, sieht sie nur in der App.
+  await savePreferences(actor, { quietHours: { critical: false } });
+  await notify("Zweiter Sturz", "critical");
+  await dispatchPush(sql, send);
+  assert.deepEqual(
+    sent.map((message) => message.title),
+    ["Sturz mit Verletzung"],
+  );
+
   await savePreferences(actor, { quietHours: { enabled: false } });
   await notify("Neue Aufgabe", "normal");
   await dispatchPush(sql, send);
