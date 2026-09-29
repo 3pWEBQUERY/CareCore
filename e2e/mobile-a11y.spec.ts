@@ -44,6 +44,37 @@ test.describe("Handy-Ansicht (390 px)", () => {
     await expect(page).toHaveURL(/\/c\/wundmanagement/);
     await expect(page.locator("h1").first()).toBeVisible();
   });
+
+  test("Schnellaktionen: Knopf über der Leiste nennt den Bewohner und führt zur Erfassung", async ({ page }) => {
+    await login(page, ADMIN);
+    const errors = watchErrors(page);
+    const { residents } = (await (await page.request.get("/api/medication/residents")).json()) as {
+      residents: Array<{ id: string; name: string }>;
+    };
+    await page.addInitScript((id) => window.sessionStorage.setItem("carecore.residentId", id), residents[0].id);
+    await page.goto("/c/vitalwerte");
+    await expect(page.locator("h1").first()).toBeVisible();
+    await page.getByRole("button", { name: "Schnellaktionen" }).tap();
+    const sheet = page.getByRole("dialog", { name: "Schnellaktionen" });
+    await expect(sheet).toContainText(residents[0].name);
+    await page.keyboard.press("Escape");
+    await expect(sheet).toHaveCount(0);
+    await page.getByRole("button", { name: "Schnellaktionen" }).tap();
+    await sheet.getByRole("button", { name: "Reservegabe" }).tap();
+    await expect(page).toHaveURL(/\/c\/medikation\/reserven/);
+    await expect(page.locator(".med-profile-head")).toContainText(residents[0].name);
+    // Auf der Startseite bleibt deren eigener Knopf „Notiz erstellen“.
+    await page.goto("/c");
+    await expect(page.getByRole("button", { name: "Schnellaktionen" })).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+});
+
+test("Schnellaktionen erscheinen nicht in der Desktop-Ansicht", async ({ page }) => {
+  await login(page, ADMIN);
+  await page.goto("/c/vitalwerte");
+  await expect(page.locator("h1").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Schnellaktionen" })).toBeHidden();
 });
 
 test("Tastatur: Seitenpanel übernimmt den Fokus, hält ihn und gibt ihn beim Schliessen zurück", async ({ page }) => {
