@@ -3,8 +3,11 @@ import { hashPassword, hashSessionToken, SESSION_COOKIE, verifyPassword } from "
 import { ApiError, iso, type Row } from "@/lib/api-context";
 import { carecoreDb, type CarecoreActor } from "@/lib/server-data";
 import {
+  AUTO_LOGOUT_MINUTES,
+  DEFAULT_PREFERENCES,
   NOTIFY_CATEGORIES,
   START_PAGES,
+  TEXT_SIZES,
   resolvePreferences,
   type NotifyCategory,
   type UserPreferences,
@@ -53,9 +56,10 @@ export async function readPreferences(userId: string): Promise<UserPreferences> 
   return resolvePreferences(rows[0]?.preferences);
 }
 
-export async function userSettings(actor: CarecoreActor): Promise<UserSettings> {
+// `tokenHash` markiert die aktuelle Sitzung; ohne Angabe wird sie aus dem Sitzungs-Cookie bestimmt.
+export async function userSettings(actor: CarecoreActor, tokenHash?: string | null): Promise<UserSettings> {
   const sql = carecoreDb();
-  const [profileRows, sessions, tokenHash] = await Promise.all([
+  const [profileRows, sessions, currentHash] = await Promise.all([
     sql`
       SELECT u.display_name, u.username, u.password_changed_at, COALESCE(p.job_title, '') AS job_title,
         COALESCE(p.phone, '') AS phone, p.preferences, cu.name AS care_unit, COALESCE(r.name, u.role) AS role_name
@@ -67,7 +71,7 @@ export async function userSettings(actor: CarecoreActor): Promise<UserSettings> 
     sql`
       SELECT id, token_hash, user_agent, created_at, expires_at FROM carecore_sessions
       WHERE user_id = ${actor.id} AND expires_at > NOW() ORDER BY created_at DESC`,
-    currentTokenHash(),
+    tokenHash === undefined ? currentTokenHash() : tokenHash,
   ]);
   const row = (profileRows[0] ?? {}) as Row;
   return {
@@ -88,31 +92,114 @@ export async function userSettings(actor: CarecoreActor): Promise<UserSettings> 
         device: device(session.user_agent),
         createdAt: iso(session.created_at) ?? "",
         expiresAt: iso(session.expires_at) ?? "",
-        current: session.token_hash === tokenHash,
+        current: session.token_hash === currentHash,
       })),
     },
   };
 }
 
+// Speichert nur die mitgeschickten Felder; ungültige Werte werden abgelehnt statt stillschweigend ersetzt.
 export async function savePreferences(actor: CarecoreActor, body: Record<string, unknown>) {
   const current = await readPreferences(actor.id);
-  const notifyInput = body.notify && typeof body.notify === "object" ? (body.notify as Record<string, unknown>) : {};
-  const next = resolvePreferences({
-    notify: Object.fromEntries(
+  const invalid = (label: string) => new ApiError(`${label}: Wert ist ungültig.`);
+  const next: Record<string, unknown> = { ...current };
+  if (body.notify !== undefined) {
+    if (!body.notify || typeof body.notify !== "object") throw invalid("Benachrichtigungen");
+    const input = body.notify as Record<string, unknown>;
+    next.notify = Object.fromEntries(
       (Object.keys(NOTIFY_CATEGORIES) as NotifyCategory[]).map((key) => [
         key,
-        typeof notifyInput[key] === "boolean" ? notifyInput[key] : current.notify[key],
+        typeof input[key] === "boolean" ? input[key] : current.notify[key],
       ]),
-    ),
-    textSize: body.textSize ?? current.textSize,
-    contrast: body.contrast ?? current.contrast,
-    startPage: typeof body.startPage === "string" && body.startPage in START_PAGES ? body.startPage : current.startPage,
-  });
+    );
+  }
+  const choose = (key: keyof UserPreferences, label: string, allowed: readonly unknown[]) => {
+    if (body[key] === undefined) return;
+    if (!allowed.includes(body[key])) throw invalid(label);
+    next[key] = body[key];
+  };
+  choose("textSize", "Schriftgrösse", Object.keys(TEXT_SIZES));
+  choose("contrast", "Kontrast", ["standard", "high"]);
+  choose("motion", "Animationen", ["standard", "reduced"]);
+  choose("shortcuts", "Tastaturkürzel", [true, false]);
+  choose("sound", "Hinweiston", [true, false]);
+  choose("startPage", "Startseite", Object.keys(START_PAGES));
+  choose("autoLogout", "Automatische Abmeldung", AUTO_LOGOUT_MINUTES);
+  if (body.quietHours !== undefined) {
+    const input =
+      body.quietHours && typeof body.quietHours === "object" ? (body.quietHours as Record<string, unknown>) : null;
+    if (!input) throw invalid("Ruhezeit");
+    const quiet = { ...current.quietHours, ...input };
+    if (
+      typeof quiet.enabled !== "boolean" ||
+      ![quiet.from, quiet.to].every((time) => /^([01]\d|2[0-3]):[0-5]\d$/.test(String(time)))
+    )
+      throw new ApiError("Ruhezeit: Bitte Uhrzeiten im Format HH:MM angeben.");
+    if (quiet.enabled && quiet.from === quiet.to)
+      throw new ApiError("Ruhezeit: Beginn und Ende müssen sich unterscheiden.");
+    next.quietHours = { enabled: quiet.enabled, from: quiet.from, to: quiet.to };
+  }
+  const resolved = resolvePreferences(next);
   await carecoreDb()`
     UPDATE carecore_user_profiles
-    SET preferences = COALESCE(preferences, '{}'::jsonb) || ${JSON.stringify(next)}::jsonb, updated_at = NOW()
+    SET preferences = COALESCE(preferences, '{}'::jsonb) || ${JSON.stringify(resolved)}::jsonb, updated_at = NOW()
     WHERE user_id = ${actor.id}`;
-  return next;
+  return resolved;
+}
+
+// Alle persönlichen Einstellungen auf die Standardwerte zurücksetzen.
+export async function resetPreferences(actor: CarecoreActor) {
+  await carecoreDb()`
+    UPDATE carecore_user_profiles SET preferences = ${JSON.stringify(DEFAULT_PREFERENCES)}::jsonb, updated_at = NOW()
+    WHERE user_id = ${actor.id}`;
+  return DEFAULT_PREFERENCES;
+}
+
+// „Meine Daten herunterladen“: Profil, Einstellungen, Qualifikationen, Geräte, Push-Abonnements (ohne Schlüssel)
+// und die eigenen Protokolleinträge der letzten 365 Tage – nur Daten der angemeldeten Person.
+export async function exportMyData(actor: CarecoreActor) {
+  const sql = carecoreDb();
+  const [settings, qualifications, subscriptions, audit, notifications] = await Promise.all([
+    userSettings(actor, null),
+    sql`
+      SELECT q.name, eq.valid_from, eq.valid_until FROM carecore_employee_qualifications eq
+      JOIN carecore_qualifications q ON q.id = eq.qualification_id
+      WHERE eq.user_id = ${actor.id} ORDER BY eq.valid_from DESC`,
+    sql`SELECT created_at, last_sent_at FROM carecore_push_subscriptions WHERE user_id = ${actor.id} ORDER BY created_at DESC`,
+    sql`
+      SELECT created_at, entity_type, action FROM carecore_audit_log
+      WHERE actor_user_id = ${actor.id} AND created_at > NOW() - INTERVAL '365 days'
+      ORDER BY created_at DESC LIMIT 5000`,
+    sql`SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE read_at IS NULL)::int AS unread FROM carecore_notifications WHERE user_id = ${actor.id}`,
+  ]);
+  return {
+    exportedAt: new Date().toISOString(),
+    profile: settings.profile,
+    preferences: settings.preferences,
+    passwordChangedAt: settings.security.passwordChangedAt,
+    sessions: settings.security.sessions.map(({ device, createdAt, expiresAt }) => ({ device, createdAt, expiresAt })),
+    qualifications: (qualifications as Row[]).map((row) => ({
+      name: String(row.name),
+      validFrom: iso(row.valid_from)?.slice(0, 10) ?? null,
+      validUntil: iso(row.valid_until)?.slice(0, 10) ?? null,
+    })),
+    pushSubscriptions: (subscriptions as Row[]).map((row) => ({
+      createdAt: iso(row.created_at),
+      lastSentAt: iso(row.last_sent_at),
+    })),
+    notifications: { total: Number(notifications[0]?.total ?? 0), unread: Number(notifications[0]?.unread ?? 0) },
+    activity: (audit as Row[]).map((row) => ({
+      at: iso(row.created_at),
+      area: String(row.entity_type),
+      action: String(row.action),
+    })),
+  };
+}
+
+// Push-Nachrichten auf allen eigenen Geräten beenden.
+export async function endAllPush(actor: CarecoreActor) {
+  const rows = await carecoreDb()`DELETE FROM carecore_push_subscriptions WHERE user_id = ${actor.id} RETURNING id`;
+  return rows.length;
 }
 
 // A new password ends every other session, so a leaked password cannot stay in use elsewhere.

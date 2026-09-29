@@ -9,11 +9,21 @@ import { loadWorkContext, useWorkContext } from "@/app/components/care-context";
 import { ProfilePopover } from "@/app/components/header-profile-popover";
 import { announcePreferences } from "@/app/components/appearance";
 import { formatDateTime, requestJson, useApiData } from "@/app/components/workspace-ui";
+import { clearOfflineData } from "@/app/components/offline-queue";
+import { SETTING_DEFINITIONS, SETTING_KEYS, type AppSettings, type SettingKey } from "@/lib/settings-shared";
 import {
+  AUTO_LOGOUT_MINUTES,
+  CONTRASTS,
+  MOTIONS,
   NOTIFY_CATEGORIES,
   START_PAGES,
+  TEXT_SIZES,
+  autoLogoutLabel,
+  type AutoLogout,
   type NotifyCategory,
+  type QuietHours,
   type StartPage,
+  type TextSize,
   type UserPreferences,
   type UserSettings,
 } from "@/lib/user-settings-shared";
@@ -21,7 +31,8 @@ import SettingsSelect from "./settings-select";
 import PasswordChangePopover from "./password-change-popover";
 import PushControl from "./push-control";
 
-export type SettingsView = "overview" | "profile" | "notifications" | "security" | "appearance";
+export type SettingsView =
+  "overview" | "profile" | "notifications" | "security" | "appearance" | "privacy" | "organization";
 
 type Item = {
   id: string;
@@ -38,6 +49,17 @@ type Item = {
     | { kind: "password"; text: string }
     | { kind: "sessions"; text: string }
     | { kind: "push"; text: string }
+    | { kind: "toggle"; text: string; label: string; checked: boolean; note?: string; save: (value: boolean) => void }
+    | { kind: "quiet"; text: string; value: QuietHours; save: (value: QuietHours) => Promise<boolean> }
+    | { kind: "action"; text: string; label: string; danger?: boolean; run: () => void }
+    | { kind: "link"; text: string; label: string; href: string }
+    | {
+        kind: "organization";
+        text: string;
+        setting: SettingKey;
+        value: AppSettings[SettingKey];
+        save: (change: { enabled?: boolean; value?: number }) => Promise<boolean>;
+      }
     | { kind: "select"; text: string; label: string; value: string; options: string[]; save: (value: string) => void };
 };
 
@@ -45,7 +67,8 @@ const VIEWS: Record<SettingsView, { title: string; eyebrow: string; description:
   overview: {
     eyebrow: "CareCore Einstellungen",
     title: "Einstellungen",
-    description: "Dein persönlicher Bereich für Profil, Benachrichtigungen, Sicherheit und Darstellung.",
+    description:
+      "Profil, Benachrichtigungen, Sicherheit, Darstellung und Datenschutz – und für die Administration die Einstellungen der Einrichtung.",
   },
   profile: {
     eyebrow: "Einstellungen · Profil",
@@ -64,8 +87,18 @@ const VIEWS: Record<SettingsView, { title: string; eyebrow: string; description:
   },
   appearance: {
     eyebrow: "Einstellungen · Darstellung",
-    title: "Darstellung",
+    title: "Darstellung & Bedienung",
     description: "Passe CareCore an deine Arbeitsweise an. Gilt auf allen deinen Geräten.",
+  },
+  privacy: {
+    eyebrow: "Einstellungen · Datenschutz",
+    title: "Datenschutz & Daten",
+    description: "Deine Daten herunterladen, dieses Gerät aufräumen und Einstellungen zurücksetzen.",
+  },
+  organization: {
+    eyebrow: "Einstellungen · Einrichtung",
+    title: "Einrichtung",
+    description: "Einstellungen für alle Mitarbeitenden der Organisation. Jede Änderung wird protokolliert.",
   },
 };
 
@@ -74,11 +107,14 @@ const NAV: Array<[SettingsView, string, ModuleIconName]> = [
   ["profile", "Profil & Präferenzen", "team"],
   ["notifications", "Benachrichtigungen", "bell"],
   ["security", "Sicherheit & Zugriff", "quality"],
-  ["appearance", "Darstellung", "pulse"],
+  ["appearance", "Darstellung & Bedienung", "pulse"],
+  ["privacy", "Datenschutz & Daten", "docs"],
+  ["organization", "Einrichtung", "building"],
 ];
 
-const TEXT_SIZES = { standard: "Standard", large: "Gross" } as const;
-const CONTRASTS = { standard: "Standard", high: "Hoher Kontrast" } as const;
+const ADMIN_VIEWS: SettingsView[] = ["organization"];
+const pick = <K extends string>(labels: Record<K, string>, label: string, fallback: K) =>
+  (Object.keys(labels) as K[]).find((key) => labels[key] === label) ?? fallback;
 const PERMISSION_LABELS: Record<string, string> = {
   "residents.read": "Bewohnerakten lesen",
   "residents.write": "Bewohnerakten bearbeiten",
@@ -106,6 +142,10 @@ export default function SettingsWorkspaceDetail({ view }: { view: SettingsView }
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const page = VIEWS[view];
+  const isAdmin = settings.data?.profile.permissions.includes("administration.manage") ?? false;
+  const organization = useApiData<{ settings: AppSettings }>(
+    view === "organization" && isAdmin ? "/api/settings" : null,
+  );
 
   return (
     <ModulePageShell pageClass={`settings-page settings-${view}`} locationSecondary="Persönlicher Bereich">
@@ -125,7 +165,70 @@ export default function SettingsWorkspaceDetail({ view }: { view: SettingsView }
             showToast((reason as Error).message);
           }
         };
-        const items = data ? itemsFor(view, data, savePreferences) : [];
+        const saveOrganization = async (key: SettingKey, change: { enabled?: boolean; value?: number }) => {
+          try {
+            await requestJson(`/api/settings/${key}`, { method: "PATCH", body: change });
+            organization.reload();
+            void loadWorkContext(true);
+            const title = SETTING_DEFINITIONS[key].title;
+            showToast(
+              change.enabled === undefined
+                ? `${title} gespeichert`
+                : `${title} ${change.enabled ? "eingeschaltet" : "ausgeschaltet"}`,
+            );
+            return true;
+          } catch (reason) {
+            showToast((reason as Error).message);
+            return false;
+          }
+        };
+        const run = async (action: () => Promise<string>) => {
+          try {
+            showToast(await action());
+          } catch (reason) {
+            showToast((reason as Error).message);
+          }
+        };
+        const actions: Actions = {
+          exportData: () => {
+            const link = document.createElement("a");
+            link.href = "/api/me/export";
+            link.download = "";
+            link.click();
+            showToast("Deine Daten werden heruntergeladen");
+          },
+          clearDevice: () => {
+            clearOfflineData();
+            showToast("Zwischengespeicherte Seiten und Daten auf diesem Gerät gelöscht");
+          },
+          endPushAll: () =>
+            void run(async () => {
+              const result = await requestJson<{ ended: number }>("/api/me/settings?scope=push", { method: "DELETE" });
+              return result.ended
+                ? `Push-Nachrichten auf ${result.ended} Gerät${result.ended === 1 ? "" : "en"} beendet`
+                : "Push war auf keinem Gerät eingeschaltet";
+            }),
+          reset: () =>
+            void run(async () => {
+              const result = await requestJson<{ preferences: UserPreferences }>("/api/me/settings?scope=preferences", {
+                method: "DELETE",
+              });
+              settings.reload();
+              announcePreferences(result.preferences);
+              void loadWorkContext(true);
+              return "Persönliche Einstellungen zurückgesetzt";
+            }),
+        };
+        const items = data
+          ? itemsFor(view, data, savePreferences, {
+              isAdmin,
+              organization: organization.data?.settings ?? null,
+              organizationError: organization.error ?? null,
+              organizationShortcuts: context?.settings.keyboardShortcuts.enabled ?? true,
+              saveOrganization,
+              actions,
+            })
+          : [];
         const selected = items.find((item) => item.id === selectedId) ?? items[0] ?? null;
         const enabledCount = data ? Object.values(data.preferences.notify).filter(Boolean).length : 0;
 
@@ -160,7 +263,7 @@ export default function SettingsWorkspaceDetail({ view }: { view: SettingsView }
                     </div>
                   </div>
                   <nav aria-label="Einstellungsnavigation">
-                    {NAV.map(([id, label, icon]) => (
+                    {NAV.filter(([id]) => isAdmin || !ADMIN_VIEWS.includes(id)).map(([id, label, icon]) => (
                       <button
                         className={view === id ? "active" : ""}
                         type="button"
@@ -349,6 +452,42 @@ function DetailControl({
       </label>
     );
   if (detail.kind === "push") return <PushControl onMessage={onMessage} />;
+  if (detail.kind === "toggle")
+    return (
+      <>
+        <label className="settings-toggle">
+          <span>{detail.label}</span>
+          <input type="checkbox" checked={detail.checked} onChange={(event) => detail.save(event.target.checked)} />
+          <i />
+        </label>
+        {detail.note && <p className="settings-note">{detail.note}</p>}
+      </>
+    );
+  if (detail.kind === "quiet") return <QuietHoursControl key={JSON.stringify(detail.value)} detail={detail} />;
+  if (detail.kind === "action")
+    return (
+      <div className="settings-action">
+        <span>{item.title}</span>
+        <button
+          className={detail.danger ? "appointment-danger-button" : "secondary-button"}
+          type="button"
+          onClick={detail.run}
+        >
+          {detail.label}
+        </button>
+      </div>
+    );
+  if (detail.kind === "link")
+    return (
+      <div className="settings-action">
+        <span>{item.title}</span>
+        <a className="secondary-button settings-link-button" href={detail.href}>
+          {detail.label}
+        </a>
+      </div>
+    );
+  if (detail.kind === "organization")
+    return <OrganizationSettingControl key={JSON.stringify(detail.value)} detail={detail} />;
   if (detail.kind === "select")
     return (
       <label className="settings-select">
@@ -400,10 +539,126 @@ function DetailControl({
   ) : null;
 }
 
+type QuietDetail = Extract<Item["detail"], { kind: "quiet" }>;
+type OrganizationDetail = Extract<Item["detail"], { kind: "organization" }>;
+
+// Ruhezeit für Push-Nachrichten: ein/aus und Beginn/Ende (Ortszeit der Einrichtung).
+function QuietHoursControl({ detail }: { detail: QuietDetail }) {
+  const [draft, setDraft] = useState(detail.value);
+  const [saving, setSaving] = useState(false);
+  const changed = JSON.stringify(draft) !== JSON.stringify(detail.value);
+  const save = async (next: QuietHours) => {
+    setSaving(true);
+    await detail.save(next);
+    setSaving(false);
+  };
+  return (
+    <div className="settings-quiet">
+      <label className="settings-toggle">
+        <span>Ruhezeit einhalten</span>
+        <input
+          type="checkbox"
+          checked={draft.enabled}
+          disabled={saving}
+          onChange={(event) => {
+            const next = { ...draft, enabled: event.target.checked };
+            setDraft(next);
+            void save(next);
+          }}
+        />
+        <i />
+      </label>
+      <div className="settings-quiet-times">
+        <label>
+          <span>Von</span>
+          <input
+            type="time"
+            value={draft.from}
+            onChange={(event) => setDraft({ ...draft, from: event.target.value })}
+          />
+        </label>
+        <label>
+          <span>Bis</span>
+          <input type="time" value={draft.to} onChange={(event) => setDraft({ ...draft, to: event.target.value })} />
+        </label>
+        <button
+          className="secondary-button"
+          type="button"
+          disabled={!changed || saving}
+          onClick={() => void save(draft)}
+        >
+          Zeiten speichern
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Einstellung der Einrichtung (Leitung › Konfiguration): ein/aus und, wo vorgesehen, ein Wert.
+function OrganizationSettingControl({ detail }: { detail: OrganizationDetail }) {
+  const definition = SETTING_DEFINITIONS[detail.setting];
+  const [value, setValue] = useState(detail.value.value === null ? "" : String(detail.value.value));
+  const [saving, setSaving] = useState(false);
+  const number = Number(value);
+  const valid =
+    value.trim() !== "" &&
+    Number.isInteger(number) &&
+    number >= (definition.min ?? 0) &&
+    number <= (definition.max ?? Infinity);
+  const save = async (change: { enabled?: boolean; value?: number }) => {
+    setSaving(true);
+    await detail.save(change);
+    setSaving(false);
+  };
+  return (
+    <div className="settings-quiet">
+      <label className="settings-toggle">
+        <span>Eingeschaltet</span>
+        <input
+          type="checkbox"
+          checked={detail.value.enabled}
+          disabled={saving}
+          onChange={(event) => void save({ enabled: event.target.checked })}
+        />
+        <i />
+      </label>
+      {definition.unit && (
+        <div className="settings-quiet-times">
+          <label>
+            <span>
+              Wert ({definition.unit}, {definition.min}–{definition.max})
+            </span>
+            <input inputMode="numeric" value={value} onChange={(event) => setValue(event.target.value)} />
+          </label>
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={saving || !valid || number === detail.value.value}
+            onClick={() => void save({ value: number })}
+          >
+            Wert speichern
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+type Actions = { exportData: () => void; clearDevice: () => void; endPushAll: () => void; reset: () => void };
+type Extras = {
+  isAdmin: boolean;
+  organization: AppSettings | null;
+  organizationError: string | null;
+  organizationShortcuts: boolean;
+  saveOrganization: (key: SettingKey, change: { enabled?: boolean; value?: number }) => Promise<boolean>;
+  actions: Actions;
+};
+
 function itemsFor(
   view: SettingsView,
   data: UserSettings,
   save: (change: Partial<UserPreferences>, message: string) => void,
+  extras: Extras,
 ): Item[] {
   const { profile, preferences, security } = data;
   const passwordAge = daysAgo(security.passwordChangedAt);
@@ -416,6 +671,9 @@ function itemsFor(
   const enabled = Object.values(preferences.notify).filter(Boolean).length;
   const total = Object.keys(NOTIFY_CATEGORIES).length;
   const appearance = [TEXT_SIZES[preferences.textSize], CONTRASTS[preferences.contrast]].join(" · ");
+  const onOff = (value: boolean) => (value ? "Ein" : "Aus");
+  const quiet = preferences.quietHours;
+  const quietValue = quiet.enabled ? `${quiet.from}–${quiet.to} Uhr` : "Aus";
 
   if (view === "overview")
     return [
@@ -442,19 +700,47 @@ function itemsFor(
       {
         id: "security",
         title: "Sicherheit & Zugriff",
-        description: "Passwort und angemeldete Geräte",
+        description: "Passwort, Geräte und automatische Abmeldung",
         value: `${security.sessions.length} Gerät${security.sessions.length === 1 ? "" : "e"}`,
         icon: "quality",
         detail: { kind: "open", view: "security", text: `Passwort ${passwordValue}.` },
       },
       {
         id: "appearance",
-        title: "Darstellung",
-        description: "Schriftgrösse, Kontrast und Startseite",
+        title: "Darstellung & Bedienung",
+        description: "Schrift, Kontrast, Animationen, Startseite, Kürzel",
         value: appearance,
         icon: "pulse",
         detail: { kind: "open", view: "appearance", text: `Startseite: ${START_PAGES[preferences.startPage].label}.` },
       },
+      {
+        id: "privacy",
+        title: "Datenschutz & Daten",
+        description: "Daten herunterladen, Gerät aufräumen, zurücksetzen",
+        value: "Deine Daten",
+        icon: "docs",
+        detail: {
+          kind: "open",
+          view: "privacy",
+          text: "Lade alle Daten herunter, die CareCore zu deinem Konto speichert, oder räume dieses Gerät auf.",
+        },
+      },
+      ...(extras.isAdmin
+        ? [
+            {
+              id: "organization",
+              title: "Einrichtung",
+              description: "Einstellungen für alle Mitarbeitenden",
+              value: "Administration",
+              icon: "building",
+              detail: {
+                kind: "open",
+                view: "organization",
+                text: "Erinnerungen, Medikation, BtM, Navigation und Tastaturkürzel für die ganze Organisation.",
+              },
+            } satisfies Item,
+          ]
+        : []),
     ];
 
   if (view === "profile")
@@ -525,6 +811,39 @@ function itemsFor(
           text: "Neue Benachrichtigungen erscheinen als Mitteilung auf diesem Gerät, auch wenn CareCore geschlossen ist. Angezeigt wird nur der Titel; es gelten die Kategorien oben.",
         },
       },
+      {
+        id: "quiet",
+        title: "Ruhezeit",
+        description: "Keine Push-Nachrichten in dieser Zeit",
+        value: quietValue,
+        icon: "shift",
+        detail: {
+          kind: "quiet",
+          text: "In der Ruhezeit kommen keine Push-Nachrichten; die Hinweise bleiben in CareCore sichtbar. Kritische Hinweise kommen immer. Es gilt die Uhrzeit der Einrichtung, über Mitternacht (z. B. 22:00–06:00) ist möglich.",
+          value: quiet,
+          save: async (value) => {
+            await save(
+              { quietHours: value },
+              value.enabled ? `Ruhezeit ${value.from}–${value.to} Uhr` : "Ruhezeit ausgeschaltet",
+            );
+            return true;
+          },
+        },
+      },
+      {
+        id: "sound",
+        title: "Hinweiston",
+        description: "Kurzer Ton bei neuen Benachrichtigungen",
+        value: onOff(preferences.sound),
+        icon: "bell",
+        detail: {
+          kind: "toggle",
+          text: "Ist CareCore geöffnet, erklingt ein kurzer, leiser Ton, sobald eine neue Benachrichtigung eintrifft. Die Liste aktualisiert sich jede Minute.",
+          label: "Ton abspielen",
+          checked: preferences.sound,
+          save: (value) => save({ sound: value }, `Hinweiston ${value ? "eingeschaltet" : "ausgeschaltet"}`),
+        },
+      },
     ];
 
   if (view === "security")
@@ -548,7 +867,178 @@ function itemsFor(
         icon: "pulse",
         detail: { kind: "sessions", text: "Hier siehst du, wo du bei CareCore angemeldet bist." },
       },
+      {
+        id: "sec-idle",
+        title: "Automatische Abmeldung",
+        description: "Abmelden, wenn CareCore nicht bedient wird",
+        value: autoLogoutLabel(preferences.autoLogout),
+        icon: "logout",
+        detail: {
+          kind: "select",
+          text: "Empfohlen auf gemeinsam genutzten Geräten im Stationszimmer. Gezählt wird die Zeit ohne Bedienung in allen Tabs dieses Browsers; offline vorgemerkte Einträge bleiben erhalten.",
+          label: "Automatische Abmeldung",
+          value: autoLogoutLabel(preferences.autoLogout),
+          options: AUTO_LOGOUT_MINUTES.map(autoLogoutLabel),
+          save: (label) =>
+            save(
+              {
+                autoLogout: (AUTO_LOGOUT_MINUTES.find((minutes) => autoLogoutLabel(minutes) === label) ??
+                  0) as AutoLogout,
+              },
+              `Automatische Abmeldung: ${label}`,
+            ),
+        },
+      },
     ];
+
+  if (view === "privacy")
+    return [
+      {
+        id: "privacy-export",
+        title: "Meine Daten herunterladen",
+        description: "Profil, Einstellungen, Qualifikationen, Geräte, Aktivität",
+        value: "JSON-Datei",
+        icon: "docs",
+        detail: {
+          kind: "action",
+          text: "Enthält alles, was CareCore zu deinem Konto speichert: Profil, Einstellungen, Qualifikationen, angemeldete Geräte, Push-Abonnements und deine protokollierten Aktionen der letzten 12 Monate (ohne Inhalte von Bewohnerakten).",
+          label: "Herunterladen",
+          run: extras.actions.exportData,
+        },
+      },
+      {
+        id: "privacy-device",
+        title: "Dieses Gerät aufräumen",
+        description: "Zwischengespeicherte Seiten und Daten löschen",
+        value: "Dieses Gerät",
+        icon: "pulse",
+        detail: {
+          kind: "action",
+          text: "Löscht die für den Offline-Betrieb gespeicherten Seiten und Daten auf diesem Gerät. Offline vorgemerkte Einträge, die noch nicht gesendet sind, bleiben erhalten. Beim Abmelden geschieht das automatisch.",
+          label: "Jetzt löschen",
+          run: extras.actions.clearDevice,
+        },
+      },
+      {
+        id: "privacy-push",
+        title: "Push auf allen Geräten beenden",
+        description: "Alle Push-Abonnements deines Kontos entfernen",
+        value: "Alle Geräte",
+        icon: "bell",
+        detail: {
+          kind: "action",
+          text: "Beendet die Push-Nachrichten auf allen Geräten, auf denen du sie eingeschaltet hast. Einschalten kannst du sie unter Benachrichtigungen jederzeit wieder.",
+          label: "Beenden",
+          danger: true,
+          run: extras.actions.endPushAll,
+        },
+      },
+      {
+        id: "privacy-reset",
+        title: "Einstellungen zurücksetzen",
+        description: "Alle persönlichen Einstellungen auf Standard",
+        value: "Standard",
+        icon: "settings",
+        detail: {
+          kind: "action",
+          text: "Benachrichtigungen, Darstellung, Startseite, Ruhezeit und automatische Abmeldung kehren zu den Standardwerten zurück. Profil, Passwort und Geräte bleiben unverändert.",
+          label: "Zurücksetzen",
+          danger: true,
+          run: extras.actions.reset,
+        },
+      },
+    ];
+
+  if (view === "organization") {
+    if (!extras.isAdmin)
+      return [
+        {
+          id: "org-denied",
+          title: "Nur für die Administration",
+          description: "Einstellungen der Einrichtung",
+          value: "Kein Zugriff",
+          icon: "building",
+          detail: { kind: "info", text: "Die Einstellungen der Einrichtung ändert die Administration." },
+        },
+      ];
+    const links: Item[] = [
+      [
+        "org-structure",
+        "Organisation & Wohnbereiche",
+        "Standorte, Wohnbereiche, Zimmer",
+        "/c/leitung/administration",
+        "building",
+      ],
+      [
+        "org-roles",
+        "Profile & Rollen",
+        "Rollen, Rechte, Medikationsrecht",
+        "/c/leitung/administration/mitarbeiter",
+        "team",
+      ],
+      ["org-staff", "Mitarbeitende", "Konten, Qualifikationen, Sperren", "/c/leitung/teamleitung/mitarbeiter", "team"],
+      [
+        "org-roster",
+        "Dienstplan",
+        "Diensttypen, Regelwerk, Qualifikationen, Feiertage",
+        "/c/dienstplan/einstellungen",
+        "shift",
+      ],
+      ["org-supply", "Pflegebedarf", "Produkte und Mindestbestände", "/c/leitung/administration/pflegebedarf", "plan"],
+      [
+        "org-system",
+        "Systemstatus",
+        "Datenbank, Migrationen, Protokoll",
+        "/c/leitung/administration/konfiguration",
+        "pulse",
+      ],
+    ].map(([id, title, description, href, icon]) => ({
+      id,
+      title,
+      description,
+      value: "Öffnen",
+      icon: icon as ModuleIconName,
+      detail: { kind: "link", text: `${description}.`, label: "Öffnen", href },
+    }));
+    const organization = extras.organization;
+    if (!organization)
+      return [
+        {
+          id: "org-loading",
+          title: extras.organizationError ? "Nicht geladen" : "Wird geladen …",
+          description: "Einstellungen der Einrichtung",
+          value: "–",
+          icon: "settings",
+          detail: { kind: "info", text: extras.organizationError ?? "Die Einstellungen werden geladen." },
+        },
+        ...links,
+      ];
+    return [
+      ...SETTING_KEYS.map((key): Item => {
+        const definition = SETTING_DEFINITIONS[key];
+        const setting = organization[key];
+        return {
+          id: `org-${key}`,
+          title: definition.title,
+          description: definition.area,
+          value: setting.enabled
+            ? definition.unit && setting.value !== null
+              ? `${setting.value} ${definition.unit}`
+              : "Ein"
+            : "Aus",
+          icon: definition.icon,
+          detail: {
+            kind: "organization",
+            text: `${definition.describe(setting.value)}. Gilt für alle Mitarbeitenden.`,
+            setting: key,
+            value: setting,
+            save: (change) => extras.saveOrganization(key, change),
+          },
+        };
+      }),
+      ...links,
+    ];
+  }
 
   return [
     {
@@ -559,12 +1049,11 @@ function itemsFor(
       icon: "note",
       detail: {
         kind: "select",
-        text: "„Gross“ vergrössert alle Seiten um rund 12 %.",
+        text: "„Gross“ vergrössert alle Seiten um rund 12 %, „Sehr gross“ um rund 24 %.",
         label: "Schriftgrösse",
         value: TEXT_SIZES[preferences.textSize],
         options: Object.values(TEXT_SIZES),
-        save: (label) =>
-          save({ textSize: label === TEXT_SIZES.large ? "large" : "standard" }, `Schriftgrösse: ${label}`),
+        save: (label) => save({ textSize: pick<TextSize>(TEXT_SIZES, label, "standard") }, `Schriftgrösse: ${label}`),
       },
     },
     {
@@ -579,7 +1068,22 @@ function itemsFor(
         label: "Kontrast",
         value: CONTRASTS[preferences.contrast],
         options: Object.values(CONTRASTS),
-        save: (label) => save({ contrast: label === CONTRASTS.high ? "high" : "standard" }, `Kontrast: ${label}`),
+        save: (label) => save({ contrast: pick(CONTRASTS, label, "standard") }, `Kontrast: ${label}`),
+      },
+    },
+    {
+      id: "app-motion",
+      title: "Animationen",
+      description: "Übergänge und Bewegungen",
+      value: MOTIONS[preferences.motion],
+      icon: "pulse",
+      detail: {
+        kind: "select",
+        text: "„Reduziert“ schaltet Übergänge und Animationen aus – ruhiger und schneller auf älteren Geräten.",
+        label: "Animationen",
+        value: MOTIONS[preferences.motion],
+        options: Object.values(MOTIONS),
+        save: (label) => save({ motion: pick(MOTIONS, label, "standard") }, `Animationen: ${label}`),
       },
     },
     {
@@ -602,6 +1106,23 @@ function itemsFor(
             },
             `Startseite: ${label}`,
           ),
+      },
+    },
+    {
+      id: "app-shortcuts",
+      title: "Tastaturkürzel",
+      description: "Einzeltasten wie J/K oder D",
+      value: extras.organizationShortcuts ? onOff(preferences.shortcuts) : "Von der Einrichtung aus",
+      icon: "settings",
+      detail: {
+        kind: "toggle",
+        text: "Mit Einzeltasten navigierst du schneller (Übersicht mit „?“). Ausschalten, wenn du Tasten versehentlich auslöst.",
+        label: "Tastaturkürzel verwenden",
+        checked: preferences.shortcuts,
+        note: extras.organizationShortcuts
+          ? undefined
+          : "Die Einrichtung hat Tastaturkürzel für alle ausgeschaltet; deine Einstellung gilt, sobald sie wieder erlaubt sind.",
+        save: (value) => save({ shortcuts: value }, `Tastaturkürzel ${value ? "eingeschaltet" : "ausgeschaltet"}`),
       },
     },
   ];

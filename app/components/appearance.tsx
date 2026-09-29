@@ -1,22 +1,24 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { UserPreferences } from "@/lib/user-settings-shared";
 import { useWorkContext } from "./care-context";
 
 const PREFERENCES_EVENT = "carecore:preferences";
 
-function apply(preferences: Pick<UserPreferences, "textSize" | "contrast">) {
+function apply(preferences: Pick<UserPreferences, "textSize" | "contrast" | "motion">) {
   const root = document.documentElement;
   root.classList.toggle("text-large", preferences.textSize === "large");
+  root.classList.toggle("text-xlarge", preferences.textSize === "xlarge");
   root.classList.toggle("contrast-high", preferences.contrast === "high");
+  root.classList.toggle("motion-reduced", preferences.motion === "reduced");
 }
 
 // Changed in the settings: applied at once, without reloading the page.
 export const announcePreferences = (preferences: UserPreferences) =>
   window.dispatchEvent(new CustomEvent(PREFERENCES_EVENT, { detail: preferences }));
 
-// Applies the personal appearance settings (text size, contrast) to the page.
+// Applies the personal appearance settings (text size, contrast, animations) to the page.
 export function PersonalAppearance() {
   const preferences = useWorkContext()?.preferences;
   useEffect(() => {
@@ -28,4 +30,16 @@ export function PersonalAppearance() {
     return () => window.removeEventListener(PREFERENCES_EVENT, onChange);
   }, []);
   return null;
+}
+
+// Persönliche Einstellungen der angemeldeten Person; Änderungen in den Einstellungen gelten sofort.
+export function usePersonalPreferences() {
+  const fromContext = useWorkContext()?.preferences ?? null;
+  const [changed, setChanged] = useState<UserPreferences | null>(null);
+  useEffect(() => {
+    const onChange = (event: Event) => setChanged((event as CustomEvent<UserPreferences>).detail);
+    window.addEventListener(PREFERENCES_EVENT, onChange);
+    return () => window.removeEventListener(PREFERENCES_EVENT, onChange);
+  }, []);
+  return changed ?? fromContext;
 }

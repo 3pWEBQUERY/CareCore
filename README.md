@@ -18,13 +18,26 @@ CareCore lässt sich auf Tablet und Handy zum Startbildschirm hinzufügen (`app/
 - **Push-Nachrichten:** siehe unten; der Service Worker zeigt sie an und öffnet beim Antippen die zugehörige Seite.
 - **Datenschutz:** Beim Abmelden und bei jeder Anmeldung werden zwischengespeicherte Seiten und Daten auf dem Gerät gelöscht; vorgemerkte Einträge bleiben der erfassenden Person zugeordnet.
 
+## Einstellungen
+
+Unter `/c/einstellungen` stellt jede Person CareCore für sich ein. Die Werte liegen in der Datenbank (`carecore_user_profiles.preferences`, `lib/user-settings.ts`), gelten auf allen Geräten und wirken sofort:
+
+- **Profil & Präferenzen:** Name, Funktion, Telefon, fester Wohnbereich; Rolle und Berechtigungen zur Ansicht.
+- **Benachrichtigungen:** Kategorien ein/aus (kritische immer), Push-Nachrichten je Gerät, **Ruhezeit** (in dieser Zeit nur kritische Push-Nachrichten, Uhrzeit der Einrichtung, auch über Mitternacht), **Hinweiston** bei neuen Benachrichtigungen (die Liste aktualisiert sich jede Minute).
+- **Sicherheit & Zugriff:** Passwort, angemeldete Geräte, **automatische Abmeldung** nach 15 Minuten bis 4 Stunden ohne Bedienung (über alle Tabs des Browsers; offline vorgemerkte Einträge bleiben).
+- **Darstellung & Bedienung:** Schriftgrösse (Standard, Gross, Sehr gross), Kontrast, **Animationen reduzieren**, Startseite (zehn Seiten zur Wahl), **Tastaturkürzel** persönlich ein/aus (gelten nur, wenn die Einrichtung sie erlaubt).
+- **Datenschutz & Daten:** eigene Daten als JSON herunterladen (`/api/me/export`: Profil, Einstellungen, Qualifikationen, Geräte, Push-Abonnements, eigene Aktionen der letzten 12 Monate, ohne Passwort und Schlüssel), zwischengespeicherte Seiten und Daten auf diesem Gerät löschen, Push auf allen Geräten beenden, alle persönlichen Einstellungen zurücksetzen.
+- **Einrichtung** (nur `administration.manage`): alle Einstellungen der Organisation (Erinnerungen, überfällige Gaben, BtM-Kontrollintervall, BtM-Zweitunterschrift, Zähler, Tastaturkürzel) direkt ein- und ausschalten und Werte ändern, protokolliert wie unter Leitung › Konfiguration; dazu Verweise auf Organisation, Rollen, Mitarbeitende, Dienstplan-Einstellungen, Pflegebedarf und Systemstatus.
+
+Ungültige Werte lehnt der Server ab (400), statt sie stillschweigend zu ersetzen.
+
 ## Push-Benachrichtigungen (Web Push)
 
 Benachrichtigungen (fällige Aufgaben, BtM-Kontrollen, Dienstplan, Schulungen, kritische Qualitätsereignisse …) erscheinen auf Wunsch als Mitteilung auf dem Gerät, auch wenn CareCore geschlossen ist (`lib/push.ts`, Migration `0030_push_subscriptions.sql`).
 
 - **Einrichten:** Schlüsselpaar einmalig mit `npx web-push generate-vapid-keys` erzeugen und als `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` sowie `VAPID_SUBJECT` (`mailto:…` oder `https://…`) in den Umgebungsvariablen setzen. Fehlt ein Wert, ist Push ausgeschaltet und die Einstellungen sagen das.
 - **Einschalten:** Jede Person unter Einstellungen › Benachrichtigungen › „Push-Nachrichten“, je Gerät. Auf dem iPhone nur in der zum Home-Bildschirm hinzugefügten App.
-- **Versand:** Neue Benachrichtigungen gehen nach jeder Anfrage an die App hinaus, jede höchstens einmal und nur, solange sie frisch ist (60 Minuten). Es gelten die Kategorien der persönlichen Einstellungen; kritische immer. Auf dem Sperrbildschirm steht nur der Titel, nie der Text.
+- **Versand:** Neue Benachrichtigungen gehen nach jeder Anfrage an die App hinaus, jede höchstens einmal und nur, solange sie frisch ist (60 Minuten). Es gelten die Kategorien und die Ruhezeit der persönlichen Einstellungen; kritische immer. Auf dem Sperrbildschirm steht nur der Titel, nie der Text.
 - **Erinnerungen bei geschlossener App:** Ein Zeitplan (z. B. Vercel Cron oder ein externer Dienst, alle 5–15 Minuten) ruft `GET /api/push/dispatch` mit `Authorization: Bearer <CRON_SECRET>` auf. Dabei entstehen die fälligen Erinnerungen für alle Personen mit Push-Abonnement und werden versendet. Ohne `CRON_SECRET` antwortet der Endpunkt mit 503.
 - **Datenschutz:** Ein Abonnement gehört zu einer Anmeldung. Abmelden, „Gerät abmelden“ oder eine abgelaufene Sitzung beendet auch die Push-Nachrichten; erloschene Abonnements werden entfernt.
 
@@ -38,7 +51,7 @@ Benachrichtigungen (fällige Aufgaben, BtM-Kontrollen, Dienstplan, Schulungen, k
 
 - `npm test`: Unit-Tests ohne Datenbank.
 - `npm run test:db`: Integrationstests gegen eine echte Postgres (`TEST_DATABASE_URL`, vorher `npm run test:db:setup` auf einer leeren Datenbank).
-- `npm run test:e2e`: Klicktests mit Playwright gegen die gebaute App (`npx next build`). Vorher auf einer **leeren** Datenbank `npm run test:e2e:setup` (Migrationen, Dienstplan- und Demodaten); die Tests verändern die Demodaten. Die App beantwortet ihre Datenbankanfragen dabei aus `TEST_DATABASE_URL` (`tests/support/neon-pg.mjs`), der Administrator erhält ein festes Testpasswort (`playwright.config.ts`). Geprüft werden alle Seiten der Navigation (ohne Skript-, Server- und API-Fehler) sowie Anmeldung, Offline-Erfassung mit späterem Senden, BtM mit Zweitunterschrift, Medikationsrecht nach Qualifikation, Änderungsprotokoll nur für die Leitung, das Bearbeiten von Qualitätsmassnahmen, Dienstplan (Kürzel planen, veröffentlichen, Tausch annehmen, Tausch gegen die Ruhezeit wird abgewiesen), Wunde anlegen und dokumentieren, Pflegeplan mit Ziel und Evaluation, RAI-Erfassung (auch per Tastatur), Tastaturbedienung der Seitenpanels sowie die Handy-Ansicht (390 px, keine Seite breiter als der Bildschirm, Menü).
+- `npm run test:e2e`: Klicktests mit Playwright gegen die gebaute App (`npx next build`). Vorher auf einer **leeren** Datenbank `npm run test:e2e:setup` (Migrationen, Dienstplan- und Demodaten); die Tests verändern die Demodaten. Die App beantwortet ihre Datenbankanfragen dabei aus `TEST_DATABASE_URL` (`tests/support/neon-pg.mjs`), der Administrator erhält ein festes Testpasswort (`playwright.config.ts`). Geprüft werden alle Seiten der Navigation (ohne Skript-, Server- und API-Fehler) sowie Anmeldung, Offline-Erfassung mit späterem Senden, BtM mit Zweitunterschrift, Medikationsrecht nach Qualifikation, Änderungsprotokoll nur für die Leitung, das Bearbeiten von Qualitätsmassnahmen, Dienstplan (Kürzel planen, veröffentlichen, Tausch annehmen, Tausch gegen die Ruhezeit wird abgewiesen), Wunde anlegen und dokumentieren, Pflegeplan mit Ziel und Evaluation, RAI-Erfassung (auch per Tastatur), Tastaturbedienung der Seitenpanels, die Einstellungen (Darstellung sofort wirksam, Ruhezeit, Datenexport, Einrichtung) sowie die Handy-Ansicht (390 px, keine Seite breiter als der Bildschirm, Menü).
 
 Alle drei laufen in der CI bei jedem Pull Request.
 

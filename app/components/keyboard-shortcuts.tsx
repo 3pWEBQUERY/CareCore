@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Keyboard } from "@phosphor-icons/react";
+import { usePersonalPreferences } from "./appearance";
 import { useCareResident, useResidentNavigation, useWorkContext } from "./care-context";
 
 // Keyboard shortcuts of the whole app. They apply when no text field is focused;
@@ -58,6 +59,14 @@ const ROUTES: Record<string, string> = Object.fromEntries(
   ),
 );
 
+// Einzeltasten-Kürzel gelten, wenn die Einrichtung (Leitung › Konfiguration) sie erlaubt und die Person sie
+// nicht unter Einstellungen › Darstellung & Bedienung ausgeschaltet hat.
+export function useShortcutsEnabled() {
+  const organization = useWorkContext()?.settings.keyboardShortcuts.enabled ?? true;
+  const personal = usePersonalPreferences()?.shortcuts ?? true;
+  return organization && personal;
+}
+
 export function isTyping(target: EventTarget | null) {
   const element = target as HTMLElement | null;
   if (!element) return false;
@@ -72,8 +81,7 @@ export function KeyboardShortcutsMenu() {
   const router = useRouter();
   const navigation = useResidentNavigation();
   const [residentId] = useCareResident();
-  // Single-key shortcuts can be switched off in "Leitung · Konfiguration".
-  const enabled = useWorkContext()?.settings.keyboardShortcuts.enabled ?? true;
+  const enabled = useShortcutsEnabled();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const toggle = useCallback(() => setOpen((value) => !value), []);

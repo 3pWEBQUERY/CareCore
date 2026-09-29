@@ -51,3 +51,39 @@ test("RAI progress counts the four domains and the note", () => {
   assert.equal(scoreFromLabel(RAI_SCORES[3]), 3);
   assert.equal(scoreFromLabel("unbekannt"), undefined);
 });
+
+test("new personal preferences: defaults, invalid values and quiet hours across midnight", async () => {
+  const { inQuietHours, TEXT_SIZES, AUTO_LOGOUT_MINUTES } = await import("../lib/user-settings-shared.ts");
+  const defaults = resolvePreferences(undefined);
+  assert.equal(defaults.motion, "standard");
+  assert.equal(defaults.shortcuts, true);
+  assert.equal(defaults.sound, false);
+  assert.equal(defaults.autoLogout, 0);
+  assert.deepEqual(defaults.quietHours, { enabled: false, from: "22:00", to: "06:00" });
+  const custom = resolvePreferences({
+    textSize: "xlarge",
+    motion: "reduced",
+    shortcuts: false,
+    sound: true,
+    autoLogout: 30,
+    quietHours: { enabled: true, from: "21:30", to: "07:00" },
+  });
+  assert.equal(TEXT_SIZES[custom.textSize], "Sehr gross");
+  assert.equal(custom.motion, "reduced");
+  assert.equal(custom.shortcuts, false);
+  assert.equal(custom.sound, true);
+  assert.ok((AUTO_LOGOUT_MINUTES as readonly number[]).includes(custom.autoLogout));
+  const broken = resolvePreferences({ autoLogout: 7, quietHours: { enabled: true, from: "25:00", to: "25:00" } });
+  assert.equal(broken.autoLogout, 0);
+  assert.deepEqual(broken.quietHours, { enabled: false, from: "22:00", to: "06:00" });
+
+  const night = { enabled: true, from: "22:00", to: "06:00" };
+  assert.equal(inQuietHours(night, "23:15"), true);
+  assert.equal(inQuietHours(night, "05:59"), true);
+  assert.equal(inQuietHours(night, "06:00"), false);
+  assert.equal(inQuietHours(night, "12:00"), false);
+  const day = { enabled: true, from: "12:00", to: "13:30" };
+  assert.equal(inQuietHours(day, "12:45"), true);
+  assert.equal(inQuietHours(day, "13:30"), false);
+  assert.equal(inQuietHours({ ...night, enabled: false }, "23:15"), false);
+});
