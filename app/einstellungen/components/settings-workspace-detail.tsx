@@ -33,6 +33,7 @@ import SettingsSelect from "./settings-select";
 import PasswordChangePopover from "./password-change-popover";
 import PushControl from "./push-control";
 import MfaControl from "./mfa-control";
+import PasskeyControl from "./passkey-control";
 
 export type SettingsView =
   "overview" | "profile" | "notifications" | "security" | "appearance" | "privacy" | "organization";
@@ -53,6 +54,7 @@ type Item = {
     | { kind: "sessions"; text: string }
     | { kind: "push"; text: string }
     | { kind: "mfa"; text: string }
+    | { kind: "passkeys"; text: string }
     | { kind: "toggle"; text: string; label: string; checked: boolean; note?: string; save: (value: boolean) => void }
     | { kind: "quiet"; text: string; value: QuietHours; save: (value: QuietHours) => Promise<boolean> }
     | { kind: "action"; text: string; label: string; danger?: boolean; run: () => void }
@@ -462,6 +464,7 @@ function DetailControl({
     );
   if (detail.kind === "push") return <PushControl onMessage={onMessage} />;
   if (detail.kind === "mfa") return <MfaControl onMessage={onMessage} onChanged={onChanged} />;
+  if (detail.kind === "passkeys") return <PasskeyControl onMessage={onMessage} onChanged={onChanged} />;
   if (detail.kind === "toggle")
     return (
       <>
@@ -902,6 +905,17 @@ function itemsFor(
         detail: {
           kind: "mfa",
           text: "Nach dem Passwort fragt CareCore nach einem 6-stelligen Code aus der App auf deinem Handy. Das schützt dein Konto, auch wenn jemand dein Passwort kennt.",
+        },
+      },
+      {
+        id: "sec-passkeys",
+        title: "Passkeys",
+        description: "Anmelden mit Fingerabdruck, Gesicht oder PIN des Geräts",
+        value: security.passkeys ? `${security.passkeys} gespeichert` : "Keine",
+        icon: "quality",
+        detail: {
+          kind: "passkeys",
+          text: "Ein Passkey ersetzt Passwort und Code: Bei der Anmeldung bestätigst du mit Fingerabdruck, Gesicht oder der PIN deines Geräts. Der Browser schlägt ihn im Feld „Benutzername“ vor.",
         },
       },
       {

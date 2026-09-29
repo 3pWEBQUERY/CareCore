@@ -1,7 +1,13 @@
 "use client";
 
-import { useState, useSyncExternalStore, type FormEvent } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import {
+  browserSupportsWebAuthn,
+  browserSupportsWebAuthnAutofill,
+  startAuthentication,
+  type PublicKeyCredentialRequestOptionsJSON,
+} from "@simplewebauthn/browser";
 import { CheckCircle, Eye, EyeSlash, LockKey, Pulse, ShieldCheck, User } from "@phosphor-icons/react";
 import { clearOfflineData } from "./components/offline-queue";
 
@@ -24,6 +30,70 @@ export default function LoginPage() {
   const message =
     error ||
     (idleSignOut ? "Du wurdest nach längerer Inaktivität automatisch abgemeldet. Bitte melde dich erneut an." : "");
+  const passkeys = useSyncExternalStore(
+    () => () => undefined,
+    () => browserSupportsWebAuthn(),
+    () => false,
+  );
+
+  // Nach erfolgreicher Anmeldung: Seiten und Daten einer früheren Anmeldung auf diesem Gerät verwerfen, dann weiter.
+  const enter = useCallback(
+    (startPathInput: string | undefined) => {
+      clearOfflineData();
+      const requestedPath = new URLSearchParams(window.location.search).get("next");
+      const startPath = startPathInput?.startsWith("/c") ? startPathInput : "/c";
+      router.replace(requestedPath?.startsWith("/c") ? requestedPath : startPath);
+      router.refresh();
+    },
+    [router],
+  );
+
+  // Passkey: im Feld „Benutzername“ vorgeschlagen (autofill) oder über den Knopf. Ersetzt Passwort und Code.
+  const passkeyLogin = useCallback(
+    async (autofill: boolean) => {
+      const start = await fetch("/api/auth/passkey", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "start" }),
+      });
+      if (!start.ok) throw new Error("Die Anmeldung mit Passkey ist derzeit nicht möglich.");
+      const { token, options } = (await start.json()) as {
+        token: string;
+        options: PublicKeyCredentialRequestOptionsJSON;
+      };
+      const response = await startAuthentication({ optionsJSON: options, useBrowserAutofill: autofill });
+      setPending(true);
+      setError("");
+      try {
+        const finish = await fetch("/api/auth/passkey", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "finish", token, response }),
+        });
+        const result = (await finish.json()) as { error?: string; startPath?: string };
+        if (!finish.ok) {
+          setError(result.error ?? "Anmeldung fehlgeschlagen.");
+          return;
+        }
+        enter(result.startPath);
+      } finally {
+        setPending(false);
+      }
+    },
+    [enter],
+  );
+
+  useEffect(() => {
+    if (challenge) return;
+    let live = true;
+    void browserSupportsWebAuthnAutofill().then((available) => {
+      // Abgebrochene Vorschläge (z. B. durch den Knopf oder das Passwort-Formular) sind kein Fehler.
+      if (available && live) passkeyLogin(true).catch(() => undefined);
+    });
+    return () => {
+      live = false;
+    };
+  }, [challenge, passkeyLogin]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -55,12 +125,7 @@ export default function LoginPage() {
         setCode("");
         return;
       }
-      // Seiten und Daten einer früheren Anmeldung auf diesem Gerät verwerfen.
-      clearOfflineData();
-      const requestedPath = new URLSearchParams(window.location.search).get("next");
-      const startPath = result.startPath?.startsWith("/c") ? result.startPath : "/c";
-      router.replace(requestedPath?.startsWith("/c") ? requestedPath : startPath);
-      router.refresh();
+      enter(result.startPath);
     } catch {
       setError("Die Verbindung zum CareCore-Arbeitsplatz konnte nicht hergestellt werden.");
     } finally {
@@ -161,7 +226,7 @@ export default function LoginPage() {
                   <input
                     id="username"
                     name="username"
-                    autoComplete="username"
+                    autoComplete="username webauthn"
                     value={username}
                     onChange={(event) => setUsername(event.target.value)}
                     placeholder="Benutzername eingeben"
@@ -213,6 +278,26 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+          {passkeys && !challenge && (
+            <p className="login-mfa-hint">
+              Passkey auf diesem Gerät?{" "}
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() =>
+                  void passkeyLogin(false).catch((cause: Error) =>
+                    setError(
+                      cause.name === "NotAllowedError"
+                        ? "Anmeldung mit Passkey abgebrochen."
+                        : cause.message || "Anmeldung mit Passkey fehlgeschlagen.",
+                    ),
+                  )
+                }
+              >
+                Mit Passkey anmelden
+              </button>
+            </p>
+          )}
           <div className="login-support">
             <ShieldCheck />
             <span>

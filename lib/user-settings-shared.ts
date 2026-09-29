@@ -146,5 +146,5 @@ export type UserSettings = {
     careUnit: string | null;
   };
   preferences: UserPreferences;
-  security: { passwordChangedAt: string | null; sessions: UserSession[]; mfa: boolean };
+  security: { passwordChangedAt: string | null; sessions: UserSession[]; mfa: boolean; passkeys: number };
 };
