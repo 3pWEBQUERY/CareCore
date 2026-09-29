@@ -66,9 +66,10 @@ type DialogProps = { onClose: () => void; onSaved: (message: string) => void };
 export function ReportEventDialog({
   residents,
   careUnits,
+  workflowSteps,
   onClose,
   onSaved,
-}: DialogProps & { residents: Option[]; careUnits: Option[] }) {
+}: DialogProps & { residents: Option[]; careUnits: Option[]; workflowSteps: Record<string, number> }) {
   const [form, setForm] = useState({
     type: EVENT_TYPES[0] as string,
     severity: "attention" as Severity,
@@ -84,6 +85,7 @@ export function ReportEventDialog({
     setForm((current) => ({ ...current, [key]: value }));
   const severities = Object.entries(SEVERITIES) as Array<[Severity, (typeof SEVERITIES)[Severity]]>;
   const { saving, error, submit } = useSubmit(onSaved);
+  const followUps = workflowSteps[form.type] ?? 0;
   return (
     <EditorDialog
       id="quality-event"
@@ -103,7 +105,9 @@ export function ReportEventDialog({
                 occurredAt: new Date(`${form.date}T${form.time}`).toISOString(),
               },
             }),
-          "Ereignis gemeldet",
+          followUps
+            ? `Ereignis gemeldet · ${followUps} ${followUps === 1 ? "Folgeaufgabe" : "Folgeaufgaben"} erstellt`
+            : "Ereignis gemeldet",
         )
       }
       saving={saving}
@@ -128,6 +132,12 @@ export function ReportEventDialog({
           onChange={(v) => set("severity", severities.find(([, item]) => item.label === v)?.[0] ?? "attention")}
         />
       </label>
+      {followUps > 0 && (
+        <p className="area-editor-wide list-hint quality-workflow-hint">
+          Aus der Ablaufkette „{form.type}“ entstehen {followUps} {followUps === 1 ? "Folgeaufgabe" : "Folgeaufgaben"}{" "}
+          für das Team.
+        </p>
+      )}
       <label className="area-editor-wide">
         <span>Kurztitel (optional)</span>
         <input

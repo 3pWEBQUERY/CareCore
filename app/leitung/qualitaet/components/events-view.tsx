@@ -12,6 +12,7 @@ import {
 } from "@/lib/quality-shared";
 import { LeadershipHeading, LeadershipKpis, initialsOf } from "../../components/leadership-page-parts";
 import { ActionDialog, HandleEventDialog, ReportEventDialog } from "./quality-dialogs";
+import { WorkflowEditor } from "./workflow-editor";
 
 const typeIcons: Record<string, ModuleIconName> = {
   Sturz: "alert",
@@ -39,6 +40,7 @@ type Dialog =
   | { kind: "report" }
   | { kind: "handle"; event: QualityEvent; status: EventStatus }
   | { kind: "action"; event: QualityEvent }
+  | { kind: "workflows" }
   | null;
 
 export default function EventsView({ showToast }: { showToast: ShowToast }) {
@@ -228,6 +230,16 @@ export default function EventsView({ showToast }: { showToast: ShowToast }) {
                     {selected.actions ? `${selected.actions} geplant · ${selected.openActions} offen` : "Keine geplant"}
                   </dd>
                 </div>
+                {selected.followUps > 0 && (
+                  <div>
+                    <dt>Folgeaufgaben</dt>
+                    <dd>
+                      <a href="/c/betrieb/aufgaben/team">
+                        {selected.followUpsDone} von {selected.followUps} erledigt
+                      </a>
+                    </dd>
+                  </div>
+                )}
                 {selected.resolution && (
                   <div>
                     <dt>Ergebnis</dt>
@@ -266,6 +278,26 @@ export default function EventsView({ showToast }: { showToast: ShowToast }) {
                   </button>
                 </div>
               )}
+            </section>
+          )}
+          {canManage && (
+            <section className="card quality-workflow-card">
+              <div className="card-header">
+                <div>
+                  <p className="eyebrow">Ablaufketten</p>
+                  <h2 className="card-title">Folgeaufgaben nach Ereignissen</h2>
+                </div>
+              </div>
+              <p>
+                {Object.keys(data.data?.workflowSteps ?? {}).length
+                  ? Object.entries(data.data?.workflowSteps ?? {})
+                      .map(([type, count]) => `${type}: ${count} ${count === 1 ? "Schritt" : "Schritte"}`)
+                      .join(" · ")
+                  : "Noch keine Ablaufkette festgelegt."}
+              </p>
+              <button className="secondary-button" type="button" onClick={() => setDialog({ kind: "workflows" })}>
+                Ablaufketten festlegen
+              </button>
             </section>
           )}
           <section className="card quality-risk-card">
@@ -307,10 +339,12 @@ export default function EventsView({ showToast }: { showToast: ShowToast }) {
         <ReportEventDialog
           residents={data.data.residents}
           careUnits={data.data.careUnits}
+          workflowSteps={data.data.workflowSteps}
           onClose={() => setDialog(null)}
           onSaved={done}
         />
       )}
+      {dialog?.kind === "workflows" && <WorkflowEditor onClose={() => setDialog(null)} onSaved={done} />}
       {dialog?.kind === "handle" && (
         <HandleEventDialog
           event={dialog.event}

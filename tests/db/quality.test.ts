@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ApiError, type ApiContext } from "@/lib/api-context";
-import { actionsData, createAction, reportEvent, updateAction, updateEvent } from "@/lib/quality";
+import { actionsData, createAction, eventsData, reportEvent, updateAction, updateEvent } from "@/lib/quality";
+import { listWorkflows, saveWorkflow } from "@/lib/quality-workflows";
 import { apiContextFor, createResident, fixture, q } from "../support/db";
 
 const failure = async (promise: Promise<unknown>) =>
@@ -92,4 +93,82 @@ test("Qualitätsereignis: Meldung benachrichtigt die Verantwortlichen, Abschluss
     ).message,
     /Zukunft/,
   );
+});
+
+test("Ablaufkette Sturz: Folgeaufgaben nach den Schritten der Einrichtung, verknüpft mit dem Ereignis", async () => {
+  const f = await fixture();
+  const lead = manager(await apiContextFor(f, "leadA"));
+  const anna = await apiContextFor(f, "anna");
+  const residentId = await createResident(f);
+  const step = { title: "Vitalzeichen kontrollieren", category: "Vitalwerte", priority: "high" };
+
+  // Ohne festgelegte Fälligkeit oder Kategorie keine Ablaufkette; nur das Qualitätsmanagement legt sie fest.
+  assert.equal((await failure(saveWorkflow(lead, "Sturz", [step]))).status, 400);
+  assert.equal(
+    (await failure(saveWorkflow(lead, "Sturz", [{ ...step, category: "", dueOffsetMinutes: 60 }]))).status,
+    400,
+  );
+  assert.equal((await failure(saveWorkflow(anna, "Sturz", [{ ...step, dueOffsetMinutes: 60 }]))).status, 403);
+  assert.equal((await failure(saveWorkflow(lead, "Unbekannt", []))).status, 400);
+
+  await saveWorkflow(lead, "Sturz", [
+    { ...step, dueOffsetMinutes: 60 },
+    {
+      title: "Sturzprotokoll ergänzen",
+      description: "Hergang und Folgen",
+      category: "Dokumentation",
+      priority: "normal",
+      dueOffsetMinutes: 1440,
+      documentOnCompletion: true,
+    },
+  ]);
+  assert.equal((await listWorkflows(anna)).Sturz.length, 2);
+
+  const occurredAt = new Date(Date.now() - 30 * 60_000).toISOString();
+  const eventId = await reportEvent(anna, {
+    type: "Sturz",
+    severity: "attention",
+    description: "Neben dem Bett gefunden",
+    occurredAt,
+    residentId,
+  });
+  const tasks = await q<{
+    title: string;
+    resident_id: string;
+    due: string;
+    priority: string;
+    document_on_completion: boolean;
+    description: string;
+    team_visible: boolean;
+    id: string;
+  }>(
+    `SELECT id, title, resident_id, due_at AS due, priority, document_on_completion, description, team_visible
+     FROM carecore_tasks WHERE quality_event_id = $1 ORDER BY due_at`,
+    [eventId],
+  );
+  assert.deepEqual(
+    tasks.map((t) => [t.title, t.priority, t.document_on_completion, t.team_visible, t.resident_id]),
+    [
+      ["Vitalzeichen kontrollieren", "high", false, true, residentId],
+      ["Sturzprotokoll ergänzen", "normal", true, true, residentId],
+    ],
+  );
+  assert.equal(new Date(tasks[0].due).getTime(), Date.parse(occurredAt) + 60 * 60_000);
+  assert.match(tasks[1].description, /Hergang und Folgen\n\nFolge von Ereignis: Sturz/);
+
+  await q(`UPDATE carecore_tasks SET status = 'completed' WHERE id = $1`, [tasks[0].id]);
+  const event = (await eventsData(lead)).events.find((e) => e.id === eventId)!;
+  assert.deepEqual([event.followUps, event.followUpsDone], [2, 1]);
+  assert.deepEqual((await eventsData(lead)).workflowSteps, { Sturz: 2 });
+
+  // Andere Ereignisarten ohne Ablaufkette erzeugen keine Aufgaben; eine leere Liste entfernt die Kette.
+  const other = await reportEvent(anna, {
+    type: "Beschwerde",
+    severity: "info",
+    description: "Essen kalt",
+    occurredAt,
+  });
+  assert.equal((await q(`SELECT 1 FROM carecore_tasks WHERE quality_event_id = $1`, [other])).length, 0);
+  await saveWorkflow(lead, "Sturz", []);
+  assert.deepEqual((await eventsData(lead)).workflowSteps, {});
 });
