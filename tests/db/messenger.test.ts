@@ -62,7 +62,7 @@ test("Messenger: Reaktion setzen und wieder entfernen, nur aus der festen Auswah
   assert.deepEqual(await toggleReaction(max, id, "👍"), { active: true });
   await toggleReaction(anna, id, "👍");
   await toggleReaction(anna, id, "✅");
-  let [thumbs, check] = (await reactionsFor(max, [id])).get(id) ?? [];
+  const [thumbs, check] = (await reactionsFor(max, [id])).get(id) ?? [];
   assert.equal(thumbs.emoji, "👍");
   assert.equal(thumbs.count, 2);
   assert.equal(thumbs.mine, true);
@@ -70,9 +70,9 @@ test("Messenger: Reaktion setzen und wieder entfernen, nur aus der festen Auswah
   assert.equal(check.mine, false);
 
   assert.deepEqual(await toggleReaction(max, id, "👍"), { active: false });
-  [thumbs] = (await reactionsFor(max, [id])).get(id) ?? [];
-  assert.equal(thumbs.count, 1);
-  assert.equal(thumbs.mine, false);
+  const [after] = (await reactionsFor(max, [id])).get(id) ?? [];
+  assert.equal(after.count, 1);
+  assert.equal(after.mine, false);
 
   assert.equal(await status(toggleReaction(max, id, "🔥")), 400);
   assert.equal(await status(toggleReaction(await apiContextFor(f, "ben"), id, "👍")), 403);
