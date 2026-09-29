@@ -1,5 +1,7 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
+import { countOf } from "@/lib/terminology";
 import { useMemo, useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { LoadError, todayInZurich } from "@/app/components/workspace-ui";
@@ -21,6 +23,7 @@ export function downloadRaiReport() {
 }
 
 export function DueView({ rai }: { rai: RaiData }) {
+  const t = useTerms();
   const openAssessment = useOpenAssessment();
   const [filter, setFilter] = useState("Alle");
   const items = useMemo(
@@ -69,7 +72,7 @@ export function DueView({ rai }: { rai: RaiData }) {
         </div>
       </div>
       <div className="rai-due-table-head">
-        <span>Bewohner</span>
+        <span>{t.one}</span>
         <span>Grund</span>
         <span>Fällig</span>
         <span>Zuständig</span>
@@ -113,6 +116,7 @@ export function DueView({ rai }: { rai: RaiData }) {
 }
 
 export function ReportsView({ rai }: { rai: RaiData }) {
+  const t = useTerms();
   const openAssessment = useOpenAssessment();
   const [selected, setSelected] = useState<string | null>(null);
   if (rai.error && !rai.data) return <LoadError message={rai.error} onRetry={rai.reload} />;
@@ -132,7 +136,7 @@ export function ReportsView({ rai }: { rai: RaiData }) {
     {
       id: "complete",
       title: "RAI-Vollständigkeit Haus",
-      detail: `${residents.filter((row) => row.state === "current" || row.state === "due").length} von ${residents.length} Bewohnern mit aktueller Erfassung`,
+      detail: `${residents.filter((row) => row.state === "current" || row.state === "due").length} von ${residents.length} ${t.manyDative} mit aktueller Erfassung`,
       value: summary ? `${summary.currentShare}%` : "–",
       tone: "stable",
       rows: residents.filter((row) => row.state !== "current" && row.state !== "due"),
@@ -164,7 +168,7 @@ export function ReportsView({ rai }: { rai: RaiData }) {
             <p className="eyebrow">Auswertung</p>
             <h2 className="card-title">{active ? active.title : "RAI-Berichte"}</h2>
             <p className="card-subtitle">
-              {active ? `${active.rows.length} Bewohner` : "Transparente Kennzahlen für Pflege und Leitung."}
+              {active ? countOf(active.rows.length, t) : "Transparente Kennzahlen für Pflege und Leitung."}
             </p>
           </div>
           {active ? (

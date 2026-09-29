@@ -6,6 +6,8 @@ export type Terms = {
   // Einzahl Nominativ („der Patient“) und Einzahl Akkusativ/Dativ/Genitiv („den Patienten“).
   one: string;
   oneOblique: string;
+  // Einzahl weiblich („die Patientin“).
+  oneFemale: string;
   // Mehrzahl („die Patienten“) und Mehrzahl Dativ („mit den Bewohnern“).
   many: string;
   manyDative: string;
@@ -18,6 +20,7 @@ export const TERMINOLOGIES = {
     label: "Bewohner",
     one: "Bewohner",
     oneOblique: "Bewohner",
+    oneFemale: "Bewohnerin",
     many: "Bewohner",
     manyDative: "Bewohnern",
     prefix: "Bewohner",
@@ -26,6 +29,7 @@ export const TERMINOLOGIES = {
     label: "Patient",
     one: "Patient",
     oneOblique: "Patienten",
+    oneFemale: "Patientin",
     many: "Patienten",
     manyDative: "Patienten",
     prefix: "Patienten",
@@ -34,6 +38,7 @@ export const TERMINOLOGIES = {
     label: "Klient",
     one: "Klient",
     oneOblique: "Klienten",
+    oneFemale: "Klientin",
     many: "Klienten",
     manyDative: "Klienten",
     prefix: "Klienten",

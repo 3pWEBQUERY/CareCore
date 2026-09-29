@@ -5,7 +5,7 @@ import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls"
 import { EditorDialog, formatDateTime, requestJson, timeInZurich, todayInZurich } from "@/app/components/workspace-ui";
 import { zurichTimeToIso } from "@/lib/resident-appointments";
 import { DOC_CATEGORIES, IMPORTANCE, TEMPLATES, type DocEntry, type Importance } from "@/lib/documentation-shared";
-import { useCareResident } from "@/app/components/care-context";
+import { useCareResident, useTerms } from "@/app/components/care-context";
 import { sendOrQueue } from "@/app/components/offline-queue";
 
 export type ResidentOption = { id: string; name: string; room: string };
@@ -60,19 +60,20 @@ export function EntryFields({
   // The quick documentation always documents for the resident chosen in the header.
   lockResident?: boolean;
 }) {
+  const t = useTerms();
   const set = <K extends keyof EntryDraft>(key: K, value: EntryDraft[K]) => onChange({ ...draft, [key]: value });
   const label = (r: ResidentOption) => `${r.name}${r.room ? ` · ${r.room}` : ""}`;
   const resident = residents.find((r) => r.id === draft.residentId);
   return (
     <>
       <label className="area-editor-wide">
-        <span>Bewohner</span>
+        <span>{t.one}</span>
         {lockResident ? (
           <input value={resident ? label(resident) : "In der Kopfzeile auswählen"} readOnly />
         ) : (
           <CareSelect
-            label="Bewohner"
-            value={resident ? label(resident) : "Bewohner wählen"}
+            label={t.one}
+            value={resident ? label(resident) : `${t.oneOblique} wählen`}
             options={residents.map(label)}
             onChange={(value) => set("residentId", residents.find((r) => label(r) === value)?.id ?? "")}
           />
@@ -156,6 +157,7 @@ export function EntryDialog({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
+  const t = useTerms();
   const [contextId] = useCareResident();
   const [draft, setDraft] = useState<EntryDraft>(() =>
     newDraft(residentId ?? residents.find((r) => r.id === contextId)?.id ?? residents[0]?.id),
@@ -173,7 +175,7 @@ export function EntryDialog({
         setSaving(true);
         setError("");
         try {
-          onSaved(await saveDraft(draft, residents.find((r) => r.id === draft.residentId)?.name ?? "Bewohner"));
+          onSaved(await saveDraft(draft, residents.find((r) => r.id === draft.residentId)?.name ?? t.one));
         } catch (cause) {
           setError(cause instanceof Error ? cause.message : "Speichern fehlgeschlagen.");
           setSaving(false);
@@ -197,6 +199,7 @@ export function AmendDialog({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
+  const t = useTerms();
   const [body, setBody] = useState(entry.body);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
@@ -230,7 +233,7 @@ export function AmendDialog({
           maxLength={1000}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="z. B. falscher Bewohner, Seite verwechselt, Ergänzung"
+          placeholder={`z. B. falscher ${t.one}, Seite verwechselt, Ergänzung`}
         />
       </label>
       <label className="area-editor-wide">

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ModuleIcon, type ModuleIconName } from "@/app/components/module-icon";
-import { useCareResident, useCareUnit, useWorkContext } from "@/app/components/care-context";
+import { useCareResident, useCareUnit, useWorkContext, useTerms } from "@/app/components/care-context";
+import { countOf } from "@/lib/terminology";
 import { requestJson, useApiData } from "@/app/components/workspace-ui";
 import { AI_TASKS, type AiDraft, type AiOverview, type AiTask } from "@/lib/ai-shared";
 
@@ -13,6 +14,7 @@ const SUGGESTIONS: AiTask[] = ["handover", "risks", "documentation"];
 type Exchange = { id: string; task: AiTask; prompt: string; draft?: AiDraft; error?: string };
 
 export function AssistantView() {
+  const t = useTerms();
   const router = useRouter();
   const context = useWorkContext();
   const [residentId] = useCareResident();
@@ -67,7 +69,7 @@ export function AssistantView() {
             <h2 className="card-title">Womit kann ich helfen?</h2>
             <p className="card-subtitle">
               {useResident
-                ? `Bezieht sich auf ${resident?.name} (Bewohner in der Kopfzeile).`
+                ? `Bezieht sich auf ${resident?.name} (${t.one} in der Kopfzeile).`
                 : `Bezieht sich auf ${info?.careUnit ?? "alle Wohnbereiche"}.`}
             </p>
           </div>
@@ -187,7 +189,7 @@ export function AssistantView() {
                 {resident?.room} · {resident?.group}
               </span>
             ) : (
-              <span>{info ? `${info.residents} Bewohner` : "Wird geladen …"}</span>
+              <span>{info ? countOf(info.residents, t) : "Wird geladen …"}</span>
             )}
             <span>{info ? `${info.openTasks} offene Aufgaben` : ""}</span>
             <span>

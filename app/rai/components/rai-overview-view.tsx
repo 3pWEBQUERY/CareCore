@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { setCareResident } from "@/app/components/care-context";
+import { setCareResident, useTerms } from "@/app/components/care-context";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { LoadError, formatDate } from "@/app/components/workspace-ui";
 import { RAI_STATE, type RaiResidentRow } from "@/lib/rai-shared";
@@ -25,6 +25,7 @@ export function useOpenAssessment() {
 }
 
 export function OverviewView({ rai }: { rai: RaiData }) {
+  const t = useTerms();
   const router = useRouter();
   const openAssessment = useOpenAssessment();
   const [query, setQuery] = useState("");
@@ -94,7 +95,7 @@ export function OverviewView({ rai }: { rai: RaiData }) {
           <div className="rai-card-header">
             <div>
               <p className="eyebrow">Arbeitskorb</p>
-              <h2 className="card-title">Bewohner und Erfassungen</h2>
+              <h2 className="card-title">{t.many} und Erfassungen</h2>
               <p className="card-subtitle">
                 {rai.loading && !rai.data
                   ? "Wird geladen …"
@@ -106,8 +107,8 @@ export function OverviewView({ rai }: { rai: RaiData }) {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Bewohner suchen"
-                aria-label="RAI Bewohner suchen"
+                placeholder={`${t.many} suchen`}
+                aria-label={`RAI ${t.many} suchen`}
               />
             </label>
           </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import { EditorDialog, requestJson, todayInZurich, timeInZurich } from "@/app/components/workspace-ui";
@@ -70,6 +71,7 @@ export function ReportEventDialog({
   onClose,
   onSaved,
 }: DialogProps & { residents: Option[]; careUnits: Option[]; workflowSteps: Record<string, number> }) {
+  const t = useTerms();
   const [form, setForm] = useState({
     type: EVENT_TYPES[0] as string,
     severity: "attention" as Severity,
@@ -156,9 +158,9 @@ export function ReportEventDialog({
         <input type="time" required value={form.time} onChange={(e) => set("time", e.target.value)} />
       </label>
       <label>
-        <span>Betroffener Bewohner</span>
+        <span>Betroffener {t.one}</span>
         <OptionSelect
-          label="Bewohner"
+          label={t.one}
           options={residents}
           value={form.residentId}
           empty={NONE}
@@ -171,7 +173,7 @@ export function ReportEventDialog({
           label="Wohnbereich"
           options={careUnits}
           value={form.careUnitId}
-          empty={form.residentId ? "Wie Bewohner" : NONE}
+          empty={form.residentId ? `Wie ${t.one}` : NONE}
           onChange={(v) => set("careUnitId", v)}
         />
       </label>

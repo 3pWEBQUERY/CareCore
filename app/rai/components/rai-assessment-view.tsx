@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ModuleIcon, type ModuleIconName } from "@/app/components/module-icon";
 import { CareDatePicker, CareSelect, formatCareDate } from "@/app/components/care-form-controls";
-import { useCareResident } from "@/app/components/care-context";
+import { useCareResident, useTerms } from "@/app/components/care-context";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
 import {
   LoadError,
@@ -63,6 +63,7 @@ function AssessmentForm({
   reload: () => void;
   showToast: (message: string) => void;
 }) {
+  const t = useTerms();
   const { resident, draft, history, people } = data;
   const last = history[0] ?? null;
   const [instrument, setInstrument] = useState(draft?.instrument ?? last?.instrument ?? RAI_INSTRUMENTS[0]);
@@ -122,7 +123,7 @@ function AssessmentForm({
             <p className="eyebrow">{draft?.status === "in_progress" ? "Erfassung fortsetzen" : "Neue Erfassung"}</p>
             <h2 className="card-title">interRAI · {resident.name}</h2>
             <p className="card-subtitle">
-              {[resident.room, resident.unit].filter(Boolean).join(" · ")} · Bewohner in der Kopfzeile
+              {[resident.room, resident.unit].filter(Boolean).join(" · ")} · {t.one} in der Kopfzeile
             </p>
           </div>
           <span className={`status-badge ${complete ? "stable" : "info"}`}>Entwurf · {progress}%</span>
@@ -225,7 +226,7 @@ function AssessmentForm({
           </div>
           <div className="rai-context-list">
             <div>
-              <span>Bewohner</span>
+              <span>{t.one}</span>
               <strong>{resident.name}</strong>
             </div>
             <div>

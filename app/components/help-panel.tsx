@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { ModuleIcon, type ModuleIconName } from "./module-icon";
-import { SHORTCUT_GROUPS } from "./keyboard-shortcuts";
+import { useTerms } from "./care-context";
+import { shortcutGroups } from "./keyboard-shortcuts";
+import type { Terms } from "@/lib/terminology";
 import { requestJson, useApiData } from "./workspace-ui";
 
 const HELP_EVENT = "carecore:help";
@@ -12,12 +14,12 @@ const HELP_EVENT = "carecore:help";
 // Opens "Hilfe & Support" from anywhere (sidebar, mobile menu).
 export const openHelp = () => window.dispatchEvent(new Event(HELP_EVENT));
 
-const GUIDES: Array<{ icon: ModuleIconName; title: string; steps: string[] }> = [
+const guides = (t: Terms): Array<{ icon: ModuleIconName; title: string; steps: string[] }> => [
   {
     icon: "residents",
-    title: "Bewohner wählen",
+    title: `${t.oneOblique} wählen`,
     steps: [
-      "Oben in der Kopfzeile auf den Bewohner tippen und die Person wählen.",
+      `Oben in der Kopfzeile auf den ${t.oneOblique} tippen und die Person wählen.`,
       "Alle Seiten wie Medikation, Vitalwerte oder Dokumentation zeigen dann diese Person.",
       "Mit den Pfeilen neben dem Namen (oder J/K) zur nächsten Person des Wohnbereichs wechseln.",
     ],
@@ -28,7 +30,7 @@ const GUIDES: Array<{ icon: ModuleIconName; title: string; steps: string[] }> = 
     steps: [
       "Unten „Doku“ (Handy) oder „Dokumentieren“ in der Seitenleiste öffnen.",
       "Art und Einordnung wählen, Text eingeben und speichern.",
-      "„Speichern & nächster Bewohner“ springt direkt zur nächsten Person.",
+      `„Speichern & nächster ${t.one}“ springt direkt zur nächsten Person.`,
     ],
   },
   {
@@ -52,7 +54,7 @@ const GUIDES: Array<{ icon: ModuleIconName; title: string; steps: string[] }> = 
     icon: "tasks",
     title: "Tagesliste",
     steps: [
-      "Die Startseite zeigt pro Bewohner, was heute fällig ist.",
+      `Die Startseite zeigt pro ${t.one}, was heute fällig ist.`,
       "Ein Tipp auf einen Punkt öffnet direkt die passende Seite für diese Person.",
     ],
   },
@@ -79,6 +81,8 @@ function HelpContent({ onClose }: { onClose: () => void }) {
   const pathname = usePathname();
   const help = useApiData<{ contacts: Array<{ name: string; jobTitle: string; phone: string }> }>("/api/help");
   const [guide, setGuide] = useState(0);
+  const t = useTerms();
+  const GUIDES = guides(t);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState("");
@@ -190,7 +194,7 @@ function HelpContent({ onClose }: { onClose: () => void }) {
           <section className="help-section">
             <h3>Tastaturkürzel</h3>
             <div className="help-shortcuts">
-              {SHORTCUT_GROUPS.map((group) => (
+              {shortcutGroups(t).map((group) => (
                 <div key={group.title}>
                   <strong>{group.title}</strong>
                   {group.items.map((item) => (

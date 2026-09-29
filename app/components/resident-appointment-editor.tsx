@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState, type FormEvent } from "react";
 import { CalendarDots, Check, ClipboardText, Trash, X } from "@phosphor-icons/react";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
@@ -40,6 +41,7 @@ export default function ResidentAppointmentEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTerms();
   const [draft, setDraft] = useState<AppointmentDraft>(() =>
     appointment ? draftFromAppointment(appointment) : (initialDraft ?? initialAppointmentDraft(residentId)),
   );
@@ -70,7 +72,7 @@ export default function ResidentAppointmentEditor({
     const startsAt = zurichTimeToIso(draft.date, draft.startTime);
     const endsAt = zurichTimeToIso(draft.date, draft.endTime);
     if (draft.kind === "resident" && !draft.residentId) {
-      setError("Bitte einen Bewohner auswählen.");
+      setError(`Bitte einen ${t.oneOblique} auswählen.`);
       return;
     }
     if (draft.kind === "care_unit_task" && !draft.careUnitId) {
@@ -143,7 +145,7 @@ export default function ResidentAppointmentEditor({
             <p className="eyebrow">CareCore One · Kalender</p>
             <h2 id="appointment-editor-title">{appointment ? "Termin verwalten" : "Termin erstellen"}</h2>
             <p>
-              Bewohnertermine erscheinen auch in der Bewohnerakte. Aufgaben für einen Wohnbereich bleiben im
+              {t.prefix}termine erscheinen auch in der {t.prefix}akte. Aufgaben für einen Wohnbereich bleiben im
               Betriebskalender.
             </p>
           </div>
@@ -159,7 +161,7 @@ export default function ResidentAppointmentEditor({
                 {appointment
                   ? appointment.title
                   : draft.kind === "resident"
-                    ? "Neuer Bewohnertermin"
+                    ? `Neuer ${t.prefix}termin`
                     : "Neue Wohnbereichsaufgabe"}
               </strong>
               <p>Alle Zeiten werden für das Alterszentrum in der Zeitzone Zürich geführt.</p>
@@ -173,7 +175,7 @@ export default function ResidentAppointmentEditor({
                 aria-pressed={draft.kind === "resident"}
                 onClick={() => changeKind("resident")}
               >
-                <CalendarDots /> Bewohnertermin
+                <CalendarDots /> {t.prefix}termin
               </button>
               <button
                 type="button"
@@ -202,13 +204,13 @@ export default function ResidentAppointmentEditor({
             </label>
             {draft.kind === "resident" ? (
               <label>
-                <span>Bewohner</span>
+                <span>{t.one}</span>
                 {residentId ? (
-                  <input value={selectedResident?.name ?? appointment?.resident_name ?? "Bewohner"} readOnly />
+                  <input value={selectedResident?.name ?? appointment?.resident_name ?? t.one} readOnly />
                 ) : (
                   <CareSelect
-                    label="Bewohner"
-                    value={selectedResident?.label ?? "Bewohner auswählen"}
+                    label={t.one}
+                    value={selectedResident?.label ?? `${t.oneOblique} auswählen`}
                     options={residentOptions.map((item) => item.label)}
                     onChange={(value) =>
                       update("residentId", residentOptions.find((item) => item.label === value)?.id ?? "")
@@ -308,7 +310,7 @@ export default function ResidentAppointmentEditor({
               <strong>Termin endgültig löschen?</strong>
               <p>
                 {draft.kind === "resident"
-                  ? "Der Eintrag verschwindet auch aus der Bewohnerakte. "
+                  ? `Der Eintrag verschwindet auch aus der ${t.prefix}akte. `
                   : "Der Eintrag verschwindet aus dem Betriebskalender. "}
                 Für eine Absage kannst du stattdessen den Status „Abgesagt“ wählen.
               </p>

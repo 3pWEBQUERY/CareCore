@@ -1,11 +1,13 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { CalendarDots, CaretLeft, CaretRight, MapPin, Plus } from "@phosphor-icons/react";
 import { appointmentLocalParts, appointmentTargetLabel } from "@/lib/resident-appointments";
 import { weekDayNames, dateHeading, TimedCalendarGrid } from "./calendar-grid";
 import type { ResidentCalendarState } from "./use-resident-calendar";
 
 export function CalendarBoard({ r }: { r: ResidentCalendarState }) {
+  const t = useTerms();
   const {
     today,
     focusDate,
@@ -24,7 +26,7 @@ export function CalendarBoard({ r }: { r: ResidentCalendarState }) {
     create,
   } = r;
   return (
-    <section className="card resident-calendar-board" aria-label="Bewohnerkalender">
+    <section className="card resident-calendar-board" aria-label={`${t.prefix}kalender`}>
       <div className="resident-calendar-toolbar">
         <div className="resident-calendar-navigation">
           <button className="secondary-button" type="button" onClick={() => setFocusDate(today)}>
@@ -151,7 +153,7 @@ export function CalendarBoard({ r }: { r: ResidentCalendarState }) {
         <div className="resident-calendar-empty">
           <CalendarDots />
           <strong>Keine Einträge in dieser Ansicht</strong>
-          <p>Wähle einen anderen Zeitraum oder erfasse einen Bewohnertermin oder eine Wohnbereichsaufgabe.</p>
+          <p>Wähle einen anderen Zeitraum oder erfasse einen {t.prefix}termin oder eine Wohnbereichsaufgabe.</p>
           <button className="secondary-button" type="button" onClick={() => create()}>
             <Plus /> Termin erstellen
           </button>

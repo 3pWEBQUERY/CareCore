@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import { EditorDialog, requestJson, todayInZurich } from "@/app/components/workspace-ui";
 import { INSTRUMENTS, bandFor, instrumentByCode, scoreAnswers } from "@/lib/assessment-instruments";
-import { useCareResident } from "@/app/components/care-context";
+import { useCareResident, useTerms } from "@/app/components/care-context";
 
 const plusDays = (days: number) => {
   const date = new Date(`${todayInZurich()}T12:00:00`);
@@ -25,6 +25,7 @@ export default function AssessmentDialog({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
+  const t = useTerms();
   const [contextId] = useCareResident();
   const [residentId, setResidentId] = useState(
     initialResident ?? residents.find((r) => r.id === contextId)?.id ?? residents[0]?.id ?? "",
@@ -86,13 +87,13 @@ export default function AssessmentDialog({
       submitLabel="Einschätzung abschliessen"
     >
       <label>
-        <span>Bewohner</span>
+        <span>{t.one}</span>
         {initialResident ? (
           <input value={resident ? residentLabel(resident) : ""} readOnly />
         ) : (
           <CareSelect
-            label="Bewohner"
-            value={resident ? residentLabel(resident) : "Bewohner wählen"}
+            label={t.one}
+            value={resident ? residentLabel(resident) : `${t.oneOblique} wählen`}
             options={residents.map(residentLabel)}
             onChange={(value) => setResidentId(residents.find((r) => residentLabel(r) === value)?.id ?? residentId)}
           />

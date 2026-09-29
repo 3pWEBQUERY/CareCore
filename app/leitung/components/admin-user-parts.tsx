@@ -1,5 +1,6 @@
 "use client";
 
+import type { Terms } from "@/lib/terminology";
 import { type ReactNode } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import type { AdminCareUnit, AdminQualification, ManagedRole, ManagedUser } from "@/lib/admin-users";
@@ -25,6 +26,14 @@ export const permissions = [
   "rai.manage",
   "ai.use",
 ];
+
+// Beschriftung eines Rechts; die Bewohner-Rechte mit der Bezeichnung der Einrichtung.
+export const permissionLabel = (permission: string, t: Terms) =>
+  permission === "residents.read"
+    ? `${t.many} lesen`
+    : permission === "residents.write"
+      ? `${t.many} bearbeiten`
+      : (labels[permission] ?? permission);
 
 export const labels: Record<string, string> = {
   "residents.read": "Bewohner lesen",

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { useCareSupplyCatalog } from "./use-care-supply-catalog";
@@ -8,6 +9,7 @@ import { CatalogTable } from "./care-supply-catalog-table";
 import { CatalogEditorDialog } from "./care-supply-catalog-editor";
 
 export default function CareSupplyCatalog() {
+  const t = useTerms();
   const r = useCareSupplyCatalog();
   const { products, error, query, setQuery, filter, setFilter, editor, visibleProducts, openEditor } = r;
   return (
@@ -22,7 +24,7 @@ export default function CareSupplyCatalog() {
             <div className="heading-copy">
               <p className="eyebrow">CareCore Admin</p>
               <h1>Pflegebedarf</h1>
-              <p>Pflegeprodukte zentral pflegen und für die Bewohnerakte bereitstellen.</p>
+              <p>Pflegeprodukte zentral pflegen und für die {t.prefix}akte bereitstellen.</p>
             </div>
             <button className="primary-button" type="button" onClick={() => openEditor()}>
               <ModuleIcon name="plus" className="button-icon" />

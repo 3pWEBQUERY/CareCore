@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import {
   EmptyState,
@@ -17,6 +18,7 @@ import AssessmentDialog from "./assessment-dialog";
 import { Overview, kindLabel, kindTone, DUE_FILTERS } from "./assessment-view-utils";
 
 export function DueView({ showToast }: { showToast: ShowToast }) {
+  const t = useTerms();
   const due = useApiData<{ items: DueItem[]; canWrite: boolean }>("/api/assessments/due");
   const overview = useApiData<Overview>("/api/assessments");
   const [filter, setFilter] = useState<(typeof DUE_FILTERS)[number]>("Alle");
@@ -65,7 +67,7 @@ export function DueView({ showToast }: { showToast: ShowToast }) {
           </div>
         </div>
         <div className="assessment-table-head">
-          <span>Bewohner</span>
+          <span>{t.one}</span>
           <span>Instrument</span>
           <span>Status</span>
           <span>Fällig</span>

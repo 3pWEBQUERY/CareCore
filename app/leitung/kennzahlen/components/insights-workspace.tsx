@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { setCareResident } from "@/app/components/care-context";
+import { setCareResident, useTerms } from "@/app/components/care-context";
+import type { Terms } from "@/lib/terminology";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { LoadError, useApiData } from "@/app/components/workspace-ui";
@@ -46,6 +47,13 @@ const pages: Record<InsightsView, { child: string; title: string; description: s
   },
 };
 
+// Überschrift der Bewohnerübersicht mit der Bezeichnung der Einrichtung.
+const residentsPage = (page: (typeof pages)["residents"], t: Terms) => ({
+  ...page,
+  title: `${t.prefix}übersicht`,
+  description: `Resident 360: der Stand jedes ${t.oneOblique} über alle Module – die dringendsten zuerst.`,
+});
+
 const LOADING: Kpi[] = ["Kennzahl 1", "Kennzahl 2", "Kennzahl 3", "Kennzahl 4"].map((label) => ({
   value: "–",
   label,
@@ -71,6 +79,7 @@ function IndicatorLink({ item }: { item: Indicator }) {
 }
 
 function CareView({ data }: { data: CareInsights }) {
+  const t = useTerms();
   return (
     <div className="insights-care-layout">
       <section className="card care-indicator-card">
@@ -78,7 +87,7 @@ function CareView({ data }: { data: CareInsights }) {
           <div>
             <p className="eyebrow">Pflegequalität</p>
             <h2 className="card-title">Indikatoren</h2>
-            <p className="card-subtitle">Aktueller Stand aller aktiven Bewohner</p>
+            <p className="card-subtitle">Aktueller Stand aller aktiven {t.many}</p>
           </div>
         </div>
         <div className="care-indicator-list">
@@ -124,6 +133,7 @@ const dateTime = (value: string) =>
   new Date(value).toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
 function ResidentsView({ data }: { data: ResidentInsights }) {
+  const t = useTerms();
   const [filter, setFilter] = useState<(typeof RESIDENT_FILTERS)[number]["id"]>("all");
   const count = (id: (typeof RESIDENT_FILTERS)[number]["id"]) =>
     id === "all" ? data.residents.length : data.residents.filter((resident) => resident.tone === id).length;
@@ -133,12 +143,12 @@ function ResidentsView({ data }: { data: ResidentInsights }) {
       <div className="card-header">
         <div>
           <p className="eyebrow">Resident 360</p>
-          <h2 className="card-title">Alle Bewohner</h2>
+          <h2 className="card-title">Alle {t.many}</h2>
           <p className="card-subtitle">
             Heute fällig · Wunden · Ereignisse der letzten {data.eventDays} Tage · Ernährung
           </p>
         </div>
-        <div className="worklist-filters" role="group" aria-label="Bewohner filtern">
+        <div className="worklist-filters" role="group" aria-label={`${t.many} filtern`}>
           {RESIDENT_FILTERS.map((item) => (
             <button
               className={filter === item.id ? "active" : ""}
@@ -217,7 +227,7 @@ function ResidentsView({ data }: { data: ResidentInsights }) {
             </span>
           </Link>
         ))}
-        {!residents.length && <p className="list-hint">Keine Bewohner in dieser Stufe.</p>}
+        {!residents.length && <p className="list-hint">Keine {t.many} in dieser Stufe.</p>}
       </div>
     </section>
   );
@@ -412,7 +422,8 @@ function WorkforceView({ data }: { data: WorkforceInsights }) {
 }
 
 export default function InsightsWorkspace({ view }: { view: InsightsView }) {
-  const page = pages[view];
+  const t = useTerms();
+  const page = view === "residents" ? residentsPage(pages.residents, t) : pages[view];
   const data = useApiData<CareInsights | ResidentInsights | LeadershipInsights | WorkforceInsights>(
     `/api/insights?view=${view}`,
   );

@@ -1,11 +1,13 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { Check, ClipboardText } from "@phosphor-icons/react";
 import { CareSelect } from "@/app/components/care-form-controls";
 import type { CareSupplyCatalogState } from "./use-care-supply-catalog";
 import { categories, units } from "./care-supply-catalog-model";
 
 export function CatalogEditorDialog({ r }: { r: CareSupplyCatalogState }) {
+  const t = useTerms();
   const { error, editor, setEditor, saving, save } = r;
   if (!editor) return null;
   return (
@@ -19,7 +21,7 @@ export function CatalogEditorDialog({ r }: { r: CareSupplyCatalogState }) {
           <div>
             <p className="eyebrow">CareCore Administration · Pflegebedarf</p>
             <h2 id="care-supply-editor-title">{editor.id ? "Pflegeprodukt bearbeiten" : "Pflegeprodukt anlegen"}</h2>
-            <p>Der Katalog wird für die Pflegebedarfsbuchung in allen Bewohnerakten verwendet.</p>
+            <p>Der Katalog wird für die Pflegebedarfsbuchung in allen {t.prefix}akten verwendet.</p>
           </div>
           <button
             className="area-editor-close"
@@ -37,7 +39,7 @@ export function CatalogEditorDialog({ r }: { r: CareSupplyCatalogState }) {
             </span>
             <div>
               <strong>Produktstammdaten</strong>
-              <p>Name, Einheit und Sollmenge erscheinen bei der Buchung an Bewohner.</p>
+              <p>Name, Einheit und Sollmenge erscheinen bei der Buchung an {t.many}.</p>
             </div>
           </div>
           <div className="area-editor-grid care-supply-editor-grid">
@@ -81,7 +83,7 @@ export function CatalogEditorDialog({ r }: { r: CareSupplyCatalogState }) {
               />
             </label>
             <label>
-              <span>Vorgeschlagene Sollmenge pro Bewohner</span>
+              <span>Vorgeschlagene Sollmenge pro {t.one}</span>
               <input
                 type="number"
                 min="0"
