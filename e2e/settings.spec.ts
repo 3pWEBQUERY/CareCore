@@ -217,7 +217,7 @@ test("FHIR-Schlüssel: erstellen, damit lesen, widerrufen", async ({ page, playw
   const card = page.locator(".admin-api-card");
   await card.getByRole("button", { name: "Schlüssel erstellen" }).click();
   const create = page.getByRole("dialog", { name: "Schlüssel erstellen" });
-  await create.getByLabel("Name").fill(name);
+  await create.getByLabel("Name", { exact: true }).fill(name);
   await create.getByLabel("Personen (Name, Geburtsdatum, Geschlecht, Status)").check();
   await create.getByRole("button", { name: "Erstellen" }).click();
   const shown = page.getByRole("dialog", { name: `Schlüssel „${name}“` });
