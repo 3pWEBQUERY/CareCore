@@ -13,7 +13,7 @@ import {
   type VitalResident,
   type VitalStatus,
 } from "@/lib/vitals-shared";
-import { useCareResident, useTerms } from "@/app/components/care-context";
+import { useCareResident, useTerms, useVitalMetrics } from "@/app/components/care-context";
 import { sendOrQueue } from "@/app/components/offline-queue";
 
 type Draft = Record<string, { value: string; secondary: string }>;
@@ -30,6 +30,7 @@ export default function MeasurementDialog({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
+  const metrics = useVitalMetrics();
   const t = useTerms();
   const [contextId] = useCareResident();
   const [residentId, setResidentId] = useState(
@@ -61,7 +62,7 @@ export default function MeasurementDialog({
 
   async function save() {
     const values: Record<string, { value: number; secondary?: number }> = {};
-    for (const metric of VITAL_METRICS) {
+    for (const metric of metrics) {
       const value = parse(draft[metric.key].value);
       if (value === null) continue;
       if (Number.isNaN(value)) {
@@ -133,7 +134,7 @@ export default function MeasurementDialog({
         <span>Uhrzeit</span>
         <input type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
       </label>
-      {VITAL_METRICS.map((metric) => {
+      {metrics.map((metric) => {
         const status = hint(metric.key);
         return (
           <div className="form-field vital-input" key={metric.key}>

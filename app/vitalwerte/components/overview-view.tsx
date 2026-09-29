@@ -24,7 +24,7 @@ import {
 import MeasurementDialog from "./measurement-dialog";
 import TrendChart from "./trend-chart";
 import { History, FILTERS, WEEK, ClinicalNote, MeasurementList } from "./overview-parts";
-import { useCareResident, useTerms } from "@/app/components/care-context";
+import { useCareResident, useTerms, useVitalMetrics } from "@/app/components/care-context";
 
 export type VitalsOverview = {
   residents: VitalResident[];
@@ -49,13 +49,15 @@ export function abnormalValues(residents: VitalResident[]) {
 }
 
 export default function OverviewView({ showToast }: { showToast: ShowToast }) {
+  const metrics = useVitalMetrics();
   const t = useTerms();
   const overview = useApiData<VitalsOverview>("/api/vitals/overview");
   const [query, setQuery] = useState("");
   const [unit, setUnit] = useState("Gesamtes Haus");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("Alle");
   const [selectedId, setSelectedId] = useCareResident();
-  const [metric, setMetric] = useState(VITAL_METRICS[0].key);
+  const [chosenMetric, setMetric] = useState(VITAL_METRICS[0].key);
+  const metric = metrics.some((m) => m.key === chosenMetric) ? chosenMetric : metrics[0].key;
   const [days, setDays] = useState(7);
   const [dialog, setDialog] = useState<{ residentId: string | null } | null>(null);
   const residents = overview.data?.residents ?? [];
@@ -200,7 +202,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
                   <em>{resident.lastMeasuredAt ? formatDateTime(resident.lastMeasuredAt) : "Noch keine Messung"}</em>
                 </span>
                 <span className="vitals-values">
-                  {VITAL_METRICS.map((m) => {
+                  {metrics.map((m) => {
                     const latest = resident.latest[m.key];
                     return (
                       <span key={m.key} className={latest ? `vital-value ${latest.status}` : "vital-value empty"}>
@@ -284,7 +286,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
                 </div>
               </div>
               <div className="vitals-metric-tabs" aria-label="Messwert auswählen">
-                {VITAL_METRICS.map((m) => (
+                {metrics.map((m) => (
                   <button
                     className={metric === m.key ? "active" : ""}
                     type="button"

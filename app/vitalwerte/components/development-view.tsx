@@ -16,7 +16,7 @@ import {
 } from "@/lib/vitals-shared";
 import { abnormalValues, type VitalsOverview } from "./overview-view";
 import TrendChart from "./trend-chart";
-import { useCareResident, useHeaderResident, useTerms } from "@/app/components/care-context";
+import { useCareResident, useHeaderResident, useTerms, useVitalMetrics } from "@/app/components/care-context";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
 
 type History = { measurements: VitalMeasurement[]; threshold: EffectiveThreshold };
@@ -33,11 +33,13 @@ const sourceLabel = {
 };
 
 export default function DevelopmentView() {
+  const metrics = useVitalMetrics();
   const t = useTerms();
   const overview = useApiData<VitalsOverview>("/api/vitals/overview");
   const residents = overview.data?.residents ?? [];
   const [, setResidentId] = useCareResident();
-  const [metric, setMetric] = useState(VITAL_METRICS[0].key);
+  const [chosenMetric, setMetric] = useState(VITAL_METRICS[0].key);
+  const metric = metrics.some((m) => m.key === chosenMetric) ? chosenMetric : metrics[0].key;
   const [days, setDays] = useState(30);
   const { resident, missing } = useHeaderResident(residents, overview.loading);
   const history = useApiData<History>(
@@ -74,7 +76,7 @@ export default function DevelopmentView() {
             <CareSelect
               label="Messwert auswählen"
               value={metric}
-              options={VITAL_METRICS.map((m) => m.key)}
+              options={metrics.map((m) => m.key)}
               onChange={setMetric}
             />
             <div>

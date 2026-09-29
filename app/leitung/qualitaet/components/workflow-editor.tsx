@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { CareSelect } from "@/app/components/care-form-controls";
 import { EditorDialog, requestJson } from "@/app/components/workspace-ui";
-import { EVENT_TYPES } from "@/lib/quality-shared";
 import { TASK_CATEGORIES, TASK_PRIORITIES, type TaskPriority } from "@/lib/tasks-shared";
 
 type Step = {
@@ -35,7 +34,8 @@ const NOT_CHOSEN = "Bitte wählen";
 
 // Ablaufketten je Ereignisart: Folgeschritte mit Fälligkeit nach dem Ereignis. Die Einrichtung legt sie selbst fest.
 export function WorkflowEditor({ onClose, onSaved }: { onClose: () => void; onSaved: (message: string) => void }) {
-  const [type, setType] = useState<string>(EVENT_TYPES[0]);
+  const [type, setType] = useState<string>("");
+  const [eventTypes, setEventTypes] = useState<string[]>([]);
   const [workflows, setWorkflows] = useState<Record<string, StoredStep[]> | null>(null);
   const [steps, setSteps] = useState<Step[]>([]);
   const [saving, setSaving] = useState(false);
@@ -43,8 +43,13 @@ export function WorkflowEditor({ onClose, onSaved }: { onClose: () => void; onSa
 
   useEffect(() => {
     let live = true;
-    requestJson<{ workflows: Record<string, StoredStep[]> }>("/api/quality/workflows").then(
-      (result) => live && setWorkflows(result.workflows),
+    requestJson<{ workflows: Record<string, StoredStep[]>; eventTypes: string[] }>("/api/quality/workflows").then(
+      (result) => {
+        if (!live) return;
+        setEventTypes(result.eventTypes);
+        setType((current) => current || result.eventTypes[0] || "");
+        setWorkflows(result.workflows);
+      },
       (cause: Error) => live && setError(cause.message),
     );
     return () => {
@@ -109,7 +114,7 @@ export function WorkflowEditor({ onClose, onSaved }: { onClose: () => void; onSa
     >
       <label className="area-editor-wide">
         <span>Ereignisart</span>
-        <CareSelect label="Ereignisart" value={type} options={[...EVENT_TYPES]} onChange={(value) => load(value)} />
+        <CareSelect label="Ereignisart" value={type} options={eventTypes} onChange={(value) => load(value)} />
       </label>
       {!workflows && <p className="area-editor-wide list-hint">Ablaufketten werden geladen …</p>}
       {workflows && !steps.length && (

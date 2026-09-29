@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { readHiddenVitals } from "@/lib/settings";
 import {
   ApiError,
   assertResident,
@@ -75,7 +76,7 @@ export async function effectiveThresholds(ctx: ApiContext, residentId: string | 
 
 export async function vitalsOverview(ctx: ApiContext) {
   const { sql, actor } = ctx;
-  const [residents, latest, units, today] = (await Promise.all([
+  const [residents, latest, units, today, hidden] = (await Promise.all([
     sql`
       SELECT r.id, r.first_name, r.last_name, COALESCE(ro.name, '') AS room, COALESCE(cu.name, '') AS care_unit, cu.id AS care_unit_id
       FROM carecore_residents r
@@ -97,11 +98,13 @@ export async function vitalsOverview(ctx: ApiContext) {
       JOIN carecore_residents r ON r.id = m.resident_id AND r.organization_id = ${actor.organizationId}
       CROSS JOIN (SELECT timezone FROM carecore_organizations WHERE id = ${actor.organizationId}) org
       WHERE (m.measured_at AT TIME ZONE org.timezone)::date = (NOW() AT TIME ZONE org.timezone)::date`,
-  ])) as [Row[], Row[], Row[], Row[]];
+    readHiddenVitals(ctx),
+  ])) as [Row[], Row[], Row[], Row[], string[]];
   const list: VitalResident[] = residents.map((row) => {
     const name = `${row.first_name} ${row.last_name}`;
     const values: Record<string, LatestVital> = {};
-    for (const entry of latest.filter((item) => item.resident_id === row.id))
+    // Nicht erfasste Vitalparameter zählen weder für den Status noch für Hinweise.
+    for (const entry of latest.filter((item) => item.resident_id === row.id && !hidden.includes(String(item.metric))))
       values[String(entry.metric)] = {
         value: Number(entry.value),
         secondary: num(entry.secondary_value),
@@ -154,12 +157,13 @@ export async function recordMeasurements(
   if (measuredAt.getTime() < Date.now() - 7 * 86_400_000)
     throw new ApiError("Messungen können höchstens 7 Tage rückwirkend erfasst werden.");
   const values = (body.values ?? {}) as Record<string, MeasurementInput>;
-  const thresholds = await effectiveThresholds(ctx, residentId);
+  const [thresholds, hidden] = await Promise.all([effectiveThresholds(ctx, residentId), readHiddenVitals(ctx)]);
   const rows: Array<{ metric: string; value: number; secondary: number | null; unit: string; status: VitalStatus }> =
     [];
   for (const [key, input] of Object.entries(values)) {
     const metric = metricByKey(key);
     if (!metric) throw new ApiError(`Unbekannter Messwert: ${key}.`);
+    if (hidden.includes(key)) throw new ApiError(`${key} wird in dieser Einrichtung nicht erfasst.`);
     const value = typeof input?.value === "number" && Number.isFinite(input.value) ? input.value : null;
     if (value === null) continue;
     const [min, max] = metric.plausible;

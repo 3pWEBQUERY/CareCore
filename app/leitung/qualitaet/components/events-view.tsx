@@ -12,6 +12,7 @@ import {
 } from "@/lib/quality-shared";
 import { LeadershipHeading, LeadershipKpis, initialsOf } from "../../components/leadership-page-parts";
 import { ActionDialog, HandleEventDialog, ReportEventDialog } from "./quality-dialogs";
+import { EventTypesEditor } from "./event-types-editor";
 import { WorkflowEditor } from "./workflow-editor";
 
 const typeIcons: Record<string, ModuleIconName> = {
@@ -41,6 +42,7 @@ type Dialog =
   | { kind: "handle"; event: QualityEvent; status: EventStatus }
   | { kind: "action"; event: QualityEvent }
   | { kind: "workflows" }
+  | { kind: "types" }
   | null;
 
 export default function EventsView({ showToast }: { showToast: ShowToast }) {
@@ -295,9 +297,19 @@ export default function EventsView({ showToast }: { showToast: ShowToast }) {
                       .join(" · ")
                   : "Noch keine Ablaufkette festgelegt."}
               </p>
-              <button className="secondary-button" type="button" onClick={() => setDialog({ kind: "workflows" })}>
-                Ablaufketten festlegen
-              </button>
+              <p>
+                {data.data?.eventTypes.custom.length
+                  ? `Eigene Ereignisarten: ${data.data.eventTypes.custom.join(", ")}`
+                  : "Keine eigenen Ereignisarten."}
+              </p>
+              <div className="quality-workflow-actions">
+                <button className="secondary-button" type="button" onClick={() => setDialog({ kind: "workflows" })}>
+                  Ablaufketten festlegen
+                </button>
+                <button className="secondary-button" type="button" onClick={() => setDialog({ kind: "types" })}>
+                  Ereignisarten
+                </button>
+              </div>
             </section>
           )}
           <section className="card quality-risk-card">
@@ -340,11 +352,20 @@ export default function EventsView({ showToast }: { showToast: ShowToast }) {
           residents={data.data.residents}
           careUnits={data.data.careUnits}
           workflowSteps={data.data.workflowSteps}
+          eventTypes={[...data.data.eventTypes.builtIn, ...data.data.eventTypes.custom]}
           onClose={() => setDialog(null)}
           onSaved={done}
         />
       )}
       {dialog?.kind === "workflows" && <WorkflowEditor onClose={() => setDialog(null)} onSaved={done} />}
+      {dialog?.kind === "types" && data.data && (
+        <EventTypesEditor
+          builtIn={data.data.eventTypes.builtIn}
+          custom={data.data.eventTypes.custom}
+          onClose={() => setDialog(null)}
+          onSaved={done}
+        />
+      )}
       {dialog?.kind === "handle" && (
         <HandleEventDialog
           event={dialog.event}

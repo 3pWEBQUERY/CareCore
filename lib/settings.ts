@@ -1,6 +1,7 @@
 import { ApiError, iso, auditStatement, type ApiContext } from "@/lib/api-context";
 import { SETTING_DEFINITIONS, resolveSettings, type AppSettings, type SettingKey } from "@/lib/settings-shared";
 import { TERMINOLOGIES, resolveTerminology, termsFor, type TerminologyKey } from "@/lib/terminology";
+import { VITAL_METRICS } from "@/lib/vitals-shared";
 
 // Organisation-wide settings (see settings-shared.ts).
 
@@ -14,6 +15,34 @@ export async function readTerminology(ctx: ApiContext): Promise<TerminologyKey> 
   const rows =
     await ctx.sql`SELECT settings->'terminology' AS terminology FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}`;
   return resolveTerminology(rows[0]?.terminology);
+}
+
+// Vitalparameter, die die Einrichtung nicht erfasst (ausgeblendet in Messung und Übersichten).
+export const resolveHiddenVitals = (value: unknown) =>
+  Array.isArray(value) ? VITAL_METRICS.map((metric) => metric.key).filter((key) => value.includes(key)) : [];
+
+export async function readHiddenVitals(ctx: ApiContext) {
+  const rows =
+    await ctx.sql`SELECT settings->'hiddenVitals' AS hidden FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}`;
+  return resolveHiddenVitals(rows[0]?.hidden);
+}
+
+export async function saveHiddenVitals(ctx: ApiContext, body: Record<string, unknown>) {
+  const input = body.hidden;
+  const keys = VITAL_METRICS.map((metric) => metric.key);
+  if (!Array.isArray(input) || !input.every((key) => typeof key === "string" && keys.includes(key)))
+    throw new ApiError("Bitte nur bekannte Vitalparameter angeben.");
+  const hidden = resolveHiddenVitals(input);
+  if (hidden.length === keys.length) throw new ApiError("Mindestens ein Vitalparameter muss erfasst werden.");
+  const before = await readHiddenVitals(ctx);
+  await ctx.sql.transaction([
+    ctx.sql`
+    UPDATE carecore_organizations
+    SET settings = jsonb_set(COALESCE(settings, '{}'::jsonb), '{hiddenVitals}', ${JSON.stringify(hidden)}::jsonb), updated_at = NOW()
+    WHERE id = ${ctx.actor.organizationId}`,
+    auditStatement(ctx, "setting", ctx.actor.organizationId, "hidden_vitals", { hidden: before }, { hidden }),
+  ]);
+  return hidden;
 }
 
 // Wortformen der Bezeichnung für Texte, die der Server erzeugt (Kennzahlen, Übersichten).

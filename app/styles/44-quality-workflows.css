@@ -40,3 +40,28 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+.quality-workflow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 18px;
+}
+.quality-workflow-actions .secondary-button {
+  margin: 0;
+}
+.event-types-builtin p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.event-types-custom {
+  display: grid;
+  gap: 10px;
+}
+.event-types-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
