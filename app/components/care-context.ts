@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { termsFor, type Terms } from "@/lib/terminology";
 import { VITAL_METRICS } from "@/lib/vitals-shared";
 import type { WorkContext } from "@/lib/work-context";
+import { useLiveEvent } from "./live-events";
 
 // Working context shared by all modules of a browser tab: the resident being
 // cared for and the care unit. Picking a resident in the header or in any
@@ -144,11 +145,15 @@ export function useResidentNavigation() {
   };
 }
 
-// Sidebar badge counts; refreshed every minute while the page is open.
+// Sidebar badge counts; sofort bei Änderungen an Aufgaben, Übergaben und Nachrichten (Echtzeit) und jede Minute
+// (überfällige Gaben ergeben sich aus der Uhrzeit).
 export type NavigationBadges = { tasks: number; handover: number; medRound: number; messages: number };
 
 export function useNavigationBadges() {
   const [badges, setBadges] = useState<NavigationBadges | null>(null);
+  const reload = useRef<() => void>(() => undefined);
+  useLiveEvent("work", () => reload.current());
+  useLiveEvent("messages", () => reload.current());
   useEffect(() => {
     let live = true;
     const load = () =>
@@ -156,6 +161,7 @@ export function useNavigationBadges() {
         .then((response) => (response.ok ? (response.json() as Promise<NavigationBadges>) : null))
         .then((data) => live && data && setBadges(data))
         .catch(() => undefined);
+    reload.current = () => void load();
     void load();
     const timer = window.setInterval(load, 60_000);
     return () => {

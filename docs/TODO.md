@@ -119,7 +119,9 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - [x] **Datenschutz:** Lösch- und Aufbewahrungskonzept für Bewohnerdaten. Fristen legt die Einrichtung fest.
       Konzept in `docs/DATENSCHUTZ.md`; Einstellung „Aufbewahrungsfrist Akten“ (ohne Vorgabe), Karte „Löschfristen“ mit
       Löschung nur auf Bestätigung durch die Administration.
-- [ ] **Echtzeit** (Server-Sent Events) statt Polling.
+- [x] **Echtzeit** (Server-Sent Events) statt Polling. `/api/events` meldet Änderungen an Benachrichtigungen,
+      Nachrichten sowie Aufgaben/Übergaben (Prüfung alle 10 s, Stand als Event-ID fürs Wiederverbinden); Kopfzeile,
+      Navigationszähler und Messenger laden sofort nach. Das bisherige Nachladen bleibt als seltene Absicherung.
 - [ ] **Öffentliche API, Webhooks, FHIR.**
 - [ ] **Portale (Phase 6).**
 

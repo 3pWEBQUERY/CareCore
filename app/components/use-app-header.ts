@@ -8,6 +8,7 @@ import { playNotificationSound } from "./notification-sound";
 import type { CareUnit, ContextResident, WorkContext } from "@/lib/work-context";
 import { loadWorkContext, useCareResident, useCareUnit, useResidentPickerRequests } from "./care-context";
 import { HeaderNotification } from "./header-parts";
+import { useLiveEvent } from "./live-events";
 
 export function useAppHeader({
   locationPrimary = "…",
@@ -74,8 +75,11 @@ export function useAppHeader({
   useEffect(() => {
     soundRef.current = soundOn;
   }, [soundOn]);
-  // Benachrichtigungen beim Öffnen und danach jede Minute, solange der Tab sichtbar ist. Mit „Hinweiston“
-  // (Einstellungen › Benachrichtigungen) erklingt ein kurzer Ton, sobald eine neue ungelesene hinzukommt.
+  // Benachrichtigungen beim Öffnen, sofort bei Änderungen (Echtzeit) und zur Sicherheit alle fünf Minuten, solange der
+  // Tab sichtbar ist. Mit „Hinweiston“ (Einstellungen › Benachrichtigungen) erklingt ein kurzer Ton, sobald eine neue
+  // ungelesene hinzukommt.
+  const reloadNotifications = useRef<() => void>(() => undefined);
+  useLiveEvent("notifications", () => reloadNotifications.current());
   useEffect(() => {
     let live = true;
     let known: Set<string> | null = null;
@@ -92,8 +96,9 @@ export function useAppHeader({
           setHeaderNotifications(data.notifications);
         })
         .catch(() => undefined);
+    reloadNotifications.current = () => void load();
     void load();
-    const timer = window.setInterval(() => document.visibilityState === "visible" && void load(), 60_000);
+    const timer = window.setInterval(() => document.visibilityState === "visible" && void load(), 300_000);
     return () => {
       live = false;
       window.clearInterval(timer);

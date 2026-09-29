@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN, login } from "./support";
+import { ADMIN, login, waitForNetworkIdle } from "./support";
 
 // Offline-Betrieb mit Service Worker: die Seite öffnet sich ohne Verbindung, ein Eintrag wird auf dem Gerät
 // vorgemerkt und nach der Rückkehr der Verbindung genau einmal gespeichert.
@@ -17,7 +17,7 @@ test("Offline: Dokumentation wird vorgemerkt und nach der Rückkehr der Verbindu
   await expect(page.locator("h1").first()).toBeVisible();
   const form = page.locator("form", { has: page.locator("textarea") }).first();
   await expect(form.locator("button.primary-button")).toBeEnabled();
-  await page.waitForLoadState("networkidle");
+  await waitForNetworkIdle(page);
 
   const text = `Offline-Eintrag ${Date.now()}`;
   await context.setOffline(true);
@@ -60,7 +60,7 @@ test("Meine Notizen: archivieren und wiederherstellen, auch ohne Verbindung", as
   await page.reload();
   const card = page.locator(".home-notes");
   await expect(card.locator("h2")).toHaveText("Meine Notizen");
-  await page.waitForLoadState("networkidle");
+  await waitForNetworkIdle(page);
   const stamp = Date.now();
   const archivedTitle = `Archiv-Test ${stamp}`;
   const offlineTitle = `Offline-Notiz ${stamp}`;
@@ -127,7 +127,7 @@ test("Meine Notizen: offline bearbeitet, inzwischen anderswo geändert – Konfl
   await page.reload();
   const card = page.locator(".home-notes");
   await expect(card.getByRole("button", { name: new RegExp(title) })).toBeVisible();
-  await page.waitForLoadState("networkidle");
+  await waitForNetworkIdle(page);
 
   // Ein anderes Gerät ändert die Notiz, während dieses Gerät noch den alten Stand zeigt.
   const other = await page.request.patch("/api/dashboard/notes", {

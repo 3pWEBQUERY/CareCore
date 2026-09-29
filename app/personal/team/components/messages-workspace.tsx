@@ -1,5 +1,6 @@
 "use client";
 
+import { useLiveEvent } from "@/app/components/live-events";
 import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -65,10 +66,12 @@ export default function MessagesWorkspace() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [load, requested]);
+  // Neue Nachrichten sofort (Echtzeit); zur Sicherheit jede Minute.
+  useLiveEvent("messages", () => void load(selectedId));
   useEffect(() => {
     const timer = window.setInterval(() => {
       void load(selectedId);
-    }, 12000);
+    }, 60_000);
     return () => window.clearInterval(timer);
   }, [load, selectedId]);
 

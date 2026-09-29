@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { navigation, routeFor } from "../app/components/navigation";
-import { ADMIN, login, watchErrors } from "./support";
+import { ADMIN, login, watchErrors, waitForNetworkIdle } from "./support";
 
 const pages = navigation
   .flatMap((group) => group.modules)
@@ -18,7 +18,7 @@ test.describe("Handy-Ansicht (390 px)", () => {
     for (const url of pages) {
       await page.goto(url);
       await expect(page.locator("h1").first()).toBeVisible();
-      await page.waitForLoadState("networkidle");
+      await waitForNetworkIdle(page);
       const width = await page.evaluate(() => document.documentElement.scrollWidth);
       if (width > 390) tooWide.push(`${url}: ${width}px`);
     }

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN, login, watchErrors } from "./support";
+import { ADMIN, FAGE, login, watchErrors } from "./support";
 
 // Posteingang: Klassen als Filter und Bündelung gleichartiger Hinweise (drei fällige Aufgaben am selben Tag).
 test("Benachrichtigungen: Klasse „Handlung“ zeigt fällige Aufgaben gebündelt", async ({ page }) => {
@@ -33,5 +33,36 @@ test("Benachrichtigungen: Klasse „Handlung“ zeigt fällige Aufgaben gebünde
   // Eine Direktnachricht ist „Sozial“, nicht „Handlung“.
   await page.getByRole("button", { name: /^Sozial/ }).click();
   await expect(page.locator(".notifications-page-row", { hasText: "Aufgabe fällig" })).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+// Echtzeit: Eine neue Benachrichtigung erscheint ohne Neuladen (Server-Sent Events statt Warten auf das Nachladen).
+test("Echtzeit: neue Benachrichtigung erscheint ohne Neuladen", async ({ page, browser }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  expect((await page.request.patch("/api/notifications", { data: { all: true } })).status()).toBe(200);
+  const live = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/events");
+  await page.goto("/c");
+  await live;
+  await expect(page.locator(".notification-trigger .notification-dot").first()).toHaveCount(0);
+
+  const other = await browser.newContext();
+  const reporter = await other.newPage();
+  await login(reporter, FAGE);
+  expect(
+    (
+      await reporter.request.post("/api/quality/events", {
+        data: {
+          type: "Beschwerde",
+          severity: "attention",
+          title: `E2E Echtzeit ${Date.now()}`,
+          description: "Echtzeit-Klicktest",
+          occurredAt: new Date().toISOString(),
+        },
+      })
+    ).status(),
+  ).toBe(201);
+  await other.close();
+  await expect(page.locator(".notification-trigger .notification-dot").first()).toBeVisible({ timeout: 25_000 });
   expect(errors).toEqual([]);
 });
