@@ -79,6 +79,11 @@ export async function updateNote({ sql, userId, organizationId }: Owner, input: 
     throw new ApiError("Archiv: Wert ist ungültig.");
   const archived = input.archived as boolean | undefined;
   if (!content && archived === undefined) throw new ApiError("Keine Änderung angegeben.");
+  // Stand, auf dem die Bearbeitung beruht: wurde die Notiz seither anderswo geändert, gilt das als Konflikt.
+  const base =
+    typeof input.baseUpdatedAt === "string" && !Number.isNaN(Date.parse(input.baseUpdatedAt))
+      ? new Date(input.baseUpdatedAt).toISOString()
+      : null;
   const rows = (await sql`
     UPDATE carecore_staff_notes SET
       title = COALESCE(${content?.title ?? null}, title),
@@ -90,9 +95,13 @@ export async function updateNote({ sql, userId, organizationId }: Owner, input: 
         ELSE archived_at END,
       updated_at = CASE WHEN ${content !== null} THEN NOW() ELSE updated_at END
     WHERE id = ${id} AND organization_id = ${organizationId} AND user_id = ${userId}
+      AND (${base}::timestamptz IS NULL OR date_trunc('milliseconds', updated_at) <= ${base}::timestamptz)
     RETURNING id, title, body, pinned, archived_at, created_at, updated_at`) as Row[];
-  if (!rows[0]) throw new ApiError("Notiz nicht gefunden.", 404);
-  return mapNote(rows[0]);
+  if (rows[0]) return mapNote(rows[0]);
+  const exists =
+    await sql`SELECT 1 FROM carecore_staff_notes WHERE id = ${id} AND organization_id = ${organizationId} AND user_id = ${userId}`;
+  if (exists[0]) throw new ApiError("Die Notiz wurde inzwischen auf einem anderen Gerät geändert.", 409);
+  throw new ApiError("Notiz nicht gefunden.", 404);
 }
 
 // Endgültig löschen; eine bereits gelöschte Notiz gilt als gelöscht.

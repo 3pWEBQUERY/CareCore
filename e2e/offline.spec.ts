@@ -109,6 +109,58 @@ test("Meine Notizen: archivieren und wiederherstellen, auch ohne Verbindung", as
   expect(saved.notes.find((note) => note.title === archivedTitle)?.archived_at).toBeNull();
 });
 
+test("Meine Notizen: offline bearbeitet, inzwischen anderswo geändert – Konflikt, eigene Fassung übernehmen", async ({
+  page,
+  context,
+}) => {
+  await login(page, ADMIN);
+  const title = `Konflikt-Test ${Date.now()}`;
+  const id = crypto.randomUUID();
+  const created = await page.request.post("/api/dashboard/notes", {
+    data: { id, title, body: "Stand A", pinned: false },
+  });
+  expect(created.ok()).toBe(true);
+  await page.goto("/c");
+  await page.waitForFunction(
+    () => navigator.serviceWorker?.controller !== null && navigator.serviceWorker?.controller !== undefined,
+  );
+  await page.reload();
+  const card = page.locator(".home-notes");
+  await expect(card.getByRole("button", { name: new RegExp(title) })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+
+  // Ein anderes Gerät ändert die Notiz, während dieses Gerät noch den alten Stand zeigt.
+  const other = await page.request.patch("/api/dashboard/notes", {
+    data: { id, title, body: "Stand vom anderen Gerät", pinned: false },
+  });
+  expect(other.ok()).toBe(true);
+
+  await context.setOffline(true);
+  await card.getByRole("button", { name: new RegExp(title) }).click();
+  await page
+    .locator(".home-note-panel")
+    .getByRole("button", { name: /Bearbeiten/ })
+    .click();
+  const dialog = page.locator(".home-note-panel");
+  await dialog.getByLabel("Notiz").fill("Meine Fassung");
+  await dialog.getByRole("button", { name: "Notiz speichern" }).click();
+  await expect(page.locator(".toast")).toContainText("offline vorgemerkt");
+
+  await context.setOffline(false);
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  const status = page.locator(".offline-status");
+  await expect(status).toContainText("abgelehnt", { timeout: 20_000 });
+  await status.getByRole("button", { name: "Anzeigen" }).click();
+  await expect(status).toContainText("Konflikt: Die Notiz wurde inzwischen auf einem anderen Gerät geändert.");
+  await status.getByRole("button", { name: "Meine Fassung übernehmen" }).click();
+  await expect(status).toContainText(/offline erfasste(r Eintrag| Einträge) gesendet/, { timeout: 20_000 });
+
+  const saved = (await (await page.request.get("/api/dashboard/notes")).json()) as {
+    notes: Array<{ id: string; body: string }>;
+  };
+  expect(saved.notes.find((note) => note.id === id)?.body).toBe("Meine Fassung");
+});
+
 test("Manifest und Service Worker sind erreichbar (installierbar)", async ({ page }) => {
   const manifest = await page.request.get("/manifest.webmanifest");
   expect(manifest.status()).toBe(200);

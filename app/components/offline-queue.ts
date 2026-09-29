@@ -21,6 +21,8 @@ export type QueuedWrite = {
   editable?: { field: string; label: string };
   // Vom Server abgelehnt (z. B. Eingabe ungültig): bleibt sichtbar, bis die Person ihn verwirft.
   error?: string;
+  // Abgelehnt, weil der Eintrag inzwischen anderswo geändert wurde (HTTP 409).
+  conflict?: boolean;
 };
 
 const DB = "carecore-offline";
@@ -73,7 +75,19 @@ export async function editWrite(item: QueuedWrite, value: string) {
     ...item,
     body: { ...(item.body as Record<string, unknown>), [item.editable.field]: value },
     error: undefined,
+    conflict: undefined,
   });
+}
+
+// Konflikt: die eigene Fassung trotzdem übernehmen – ohne Vergleichsstand erneut senden.
+export const canOverride = (item: QueuedWrite) =>
+  !!item.conflict && !!item.body && typeof item.body === "object" && "baseUpdatedAt" in item.body;
+
+export async function overrideWrite(item: QueuedWrite) {
+  if (!canOverride(item)) return;
+  const body = { ...(item.body as Record<string, unknown>) };
+  delete body.baseUpdatedAt;
+  await saveWrite({ ...item, body, error: undefined, conflict: undefined });
 }
 
 // Angemeldete Person (von OfflineSync gesetzt), damit Einträge nur mit ihrer Sitzung gesendet werden.
@@ -160,7 +174,11 @@ async function sendQueued() {
       // Serverfehler oder Drossel: später erneut senden, nicht als abgelehnt markieren.
       break;
     } else {
-      await saveWrite({ ...item, error: outcome.payload?.error || "Der Eintrag wurde abgelehnt." });
+      await saveWrite({
+        ...item,
+        error: outcome.payload?.error || "Der Eintrag wurde abgelehnt.",
+        conflict: outcome.response.status === 409 || undefined,
+      });
       result.rejected += 1;
     }
   }
