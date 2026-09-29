@@ -41,7 +41,9 @@ test("Offline: Dokumentation wird vorgemerkt und nach der Rückkehr der Verbindu
 
   await context.setOffline(false);
   await page.evaluate(() => window.dispatchEvent(new Event("online")));
-  await expect(page.locator(".offline-status")).toContainText("gesendet", { timeout: 20_000 });
+  await expect(page.locator(".offline-status")).toContainText(/offline erfasste(r Eintrag| Einträge) gesendet/, {
+    timeout: 20_000,
+  });
 
   const response = await page.request.get("/api/documentation?days=1");
   const payload = (await response.json()) as { entries: Array<{ body: string }> };
@@ -97,7 +99,9 @@ test("Meine Notizen: archivieren und wiederherstellen, auch ohne Verbindung", as
 
   await context.setOffline(false);
   await page.evaluate(() => window.dispatchEvent(new Event("online")));
-  await expect(page.locator(".offline-status")).toContainText("gesendet", { timeout: 20_000 });
+  await expect(page.locator(".offline-status")).toContainText(/offline erfasste(r Eintrag| Einträge) gesendet/, {
+    timeout: 20_000,
+  });
   const saved = (await (await page.request.get("/api/dashboard/notes")).json()) as {
     notes: Array<{ title: string; archived_at: string | null }>;
   };

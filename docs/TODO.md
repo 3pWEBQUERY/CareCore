@@ -1,42 +1,107 @@
 # To-do-Liste
 
-Offene Punkte aus den Prüfungen im September 2026, nach Priorität geordnet. Erledigtes steht im README und in den
-Pull Requests (#35–#41).
+Abgleich des Projekts mit dem **CareCore PRD v1.0** (Stand 29.09.2026). Die frühere Liste (PR #35–#47) ist
+abgeschlossen; Erledigtes steht im README und in den Pull Requests.
 
-## Hoch
+Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 
-- [x] **Weitere Module prüfen:** Schicht & Übergabe, Aufgaben, Dokumentation (Nachträge), Schulungen,
-      Team-Neuigkeiten, Kalender, Messenger, Cloud, Mitarbeitende/Administration, KI-Entwürfe.
-  - Alle Protokolleinträge laufen jetzt in derselben Transaktion wie die Änderung (`auditStatement`,
-    `residentAudit`); `writeAudit` ist nur noch ein interner Helfer.
-  - Messenger, Cloud und Kalender sind auf die Organisation beschränkt.
-- [x] **Hochgeladene Dateien prüfen:** Dokumente und Nachweise werden am Inhalt geprüft (`lib/file-signatures.ts`).
-- [ ] **Entscheidung der Einrichtung:** Soll auch die Rolle „Leitung“ das Medikationsrecht nur mit Qualifikation
-      erhalten?
-  - Heute hat die Leitung es immer.
-  - Umsetzbar ohne Code über Mitarbeitende › Profile & Rollen › „Nur mit Qualifikation“.
+## Abgleich je PRD-Bereich
+
+| PRD-Bereich                  | Stand | Befund im Code                                                                                                                                                       |
+| ---------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Home „One Shift. One Screen“ | 🟡    | Startseite `/c` mit Widgets, Notizen, Schnellzugriff, Zeitleiste. Keine feste Gliederung Kritisch / Wichtig / Routine.                                               |
+| Bewohner-Kopfbereich         | 🟡    | Akte mit Übersicht, Verlauf, Körperstatus, Dokumenten. **Reanimationsstatus fehlt** (kein Feld, nur freie Klinik-Hinweise).                                          |
+| Resident Timeline            | ✅    | `bewohner/verlauf`, `lib/resident-history.ts`.                                                                                                                       |
+| Plan                         | ✅    | Pflegeplanung mit Zielen, Massnahmen, Evaluation, Einschätzungen. Keine regelbasierten Vorschläge aus Einschätzungen.                                                |
+| Chart / Schnelldoku          | 🟡    | Doku, Nachträge, Schnelldokumentation. Aus Aufgaben kein ✓ △ ✕, keine Spracheingabe.                                                                                 |
+| Handover                     | ✅    | Übergabe, „Seit meinem letzten Dienst“, Lesebestätigung (`carecore_handover_reads`).                                                                                 |
+| Tasks                        | 🟡    | Status nur offen / in Bearbeitung / erledigt / abgebrochen. **Teilweise, übersprungen (mit Grund) und eskaliert fehlen.**                                            |
+| Med                          | 🟡    | Runde, Reserve (PRN), BtM mit Zweitunterschrift, Bestand. Keine Wirkungskontrolle mit Termin nach PRN-Gabe. Interaktionen fehlen (braucht eine externe Datenquelle). |
+| Vitals                       | ✅    | Individuelle Grenzwerte je Bewohner (`carecore_vital_thresholds`).                                                                                                   |
+| Wounds                       | 🟡    | Verlauf, Fotos, Körperkarte, Erinnerungen. Verbandsmaterial ist nicht als Liste je Versorgung erfasst.                                                               |
+| Nutrition                    | 🟡    | Plan, Trinken, Mahlzeiten, Screenings in den Einschätzungen. Kein automatischer Hinweis bei Gewichts- oder Trinktrend.                                               |
+| Team / Kanäle                | ✅    | Kanäle, Beiträge, Lesebestätigungen (`carecore_post_reads`).                                                                                                         |
+| Chat                         | 🟡    | Unterhaltungen mit Anhängen. **Reaktionen und @Erwähnungen fehlen**; kein Push bei neuer Nachricht.                                                                  |
+| Schedule                     | ✅    | Dienstplan, Tausch, Wünsche, Zeiterfassung, KI-Planung. Offene Dienste werden nur in Insights gezählt, keine Börse.                                                  |
+| Docs                         | ✅    | Versionen, Freigabe, Lesebestätigung (`carecore_document_reads`). Bei neuer Version muss die Bestätigung erneut angefordert werden (prüfen).                         |
+| Learn                        | 🟡    | Schulungen, Pflicht, Gültigkeit, Nachweise, Link. **Kein Quiz**, Videos nur als Link.                                                                                |
+| Quality                      | ✅    | Ereignisse mit Massnahmen und Status.                                                                                                                                |
+| KI-Assistenten               | 🟡    | Übergabe, Risiken, Dokumentation, freie Frage, Dienstplan-KI; Entwürfe mit Prüfung. Keine Planungs- oder Such-Assistenz.                                             |
+| Globale Suche ⌘K             | ✅    | `global-search-dialog.tsx`, Tastenkürzel.                                                                                                                            |
+| Benachrichtigungen           | 🟡    | Priorität und Push mit Ruhezeiten. Keine vier Klassen (Kritisch / Handlung / Info / Sozial), keine Bündelung.                                                        |
+| Mobile                       | 🟡    | Untere Navigation, Hauptmenü. **Kein Schnellaktions-Knopf (FAB).**                                                                                                   |
+| Dark Mode                    | ❌    | Keine dunkle Darstellung.                                                                                                                                            |
+| Barrierefreiheit WCAG 2.2 AA | 🟡    | Tastatur, Fokusfalle, Schriftgrösse, Kontrast-Einstellung. `--muted` erreicht nur 4,4:1.                                                                             |
+| IAM                          | 🟡    | Passwort, Login-Drossel, Sitzungen mit Gerät, automatische Abmeldung. **SSO, MFA und Passkeys fehlen.**                                                              |
+| Rechte                       | 🟡    | Grobe Rechte (`medication.manage` u. a.) plus Qualifikationen. Keine Trennung Verabreichen / Verordnung bearbeiten.                                                  |
+| Audit                        | ✅    | Atomar, pro Bewohner. Gerät und Sitzung werden nicht mitgeschrieben.                                                                                                 |
+| Datenschutz                  | 🟡    | Eigener Datenexport, Quittungen nach 30 Tagen gelöscht. Kein Lösch- oder Aufbewahrungskonzept für Bewohnerdaten.                                                     |
+| Sicherheit                   | 🟡    | Login-, Passwort- und KI-Drossel. Keine allgemeine API-Drossel.                                                                                                      |
+| Backups / Health             | ❌    | Kein Health-Endpunkt; Backups nur durch den Datenbank-Anbieter.                                                                                                      |
+| Offline                      | 🟡    | Warteschlange mit Quittungen, Service Worker. **Lokaler Speicher unverschlüsselt**, keine Konfliktanzeige.                                                           |
+| API / FHIR / Webhooks        | ❌    | Nur interne API.                                                                                                                                                     |
+| Mandanten                    | 🟡    | Organisation, Standort, Wohnbereich. Eigene Rollen gelten global.                                                                                                    |
+| Domain Events / Echtzeit     | ❌    | Polling, keine Ereignisse.                                                                                                                                           |
+| Admin-Konfiguration          | 🟡    | Einstellungen der Einrichtung. Ereignistypen, Vitalparameter und Branding sind nicht konfigurierbar.                                                                 |
+| Insights / Resident 360      | 🟡    | Kennzahlen-Seite vorhanden. Keine Personal-Dashboards, keine 360-Ansicht.                                                                                            |
+| Smart Workflows              | ❌    | Kein Ablauf Sturz → Einschätzung → Vitalwerte → Arzt → Plan → Nachkontrolle → Qualität.                                                                              |
+| Universal Action System      | ❌    | Aktionen sind je Modul gebaut.                                                                                                                                       |
+| Sprachen / Terminologie      | ❌    | Nur Deutsch, feste Bezeichnung „Bewohner“.                                                                                                                           |
+| Phase 6 Portale              | ❌    | Angehörigen-, Arzt- und Apothekenportal sind späterer Umfang.                                                                                                        |
+
+## Hoch (klinische Sicherheit und Kernabläufe)
+
+- [ ] **Reanimationsstatus im Bewohner-Kopfbereich:** eigenes Feld (REA ja/nein/unklar, Quelle, Datum), in Akte,
+      Kopfzeile und Überleitungsbogen; mit Audit. Werte kommen aus der Patientenverfügung, keine Voreinstellung.
+- [ ] **Aufgabenstatus erweitern:** teilweise, übersprungen (Grund Pflicht), eskaliert; „überfällig“ berechnet.
+      Die Schnelldoku aus der Aufgabe bekommt ✓ △ ✕, und jede Auswahl erzeugt einen Doku-Eintrag.
+- [ ] **Wirkungskontrolle nach Reservegabe:** Kontrolle mit Termin und Erinnerung, Ergebnis dokumentiert. Den
+      Zeitpunkt legt die Verordnung fest, es gibt kein erfundenes Standardintervall.
+- [ ] **Chat:** Reaktionen, @Erwähnungen mit Benachrichtigung, Push bei neuer Nachricht.
+- [ ] **Benachrichtigungsklassen** Kritisch / Handlung / Info / Sozial, mit Bündelung. Kritisches ignoriert die
+      Ruhezeiten nur, wenn die Person es erlaubt.
 
 ## Mittel
 
-- [x] **Offline-Erfassung erweitern:** Übergabenotizen, „Aufgabe erledigt“ und Wundverlauf, jeweils mit
-      Anfrage-Kennung und Quittung. Medikamentengaben bleiben bewusst online.
-- [x] **Push-Benachrichtigungen (Web Push)** für die installierte App.
-  - Braucht `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` und für Erinnerungen bei geschlossener App
-    einen Zeitplan mit `CRON_SECRET` (siehe README).
-- [x] **Klicktests ausbauen:** Dienstplan (planen, veröffentlichen, tauschen), Wunde anlegen und dokumentieren,
-      Pflegeplan mit Ziel und Evaluation, RAI-Erfassung, Handy-Ansicht (390 px).
-- [x] **Qualifikationen je Person** in der Mitarbeiterverwaltung anzeigen und pflegen.
-- [x] **Aufbewahrung der Anfrage-Quittungen:** Quittungen werden nach 30 Tagen gelöscht.
+- [ ] **Mobile Schnellaktionen (FAB):** Doku, Vitalwert, Reservegabe, Notiz für den gewählten Bewohner.
+- [ ] **Health-Endpunkt** `/api/health` (DB-Verbindung, Migrationsstand, ohne Geheimnisse).
+- [ ] **Allgemeine API-Drossel** für schreibende Anfragen.
+- [ ] **Offline:** lokalen Speicher verschlüsseln (Schlüssel an die Sitzung gebunden) und Konflikte anzeigen, wenn
+      ein Eintrag inzwischen geändert wurde.
+- [ ] **Audit mit Sitzung und Gerät** (Sitzungs-ID, User-Agent).
+- [ ] **Feinere Medikationsrechte:** verabreichen vs. Verordnung bearbeiten.
+- [ ] **Lernen:** Quiz mit Bestehensgrenze (von der Einrichtung festgelegt) und Compliance-Übersicht je Team.
+- [ ] **Dokumente:** Lesebestätigung bei neuer Version erneut anfordern (prüfen, ergänzen).
+- [ ] **Trendhinweise Ernährung:** Hinweis, wenn eine von der Einrichtung gesetzte Grenze für Gewicht oder
+      Trinkmenge unterschritten wird. Keine erfundenen Werte.
+- [ ] **Wunden:** Verbandsmaterial je Versorgung aus dem Materialkatalog.
+- [ ] **Dienstplan:** Börse für offene Dienste.
+- [ ] **Dark Mode** als Wahl in den persönlichen Einstellungen. Das Standard-Aussehen bleibt unverändert.
 
-## Niedrig
+## Niedrig / später
 
-- [x] **BtM:** optionale Zweitunterschrift bei der Gabe (Einstellung „Zweitunterschrift bei BtM-Gaben“).
-- [x] **Barrierefreiheit:** Tastaturbedienung der Seitenpanels und Auswahllisten; Kontraste der Statusfarben geprüft.
-- [x] **Offline-Statusanzeige:** Eintrag vor dem Senden bearbeiten.
+- [ ] **MFA (TOTP) und Passkeys**, danach SSO (braucht einen Identity-Provider der Einrichtung).
+- [ ] **Smart Workflow Sturz** als erste Ablaufkette mit Folgeaufgaben.
+- [ ] **Home in Kritisch / Wichtig / Routine** gliedern, ohne das bestehende Aussehen zu verändern.
+- [ ] **Resident 360** und Personal-Dashboards in Insights.
+- [ ] **Konfigurierbare Terminologie** (Bewohner / Patient / Klient), danach FR / IT / EN.
+- [ ] **Admin-Konfiguration:** Ereignistypen, Vitalparameter, Branding.
+- [ ] **Datenschutz:** Lösch- und Aufbewahrungskonzept für Bewohnerdaten. Fristen legt die Einrichtung fest.
+- [ ] **Echtzeit** (Server-Sent Events) statt Polling.
+- [ ] **Öffentliche API, Webhooks, FHIR.**
+- [ ] **Portale (Phase 6).**
+
+## Braucht eine Entscheidung oder externe Quelle
+
+- **Leitung:** Soll die Rolle „Leitung“ das Medikationsrecht nur mit Qualifikation erhalten? Heute hat sie es immer.
+  Umsetzbar ohne Code über Mitarbeitende › Profile & Rollen › „Nur mit Qualifikation“.
+- **Interaktionsprüfung:** Braucht eine lizenzierte Arzneimitteldatenbank. Es werden keine Regeln erfunden.
+- **SSO:** Braucht den Identity-Provider der Einrichtung.
+- **Backups / Disaster Recovery:** Laufen beim Datenbank-Anbieter; Ziele für RPO und RTO legt der Betreiber fest.
 
 ## Bekannte Grenzen
 
 - Eigene Rollen (`carecore_roles`) gelten für alle Organisationen der Datenbank, nicht je Organisation.
 - Das Löschen von Mitarbeitenden entfernt das Konto endgültig; für ausgeschiedene Personen besser „Sperren & archivieren“.
-- Grauer Hilfstext (`--muted`) auf dem hellen Seitenhintergrund erreicht 4,4:1 und liegt knapp unter AA für
-  kleine Schrift. Er wurde nicht geändert, weil sich die Optik nicht verändern soll.
+- Grauer Hilfstext (`--muted`) erreicht 4,4:1 und liegt knapp unter AA für kleine Schrift. Er bleibt unverändert,
+  weil sich die Optik nicht verändern soll.

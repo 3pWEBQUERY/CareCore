@@ -128,7 +128,18 @@ export async function sendOrQueue<T>(
 
 // Sendet die vorgemerkten Einträge der angemeldeten Person der Reihe nach.
 // Ergebnis: gesendet, abgelehnt, und ob die Anmeldung abgelaufen ist.
-export async function flushQueue() {
+// Nur ein Sendevorgang gleichzeitig: sonst schicken zwei Auslöser (z. B. „online“ und Intervall) denselben Eintrag
+// doppelt, und der zweite scheitert an der bereits vergebenen Quittung.
+let flushing: Promise<{ sent: number; rejected: number; signedOut: boolean }> | null = null;
+
+export function flushQueue() {
+  flushing ??= sendQueued().finally(() => {
+    flushing = null;
+  });
+  return flushing;
+}
+
+async function sendQueued() {
   const result = { sent: 0, rejected: 0, signedOut: false };
   if (!currentUserId) return result;
   for (const item of await queuedWrites(currentUserId)) {
