@@ -18,6 +18,7 @@ import {
   MARITAL_STATUSES,
   RESIDENT_DOCUMENT_CATEGORIES,
   RESIDENT_FILE_TYPES,
+  RESUSCITATION_STATUSES,
   type MasterData,
   type RecordSummary,
   type ResidentFile,
@@ -44,6 +45,7 @@ export async function recordSummary(ctx: ApiContext, residentIdInput: unknown): 
   const [rows, vitals, documents, meds, staff] = await Promise.all([
     ctx.sql`
       SELECT r.*, to_char(r.date_of_birth, 'YYYY-MM-DD') AS birth_day, to_char(r.admitted_on, 'YYYY-MM-DD') AS admitted_day,
+        to_char(r.resuscitation_decided_on, 'YYYY-MM-DD') AS resuscitation_day,
         nurse.display_name AS nurse_name, checker.display_name AS checker_name,
         plan.care_level, owner.display_name AS plan_owner,
         EXISTS (SELECT 1 FROM carecore_resident_contacts c WHERE c.resident_id = r.id AND c.is_emergency_contact) AS has_emergency_contact,
@@ -86,8 +88,12 @@ export async function recordSummary(ctx: ApiContext, residentIdInput: unknown): 
     pharmacy: (r.pharmacy as string | null) ?? null,
     insurer: (r.insurer as string | null) ?? null,
     insuranceNumber: (r.insurance_number as string | null) ?? null,
+    resuscitationStatus: (r.resuscitation_status as MasterData["resuscitationStatus"]) ?? null,
+    resuscitationSource: (r.resuscitation_source as string | null) ?? null,
+    resuscitationDecidedOn: (r.resuscitation_day as string | null) ?? null,
   };
   const missing = [
+    !master.resuscitationStatus && "Reanimationsstatus",
     !master.dateOfBirth && "Geburtsdatum",
     !master.admittedOn && "Eintrittsdatum",
     !master.primaryNurseId && "Bezugspflege",
@@ -137,6 +143,12 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
   const ssn = optional(body.socialSecurityNumber, 20);
   if (ssn && !/^756\.?\d{4}\.?\d{4}\.?\d{2}$/.test(ssn))
     throw new ApiError("Die AHV-Nummer hat das Format 756.XXXX.XXXX.XX.");
+  const resuscitationStatus = body.resuscitationStatus ? String(body.resuscitationStatus) : null;
+  if (resuscitationStatus && !(resuscitationStatus in RESUSCITATION_STATUSES))
+    throw new ApiError("Ungültiger Reanimationsstatus.");
+  const resuscitationSource = resuscitationStatus ? optional(body.resuscitationSource, 200) : null;
+  if (resuscitationStatus && !resuscitationSource)
+    throw new ApiError("Bitte die Grundlage des Reanimationsstatus angeben (z. B. Patientenverfügung).");
   let nurseId: string | null = null;
   if (body.primaryNurseId) {
     nurseId = assertUuid(body.primaryNurseId, "Bezugspflege");
@@ -163,9 +175,31 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
     pharmacy: optional(body.pharmacy, 200),
     insurer: optional(body.insurer, 160),
     insuranceNumber: optional(body.insuranceNumber, 40),
+    resuscitationStatus,
+    resuscitationSource,
+    resuscitationDecidedOn: resuscitationStatus ? dateOf(body.resuscitationDecidedOn, "Datum des Entscheids") : null,
   };
-  const before = (await ctx.sql`SELECT * FROM carecore_residents WHERE id = ${residentId}`) as Row[];
+  if (
+    data.resuscitationDecidedOn &&
+    data.resuscitationDecidedOn > new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Zurich" })
+  )
+    throw new ApiError("Das Datum des Entscheids liegt in der Zukunft.");
+  const before = (await ctx.sql`
+    SELECT *, to_char(resuscitation_decided_on, 'YYYY-MM-DD') AS resuscitation_day
+    FROM carecore_residents WHERE id = ${residentId}`) as Row[];
   const b = before[0];
+  const resuscitationBefore = {
+    status: (b.resuscitation_status as string | null) ?? null,
+    source: (b.resuscitation_source as string | null) ?? null,
+    decidedOn: (b.resuscitation_day as string | null) ?? null,
+  };
+  const resuscitationAfter = {
+    status: data.resuscitationStatus,
+    source: data.resuscitationSource,
+    decidedOn: data.resuscitationDecidedOn,
+  };
+  // Der Reanimationsstatus ist ein klinischer Entscheid: jede Änderung erhält einen eigenen Protokolleintrag.
+  const resuscitationChanged = JSON.stringify(resuscitationBefore) !== JSON.stringify(resuscitationAfter);
   try {
     await ctx.sql.transaction([
       ctx.sql`
@@ -175,7 +209,8 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
         external_number = ${data.externalNumber}, admitted_on = ${data.admittedOn}, admission_reason = ${data.admissionReason},
         primary_care_user_id = ${data.primaryNurseId}, gp_name = ${data.gpName}, gp_practice = ${data.gpPractice},
         gp_phone = ${data.gpPhone}, pharmacy = ${data.pharmacy}, insurer = ${data.insurer},
-        insurance_number = ${data.insuranceNumber},
+        insurance_number = ${data.insuranceNumber}, resuscitation_status = ${data.resuscitationStatus},
+        resuscitation_source = ${data.resuscitationSource}, resuscitation_decided_on = ${data.resuscitationDecidedOn},
         master_data_checked_at = NOW(), master_data_checked_by = ${ctx.actor.id}, updated_at = NOW()
       WHERE id = ${residentId}`,
       auditStatement(
@@ -191,6 +226,18 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
           insuranceNumber: data.insuranceNumber ? "geändert" : null,
         },
       ),
+      ...(resuscitationChanged
+        ? [
+            auditStatement(
+              ctx,
+              "resident",
+              residentId,
+              "resuscitation_updated",
+              resuscitationBefore,
+              resuscitationAfter,
+            ),
+          ]
+        : []),
     ]);
   } catch (error) {
     if (String(error).includes("external_number"))

@@ -10,7 +10,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | PRD-Bereich                  | Stand | Befund im Code                                                                                                                                                       |
 | ---------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Home „One Shift. One Screen“ | 🟡    | Startseite `/c` mit Widgets, Notizen, Schnellzugriff, Zeitleiste. Keine feste Gliederung Kritisch / Wichtig / Routine.                                               |
-| Bewohner-Kopfbereich         | 🟡    | Akte mit Übersicht, Verlauf, Körperstatus, Dokumenten. **Reanimationsstatus fehlt** (kein Feld, nur freie Klinik-Hinweise).                                          |
+| Bewohner-Kopfbereich         | ✅    | Akte mit Übersicht, Verlauf, Körperstatus, Dokumenten und Reanimationsstatus im Aktenkopf.                                                                           |
 | Resident Timeline            | ✅    | `bewohner/verlauf`, `lib/resident-history.ts`.                                                                                                                       |
 | Plan                         | ✅    | Pflegeplanung mit Zielen, Massnahmen, Evaluation, Einschätzungen. Keine regelbasierten Vorschläge aus Einschätzungen.                                                |
 | Chart / Schnelldoku          | 🟡    | Doku, Nachträge, Schnelldokumentation. Aus Aufgaben kein ✓ △ ✕, keine Spracheingabe.                                                                                 |
@@ -51,7 +51,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 
 ## Hoch (klinische Sicherheit und Kernabläufe)
 
-- [ ] **Reanimationsstatus im Bewohner-Kopfbereich:** eigenes Feld (REA ja/nein/unklar, Quelle, Datum), in Akte,
+- [x] **Reanimationsstatus im Bewohner-Kopfbereich:** eigenes Feld (REA ja / nein / nicht erfasst, Grundlage, Datum), in Akte,
       Kopfzeile und Überleitungsbogen; mit Audit. Werte kommen aus der Patientenverfügung, keine Voreinstellung.
 - [ ] **Aufgabenstatus erweitern:** teilweise, übersprungen (Grund Pflicht), eskaliert; „überfällig“ berechnet.
       Die Schnelldoku aus der Aufgabe bekommt ✓ △ ✕, und jede Auswahl erzeugt einen Doku-Eintrag.

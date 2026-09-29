@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import ResidentAppointmentEditor from "@/app/components/resident-appointment-editor";
 import { Camera, CaretDown, CaretUp, Printer, X } from "@phosphor-icons/react";
+import { RESUSCITATION_STATUSES, resuscitationShort } from "@/lib/resident-record-shared";
 import { ResidentRecordProps, recordTabs } from "./resident-record-data";
 import { useResidentRecord } from "./use-resident-record";
 import { RecordOverviewView } from "./record-overview-view";
@@ -40,7 +41,10 @@ export function ResidentRecord(props: ResidentRecordProps) {
     uploadResidentPhoto,
     selectTab,
     navigation,
+    live,
   } = r;
+  const master = live.summary.data?.master;
+  const resuscitation = master?.resuscitationStatus ?? null;
   return (
     <div
       className="resident-record-layer"
@@ -124,6 +128,18 @@ export function ResidentRecord(props: ResidentRecordProps) {
                 <Printer aria-hidden="true" />
                 <span>Überleitungsbogen</span>
               </a>
+            )}
+            {master && (
+              <span
+                className={`status-badge record-resuscitation ${resuscitation === "dnr" ? "critical" : resuscitation ? "info" : "attention"}`}
+                title={
+                  resuscitation
+                    ? `${RESUSCITATION_STATUSES[resuscitation].label} · Grundlage: ${master.resuscitationSource ?? "–"}`
+                    : "Reanimationsstatus nicht erfasst (Stammdaten)"
+                }
+              >
+                {resuscitationShort(resuscitation)}
+              </span>
             )}
             <span className={`status-badge ${resident.status}`}>{resident.statusLabel}</span>
             <button

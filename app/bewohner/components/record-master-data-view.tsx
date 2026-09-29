@@ -4,7 +4,14 @@ import { useState } from "react";
 import { CalendarDots, Check, ClipboardText, PencilSimple, Plus, Trash, User } from "@phosphor-icons/react";
 import { formatDate, formatDateTime, requestJson } from "@/app/components/workspace-ui";
 import { CareOptionSelect } from "@/app/components/care-form-controls";
-import { LANGUAGES, MARITAL_STATUSES, type MasterData, type RecordSummary } from "@/lib/resident-record-shared";
+import {
+  LANGUAGES,
+  MARITAL_STATUSES,
+  RESUSCITATION_STATUSES,
+  type MasterData,
+  type RecordSummary,
+  type ResuscitationStatus,
+} from "@/lib/resident-record-shared";
 import type { ResidentRecordState } from "./use-resident-record";
 
 const GENDERS: Record<string, string> = {
@@ -288,6 +295,65 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
         </div>
 
         <aside className="master-data-secondary">
+          <section className="record-card master-data-card" aria-labelledby="resuscitation-title">
+            <div className="record-card-heading">
+              <div>
+                <span className="record-section-label">Notfall</span>
+                <h3 id="resuscitation-title">Reanimationsstatus</h3>
+              </div>
+            </div>
+            <div className="master-data-form-grid single-column">
+              <label>
+                <span>Entscheid</span>
+                <CareOptionSelect
+                  label="Reanimationsstatus"
+                  value={values.resuscitationStatus ?? ""}
+                  onChange={(value) =>
+                    setDraft((current) =>
+                      current
+                        ? value
+                          ? { ...current, resuscitationStatus: value as ResuscitationStatus }
+                          : {
+                              ...current,
+                              resuscitationStatus: null,
+                              resuscitationSource: null,
+                              resuscitationDecidedOn: null,
+                            }
+                        : current,
+                    )
+                  }
+                  disabled={!editable}
+                  options={[
+                    { value: "", label: "Nicht erfasst" },
+                    ...Object.entries(RESUSCITATION_STATUSES).map(([value, status]) => ({
+                      value,
+                      label: status.label,
+                    })),
+                  ]}
+                />
+              </label>
+              <label>
+                <span>Grundlage</span>
+                <input
+                  placeholder={editable ? "z. B. Patientenverfügung" : undefined}
+                  disabled={editable && !values.resuscitationStatus}
+                  {...field("resuscitationSource")}
+                />
+              </label>
+              <label>
+                <span>Entscheid vom</span>
+                {editable ? (
+                  <input type="date" disabled={!values.resuscitationStatus} {...field("resuscitationDecidedOn")} />
+                ) : (
+                  <input
+                    readOnly
+                    value={values.resuscitationDecidedOn ? formatDate(values.resuscitationDecidedOn) : ""}
+                  />
+                )}
+              </label>
+            </div>
+          </section>
+
           <section className="record-card master-data-card">
             <div className="record-card-heading">
               <div>
