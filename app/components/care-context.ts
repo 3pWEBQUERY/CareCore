@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { termsFor, type Terms } from "@/lib/terminology";
 import type { WorkContext } from "@/lib/work-context";
 
 // Working context shared by all modules of a browser tab: the resident being
@@ -84,6 +85,12 @@ export function useWorkContext() {
     };
   }, []);
   return context;
+}
+
+// Bezeichnung der betreuten Personen der Einrichtung; bis der Arbeitskontext geladen ist „Bewohner“.
+export function useTerms(): Terms {
+  const context = useWorkContext();
+  return termsFor(context?.terminology);
 }
 
 // Resident-centred pages show the resident chosen in the header. `missing` means the

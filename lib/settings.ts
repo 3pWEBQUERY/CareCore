@@ -1,5 +1,6 @@
 import { ApiError, iso, auditStatement, type ApiContext } from "@/lib/api-context";
 import { SETTING_DEFINITIONS, resolveSettings, type AppSettings, type SettingKey } from "@/lib/settings-shared";
+import { TERMINOLOGIES, resolveTerminology, type TerminologyKey } from "@/lib/terminology";
 
 // Organisation-wide settings (see settings-shared.ts).
 
@@ -7,6 +8,28 @@ export async function readSettings(ctx: ApiContext): Promise<AppSettings> {
   const rows =
     await ctx.sql`SELECT settings->'app' AS app FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}`;
   return resolveSettings(rows[0]?.app);
+}
+
+export async function readTerminology(ctx: ApiContext): Promise<TerminologyKey> {
+  const rows =
+    await ctx.sql`SELECT settings->'terminology' AS terminology FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}`;
+  return resolveTerminology(rows[0]?.terminology);
+}
+
+// Bezeichnung der betreuten Personen (Bewohner / Patient / Klient) für die ganze Einrichtung.
+export async function saveTerminology(ctx: ApiContext, body: Record<string, unknown>) {
+  if (typeof body.value !== "string" || !(body.value in TERMINOLOGIES))
+    throw new ApiError("Bitte Bewohner, Patient oder Klient wählen.");
+  const next = body.value as TerminologyKey;
+  const before = await readTerminology(ctx);
+  await ctx.sql.transaction([
+    ctx.sql`
+    UPDATE carecore_organizations
+    SET settings = jsonb_set(COALESCE(settings, '{}'::jsonb), '{terminology}', ${JSON.stringify(next)}::jsonb), updated_at = NOW()
+    WHERE id = ${ctx.actor.organizationId}`,
+    auditStatement(ctx, "setting", ctx.actor.organizationId, "terminology", { value: before }, { value: next }),
+  ]);
+  return next;
 }
 
 export async function saveSetting(ctx: ApiContext, key: unknown, body: Record<string, unknown>) {

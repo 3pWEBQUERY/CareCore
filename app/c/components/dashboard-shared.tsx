@@ -34,6 +34,7 @@ import {
   Warning,
   X,
 } from "@phosphor-icons/react";
+import type { Terms } from "@/lib/terminology";
 
 export type IconName =
   | "home"
@@ -181,6 +182,13 @@ export const dashboardWidgets: Array<{ id: DashboardWidgetId; label: string; des
 ];
 
 export const defaultDashboardOrder = dashboardWidgets.map((widget) => widget.id);
+
+// Beschriftung der Bereiche mit der Bezeichnung der Einrichtung (Bewohner / Patient / Klient).
+export function widgetText(widget: (typeof dashboardWidgets)[number], terms: Terms) {
+  if (widget.id === "worklist") return { label: widget.label, description: `Was heute je ${terms.one} fällig ist` };
+  if (widget.id === "residents") return { label: `Meine ${terms.many}`, description: `Zugewiesene ${terms.many}` };
+  return { label: widget.label, description: widget.description };
+}
 
 // Widgets missing in a saved layout (added later) are inserted at their default position.
 export function completeDashboardOrder(order: DashboardWidgetId[]) {

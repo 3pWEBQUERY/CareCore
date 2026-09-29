@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ModuleIcon } from "./module-icon";
 import type { ContextResident, WorkContext } from "@/lib/work-context";
+import { countOf, termsFor } from "@/lib/terminology";
 
 export function ResidentPickerPopover({
   context,
@@ -18,6 +19,7 @@ export function ResidentPickerPopover({
   onChoose: (resident: ContextResident) => void;
 }) {
   const [query, setQuery] = useState("");
+  const t = termsFor(context.terminology);
   const [unitFilter, setUnitFilter] = useState(selectedAreaId ?? "all");
   const visibleResidents = context.residents.filter(
     (resident) =>
@@ -40,15 +42,15 @@ export function ResidentPickerPopover({
       >
         <header className="resident-picker-header">
           <div>
-            <p className="eyebrow">Bewohnerakte · Arbeitskontext</p>
-            <h2 id="resident-picker-title">Bewohner auswählen</h2>
+            <p className="eyebrow">{t.prefix}akte · Arbeitskontext</p>
+            <h2 id="resident-picker-title">{t.oneOblique} auswählen</h2>
             <p>Standardmässig ist dein fester Wohnbereich ausgewählt. Du kannst bereichsübergreifend arbeiten.</p>
           </div>
           <button
             className="profile-panel-close"
             type="button"
             onClick={onClose}
-            aria-label="Bewohnerauswahl schliessen"
+            aria-label={`${t.prefix}auswahl schliessen`}
           >
             <ModuleIcon name="close" />
           </button>
@@ -62,10 +64,10 @@ export function ResidentPickerPopover({
                 onChange={(event) => setQuery(event.target.value)}
                 autoFocus
                 placeholder="Name, Zimmer oder Wohnbereich suchen …"
-                aria-label="Bewohner suchen"
+                aria-label={`${t.oneOblique} suchen`}
               />
             </label>
-            <span>{visibleResidents.length} Bewohner sichtbar</span>
+            <span>{countOf(visibleResidents.length, t)} sichtbar</span>
           </div>
           <div className="resident-picker-filters" aria-label="Wohnbereich filtern">
             <button type="button" className={unitFilter === "all" ? "active" : ""} onClick={() => setUnitFilter("all")}>
@@ -106,7 +108,7 @@ export function ResidentPickerPopover({
             {visibleResidents.length === 0 && (
               <div className="resident-context-empty">
                 <ModuleIcon name="search" />
-                <strong>Keine Bewohner gefunden</strong>
+                <strong>Keine {t.many} gefunden</strong>
                 <span>Prüfe Suchbegriff oder Wohnbereich.</span>
               </div>
             )}

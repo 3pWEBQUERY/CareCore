@@ -57,8 +57,8 @@ export function HomeHero({ r }: { r: DashboardState }) {
             {greeting}, {firstName}.
           </h1>
           <p>
-            Das ist dein Überblick für {currentScope}. Notizen, Aufgaben und Bewohner-Neuigkeiten sind hier an einem
-            Ort.
+            Das ist dein Überblick für {currentScope}. Notizen, Aufgaben und {r.terms.prefix}-Neuigkeiten sind hier an
+            einem Ort.
           </p>
         </div>
         <div className="home-clock" aria-label={`Aktuelle Uhrzeit ${formattedTime}`}>
@@ -79,7 +79,7 @@ export function HomeHero({ r }: { r: DashboardState }) {
               <span>
                 <Icon name="residents" />
               </span>
-              Bewohner
+              {r.terms.many}
             </button>
             <button type="button" onClick={() => router.push("/c/pflegedokumentation")}>
               <span>
@@ -172,7 +172,8 @@ export function HomeHero({ r }: { r: DashboardState }) {
               <Icon name="note" />
               <strong>Platz für deine Gedanken</strong>
               <p>
-                Halte persönliche To-dos und Merkpunkte fest. Klinische Einträge gehören weiterhin in die Bewohnerakte.
+                Halte persönliche To-dos und Merkpunkte fest. Klinische Einträge gehören weiterhin in die{" "}
+                {r.terms.prefix}akte.
               </p>
               <button type="button" onClick={() => openNote("new")}>
                 Erste Notiz erstellen <Icon name="chevron" />
@@ -190,7 +191,7 @@ export function HomeHero({ r }: { r: DashboardState }) {
           </div>
           <div className="home-day-summary">
             <strong>{assignedResidents.length}</strong>
-            <span>Bewohner im Blick</span>
+            <span>{r.terms.many} im Blick</span>
             <i />
             <strong>{changes.filter((item) => item.type === "critical").length}</strong>
             <span>wichtige Einträge</span>

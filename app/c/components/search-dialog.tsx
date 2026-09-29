@@ -24,7 +24,7 @@ export function SearchDialog({ r }: { r: DashboardState }) {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Bewohner oder Funktionen suchen…"
+            placeholder={`${r.terms.many} oder Funktionen suchen…`}
             aria-label="Suchbegriff"
           />
           <button type="button" onClick={closeSearch} aria-label="Suche schliessen">

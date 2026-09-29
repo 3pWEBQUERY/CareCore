@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
-import { saveSetting } from "@/lib/settings";
+import { saveSetting, saveTerminology } from "@/lib/settings";
 
 export const runtime = "nodejs";
 
@@ -9,6 +9,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ke
     const ctx = await apiContext("administration.manage");
     if (ctx instanceof NextResponse) return ctx;
     const { key } = await params;
+    if (key === "terminology")
+      return NextResponse.json({
+        terminology: await saveTerminology(ctx, (await request.json()) as Record<string, unknown>),
+      });
     return NextResponse.json({
       settings: await saveSetting(ctx, key, (await request.json()) as Record<string, unknown>),
     });

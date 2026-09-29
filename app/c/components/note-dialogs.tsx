@@ -121,7 +121,7 @@ export function NoteEditorDialog({ r }: { r: DashboardState }) {
             <p className="eyebrow">MEIN ARBEITSPLATZ · PRIVAT</p>
             <h2 id="home-note-dialog-title">{noteEditor === "new" ? "Notiz erstellen" : "Notiz bearbeiten"}</h2>
             <p>
-              Persönliche Merkpunkte für deinen Arbeitsalltag. Pflegebeobachtungen bitte in der Bewohnerakte
+              Persönliche Merkpunkte für deinen Arbeitsalltag. Pflegebeobachtungen bitte in der {r.terms.prefix}akte
               dokumentieren.
             </p>
           </div>

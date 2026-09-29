@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
+import { useTerms } from "@/app/components/care-context";
 
 // Minimal resident fields the list needs; modules pass their own richer types.
 export type ListResident = { id: string; name: string; initials: string; room: string; careUnit: string };
@@ -21,6 +22,7 @@ export default function ResidentList<T extends ListResident>({
   countLabel: (resident: T) => string;
 }) {
   const [query, setQuery] = useState("");
+  const t = useTerms();
   const needle = query.trim().toLocaleLowerCase("de-CH");
   const filtered = residents.filter((resident) =>
     `${resident.name} ${resident.room} ${resident.careUnit}`.toLocaleLowerCase("de-CH").includes(needle),
@@ -29,9 +31,11 @@ export default function ResidentList<T extends ListResident>({
     <section className="card med-resident-browser">
       <div className="med-resident-toolbar">
         <div>
-          <h2 className="card-title">Bewohner</h2>
+          <h2 className="card-title">{t.many}</h2>
           <p className="card-subtitle">
-            {loading && !residents.length ? "Wird geladen …" : `${filtered.length} von ${residents.length} Bewohnern`}
+            {loading && !residents.length
+              ? "Wird geladen …"
+              : `${filtered.length} von ${residents.length} ${t.manyDative}`}
           </p>
         </div>
         <label className="resident-search">
@@ -39,8 +43,8 @@ export default function ResidentList<T extends ListResident>({
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Bewohner oder Zimmer"
-            aria-label="Bewohner durchsuchen"
+            placeholder={`${t.one} oder Zimmer`}
+            aria-label={`${t.many} durchsuchen`}
           />
         </label>
       </div>
@@ -65,7 +69,7 @@ export default function ResidentList<T extends ListResident>({
           </button>
         ))}
         {!loading && !filtered.length && (
-          <p className="list-hint">{residents.length ? "Keine Treffer." : "Keine aktiven Bewohner erfasst."}</p>
+          <p className="list-hint">{residents.length ? "Keine Treffer." : `Keine aktiven ${t.many} erfasst.`}</p>
         )}
       </div>
     </section>

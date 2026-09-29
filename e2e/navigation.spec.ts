@@ -64,3 +64,26 @@ test("Tagesliste gliedert nach Kritisch, Wichtig und Routine", async ({ page }) 
   await expect(items).toHaveCount(sum);
   expect(errors).toEqual([]);
 });
+
+// Konfiguration: „Patient“ statt „Bewohner“ gilt in Navigation, Kopfzeile und Startseite.
+test("Bezeichnung der betreuten Personen umstellen: Patient", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  try {
+    await page.goto("/c/leitung/administration/konfiguration");
+    const options = page.getByRole("group", { name: "Bezeichnung wählen" });
+    await expect(options.getByRole("button", { name: "Bewohner" })).toHaveAttribute("aria-pressed", "true");
+    await options.getByRole("button", { name: "Patient" }).click();
+    await expect(page.locator(".toast")).toContainText("Bezeichnung „Patient“ gespeichert");
+    await expect(options.getByRole("button", { name: "Patient" })).toHaveAttribute("aria-pressed", "true");
+
+    await page.goto("/c");
+    await expect(page.locator(".summary-label").first()).toHaveText("Patienten zugeteilt");
+    await expect(page.locator(".resident-context-copy small").first()).toHaveText("Patient");
+    await page.goto("/c/leitung/kennzahlen/bewohner");
+    await expect(page.locator(".page-tabs").getByRole("link", { name: "Kennzahlen Patienten" })).toBeVisible();
+  } finally {
+    expect((await page.request.patch("/api/settings/terminology", { data: { value: "resident" } })).status()).toBe(200);
+  }
+  expect(errors).toEqual([]);
+});
