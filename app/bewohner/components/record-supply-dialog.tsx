@@ -1,11 +1,13 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { CareSelect } from "@/app/components/care-form-controls";
 import { Check, ClipboardText } from "@phosphor-icons/react";
 import { useEscapeClose } from "@/app/components/use-escape-close";
 import type { ResidentRecordState } from "./use-resident-record";
 
 export function SupplyEditorDialog({ r }: { r: ResidentRecordState }) {
+  const t = useTerms();
   const { resident, careSupplyProducts, supplyEditor, setSupplyEditor, supplySaving, saveSupply } = r;
   useEscapeClose(() => !supplySaving && setSupplyEditor(null), Boolean(supplyEditor));
   if (!supplyEditor) return null;
@@ -18,7 +20,7 @@ export function SupplyEditorDialog({ r }: { r: ResidentRecordState }) {
       <section className="area-editor-panel" role="dialog" aria-modal="true" aria-labelledby="supply-editor-title">
         <header className="area-editor-header">
           <div>
-            <p className="eyebrow">CareCore Bewohner · Pflegebedarf</p>
+            <p className="eyebrow">CareCore {t.many} · Pflegebedarf</p>
             <h2 id="supply-editor-title">{supplyEditor.id ? "Bedarf bearbeiten" : "Pflegebedarf hinzufügen"}</h2>
             <p>
               {supplyEditor.id
@@ -45,8 +47,8 @@ export function SupplyEditorDialog({ r }: { r: ResidentRecordState }) {
               <strong>{supplyEditor.id ? "Bestand und Status" : "Produkt aus dem Pflegekatalog"}</strong>
               <p>
                 {supplyEditor.id
-                  ? "Der bestehende Bewohnerbestand wird aktualisiert."
-                  : "Die gebuchte Menge wird dem aktuellen Bewohnerbestand hinzugefügt und protokolliert."}
+                  ? `Der bestehende ${t.prefix}bestand wird aktualisiert.`
+                  : `Die gebuchte Menge wird dem aktuellen ${t.prefix}bestand hinzugefügt und protokolliert.`}
               </p>
             </div>
             <span className="duty-assignment-status">
@@ -246,7 +248,7 @@ export function SupplyEditorDialog({ r }: { r: ResidentRecordState }) {
                   ? `${supplyEditor.draft.currentQuantity} von ${supplyEditor.draft.targetQuantity} ${supplyEditor.draft.unit}`
                   : `${supplyEditor.draft.quantity} ${supplyEditor.draft.unit}`}
               </strong>
-              <small>{supplyEditor.id ? "Bestand nach Sollmenge" : "Wird dem Bewohner gutgeschrieben"}</small>
+              <small>{supplyEditor.id ? "Bestand nach Sollmenge" : `Wird dem ${t.oneOblique} gutgeschrieben`}</small>
             </span>
           </div>
 

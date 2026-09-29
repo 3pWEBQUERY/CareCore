@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import type { Confirm } from "@/app/components/confirm-dialog";
 import { useEffect, useState, type FormEvent } from "react";
 import { CareSupplyProduct, ResidentSupply, SupplyDraft, emptySupply } from "./resident-record-data";
@@ -14,6 +15,7 @@ export function useRecordSupplies({
   onAction: (message: string) => void;
   confirm: Confirm;
 }) {
+  const t = useTerms();
   const [supplies, setSupplies] = useState<ResidentSupply[]>([]);
   const [careSupplyProducts, setCareSupplyProducts] = useState<CareSupplyProduct[]>([]);
   const [suppliesLoading, setSuppliesLoading] = useState(Boolean(resident.id));
@@ -69,7 +71,7 @@ export function useRecordSupplies({
   async function saveSupply(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!resident.id || !supplyEditor) {
-      setSuppliesError("Diese Demoakte hat keine gespeicherte Bewohner-ID.");
+      setSuppliesError("Diese Demoakte ist nicht gespeichert.");
       return;
     }
     if (!supplyEditor.id && !supplyEditor.draft.productId) {
@@ -106,7 +108,7 @@ export function useRecordSupplies({
           : [...current.filter((item) => item.product_id !== data.supply.product_id), data.supply],
       );
       setSupplyEditor(null);
-      onAction(supplyEditor.id ? "Pflegebedarf aktualisiert" : "Pflegeprodukt dem Bewohner zugewiesen");
+      onAction(supplyEditor.id ? "Pflegebedarf aktualisiert" : `Pflegeprodukt dem ${t.oneOblique} zugewiesen`);
     } catch {
       setSuppliesError("Pflegebedarf konnte nicht gespeichert werden.");
     } finally {

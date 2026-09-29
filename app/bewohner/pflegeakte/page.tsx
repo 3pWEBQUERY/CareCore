@@ -8,7 +8,7 @@ import { EmptyState, LoadError, formatDate, useApiData } from "@/app/components/
 import type { CareGoal } from "@/lib/care-planning-shared";
 import { RECORD_TONES, type CareRecordDetail, type CareRecordsOverview } from "@/lib/care-records-shared";
 import { CareRecordEditor } from "./care-record-editor";
-import { useCareResident, useHeaderResident } from "@/app/components/care-context";
+import { useCareResident, useHeaderResident, useTerms } from "@/app/components/care-context";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
 
 const categoryIcons: Record<string, ModuleIconName> = {
@@ -49,6 +49,7 @@ const nextEvaluation = (reviewOn: string | null, goals: CareGoal[]) =>
     .sort()[0] ?? null;
 
 export default function CareRecordsPage() {
+  const t = useTerms();
   const [, setSelectedId] = useCareResident();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -78,9 +79,9 @@ export default function CareRecordsPage() {
         <main className="workspace module-workspace">
           <section className="page-heading care-page-heading" aria-labelledby="care-records-title">
             <div className="heading-copy">
-              <p className="eyebrow">CareCore Bewohner</p>
+              <p className="eyebrow">CareCore {t.many}</p>
               <h1 id="care-records-title">Pflegeakten</h1>
-              <p>Pflegeprofil, Ziele, Massnahmen und Evaluationen des Bewohners in der Kopfzeile.</p>
+              <p>Pflegeprofil, Ziele, Massnahmen und Evaluationen des {t.oneOblique} in der Kopfzeile.</p>
             </div>
             {canWrite && (
               <button className="primary-button" type="button" onClick={() => setEditorOpen(true)}>
@@ -397,7 +398,7 @@ export default function CareRecordsPage() {
               <HeaderResidentHint
                 loading={overview.loading}
                 missing={missing}
-                text="Die Pflegeakte zeigt Ziele, Massnahmen, Risiken und Verantwortliche des Bewohners in der Kopfzeile."
+                text={`Die Pflegeakte zeigt Ziele, Massnahmen, Risiken und Verantwortliche des ${t.oneOblique} in der Kopfzeile.`}
               />
             )}
           </div>

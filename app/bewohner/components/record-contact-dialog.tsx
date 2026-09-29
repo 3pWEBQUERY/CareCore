@@ -1,10 +1,12 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { Check, X } from "@phosphor-icons/react";
 import { useEscapeClose } from "@/app/components/use-escape-close";
 import type { ResidentRecordState } from "./use-resident-record";
 
 export function ContactEditorDialog({ r }: { r: ResidentRecordState }) {
+  const t = useTerms();
   const { resident, contactEditor, setContactEditor, contactSaving, saveContact, contactsError } = r;
   useEscapeClose(() => !contactSaving && setContactEditor(null), Boolean(contactEditor));
   if (!contactEditor) return null;
@@ -96,7 +98,7 @@ export function ContactEditorDialog({ r }: { r: ResidentRecordState }) {
               />
               <span>
                 <strong>Hauptkontakt</strong>
-                <small>Diese Person wird in der Bewohnerakte vorrangig angezeigt.</small>
+                <small>Diese Person wird in der {t.prefix}akte vorrangig angezeigt.</small>
               </span>
               <i>
                 <Check />

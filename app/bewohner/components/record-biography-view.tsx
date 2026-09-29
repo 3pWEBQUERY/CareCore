@@ -1,9 +1,11 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { Check, NotePencil, User } from "@phosphor-icons/react";
 import type { ResidentRecordState } from "./use-resident-record";
 
 export function RecordBiographyView({ r }: { r: ResidentRecordState }) {
+  const t = useTerms();
   const {
     resident,
     contentRef,
@@ -21,7 +23,7 @@ export function RecordBiographyView({ r }: { r: ResidentRecordState }) {
     <main className="resident-record-content biography-view" ref={contentRef} key="biography">
       <div className="record-subpage-heading biography-heading">
         <div>
-          <span className="record-section-label">Bewohnerakte</span>
+          <span className="record-section-label">{`${t.prefix}akte`}</span>
           <h3>Biografie</h3>
           <p>
             Was {resident.name} geprägt hat, stärkt und im Alltag wichtig ist – für eine persönliche, respektvolle
@@ -68,7 +70,7 @@ export function RecordBiographyView({ r }: { r: ResidentRecordState }) {
           <strong>Personzentriert begleiten</strong>
           <p>
             Biografische Angaben werden nur für die Betreuung und Pflege verwendet. Ergänze nur Informationen, die für
-            den Alltag des Bewohners hilfreich sind.
+            den Alltag des {t.oneOblique} hilfreich sind.
           </p>
         </div>
         <small>
@@ -109,7 +111,7 @@ export function RecordBiographyView({ r }: { r: ResidentRecordState }) {
               <div className="biography-reading">
                 <p>
                   {biography.lifeStory ||
-                    "Noch keine Lebensgeschichte hinterlegt. Ergänze sie gemeinsam mit dem Bewohner oder seinen Angehörigen."}
+                    `Noch keine Lebensgeschichte hinterlegt. Ergänze sie gemeinsam mit dem ${t.oneOblique} oder seinen Angehörigen.`}
                 </p>
               </div>
             )}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { CalendarDots, Check, FileText, MagnifyingGlass, Stethoscope } from "@phosphor-icons/react";
 import { CareSelect } from "@/app/components/care-form-controls";
@@ -22,6 +23,7 @@ function UploadDialog({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
+  const t = useTerms();
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<string>(RESIDENT_DOCUMENT_CATEGORIES[0]);
   const [description, setDescription] = useState("");
@@ -31,9 +33,9 @@ function UploadDialog({
   return (
     <EditorDialog
       id="resident-document-upload"
-      eyebrow={`Bewohnerakte · ${residentName}`}
+      eyebrow={`${t.prefix}akte · ${residentName}`}
       title="Dokument hochladen"
-      description="PDF oder Bild (z. B. ein fotografierter Arztbericht), höchstens 4 MB. Das Dokument ist nur in dieser Bewohnerakte sichtbar."
+      description={`PDF oder Bild (z. B. ein fotografierter Arztbericht), höchstens 4 MB. Das Dokument ist nur in dieser ${t.prefix}akte sichtbar.`}
       onClose={onClose}
       onSubmit={async () => {
         if (!file) {
@@ -90,6 +92,7 @@ function UploadDialog({
 }
 
 export function RecordDocumentsView({ r }: { r: ResidentRecordState }) {
+  const t = useTerms();
   const {
     resident,
     onAction,
@@ -114,7 +117,7 @@ export function RecordDocumentsView({ r }: { r: ResidentRecordState }) {
     <main className="resident-record-content record-documents-view" ref={contentRef} key="documents">
       <div className="record-subpage-heading">
         <div>
-          <span className="record-section-label">Bewohnerakte</span>
+          <span className="record-section-label">{`${t.prefix}akte`}</span>
           <h3>Dokumente</h3>
           <p>Zentrale Ablage für Berichte, Pläne, Formulare und administrative Unterlagen von {resident.name}.</p>
         </div>

@@ -1,19 +1,21 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { Icon } from "./residents-utils";
 import type { ResidentsPageState } from "./use-residents-page";
 
 export function ResidentSummary({ r }: { r: ResidentsPageState }) {
+  const t = useTerms();
   const { residents, admissionsThisWeek } = r;
   return (
-    <section className="resident-summary" aria-label="Bewohnerübersicht">
+    <section className="resident-summary" aria-label={`${t.prefix}übersicht`}>
       <div>
         <span className="summary-icon">
           <Icon name="residents" />
         </span>
         <span>
           <strong>{residents.length}</strong>
-          <small>Bewohner gesamt</small>
+          <small>{t.many} gesamt</small>
         </span>
       </div>
       <div>

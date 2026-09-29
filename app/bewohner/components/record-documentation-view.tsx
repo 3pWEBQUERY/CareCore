@@ -2,12 +2,13 @@
 
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import { ArrowsLeftRight, Check, Pulse, Stethoscope, Warning } from "@phosphor-icons/react";
-import { useWorkContext } from "@/app/components/care-context";
+import { useWorkContext, useTerms } from "@/app/components/care-context";
 import { DOC_CATEGORIES } from "@/lib/documentation-shared";
 import { AmendDialog } from "@/app/pflegedokumentation/components/entry-parts";
 import type { ResidentRecordState } from "./use-resident-record";
 
 export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
+  const t = useTerms();
   const {
     resident,
     contentRef,
@@ -50,7 +51,7 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
           <p>
             {readOnly
               ? `Erfasst ${selectedEntry?.time} von ${selectedEntry?.author}. Einträge bleiben unverändert; Korrekturen werden als Nachtrag gespeichert.`
-              : "Die Erfassung bleibt vollständig innerhalb der geöffneten Bewohnerakte."}
+              : `Die Erfassung bleibt vollständig innerhalb der geöffneten ${t.prefix}akte.`}
           </p>
         </div>
         <button type="button" onClick={() => setActiveView("overview")}>
@@ -218,7 +219,7 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
             <Check aria-hidden="true" />
             <span>
               <strong>Dokumentationsqualität</strong>
-              <small>Eintrag ist eindeutig dem Bewohner, Zeitpunkt und Fachbereich zugeordnet.</small>
+              <small>Eintrag ist eindeutig dem {t.oneOblique}, Zeitpunkt und Fachbereich zugeordnet.</small>
             </span>
           </div>
 
@@ -241,7 +242,7 @@ export function RecordDocumentationView({ r }: { r: ResidentRecordState }) {
                 type="submit"
                 data-next="true"
                 disabled={documentationSaving}
-                title="Speichern und die nächste Bewohnerakte öffnen"
+                title={`Speichern und die nächste ${t.prefix}akte öffnen`}
               >
                 Speichern &amp; weiter
               </button>

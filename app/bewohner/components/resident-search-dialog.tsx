@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState, type KeyboardEvent } from "react";
 import { Icon } from "./residents-utils";
 import type { ResidentsPageState } from "./use-residents-page";
@@ -7,6 +8,7 @@ import type { ResidentsPageState } from "./use-residents-page";
 // Schnellsuche (Strg/⌘ + K): alle Bewohner unabhängig vom Filter des Verzeichnisses; Pfeiltasten wählen,
 // Enter öffnet die Akte.
 export function ResidentSearchDialog({ r }: { r: ResidentsPageState }) {
+  const t = useTerms();
   const { residents, setSearchOpen, setSelectedResident } = r;
   const [term, setTerm] = useState("");
   const [active, setActive] = useState(0);
@@ -36,7 +38,7 @@ export function ResidentSearchDialog({ r }: { r: ResidentsPageState }) {
       className="search-dialog"
       role="dialog"
       aria-modal="true"
-      aria-label="Bewohner suchen"
+      aria-label={`${t.many} suchen`}
     >
       <div className="search-input-wrap">
         <Icon name="search" />
@@ -48,7 +50,7 @@ export function ResidentSearchDialog({ r }: { r: ResidentsPageState }) {
             setActive(0);
           }}
           onKeyDown={onKeyDown}
-          placeholder="Bewohner nach Name, Zimmer oder Wohnbereich suchen…"
+          placeholder={`${t.many} nach Name, Zimmer oder Wohnbereich suchen…`}
           aria-label="Suchbegriff"
           aria-controls="resident-search-results"
           aria-activedescendant={results.length ? `resident-search-${current}` : undefined}
@@ -57,9 +59,9 @@ export function ResidentSearchDialog({ r }: { r: ResidentsPageState }) {
           ESC
         </button>
       </div>
-      <div className="search-results" id="resident-search-results" role="listbox" aria-label="Bewohner">
+      <div className="search-results" id="resident-search-results" role="listbox" aria-label={t.many}>
         <span className="search-group-label">
-          Bewohner · {results.length} von {residents.length}
+          {t.many} · {results.length} von {residents.length}
         </span>
         {results.map((resident, index) => (
           <button
@@ -83,7 +85,9 @@ export function ResidentSearchDialog({ r }: { r: ResidentsPageState }) {
         ))}
         {!results.length && (
           <p className="search-empty">
-            {residents.length ? `Keine Bewohner zu „${term.trim()}“ gefunden.` : "Es sind noch keine Bewohner erfasst."}
+            {residents.length
+              ? `Keine ${t.many} zu „${term.trim()}“ gefunden.`
+              : `Es sind noch keine ${t.many} erfasst.`}
           </p>
         )}
       </div>

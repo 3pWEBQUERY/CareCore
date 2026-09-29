@@ -29,7 +29,7 @@ export function useResidentsPage() {
   const loadResidents = useCallback(async () => {
     try {
       const response = await fetch("/api/residents", { cache: "no-store" });
-      if (!response.ok) throw new Error("Bewohner konnten nicht geladen werden.");
+      if (!response.ok) throw new Error("Liste konnte nicht geladen werden.");
       const data = (await response.json()) as {
         residents: ResidentRow[];
         units: { name: string }[];

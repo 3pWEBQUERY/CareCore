@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import ResidentAppointmentEditor from "@/app/components/resident-appointment-editor";
@@ -21,6 +22,7 @@ import { ContactEditorDialog } from "./record-contact-dialog";
 import { SupplyEditorDialog } from "./record-supply-dialog";
 
 export function ResidentRecord(props: ResidentRecordProps) {
+  const t = useTerms();
   const r = useResidentRecord(props);
   const {
     resident,
@@ -62,8 +64,8 @@ export function ResidentRecord(props: ResidentRecordProps) {
             <button
               className={`resident-avatar record-photo-trigger ${resident.status === "critical" ? "critical" : ""}`}
               type="button"
-              aria-label={residentPhoto ? "Bewohnerbild ändern" : "Bewohnerbild hochladen"}
-              title={residentPhoto ? "Bewohnerbild ändern" : "Bewohnerbild hochladen"}
+              aria-label={residentPhoto ? `${t.prefix}bild ändern` : `${t.prefix}bild hochladen`}
+              title={residentPhoto ? `${t.prefix}bild ändern` : `${t.prefix}bild hochladen`}
               disabled={residentPhotoSaving}
               onClick={() => residentPhotoInputRef.current?.click()}
             >
@@ -86,7 +88,7 @@ export function ResidentRecord(props: ResidentRecordProps) {
               aria-hidden="true"
             />
             <div>
-              <span className="record-kicker">Bewohnerakte</span>
+              <span className="record-kicker">{`${t.prefix}akte`}</span>
               <h2 id="resident-record-title">{resident.name}</h2>
               <p>
                 {resident.room} · {resident.unit} · {resident.careLevel}
@@ -95,11 +97,11 @@ export function ResidentRecord(props: ResidentRecordProps) {
           </div>
           <div className="record-header-actions">
             {navigation && (
-              <span className="record-navigation" aria-label="Zwischen Bewohnerakten blättern">
+              <span className="record-navigation" aria-label={`Zwischen ${t.prefix}akten blättern`}>
                 <button
                   type="button"
-                  aria-label="Vorherige Bewohnerakte"
-                  title="Vorherige Bewohnerakte (Alt + ↑)"
+                  aria-label={`Vorherige ${t.prefix}akte`}
+                  title={`Vorherige ${t.prefix}akte (Alt + ↑)`}
                   onClick={navigation.onPrevious}
                 >
                   <CaretUp aria-hidden="true" />
@@ -109,8 +111,8 @@ export function ResidentRecord(props: ResidentRecordProps) {
                 </small>
                 <button
                   type="button"
-                  aria-label="Nächste Bewohnerakte"
-                  title="Nächste Bewohnerakte (Alt + ↓)"
+                  aria-label={`Nächste ${t.prefix}akte`}
+                  title={`Nächste ${t.prefix}akte (Alt + ↓)`}
                   onClick={navigation.onNext}
                 >
                   <CaretDown aria-hidden="true" />
@@ -146,7 +148,7 @@ export function ResidentRecord(props: ResidentRecordProps) {
               className="record-close-button"
               ref={closeButtonRef}
               type="button"
-              aria-label="Bewohnerakte schliessen"
+              aria-label={`${t.prefix}akte schliessen`}
               onClick={onClose}
             >
               <X aria-hidden="true" />
@@ -154,7 +156,7 @@ export function ResidentRecord(props: ResidentRecordProps) {
           </div>
         </header>
 
-        <nav className="resident-record-tabs" aria-label="Bereiche der Bewohnerakte">
+        <nav className="resident-record-tabs" aria-label={`Bereiche der ${t.prefix}akte`}>
           {recordTabs.map((tab) => {
             const active =
               (tab === "Übersicht" && activeView === "overview") ||

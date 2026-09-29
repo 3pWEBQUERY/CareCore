@@ -1,9 +1,12 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
+import { countOf } from "@/lib/terminology";
 import { Icon, residentStatusFilters, ResidentAvatar } from "./residents-utils";
 import type { ResidentsPageState } from "./use-residents-page";
 
 export function ResidentDirectory({ r }: { r: ResidentsPageState }) {
+  const t = useTerms();
   const {
     query,
     setQuery,
@@ -31,12 +34,12 @@ export function ResidentDirectory({ r }: { r: ResidentsPageState }) {
       <div className="directory-toolbar">
         <div>
           <h2 className="card-title" id="directory-title">
-            Bewohnerverzeichnis
+            {t.prefix}verzeichnis
           </h2>
           <p className="card-subtitle">
             {filtered
-              ? `${filteredResidents.length} von ${residents.length} Bewohnern${unit !== "Alle" ? ` · ${unit}` : ""}${statusFilter !== "Alle" ? ` · ${statusFilter}` : ""}`
-              : `${residents.length} Bewohner aus der Datenbank`}
+              ? `${filteredResidents.length} von ${residents.length} ${t.manyDative}${unit !== "Alle" ? ` · ${unit}` : ""}${statusFilter !== "Alle" ? ` · ${statusFilter}` : ""}`
+              : `${countOf(residents.length, t)} aus der Datenbank`}
           </p>
         </div>
         <label className="resident-search">
@@ -45,7 +48,7 @@ export function ResidentDirectory({ r }: { r: ResidentsPageState }) {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Name oder Zimmer suchen"
-            aria-label="Bewohner suchen"
+            aria-label={`${t.many} suchen`}
           />
         </label>
         <button
@@ -88,8 +91,8 @@ export function ResidentDirectory({ r }: { r: ResidentsPageState }) {
             </div>
           </div>
           <div className="resident-filter-group">
-            <span>Bewohnerstatus</span>
-            <div className="resident-status-filter" aria-label="Bewohnerstatus filtern">
+            <span>{t.prefix}status</span>
+            <div className="resident-status-filter" aria-label={`${t.prefix}status filtern`}>
               {residentStatusFilters.map((label) => (
                 <button
                   className={statusFilter === label ? "active" : ""}
@@ -111,9 +114,9 @@ export function ResidentDirectory({ r }: { r: ResidentsPageState }) {
         </div>
       </div>
 
-      <div className="resident-table" role="table" aria-label="Bewohnerliste">
+      <div className="resident-table" role="table" aria-label={`${t.prefix}liste`}>
         <div className="resident-table-head" role="row">
-          <span role="columnheader">Bewohner</span>
+          <span role="columnheader">{t.one}</span>
           <span role="columnheader">Wohnbereich</span>
           <span role="columnheader">Pflegebedarf</span>
           <span role="columnheader">Letzte Aktualisierung</span>
@@ -155,15 +158,15 @@ export function ResidentDirectory({ r }: { r: ResidentsPageState }) {
         {filteredResidents.length === 0 && (
           <div className="resident-empty">
             <Icon name="search" />
-            <strong>Keine Bewohner gefunden</strong>
+            <strong>Keine {t.many} gefunden</strong>
             <p>
               {residents.length
-                ? "Keine Bewohner passen zu Suche und Filter."
-                : "Es sind noch keine Bewohner erfasst. Über „Bewohner aufnehmen“ legst du die erste Akte an."}
+                ? `Keine ${t.many} passen zu Suche und Filter.`
+                : `Es sind noch keine ${t.many} erfasst. Über „${t.oneOblique} aufnehmen“ legst du die erste Akte an.`}
             </p>
             {filtered && residents.length > 0 && (
               <button className="secondary-button" type="button" onClick={resetFilters}>
-                Alle {residents.length} Bewohner anzeigen
+                Alle {countOf(residents.length, t)} anzeigen
               </button>
             )}
           </div>

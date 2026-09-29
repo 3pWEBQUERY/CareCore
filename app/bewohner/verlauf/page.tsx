@@ -13,7 +13,8 @@ import {
   type HistoryResident,
 } from "@/lib/resident-history-shared";
 import { StayDialog, type StayDialogMode } from "./stay-dialog";
-import { useCareResident } from "@/app/components/care-context";
+import { useCareResident, useTerms } from "@/app/components/care-context";
+import type { Terms } from "@/lib/terminology";
 
 const ALL_UNITS = "Gesamtes Haus";
 const isArchived = (resident: HistoryResident) => resident.status === "Ausgetreten" || resident.status === "Verstorben";
@@ -30,10 +31,10 @@ const avatarTone = (resident: HistoryResident) =>
   resident.tone === "critical" ? "critical" : resident.tone === "archived" ? "archived" : "";
 
 // Downloads the filtered list as CSV (semicolon separated for Excel with Swiss locale).
-function downloadReport(residents: HistoryResident[]) {
+function downloadReport(residents: HistoryResident[], t: Terms) {
   const cell = (value: string) => `"${value.replaceAll('"', '""')}"`;
   const lines = [
-    ["Bewohner", "Zimmer", "Wohnbereich", "Status", "Zeitraum", "Letzter Eintrag", "Datum", "Erfasst von", "Einträge"],
+    [t.one, "Zimmer", "Wohnbereich", "Status", "Zeitraum", "Letzter Eintrag", "Datum", "Erfasst von", "Einträge"],
     ...residents.map((resident) => [
       resident.name,
       resident.room,
@@ -57,6 +58,7 @@ function downloadReport(residents: HistoryResident[]) {
 }
 
 export default function ResidentHistoryPage() {
+  const t = useTerms();
   const [status, setStatus] = useState<HistoryFilter>("Alle");
   const [unit, setUnit] = useState(ALL_UNITS);
   const [query, setQuery] = useState("");
@@ -102,16 +104,16 @@ export default function ResidentHistoryPage() {
         <main className="workspace module-workspace">
           <section className="page-heading residents-heading" aria-labelledby="resident-history-title">
             <div className="heading-copy">
-              <p className="eyebrow">CareCore Bewohner</p>
-              <h1 id="resident-history-title">Bewohnerverlauf &amp; Archiv</h1>
-              <p>Alle aktiven und ehemaligen Bewohnerakten des gesamten Hauses an einem Ort.</p>
+              <p className="eyebrow">CareCore {t.many}</p>
+              <h1 id="resident-history-title">{t.prefix}verlauf &amp; Archiv</h1>
+              <p>Alle aktiven und ehemaligen {t.prefix}akten des gesamten Hauses an einem Ort.</p>
             </div>
             <button
               className="primary-button"
               type="button"
               disabled={!filteredResidents.length}
               onClick={() => {
-                downloadReport(filteredResidents);
+                downloadReport(filteredResidents, t);
                 showToast(`Hausbericht mit ${filteredResidents.length} Akten heruntergeladen`);
               }}
             >
@@ -120,14 +122,14 @@ export default function ResidentHistoryPage() {
             </button>
           </section>
 
-          <section className="wound-summary" aria-label="Hausweite Bewohnerübersicht">
+          <section className="wound-summary" aria-label={`Hausweite ${t.prefix}übersicht`}>
             <div>
               <span className="summary-icon">
                 <ModuleIcon name="residents" />
               </span>
               <span>
                 <strong>{residents.length}</strong>
-                <small>Bewohnerakten gesamt</small>
+                <small>{t.prefix}akten gesamt</small>
               </span>
             </div>
             <div>
@@ -169,7 +171,7 @@ export default function ResidentHistoryPage() {
               <strong>Gesamtes Haus</strong>
               <p>
                 Die Ansicht umfasst alle Wohnbereiche sowie aktive, geplante, verlegte, ausgetretene und verstorbene
-                Bewohner.
+                {t.many}.
               </p>
             </div>
             <button className="quiet-button" type="button" onClick={resetFilters}>
@@ -182,11 +184,11 @@ export default function ResidentHistoryPage() {
               <div className="house-history-toolbar">
                 <div>
                   <h2 className="card-title" id="house-residents-title">
-                    Bewohnerakten
+                    {t.prefix}akten
                   </h2>
                   <p className="card-subtitle">
                     {overview.loading && !overview.data
-                      ? "Bewohnerakten werden geladen …"
+                      ? `${t.prefix}akten werden geladen …`
                       : `${filteredResidents.length} von ${residents.length} Akten angezeigt`}
                   </p>
                 </div>
@@ -196,7 +198,7 @@ export default function ResidentHistoryPage() {
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Name, Zimmer oder Eintrag suchen"
-                    aria-label="Alle Bewohnerakten durchsuchen"
+                    aria-label={`Alle ${t.prefix}akten durchsuchen`}
                   />
                 </label>
                 <label className="house-unit-filter">
@@ -228,7 +230,7 @@ export default function ResidentHistoryPage() {
                 </div>
               </div>
               <div className="house-resident-table-head" aria-hidden="true">
-                <span>Bewohner</span>
+                <span>{t.one}</span>
                 <span>Wohnbereich</span>
                 <span>Aufenthalt</span>
                 <span>Letzter Eintrag</span>
@@ -275,7 +277,7 @@ export default function ResidentHistoryPage() {
                 {!overview.loading && filteredResidents.length === 0 && (
                   <div className="resident-empty">
                     <ModuleIcon name="search" />
-                    <strong>Keine Bewohnerakten gefunden</strong>
+                    <strong>Keine {t.prefix}akten gefunden</strong>
                     <p>Suchbegriff, Wohnbereich oder Statusfilter anpassen.</p>
                     <button className="secondary-button" type="button" onClick={resetFilters}>
                       Filter zurücksetzen
@@ -290,7 +292,7 @@ export default function ResidentHistoryPage() {
                 <section className={`card house-resident-focus ${archived ? "archived" : ""}`} aria-live="polite">
                   <div className="card-header">
                     <div>
-                      <p className="eyebrow">Ausgewählte Bewohnerakte</p>
+                      <p className="eyebrow">Ausgewählte {t.prefix}akte</p>
                       <h2 className="card-title">{selected.name}</h2>
                       <p className="card-subtitle">
                         {[selected.room, selected.careUnit].filter(Boolean).join(" · ") || "Ohne Zimmerzuteilung"}
@@ -337,7 +339,7 @@ export default function ResidentHistoryPage() {
                     )}
                     <div className="course-focus-actions">
                       <Link className="primary-button" href={`/bewohner?resident=${selected.id}`}>
-                        {archived ? "Archivakte öffnen" : "Bewohnerakte öffnen"}
+                        {archived ? "Archivakte öffnen" : `${t.prefix}akte öffnen`}
                       </Link>
                       {canWrite && selected.status === "Aktiv" && (
                         <button

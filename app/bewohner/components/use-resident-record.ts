@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { isTyping, useShortcutsEnabled } from "@/app/components/keyboard-shortcuts";
 import { requestJson, timeInZurich, todayInZurich } from "@/app/components/workspace-ui";
@@ -31,6 +32,7 @@ export function useResidentRecord({
   onViewChange,
   navigation,
 }: ResidentRecordProps) {
+  const t = useTerms();
   const {
     appointments,
     setAppointments,
@@ -291,7 +293,7 @@ export function useResidentRecord({
         },
       });
       live.reloadDocumentation();
-      onAction(andNext ? "Dokumentation gespeichert · nächster Bewohner" : "Dokumentation gespeichert");
+      onAction(andNext ? `Dokumentation gespeichert · nächster ${t.one}` : "Dokumentation gespeichert");
       if (andNext && navigation) {
         navigation.onNext();
         return;

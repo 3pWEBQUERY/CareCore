@@ -42,7 +42,7 @@ export function useRecordBiography({
 
   async function saveBiography() {
     if (!resident.id) {
-      setBiographyError("Diese Demoakte hat keine gespeicherte Bewohner-ID.");
+      setBiographyError("Diese Demoakte ist nicht gespeichert.");
       return;
     }
     setBiographySaving(true);

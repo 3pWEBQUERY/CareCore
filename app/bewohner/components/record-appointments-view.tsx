@@ -1,10 +1,12 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { appointmentDateLabel, appointmentLocalParts } from "@/lib/resident-appointments";
 import { ArrowRight, CalendarDots, Plus } from "@phosphor-icons/react";
 import type { ResidentRecordState } from "./use-resident-record";
 
 export function RecordAppointmentsView({ r }: { r: ResidentRecordState }) {
+  const t = useTerms();
   const {
     resident,
     contentRef,
@@ -19,7 +21,7 @@ export function RecordAppointmentsView({ r }: { r: ResidentRecordState }) {
     <main className="resident-record-content record-appointments-view" ref={contentRef} key="appointments">
       <div className="record-subpage-heading">
         <div>
-          <span className="record-section-label">Bewohnerakte</span>
+          <span className="record-section-label">{`${t.prefix}akte`}</span>
           <h3>Termine</h3>
           <p>Arztbesuche, Therapien und weitere Termine für {resident.name}.</p>
         </div>
@@ -40,7 +42,7 @@ export function RecordAppointmentsView({ r }: { r: ResidentRecordState }) {
       {!resident.id ? (
         <section className="record-card resident-appointment-empty">
           <CalendarDots />
-          <strong>Termine sind nach dem Speichern des Bewohners verfügbar.</strong>
+          <strong>Termine sind nach dem Speichern des {t.oneOblique} verfügbar.</strong>
         </section>
       ) : appointmentsLoading ? (
         <div className="resident-appointment-loading" role="status">
