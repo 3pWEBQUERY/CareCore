@@ -1,4 +1,4 @@
-import { ApiError, iso, writeAudit, type ApiContext } from "@/lib/api-context";
+import { ApiError, iso, auditStatement, type ApiContext } from "@/lib/api-context";
 import { SETTING_DEFINITIONS, resolveSettings, type AppSettings, type SettingKey } from "@/lib/settings-shared";
 
 // Organisation-wide settings (see settings-shared.ts).
@@ -27,11 +27,13 @@ export async function saveSetting(ctx: ApiContext, key: unknown, body: Record<st
   if (enabled && definition.unit && value === null)
     throw new ApiError(`Bitte zuerst einen Wert in ${definition.unit} festlegen.`);
   const next = { ...before, [settingKey]: { enabled, value } };
-  await ctx.sql`
+  await ctx.sql.transaction([
+    ctx.sql`
     UPDATE carecore_organizations
     SET settings = jsonb_set(COALESCE(settings, '{}'::jsonb), '{app}', ${JSON.stringify(next)}::jsonb), updated_at = NOW()
-    WHERE id = ${ctx.actor.organizationId}`;
-  await writeAudit(ctx, "setting", ctx.actor.organizationId, settingKey, before[settingKey], next[settingKey]);
+    WHERE id = ${ctx.actor.organizationId}`,
+    auditStatement(ctx, "setting", ctx.actor.organizationId, settingKey, before[settingKey], next[settingKey]),
+  ]);
   return next;
 }
 

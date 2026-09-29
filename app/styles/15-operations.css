@@ -669,3 +669,33 @@
     max-width: none;
   }
 }
+.offline-status-list li {
+  flex-wrap: wrap;
+}
+.offline-status-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+.offline-status-edit {
+  width: 100%;
+  display: grid;
+  gap: 6px;
+}
+.offline-status-edit label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+.offline-status-edit textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 5px;
+  color: var(--ink);
+  background: white;
+  font: inherit;
+  font-weight: 500;
+}
+.offline-status-edit .offline-status-actions {
+  justify-content: flex-end;
+}

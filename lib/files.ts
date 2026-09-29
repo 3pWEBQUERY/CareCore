@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { ApiError, type ApiContext } from "@/lib/api-context";
+import { contentMatchesType } from "@/lib/file-signatures";
 
 const MAX_FILE_BYTES = 4 * 1024 * 1024;
 
@@ -19,10 +20,13 @@ export async function storeFile(
     .replace(/[\\/\u0000-\u001f]/g, "-")
     .slice(0, 220);
   if (!name) throw new ApiError("Der Dateiname ist ungültig.");
+  const bytes = Buffer.from(await file.arrayBuffer());
+  if (!contentMatchesType(type, bytes))
+    throw new ApiError("Der Inhalt der Datei passt nicht zum Dateityp. Bitte die Originaldatei hochladen.", 415);
   const id = randomUUID();
   await ctx.sql`
     INSERT INTO carecore_cloud_files (id, organization_id, name, mime_type, size_bytes, content_base64, uploaded_by, purpose)
     VALUES (${id}, ${ctx.actor.organizationId}, ${name}, ${type}, ${file.size},
-      ${Buffer.from(await file.arrayBuffer()).toString("base64")}, ${ctx.actor.id}, ${purpose})`;
+      ${bytes.toString("base64")}, ${ctx.actor.id}, ${purpose})`;
   return { id, name, type, size: file.size };
 }

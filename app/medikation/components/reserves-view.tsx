@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useWorkContext } from "@/app/components/care-context";
 import { ModuleIcon } from "@/app/components/module-icon";
 import type { MedOrder } from "@/lib/medication-shared";
 import {
@@ -20,6 +21,7 @@ import { useOrderDialogs } from "./order-dialogs";
 import { orderTone, useSelectedResident } from "./plan-view";
 import { AllergyBadge } from "@/app/components/resident-list";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
+import { WitnessFields, emptyWitness } from "./btm-witness";
 import { ReceiptDialog } from "./stock-dialogs";
 import { MovementJournal } from "./stock-view";
 
@@ -280,6 +282,8 @@ function AdministerDialog({
 }) {
   const [note, setNote] = useState("");
   const [quantity, setQuantity] = useState(String(order.stockQuantity ?? 1));
+  const [witness, setWitness] = useState(emptyWitness);
+  const witnessRequired = (useWorkContext()?.settings.btmAdministrationWitness.enabled ?? false) && order.controlled;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const save = async () => {
@@ -288,7 +292,12 @@ function AdministerDialog({
     try {
       await requestJson("/api/medication/prn", {
         method: "POST",
-        body: { orderId: order.id, note, quantity: Number(quantity.replace(",", ".")) },
+        body: {
+          orderId: order.id,
+          note,
+          quantity: Number(quantity.replace(",", ".")),
+          witness: witnessRequired ? witness : undefined,
+        },
       });
       onSaved(`${residentName}: ${order.name} – Reservegabe dokumentiert`);
     } catch (cause) {
@@ -324,6 +333,7 @@ function AdministerDialog({
         <span>Ausgebuchte Menge ({order.stockUnit ?? "Einheiten"})</span>
         <input required inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
       </label>
+      {witnessRequired && <WitnessFields value={witness} onChange={setWitness} />}
     </EditorDialog>
   );
 }

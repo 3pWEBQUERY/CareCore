@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { EditorDialog, requestJson, type ShowToast } from "@/app/components/workspace-ui";
 import { notifyOperationsChanged } from "./operations-ui";
+import { sendOrQueue } from "@/app/components/offline-queue";
 
 // Completion with a note; the note goes into the care record when the task asks for it.
 export function TaskCompleteDialog({
@@ -32,9 +33,20 @@ export function TaskCompleteDialog({
         setSaving(true);
         setError("");
         try {
-          await requestJson(`/api/tasks/${task.id}/status`, { method: "POST", body: { status: "completed", note } });
+          const result = await sendOrQueue(
+            `/api/tasks/${task.id}/status`,
+            { status: "completed", note, completedAt: new Date().toISOString() },
+            `Aufgabe erledigt · ${task.title}`,
+            { field: "note", label: "Notiz" },
+          );
           notifyOperationsChanged();
-          onDone(task.documentOnCompletion ? "Aufgabe erledigt und dokumentiert" : "Aufgabe erledigt");
+          onDone(
+            result.queued
+              ? "Aufgabe offline als erledigt vorgemerkt – wird gesendet, sobald die Verbindung zurück ist"
+              : task.documentOnCompletion
+                ? "Aufgabe erledigt und dokumentiert"
+                : "Aufgabe erledigt",
+          );
         } catch (cause) {
           setError(cause instanceof Error ? cause.message : "Speichern fehlgeschlagen.");
           setSaving(false);
@@ -75,12 +87,23 @@ export function useTaskToggle(showToast: ShowToast, onChanged: () => void) {
       return;
     }
     try {
-      await requestJson(`/api/tasks/${task.id}/status`, {
-        method: "POST",
-        body: { status: task.done ? "open" : "completed" },
-      });
+      // Erledigen geht auch offline (wird nachgereicht); wieder öffnen nur mit Verbindung.
+      const result = task.done
+        ? (await requestJson(`/api/tasks/${task.id}/status`, { method: "POST", body: { status: "open" } }),
+          { queued: false })
+        : await sendOrQueue(
+            `/api/tasks/${task.id}/status`,
+            { status: "completed", completedAt: new Date().toISOString() },
+            `Aufgabe erledigt · ${task.title}`,
+          );
       notifyOperationsChanged();
-      showToast(task.done ? "Aufgabe wieder geöffnet" : "Aufgabe erledigt");
+      showToast(
+        task.done
+          ? "Aufgabe wieder geöffnet"
+          : result.queued
+            ? "Aufgabe offline als erledigt vorgemerkt – wird gesendet, sobald die Verbindung zurück ist"
+            : "Aufgabe erledigt",
+      );
       onChanged();
     } catch (cause) {
       showToast(cause instanceof Error ? cause.message : "Speichern fehlgeschlagen.");

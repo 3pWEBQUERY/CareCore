@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ApiError, assertResident, iso, text, writeAudit, type ApiContext, type Row } from "@/lib/api-context";
+import { ApiError, assertResident, iso, text, auditStatement, type ApiContext, type Row } from "@/lib/api-context";
 import { initials } from "@/lib/medication-shared";
 import {
   EXIT_KINDS,
@@ -165,15 +165,15 @@ export async function recordExit(ctx: ApiContext, residentIdInput: unknown, body
     ctx.sql`
       UPDATE carecore_care_plans SET status = 'closed', closed_at = NOW(), closed_reason = ${label}, updated_at = NOW()
       WHERE resident_id = ${residentId} AND status IN ('draft', 'active', 'review') AND ${closes}`,
+    auditStatement(
+      ctx,
+      "resident",
+      residentId,
+      `stay_${kind}`,
+      { status: resident.status },
+      { status: kind, date: day, note },
+    ),
   ]);
-  await writeAudit(
-    ctx,
-    "resident",
-    residentId,
-    `stay_${kind}`,
-    { status: resident.status },
-    { status: kind, date: day, note },
-  );
   return `${label} von ${resident.first_name} ${resident.last_name} erfasst`;
 }
 
@@ -196,14 +196,14 @@ export async function recordReturn(ctx: ApiContext, residentIdInput: unknown, bo
         CASE WHEN ${day}::date = (NOW() AT TIME ZONE ${resident.tz})::date THEN NOW() ELSE (${`${day} 12:00`}::timestamp AT TIME ZONE ${resident.tz}) END,
         'important'`,
     ctx.sql`UPDATE carecore_residents SET status = 'active', discharged_on = NULL, updated_at = NOW() WHERE id = ${residentId}`,
+    auditStatement(
+      ctx,
+      "resident",
+      residentId,
+      "stay_returned",
+      { status: resident.status },
+      { status: "active", date: day },
+    ),
   ]);
-  await writeAudit(
-    ctx,
-    "resident",
-    residentId,
-    "stay_returned",
-    { status: resident.status },
-    { status: "active", date: day },
-  );
   return `Rückkehr von ${resident.first_name} ${resident.last_name} erfasst`;
 }

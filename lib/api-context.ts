@@ -8,6 +8,7 @@ import {
   type CarecoreActor,
   type Permission,
 } from "@/lib/server-data";
+import { schedulePush } from "@/lib/push";
 
 // Shared helpers for the module APIs (medication, vital signs, ...).
 
@@ -31,6 +32,8 @@ export async function apiContext(permission: Permission): Promise<ApiContext | N
   if (!actor) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
   if (!actor.organizationId) return NextResponse.json({ error: "Keine Organisation zugeordnet." }, { status: 400 });
   if (!hasPermission(actor, permission)) return forbidden();
+  // Benachrichtigungen, die diese Anfrage erzeugt, gehen nach der Antwort als Push hinaus.
+  schedulePush();
   return { actor: actor as ApiContext["actor"], sql: carecoreDb() };
 }
 

@@ -5,7 +5,7 @@ import {
   assertUuid,
   iso,
   text,
-  writeAudit,
+  auditStatement,
   type ApiContext,
   type Row,
 } from "@/lib/api-context";
@@ -165,8 +165,10 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
     insuranceNumber: optional(body.insuranceNumber, 40),
   };
   const before = (await ctx.sql`SELECT * FROM carecore_residents WHERE id = ${residentId}`) as Row[];
+  const b = before[0];
   try {
-    await ctx.sql`
+    await ctx.sql.transaction([
+      ctx.sql`
       UPDATE carecore_residents SET first_name = ${data.firstName}, last_name = ${data.lastName},
         date_of_birth = ${data.dateOfBirth}, gender = ${data.gender}, marital_status = ${data.maritalStatus},
         language = ${data.language}, social_security_number = ${data.socialSecurityNumber}, religion = ${data.religion},
@@ -175,26 +177,26 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
         gp_phone = ${data.gpPhone}, pharmacy = ${data.pharmacy}, insurer = ${data.insurer},
         insurance_number = ${data.insuranceNumber},
         master_data_checked_at = NOW(), master_data_checked_by = ${ctx.actor.id}, updated_at = NOW()
-      WHERE id = ${residentId}`;
+      WHERE id = ${residentId}`,
+      auditStatement(
+        ctx,
+        "resident",
+        residentId,
+        "master_data_updated",
+        { firstName: b.first_name, lastName: b.last_name, primaryNurseId: b.primary_care_user_id, gpName: b.gp_name },
+        // Social security and insurance numbers are not written to the audit trail.
+        {
+          ...data,
+          socialSecurityNumber: data.socialSecurityNumber ? "geändert" : null,
+          insuranceNumber: data.insuranceNumber ? "geändert" : null,
+        },
+      ),
+    ]);
   } catch (error) {
     if (String(error).includes("external_number"))
       throw new ApiError("Diese Bewohnernummer ist bereits vergeben.", 409);
     throw error;
   }
-  const b = before[0];
-  await writeAudit(
-    ctx,
-    "resident",
-    residentId,
-    "master_data_updated",
-    { firstName: b.first_name, lastName: b.last_name, primaryNurseId: b.primary_care_user_id, gpName: b.gp_name },
-    // Social security and insurance numbers are not written to the audit trail.
-    {
-      ...data,
-      socialSecurityNumber: data.socialSecurityNumber ? "geändert" : null,
-      insuranceNumber: data.insuranceNumber ? "geändert" : null,
-    },
-  );
 }
 
 const IMPORTANCE_TONES: Record<string, TimelineEntry["tone"]> = {
@@ -327,23 +329,37 @@ export async function uploadResidentFile(ctx: ApiContext, residentIdInput: unkno
     throw new ApiError("Bitte eine Kategorie wählen.");
   const file = await storeFile(ctx, form.get("file"), "document", DOCUMENT_TYPES);
   const id = randomUUID();
-  await ctx.sql`
+  await ctx.sql.transaction([
+    ctx.sql`
     INSERT INTO carecore_documents (id, organization_id, resident_id, kind, title, category, description, file_id, storage_key,
       mime_type, size_bytes, version, version_no, status, uploaded_by)
     VALUES (${id}, ${ctx.actor.organizationId}, ${residentId}, 'document', ${title}, ${category},
       ${text(form.get("description"), 2000) || null}, ${file.id}, ${`cloud:${file.id}`}, ${file.type}, ${file.size}, '1', 1,
-      'active', ${ctx.actor.id})`;
-  await writeAudit(ctx, "resident_document", id, "uploaded", null, { residentId, title, category, file: file.name });
+      'active', ${ctx.actor.id})`,
+    auditStatement(ctx, "resident_document", id, "uploaded", null, {
+      residentId,
+      title,
+      category,
+      file: file.name,
+    }),
+  ]);
   return id;
 }
 
 export async function archiveResidentFile(ctx: ApiContext, residentIdInput: unknown, documentIdInput: unknown) {
   const residentId = await assertResident(ctx, residentIdInput);
   const documentId = assertUuid(documentIdInput, "Dokument");
+  // Archivieren und Protokoll in einer Anweisung.
   const rows = await ctx.sql`
-    UPDATE carecore_documents SET status = 'archived', archived_at = NOW(), archived_by = ${ctx.actor.id}, updated_at = NOW()
-    WHERE id = ${documentId} AND resident_id = ${residentId} AND status <> 'archived' RETURNING title`;
+    WITH archived AS (
+      UPDATE carecore_documents SET status = 'archived', archived_at = NOW(), archived_by = ${ctx.actor.id}, updated_at = NOW()
+      WHERE id = ${documentId} AND resident_id = ${residentId} AND status <> 'archived' RETURNING id, title),
+    logged AS (
+      INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
+      SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'resident_document', archived.id, 'archived',
+        ${JSON.stringify({ residentId })}::jsonb
+      FROM archived)
+    SELECT title FROM archived`;
   if (!rows[0]) throw new ApiError("Dokument nicht gefunden.", 404);
-  await writeAudit(ctx, "resident_document", documentId, "archived", null, { residentId });
   return String(rows[0].title);
 }

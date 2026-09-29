@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ApiError, assertUuid, iso, text, writeAudit, type ApiContext, type Row } from "@/lib/api-context";
+import { ApiError, assertUuid, auditStatement, iso, text, type ApiContext, type Row } from "@/lib/api-context";
 import {
   SERVICES,
   SITE_STATUS,
@@ -180,25 +180,26 @@ export async function saveSite(ctx: ApiContext, siteId: string | null, body: Rec
   const before = siteId ? await assertSite(ctx, siteId) : null;
   const id = siteId ?? randomUUID();
   try {
-    if (before)
-      await ctx.sql`
+    await ctx.sql.transaction([
+      before
+        ? ctx.sql`
         UPDATE carecore_sites SET name = ${input.name}, code = ${input.code}, site_type = ${input.siteType},
           country = ${input.country}, address_line1 = ${input.addressLine1}, postal_code = ${input.postalCode},
           city = ${input.city}, phone = ${input.phone}, email = ${input.email}, status = ${input.status},
           active = ${input.status !== "archived"}, manager_user_id = ${managerId}, notes = ${input.notes}, updated_at = NOW()
-        WHERE id = ${id}`;
-    else
-      await ctx.sql`
+        WHERE id = ${id}`
+        : ctx.sql`
         INSERT INTO carecore_sites (id, organization_id, name, code, site_type, country, address_line1, postal_code, city,
           phone, email, status, active, manager_user_id, notes)
         VALUES (${id}, ${ctx.actor.organizationId}, ${input.name}, ${input.code}, ${input.siteType}, ${input.country},
           ${input.addressLine1}, ${input.postalCode}, ${input.city}, ${input.phone}, ${input.email}, ${input.status},
-          ${input.status !== "archived"}, ${managerId}, ${input.notes})`;
+          ${input.status !== "archived"}, ${managerId}, ${input.notes})`,
+      auditStatement(ctx, "site", id, before ? "update" : "create", before, { ...input, managerId }),
+    ]);
   } catch (error) {
     if (uniqueViolation(error)) throw new ApiError("Ein Standort mit diesem Namen existiert bereits.", 409);
     throw error;
   }
-  await writeAudit(ctx, "site", id, before ? "update" : "create", before, { ...input, managerId });
   return id;
 }
 
@@ -246,21 +247,22 @@ export async function saveUnit(ctx: ApiContext, unitId: string | null, body: Rec
   const id = unitId ?? randomUUID();
   const services = JSON.stringify(input.services);
   try {
-    if (before)
-      await ctx.sql`
+    await ctx.sql.transaction([
+      before
+        ? ctx.sql`
         UPDATE carecore_care_units SET site_id = ${site}, name = ${input.name}, code = ${input.code}, floor = ${input.floor},
           capacity = ${input.capacity}, specialty = ${input.specialty}, services = ${services}::jsonb, notes = ${input.notes},
           active = ${input.active}, lead_user_id = ${leadId}, updated_at = NOW()
-        WHERE id = ${id}`;
-    else
-      await ctx.sql`
+        WHERE id = ${id}`
+        : ctx.sql`
         INSERT INTO carecore_care_units (id, site_id, name, code, floor, capacity, specialty, services, notes, active, lead_user_id)
         VALUES (${id}, ${site}, ${input.name}, ${input.code}, ${input.floor}, ${input.capacity}, ${input.specialty},
-          ${services}::jsonb, ${input.notes}, ${input.active}, ${leadId})`;
+          ${services}::jsonb, ${input.notes}, ${input.active}, ${leadId})`,
+      auditStatement(ctx, "care_unit", id, before ? "update" : "create", before, { ...input, siteId: site, leadId }),
+    ]);
   } catch (error) {
     if (uniqueViolation(error)) throw new ApiError("Ein Wohnbereich mit dieser Bezeichnung existiert bereits.", 409);
     throw error;
   }
-  await writeAudit(ctx, "care_unit", id, before ? "update" : "create", before, { ...input, siteId: site, leadId });
   return id;
 }

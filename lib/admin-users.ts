@@ -15,7 +15,10 @@ export type ManagedUser = {
   archivedAt: string | null;
   createdAt: string;
   lastSeenAt: string | null;
+  // Heute gültige Qualifikationen (z. B. HF, FaGe); sie entscheiden in Rollen wie „Pflege“ über das Medikationsrecht.
+  qualificationIds: string[];
 };
+export type AdminQualification = { id: string; code: string; name: string; grantsMedication: boolean };
 export type AdminCareUnit = { id: string; name: string; detail: string };
 export type ManagedRole = {
   id: string;
@@ -62,6 +65,7 @@ function database() {
 export async function listManagedUsers(actorId: string): Promise<{
   users: ManagedUser[];
   careUnits: AdminCareUnit[];
+  qualifications: AdminQualification[];
   roles: ManagedRole[];
   stats: AdminUserStats;
 }> {
@@ -88,8 +92,21 @@ export async function listManagedUsers(actorId: string): Promise<{
       floor: string;
     }>;
   const roles = await listManagedRoles();
+  const [qualifications, held] = (await Promise.all([
+    sql`SELECT q.id, q.code, q.name, q.grants_medication FROM carecore_qualifications q
+      WHERE q.organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}) ORDER BY q.code`,
+    sql`SELECT eq.user_id, eq.qualification_id FROM carecore_employee_qualifications eq
+      JOIN carecore_qualifications q ON q.id = eq.qualification_id
+      JOIN carecore_organizations o ON o.id = q.organization_id
+      WHERE q.organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId})
+        AND eq.valid_from <= (NOW() AT TIME ZONE o.timezone)::date
+        AND (eq.valid_until IS NULL OR eq.valid_until >= (NOW() AT TIME ZONE o.timezone)::date)`,
+  ])) as unknown as [
+    Array<{ id: string; code: string; name: string; grants_medication: boolean }>,
+    Array<{ user_id: string; qualification_id: string }>,
+  ];
   const audit =
-    (await sql`SELECT COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')::int AS recent_count, MAX(created_at) AS last_audit_at FROM carecore_audit_log WHERE entity_type IN ('user', 'role')`) as unknown as Array<{
+    (await sql`SELECT COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')::int AS recent_count, MAX(created_at) AS last_audit_at FROM carecore_audit_log WHERE entity_type IN ('user', 'role') AND organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId})`) as unknown as Array<{
       recent_count: number;
       last_audit_at: string | null;
     }>;
@@ -110,6 +127,13 @@ export async function listManagedUsers(actorId: string): Promise<{
       archivedAt: user.archived_at,
       createdAt: user.created_at,
       lastSeenAt: user.last_seen_at,
+      qualificationIds: held.filter((row) => row.user_id === user.id).map((row) => row.qualification_id),
+    })),
+    qualifications: qualifications.map((q) => ({
+      id: q.id,
+      code: q.code,
+      name: q.name,
+      grantsMedication: Boolean(q.grants_medication),
     })),
     careUnits: careUnits.map((unit) => ({ id: unit.id, name: unit.name, detail: unit.floor || "Wohnbereich" })),
     roles,
@@ -185,17 +209,25 @@ export async function updateManagedUser(
     jobTitle?: string;
     phone?: string;
     primaryCareUnitId?: string | null;
+    qualificationIds?: string[];
     action?: "lock" | "restore";
   },
 ) {
   const sql = database();
   await assertManagedUser(sql, actorId, userId);
+  // Änderung und Protokoll gemeinsam.
   if (input.action === "lock") {
     if (userId === actorId) throw new Error("CANNOT_LOCK_SELF");
-    await sql`UPDATE carecore_users SET active = FALSE, archived_at = NOW(), archived_by = ${actorId}, archive_reason = 'Zugriff durch Administration gesperrt', updated_at = NOW() WHERE id = ${userId}`;
-    await sql`DELETE FROM carecore_sessions WHERE user_id = ${userId}`;
+    await sql.transaction([
+      sql`UPDATE carecore_users SET active = FALSE, archived_at = NOW(), archived_by = ${actorId}, archive_reason = 'Zugriff durch Administration gesperrt', updated_at = NOW() WHERE id = ${userId}`,
+      sql`DELETE FROM carecore_sessions WHERE user_id = ${userId}`,
+      auditStatement(sql, actorId, "user", userId, "lock", input),
+    ]);
   } else if (input.action === "restore") {
-    await sql`UPDATE carecore_users SET active = TRUE, archived_at = NULL, archived_by = NULL, archive_reason = NULL, updated_at = NOW() WHERE id = ${userId}`;
+    await sql.transaction([
+      sql`UPDATE carecore_users SET active = TRUE, archived_at = NULL, archived_by = NULL, archive_reason = NULL, updated_at = NOW() WHERE id = ${userId}`,
+      auditStatement(sql, actorId, "user", userId, "restore", input),
+    ]);
   } else {
     const name = input.displayName?.trim().slice(0, 120);
     const username = input.username?.trim().slice(0, 80);
@@ -203,15 +235,64 @@ export async function updateManagedUser(
     if (!name || !username || !role) throw new Error("INVALID_USER_INPUT");
     await assertRole(sql, role);
     if (input.primaryCareUnitId) await assertCareUnit(sql, actorId, input.primaryCareUnitId);
-    await sql`UPDATE carecore_users SET display_name = ${name}, username = ${username}, role = ${role}, updated_at = NOW() WHERE id = ${userId}`;
-    await sql`INSERT INTO carecore_user_profiles (user_id, organization_id, job_title, phone, primary_care_unit_id) VALUES (${userId}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}), ${input.jobTitle?.trim().slice(0, 140) || null}, ${input.phone?.trim().slice(0, 60) || null}, ${input.primaryCareUnitId ?? null}) ON CONFLICT (user_id) DO UPDATE SET organization_id = COALESCE(carecore_user_profiles.organization_id, EXCLUDED.organization_id), job_title = EXCLUDED.job_title, phone = EXCLUDED.phone, primary_care_unit_id = EXCLUDED.primary_care_unit_id, updated_at = NOW()`;
-    if (input.primaryCareUnitId) {
-      await sql`UPDATE carecore_user_unit_assignments SET is_primary = FALSE WHERE user_id = ${userId}`;
-      await sql`INSERT INTO carecore_user_unit_assignments (user_id, care_unit_id, assignment_role, is_primary) VALUES (${userId}, ${input.primaryCareUnitId}, 'Mitarbeitende:r', TRUE) ON CONFLICT (user_id, care_unit_id) DO UPDATE SET is_primary = TRUE, ends_on = NULL`;
-    }
+    const qualifications = input.qualificationIds
+      ? await qualificationChanges(sql, actorId, userId, input.qualificationIds)
+      : [];
+    await sql.transaction([
+      sql`UPDATE carecore_users SET display_name = ${name}, username = ${username}, role = ${role}, updated_at = NOW() WHERE id = ${userId}`,
+      sql`INSERT INTO carecore_user_profiles (user_id, organization_id, job_title, phone, primary_care_unit_id) VALUES (${userId}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}), ${input.jobTitle?.trim().slice(0, 140) || null}, ${input.phone?.trim().slice(0, 60) || null}, ${input.primaryCareUnitId ?? null}) ON CONFLICT (user_id) DO UPDATE SET organization_id = COALESCE(carecore_user_profiles.organization_id, EXCLUDED.organization_id), job_title = EXCLUDED.job_title, phone = EXCLUDED.phone, primary_care_unit_id = EXCLUDED.primary_care_unit_id, updated_at = NOW()`,
+      ...(input.primaryCareUnitId
+        ? [
+            sql`UPDATE carecore_user_unit_assignments SET is_primary = FALSE WHERE user_id = ${userId}`,
+            sql`INSERT INTO carecore_user_unit_assignments (user_id, care_unit_id, assignment_role, is_primary) VALUES (${userId}, ${input.primaryCareUnitId}, 'Mitarbeitende:r', TRUE) ON CONFLICT (user_id, care_unit_id) DO UPDATE SET is_primary = TRUE, ends_on = NULL`,
+          ]
+        : []),
+      ...qualifications,
+      auditStatement(sql, actorId, "user", userId, "updated", input),
+    ]);
   }
-  await audit(actorId, userId, input.action ?? "updated", input);
   return listManagedUsers(actorId);
+}
+
+// Qualifikationen setzen: neue gelten ab heute, entfernte enden gestern (am selben Tag vergebene werden
+// zurückgenommen); frühere Zeiträume bleiben als Verlauf erhalten.
+async function qualificationChanges(
+  sql: ReturnType<typeof database>,
+  actorId: string,
+  userId: string,
+  requested: string[],
+) {
+  const own = (await sql`
+    SELECT q.id FROM carecore_qualifications q
+    WHERE q.organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId})`) as unknown as Array<{
+    id: string;
+  }>;
+  const allowed = new Set(own.map((row) => row.id));
+  const wanted = [...new Set(requested)];
+  if (wanted.some((id) => !allowed.has(id))) throw new Error("QUALIFICATION_NOT_FOUND");
+  return [
+    sql`DELETE FROM carecore_employee_qualifications eq USING carecore_organizations o, carecore_user_profiles p
+      WHERE eq.user_id = ${userId} AND p.user_id = ${actorId} AND o.id = p.organization_id
+        AND NOT (eq.qualification_id = ANY(${wanted}::uuid[]))
+        AND eq.valid_from = (NOW() AT TIME ZONE o.timezone)::date`,
+    sql`UPDATE carecore_employee_qualifications eq SET valid_until = (NOW() AT TIME ZONE o.timezone)::date - 1
+      FROM carecore_organizations o, carecore_user_profiles p
+      WHERE eq.user_id = ${userId} AND p.user_id = ${actorId} AND o.id = p.organization_id
+        AND NOT (eq.qualification_id = ANY(${wanted}::uuid[]))
+        AND eq.valid_from < (NOW() AT TIME ZONE o.timezone)::date
+        AND (eq.valid_until IS NULL OR eq.valid_until >= (NOW() AT TIME ZONE o.timezone)::date)`,
+    sql`INSERT INTO carecore_employee_qualifications (user_id, qualification_id, valid_from)
+      SELECT ${userId}, wanted.id, (NOW() AT TIME ZONE o.timezone)::date
+      FROM unnest(${wanted}::uuid[]) AS wanted(id)
+      JOIN carecore_user_profiles p ON p.user_id = ${actorId}
+      JOIN carecore_organizations o ON o.id = p.organization_id
+      WHERE NOT EXISTS (
+        SELECT 1 FROM carecore_employee_qualifications eq
+        WHERE eq.user_id = ${userId} AND eq.qualification_id = wanted.id
+          AND eq.valid_from <= (NOW() AT TIME ZONE o.timezone)::date
+          AND (eq.valid_until IS NULL OR eq.valid_until >= (NOW() AT TIME ZONE o.timezone)::date))
+      ON CONFLICT DO NOTHING`,
+  ];
 }
 
 export async function createManagedUser(
@@ -235,17 +316,22 @@ export async function createManagedUser(
   if (input.primaryCareUnitId) await assertCareUnit(sql, actorId, input.primaryCareUnitId);
   const id = randomUUID();
   const passwordHash = await hashPassword(input.password);
-  await sql`INSERT INTO carecore_users (id, username, display_name, role, password_hash) VALUES (${id}, ${username}, ${displayName}, ${role}, ${passwordHash})`;
-  // New employees belong to the organization of the administrator who creates them.
-  await sql`INSERT INTO carecore_user_profiles (user_id, organization_id, job_title, phone, primary_care_unit_id) VALUES (${id}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}), ${input.jobTitle?.trim().slice(0, 140) || null}, ${input.phone?.trim().slice(0, 60) || null}, ${input.primaryCareUnitId ?? null})`;
-  if (input.primaryCareUnitId)
-    await sql`INSERT INTO carecore_user_unit_assignments (user_id, care_unit_id, assignment_role, is_primary) VALUES (${id}, ${input.primaryCareUnitId}, 'Mitarbeitende:r', TRUE)`;
-  await audit(actorId, id, "created", {
-    displayName,
-    username,
-    role,
-    primaryCareUnitId: input.primaryCareUnitId ?? null,
-  });
+  await sql.transaction([
+    sql`INSERT INTO carecore_users (id, username, display_name, role, password_hash) VALUES (${id}, ${username}, ${displayName}, ${role}, ${passwordHash})`,
+    // New employees belong to the organization of the administrator who creates them.
+    sql`INSERT INTO carecore_user_profiles (user_id, organization_id, job_title, phone, primary_care_unit_id) VALUES (${id}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}), ${input.jobTitle?.trim().slice(0, 140) || null}, ${input.phone?.trim().slice(0, 60) || null}, ${input.primaryCareUnitId ?? null})`,
+    ...(input.primaryCareUnitId
+      ? [
+          sql`INSERT INTO carecore_user_unit_assignments (user_id, care_unit_id, assignment_role, is_primary) VALUES (${id}, ${input.primaryCareUnitId}, 'Mitarbeitende:r', TRUE)`,
+        ]
+      : []),
+    auditStatement(sql, actorId, "user", id, "created", {
+      displayName,
+      username,
+      role,
+      primaryCareUnitId: input.primaryCareUnitId ?? null,
+    }),
+  ]);
   return listManagedUsers(actorId);
 }
 
@@ -253,8 +339,10 @@ export async function deleteManagedUser(actorId: string, userId: string) {
   if (userId === actorId) throw new Error("CANNOT_DELETE_SELF");
   const sql = database();
   await assertManagedUser(sql, actorId, userId);
-  await audit(actorId, userId, "deleted", { permanentlyDeleted: true });
-  await sql`DELETE FROM carecore_users WHERE id = ${userId}`;
+  await sql.transaction([
+    auditStatement(sql, actorId, "user", userId, "deleted", { permanentlyDeleted: true }),
+    sql`DELETE FROM carecore_users WHERE id = ${userId}`,
+  ]);
   return listManagedUsers(actorId);
 }
 
@@ -281,8 +369,10 @@ export async function createManagedRole(
   const id = randomUUID();
   const permissions = normalizePermissions(input.permissions);
   const medicationRequiresQualification = input.medicationRequiresQualification === true;
-  await sql`INSERT INTO carecore_roles (id, key, name, description, permissions, medication_requires_qualification, created_by) VALUES (${id}, ${key}, ${name}, ${input.description?.trim().slice(0, 500) ?? ""}, ${JSON.stringify(permissions)}::jsonb, ${medicationRequiresQualification}, ${actorId})`;
-  await auditRole(actorId, id, "created", { key, name, permissions, medicationRequiresQualification });
+  await sql.transaction([
+    sql`INSERT INTO carecore_roles (id, key, name, description, permissions, medication_requires_qualification, created_by) VALUES (${id}, ${key}, ${name}, ${input.description?.trim().slice(0, 500) ?? ""}, ${JSON.stringify(permissions)}::jsonb, ${medicationRequiresQualification}, ${actorId})`,
+    auditStatement(sql, actorId, "role", id, "created", { key, name, permissions, medicationRequiresQualification }),
+  ]);
   return listManagedRoles();
 }
 
@@ -299,12 +389,15 @@ export async function updateManagedRole(
   const medicationRequiresQualification =
     typeof input.medicationRequiresQualification === "boolean" ? input.medicationRequiresQualification : null;
   // The admin role always keeps every permission so administrators cannot lock themselves out.
-  const updated =
-    (await sql`UPDATE carecore_roles SET name = ${name}, description = ${input.description?.trim().slice(0, 500) ?? ""}, permissions = CASE WHEN key = 'admin' THEN ${JSON.stringify(roleKeys)}::jsonb ELSE ${JSON.stringify(permissions)}::jsonb END, medication_requires_qualification = CASE WHEN key = 'admin' THEN FALSE ELSE COALESCE(${medicationRequiresQualification}::boolean, medication_requires_qualification) END, updated_at = NOW() WHERE id = ${roleId} RETURNING id`) as unknown as Array<{
-      id: string;
-    }>;
+  const [updated] = (await sql.transaction([
+    sql`UPDATE carecore_roles SET name = ${name}, description = ${input.description?.trim().slice(0, 500) ?? ""}, permissions = CASE WHEN key = 'admin' THEN ${JSON.stringify(roleKeys)}::jsonb ELSE ${JSON.stringify(permissions)}::jsonb END, medication_requires_qualification = CASE WHEN key = 'admin' THEN FALSE ELSE COALESCE(${medicationRequiresQualification}::boolean, medication_requires_qualification) END, updated_at = NOW() WHERE id = ${roleId} RETURNING id`,
+    // Nur protokolliert, wenn die Rolle existiert.
+    sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
+      SELECT ${randomUUID()}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}), ${actorId}, 'role', id,
+        'updated', ${JSON.stringify({ name, permissions, medicationRequiresQualification })}::jsonb
+      FROM carecore_roles WHERE id = ${roleId}`,
+  ])) as unknown as Array<Array<{ id: string }>>;
   if (!updated[0]) throw new Error("ROLE_NOT_FOUND");
-  await auditRole(actorId, roleId, "updated", { name, permissions, medicationRequiresQualification });
   return listManagedRoles();
 }
 
@@ -322,16 +415,23 @@ export async function deleteManagedRole(actorId: string, roleId: string) {
       count: number;
     }>;
   if (Number(users[0]?.count) > 0) throw new Error("ROLE_IN_USE");
-  await sql`DELETE FROM carecore_roles WHERE id = ${roleId}`;
-  await auditRole(actorId, roleId, "deleted", { key: role[0].key });
+  await sql.transaction([
+    sql`DELETE FROM carecore_roles WHERE id = ${roleId}`,
+    auditStatement(sql, actorId, "role", roleId, "deleted", { key: role[0].key }),
+  ]);
   return listManagedRoles();
 }
 
-async function audit(actorId: string, userId: string, action: string, afterData: unknown) {
-  const sql = database();
-  await sql`INSERT INTO carecore_audit_log (id, actor_user_id, entity_type, entity_id, action, after_data) VALUES (${randomUUID()}, ${actorId}, 'user', ${userId}, ${action}, ${JSON.stringify(afterData)}::jsonb)`;
-}
-async function auditRole(actorId: string, roleId: string, action: string, afterData: unknown) {
-  const sql = database();
-  await sql`INSERT INTO carecore_audit_log (id, actor_user_id, entity_type, entity_id, action, after_data) VALUES (${randomUUID()}, ${actorId}, 'role', ${roleId}, ${action}, ${JSON.stringify(afterData)}::jsonb)`;
+// Protokolleintrag mit der Organisation der handelnden Person, für `sql.transaction([...])`.
+function auditStatement(
+  sql: ReturnType<typeof database>,
+  actorId: string,
+  entityType: "user" | "role",
+  entityId: string,
+  action: string,
+  afterData: unknown,
+) {
+  return sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
+    VALUES (${randomUUID()}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}), ${actorId},
+      ${entityType}, ${entityId}, ${action}, ${JSON.stringify(afterData)}::jsonb)`;
 }

@@ -15,6 +15,7 @@ import {
 } from "@/lib/wounds-shared";
 import EntryFields, { emptyEntry, entryPayload, type EntryDraft } from "./entry-fields";
 import { useCareResident } from "@/app/components/care-context";
+import { sendOrQueue } from "@/app/components/offline-queue";
 
 export type WoundsPayload = {
   wounds: Wound[];
@@ -265,11 +266,15 @@ export function EntryDialog({
     setSaving(true);
     setError("");
     try {
-      await requestJson(`/api/wounds/${wound.id}/entries`, {
-        method: "POST",
-        body: { ...entryPayload(entry), entryType, observedAt: zurichTimeToIso(date, time), woundStatus: status },
-      });
-      onSaved(`${wound.residentName}: ${entryType} dokumentiert`);
+      const result = await sendOrQueue(
+        `/api/wounds/${wound.id}/entries`,
+        { ...entryPayload(entry), entryType, observedAt: zurichTimeToIso(date, time), woundStatus: status },
+        `${entryType} · ${wound.residentName}`,
+        { field: "note", label: "Bemerkung" },
+      );
+      onSaved(
+        `${wound.residentName}: ${entryType} ${result.queued ? "offline gespeichert – wird gesendet, sobald die Verbindung zurück ist" : "dokumentiert"}`,
+      );
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Eintrag konnte nicht gespeichert werden.");
       setSaving(false);

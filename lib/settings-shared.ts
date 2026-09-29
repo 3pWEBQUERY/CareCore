@@ -8,6 +8,7 @@ export type SettingKey =
   | "vitalsReminder"
   | "medicationOverdue"
   | "btmCountInterval"
+  | "btmAdministrationWitness"
   | "navigationBadges"
   | "keyboardShortcuts";
 
@@ -68,6 +69,14 @@ export const SETTING_DEFINITIONS: Record<SettingKey, Definition> = {
     unit: "Tage",
     min: 1,
     max: 365,
+    defaults: { enabled: false, value: null },
+  },
+  // Ob Gaben von Betäubungsmitteln eine Zweitunterschrift brauchen, entscheidet die Einrichtung.
+  btmAdministrationWitness: {
+    title: "Zweitunterschrift bei BtM-Gaben",
+    icon: "med",
+    area: "Medikamentenrunde & Reserven",
+    describe: () => "Gaben von Betäubungsmitteln bestätigt eine zweite berechtigte Person mit ihrem Passwort",
     defaults: { enabled: false, value: null },
   },
   navigationBadges: {

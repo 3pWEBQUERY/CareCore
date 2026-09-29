@@ -27,9 +27,12 @@ export function CareSelect({
 }) {
   const [open, setOpen] = useState(false);
   const [openUp, setOpenUp] = useState(false);
+  // Mit der Tastatur markierte Option (-1: keine, z. B. nach dem Öffnen mit der Maus).
+  const [active, setActive] = useState(-1);
   const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
   const rootRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const listId = useId();
   const updatePosition = useCallback(() => {
     const rect = rootRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -56,35 +59,80 @@ export function CareSelect({
       window.removeEventListener("scroll", updatePosition, true);
     };
   }, [open, updatePosition]);
+  useEffect(() => {
+    if (open && active >= 0)
+      menuRef.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [open, active]);
   const toggle = () =>
     setOpen((current) => {
       if (!current) updatePosition();
       else setOpenUp(false);
+      setActive(-1);
       return !current;
     });
+  const close = () => {
+    setOpen(false);
+    setOpenUp(false);
+    setActive(-1);
+  };
+  // Tastatur: Pfeiltasten, Pos1/Ende, Enter/Leertaste wählen, Escape und Tab schliessen.
+  const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    const count = options.length;
+    if (!open) {
+      if (["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) {
+        event.preventDefault();
+        updatePosition();
+        setActive(Math.max(options.indexOf(value), 0));
+        setOpen(true);
+      }
+      return;
+    }
+    if (event.key === "Escape" || event.key === "Tab") {
+      if (event.key === "Escape") event.preventDefault();
+      close();
+    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      setActive(
+        active < 0
+          ? Math.max(options.indexOf(value), 0)
+          : (active + (event.key === "ArrowDown" ? 1 : -1) + count) % count,
+      );
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      setActive(event.key === "Home" ? 0 : count - 1);
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (active >= 0 && options[active] !== undefined) onChange(options[active]);
+      close();
+    }
+  };
   const menu =
     open && typeof document !== "undefined"
       ? createPortal(
           <div
             ref={menuRef}
             className={`area-select-menu area-select-menu-portal ${openUp ? "up" : ""}`}
+            id={listId}
             role="listbox"
             aria-label={label}
             style={{ ...position, zIndex: menuZIndex }}
           >
-            {options.map((option) => (
+            {options.map((option, index) => (
               <button
                 type="button"
                 role="option"
+                id={`${listId}-${index}`}
+                data-index={index}
                 aria-selected={value === option}
-                className={value === option ? "selected" : ""}
+                className={[value === option ? "selected" : "", index === active ? "active" : ""]
+                  .filter(Boolean)
+                  .join(" ")}
                 key={option}
                 onClick={(event) => {
                   // Inside a <label> the click would otherwise re-activate the trigger and reopen the menu.
                   event.preventDefault();
                   onChange(option);
-                  setOpen(false);
-                  setOpenUp(false);
+                  close();
                 }}
               >
                 {option}
@@ -101,10 +149,14 @@ export function CareSelect({
         <button
           className="area-select-trigger"
           type="button"
+          role="combobox"
           aria-haspopup="listbox"
           aria-expanded={open}
+          aria-controls={open ? listId : undefined}
+          aria-activedescendant={open && active >= 0 ? `${listId}-${active}` : undefined}
           aria-label={label}
           onClick={toggle}
+          onKeyDown={onKeyDown}
         >
           <span>{value}</span>
           <ModuleIcon name="caretDown" className={open ? "open" : ""} />

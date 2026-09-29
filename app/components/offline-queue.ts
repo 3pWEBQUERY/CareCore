@@ -13,6 +13,8 @@ export type QueuedWrite = {
   body: unknown;
   label: string;
   createdAt: string;
+  // Textfeld, das vor dem Senden noch korrigiert werden kann (z. B. der Dokumentationstext).
+  editable?: { field: string; label: string };
   // Vom Server abgelehnt (z. B. Eingabe ungültig): bleibt sichtbar, bis die Person ihn verwirft.
   error?: string;
 };
@@ -59,6 +61,17 @@ async function saveWrite(item: QueuedWrite) {
   changed();
 }
 
+// Vorgemerkten Eintrag korrigieren: neuer Text im bearbeitbaren Feld; ein abgelehnter Eintrag wird damit erneut
+// gesendet (die Kennung bleibt, der Server hat ihn ja nicht gespeichert).
+export async function editWrite(item: QueuedWrite, value: string) {
+  if (!item.editable || !item.body || typeof item.body !== "object") return;
+  await saveWrite({
+    ...item,
+    body: { ...(item.body as Record<string, unknown>), [item.editable.field]: value },
+    error: undefined,
+  });
+}
+
 // Angemeldete Person (von OfflineSync gesetzt), damit Einträge nur mit ihrer Sitzung gesendet werden.
 let currentUserId: string | null = null;
 export const setOfflineUser = (userId: string | null) => {
@@ -83,6 +96,7 @@ export async function sendOrQueue<T>(
   url: string,
   body: unknown,
   label: string,
+  editable?: { field: string; label: string },
 ): Promise<{ queued: false; data: T } | { queued: true }> {
   const requestId = crypto.randomUUID();
   try {
@@ -93,7 +107,15 @@ export async function sendOrQueue<T>(
     // Nur Verbindungsfehler werden vorgemerkt; Ablehnungen des Servers zeigt das Formular direkt.
     if (!(error instanceof TypeError)) throw error;
     if (!currentUserId) throw new Error("Keine Verbindung. Der Eintrag konnte nicht gespeichert werden.");
-    await saveWrite({ id: requestId, userId: currentUserId, url, body, label, createdAt: new Date().toISOString() });
+    await saveWrite({
+      id: requestId,
+      userId: currentUserId,
+      url,
+      body,
+      label,
+      createdAt: new Date().toISOString(),
+      editable,
+    });
     return { queued: true };
   }
 }

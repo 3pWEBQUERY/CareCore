@@ -152,6 +152,7 @@ export default function AdminUserManagement({
           user={selected}
           careUnits={data?.careUnits ?? []}
           roles={data?.roles ?? []}
+          qualifications={data?.qualifications ?? []}
           onClose={() => setSelected(null)}
           onUpdated={(next, message) => {
             setData(next);

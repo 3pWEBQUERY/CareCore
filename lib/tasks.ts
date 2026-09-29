@@ -5,10 +5,11 @@ import {
   assertUuid,
   iso,
   text,
-  writeAudit,
+  auditStatement,
   type ApiContext,
   type Row,
 } from "@/lib/api-context";
+import { capturedAt } from "@/lib/request-receipts";
 import { listCareUnits } from "@/lib/medication";
 import { hasPermission } from "@/lib/server-data";
 import {
@@ -214,13 +215,15 @@ async function notifyAssignee(ctx: ApiContext, taskId: string, input: TaskInput,
 export async function createTask(ctx: ApiContext, body: Record<string, unknown>) {
   const input = await parseTask(ctx, body);
   const id = randomUUID();
-  await ctx.sql`
+  await ctx.sql.transaction([
+    ctx.sql`
     INSERT INTO carecore_tasks (id, organization_id, resident_id, care_unit_id, assigned_to, created_by, title, description,
       category, priority, due_at, recurrence, team_visible, remind, document_on_completion)
     VALUES (${id}, ${ctx.actor.organizationId}, ${input.residentId}, ${input.careUnitId}, ${input.assignedTo}, ${ctx.actor.id},
       ${input.title}, ${input.description || null}, ${input.category}, ${input.priority}, ${input.dueAt}, ${input.recurrence},
-      ${input.teamVisible}, ${input.remind}, ${input.documentOnCompletion})`;
-  await writeAudit(ctx, "task", id, "created", null, input);
+      ${input.teamVisible}, ${input.remind}, ${input.documentOnCompletion})`,
+    auditStatement(ctx, "task", id, "created", null, input),
+  ]);
   await notifyAssignee(ctx, id, input, null);
   return id;
 }
@@ -232,15 +235,17 @@ export async function updateTask(ctx: ApiContext, taskIdInput: unknown, body: Re
   if (before.status === "completed" || before.status === "cancelled")
     throw new ApiError("Erledigte oder abgebrochene Aufgaben können nicht mehr geändert werden.", 409);
   const input = await parseTask(ctx, { assignedTo: before.assignedTo, ...body });
-  await ctx.sql`
+  await ctx.sql.transaction([
+    ctx.sql`
     UPDATE carecore_tasks SET title = ${input.title}, description = ${input.description || null}, category = ${input.category},
       priority = ${input.priority}, resident_id = ${input.residentId}, care_unit_id = ${input.careUnitId},
       assigned_to = ${input.assignedTo}, due_at = ${input.dueAt}, recurrence = ${input.recurrence},
       team_visible = ${input.teamVisible}, remind = ${input.remind}, document_on_completion = ${input.documentOnCompletion},
       reminded_at = CASE WHEN due_at IS DISTINCT FROM ${input.dueAt}::timestamptz THEN NULL ELSE reminded_at END,
       updated_at = NOW()
-    WHERE id = ${before.id} AND organization_id = ${ctx.actor.organizationId}`;
-  await writeAudit(ctx, "task", before.id, "updated", before, input);
+    WHERE id = ${before.id} AND organization_id = ${ctx.actor.organizationId}`,
+    auditStatement(ctx, "task", before.id, "updated", before, input),
+  ]);
   await notifyAssignee(ctx, before.id, input, before.assignedTo);
 }
 
@@ -266,17 +271,21 @@ export async function setTaskStatus(ctx: ApiContext, taskIdInput: unknown, body:
     if (!task.canEdit) throw new ApiError("Nur Ersteller, Verantwortliche oder die Leitung dürfen abbrechen.", 403);
     const reason = text(body.reason, 1000);
     if (!reason) throw new ApiError("Bitte den Grund für den Abbruch angeben.");
-    await sql`UPDATE carecore_tasks SET status = 'cancelled', cancel_reason = ${reason}, updated_at = NOW() WHERE id = ${task.id}`;
-    await writeAudit(ctx, "task", task.id, "cancelled", { status: task.status }, { status, reason });
+    await sql.transaction([
+      sql`UPDATE carecore_tasks SET status = 'cancelled', cancel_reason = ${reason}, updated_at = NOW() WHERE id = ${task.id}`,
+      auditStatement(ctx, "task", task.id, "cancelled", { status: task.status }, { status, reason }),
+    ]);
     return;
   }
 
   if (status === "completed") {
     const note = text(body.note, 10000);
+    // Offline erledigt: der Zeitpunkt der Erledigung, nicht der Übertragung.
+    const completedAt = capturedAt(body.completedAt);
     if (task.documentOnCompletion && note.length < 3)
       throw new ApiError("Diese Aufgabe verlangt eine Dokumentation. Bitte kurz beschreiben, was durchgeführt wurde.");
     const statements = [
-      sql`UPDATE carecore_tasks SET status = 'completed', completed_at = NOW(), completed_by = ${actor.id},
+      sql`UPDATE carecore_tasks SET status = 'completed', completed_at = COALESCE(${completedAt}::timestamptz, NOW()), completed_by = ${actor.id},
         completion_note = ${note || null}, updated_at = NOW() WHERE id = ${task.id}`,
     ];
     if (note && task.residentId && task.documentOnCompletion)
@@ -284,7 +293,8 @@ export async function setTaskStatus(ctx: ApiContext, taskIdInput: unknown, body:
         INSERT INTO carecore_documentation_entries (id, resident_id, care_unit_id, author_user_id, category, title, body, occurred_at, importance)
         SELECT ${randomUUID()}, ${task.residentId},
           (SELECT care_unit_id FROM carecore_resident_stays WHERE resident_id = ${task.residentId} AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1),
-          ${actor.id}, ${TASK_DOC_CATEGORY[task.category] ?? "Pflege"}, ${task.title}, ${`${task.title}: ${note}`}, NOW(), 'standard'`);
+          ${actor.id}, ${TASK_DOC_CATEGORY[task.category] ?? "Pflege"}, ${task.title}, ${`${task.title}: ${note}`},
+          COALESCE(${completedAt}::timestamptz, NOW()), 'standard'`);
     let followUpId: string | null = null;
     if (task.recurrence !== "none" && task.dueAt) {
       followUpId = randomUUID();
@@ -296,8 +306,10 @@ export async function setTaskStatus(ctx: ApiContext, taskIdInput: unknown, body:
         FROM carecore_tasks WHERE id = ${task.id}`);
       statements.push(sql`UPDATE carecore_tasks SET follow_up_task_id = ${followUpId} WHERE id = ${task.id}`);
     }
+    statements.push(
+      auditStatement(ctx, "task", task.id, "completed", { status: task.status }, { status, note, followUpId }),
+    );
     await sql.transaction(statements);
-    await writeAudit(ctx, "task", task.id, "completed", { status: task.status }, { status, note, followUpId });
     return;
   }
 
@@ -307,15 +319,15 @@ export async function setTaskStatus(ctx: ApiContext, taskIdInput: unknown, body:
       WHERE id = (SELECT follow_up_task_id FROM carecore_tasks WHERE id = ${task.id}) AND status = 'open'`,
     sql`UPDATE carecore_tasks SET status = ${status}, completed_at = NULL, completed_by = NULL, completion_note = NULL,
       follow_up_task_id = NULL, updated_at = NOW() WHERE id = ${task.id}`,
+    auditStatement(
+      ctx,
+      "task",
+      task.id,
+      status === "open" ? "reopened" : "started",
+      { status: task.status },
+      { status },
+    ),
   ]);
-  await writeAudit(
-    ctx,
-    "task",
-    task.id,
-    status === "open" ? "reopened" : "started",
-    { status: task.status },
-    { status },
-  );
 }
 
 // Creates due-date reminders for the signed-in person (called when notifications are loaded).

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useWorkContext } from "@/app/components/care-context";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import { ModuleIcon } from "@/app/components/module-icon";
 import {
@@ -11,7 +12,9 @@ import {
   type RoundDose,
   type RoundKey,
 } from "@/lib/medication-shared";
+import type { WitnessInput } from "@/lib/medication-btm-shared";
 import {
+  EditorDialog,
   EmptyState,
   LoadError,
   PageHeading,
@@ -24,6 +27,7 @@ import {
   useApiData,
   type ShowToast,
 } from "@/app/components/workspace-ui";
+import { WitnessFields, emptyWitness } from "./btm-witness";
 import type { ResidentsPayload } from "./plan-view";
 
 const statusTone: Record<RoundDose["status"], string> = {
@@ -63,6 +67,8 @@ export default function RoundView({ showToast }: { showToast: ShowToast }) {
     status: Exclude<AdministrationStatus, "administered">;
   } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [witnessDose, setWitnessDose] = useState<RoundDose | null>(null);
+  const witnessRequired = useWorkContext()?.settings.btmAdministrationWitness.enabled ?? false;
   const permissions = useApiData<ResidentsPayload>("/api/medication/residents");
   const canManage = permissions.data?.canManage ?? false;
   const { data, error, loading, reload } = useApiData<{ date: string; doses: RoundDose[] }>(
@@ -75,17 +81,18 @@ export default function RoundView({ showToast }: { showToast: ShowToast }) {
   const percent = doses.length ? Math.round((documented / doses.length) * 100) : 0;
   const keyOf = (dose: RoundDose) => `${dose.orderId}-${dose.scheduledAt}`;
 
-  async function documentDose(dose: RoundDose, status: AdministrationStatus, note?: string) {
+  async function documentDose(dose: RoundDose, status: AdministrationStatus, note?: string, witness?: WitnessInput) {
     setBusy(keyOf(dose));
     try {
       const result = await requestJson<{ stockNote: string | null }>("/api/medication/round", {
         method: "POST",
-        body: { orderId: dose.orderId, scheduledAt: dose.scheduledAt, status, note },
+        body: { orderId: dose.orderId, scheduledAt: dose.scheduledAt, status, note, witness },
       });
       showToast(
         `${dose.residentName}: ${dose.medication} – ${administrationLabels[status]} dokumentiert${result.stockNote ? `. ${result.stockNote}` : ""}`,
       );
       setPending(null);
+      setWitnessDose(null);
       reload();
     } finally {
       setBusy(null);
@@ -190,7 +197,11 @@ export default function RoundView({ showToast }: { showToast: ShowToast }) {
                     <button
                       type="button"
                       disabled={isBusy}
-                      onClick={() => void documentDose(dose, "administered").catch((e: Error) => showToast(e.message))}
+                      onClick={() =>
+                        dose.controlled && witnessRequired
+                          ? setWitnessDose(dose)
+                          : void documentDose(dose, "administered").catch((e: Error) => showToast(e.message))
+                      }
                     >
                       Gegeben
                     </button>
@@ -222,6 +233,13 @@ export default function RoundView({ showToast }: { showToast: ShowToast }) {
           {loading && !data && <p className="list-hint">Runde wird geladen …</p>}
         </div>
       </section>
+      {witnessDose && (
+        <WitnessDialog
+          dose={witnessDose}
+          onClose={() => setWitnessDose(null)}
+          onConfirm={(witness) => documentDose(witnessDose, "administered", undefined, witness)}
+        />
+      )}
       {pending && (
         <ReasonDialog
           title={reasonCopy[pending.status].title}
@@ -251,5 +269,45 @@ export default function RoundView({ showToast }: { showToast: ShowToast }) {
         </ReasonDialog>
       )}
     </>
+  );
+}
+
+// Gabe eines Betäubungsmittels, wenn die Einrichtung dafür eine Zweitunterschrift verlangt.
+function WitnessDialog({
+  dose,
+  onClose,
+  onConfirm,
+}: {
+  dose: RoundDose;
+  onClose: () => void;
+  onConfirm: (witness: WitnessInput) => Promise<void>;
+}) {
+  const [witness, setWitness] = useState(emptyWitness);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const submit = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      await onConfirm(witness);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Die Gabe konnte nicht dokumentiert werden.");
+      setSaving(false);
+    }
+  };
+  return (
+    <EditorDialog
+      id="med-round-witness"
+      eyebrow={`CareCore Med · ${dose.residentName}`}
+      title={`${dose.medication} geben`}
+      description={`${dose.time} · ${dose.amount}${dose.route ? ` · ${dose.route}` : ""}. Die Einrichtung verlangt bei Betäubungsmitteln eine Zweitunterschrift.`}
+      onClose={onClose}
+      onSubmit={submit}
+      saving={saving}
+      error={error}
+      submitLabel="Gabe dokumentieren"
+    >
+      <WitnessFields value={witness} onChange={setWitness} />
+    </EditorDialog>
   );
 }
