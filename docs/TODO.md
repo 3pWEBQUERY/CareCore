@@ -89,7 +89,8 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 
 - [x] **MFA (TOTP)** mit Wiederherstellungscodes und Zurücksetzen durch die Administration. Braucht `CARECORE_MFA_KEY`.
 - [ ] **Passkeys**, danach SSO (braucht einen Identity-Provider der Einrichtung).
-- [ ] **Smart Workflow Sturz** als erste Ablaufkette mit Folgeaufgaben.
+- [x] **Smart Workflow Sturz** als erste Ablaufkette mit Folgeaufgaben. Umgesetzt für alle Ereignisarten; die
+      Schritte (Titel, Fälligkeit nach dem Ereignis, Priorität) legt das Qualitätsmanagement fest, ohne Vorgaben.
 - [ ] **Home in Kritisch / Wichtig / Routine** gliedern, ohne das bestehende Aussehen zu verändern.
 - [ ] **Resident 360** und Personal-Dashboards in Insights.
 - [ ] **Konfigurierbare Terminologie** (Bewohner / Patient / Klient), danach FR / IT / EN.

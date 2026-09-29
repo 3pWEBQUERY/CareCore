@@ -105,7 +105,9 @@ export function ReportEventDialog({
                 occurredAt: new Date(`${form.date}T${form.time}`).toISOString(),
               },
             }),
-          followUps ? `Ereignis gemeldet · ${followUps} Folgeaufgaben erstellt` : "Ereignis gemeldet",
+          followUps
+            ? `Ereignis gemeldet · ${followUps} ${followUps === 1 ? "Folgeaufgabe" : "Folgeaufgaben"} erstellt`
+            : "Ereignis gemeldet",
         )
       }
       saving={saving}
