@@ -76,3 +76,33 @@ test("Bewohnerakte: Dokument (PDF) über die Ablagefläche hochladen, Word-Datei
   await expect(page.getByText("Austrittsbericht Spital").first()).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test("Körperübersicht: Klick auf die Figur öffnet direkt „Befund erfassen“, Ziehen dreht nur", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  await page.goto("/c/bewohner");
+  await page.locator(".resident-list-row").first().click();
+  const canvas = page.locator(".clinical-body-canvas");
+  await canvas.scrollIntoViewIfNeeded();
+  await expect(page.locator(".clinical-body-status")).toHaveCount(0);
+  await expect(page.getByText("3D-Referenz")).toHaveCount(0);
+  const box = (await canvas.boundingBox())!;
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height * 0.42;
+
+  // Ziehen dreht das Modell und erfasst nichts.
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 60, y, { steps: 6 });
+  await page.mouse.up();
+  await expect(page.getByRole("dialog", { name: "Befund erfassen" })).toHaveCount(0);
+
+  // Zurück nach vorne und direkt auf den Bauch klicken.
+  await page.locator(".body-map-card").getByRole("button", { name: "Vorne" }).click();
+  await page.waitForTimeout(600);
+  await page.mouse.click(x, y);
+  const dialog = page.getByRole("dialog", { name: "Befund erfassen" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("textbox", { name: "Körperstelle" })).toHaveValue(/bauch/i);
+  expect(errors).toEqual([]);
+});

@@ -20,6 +20,8 @@ type Props = {
   observations: BodyMapObservation[];
   selectedId: string | null;
   placing: boolean;
+  // Ein Klick auf die Figur erfasst direkt einen Befund an dieser Stelle (ohne vorher „Befund hinzufügen“).
+  quickPlace?: boolean;
   // Punkt des Befunds, der gerade erfasst wird (Vorschau am Modell).
   pending?: BodyPoint | null;
   onSelect: (id: string) => void;
@@ -82,6 +84,7 @@ export function BodyMap3D({
   observations,
   selectedId,
   placing,
+  quickPlace = false,
   pending,
   onSelect,
   onPlace,
@@ -89,7 +92,7 @@ export function BodyMap3D({
 }: Props) {
   const sex: BodySex = gender === "female" ? "female" : "male";
   const containerRef = useRef<HTMLDivElement>(null);
-  const callbacks = useRef({ onSelect, onPlace, placing, observations });
+  const callbacks = useRef({ onSelect, onPlace, placing: placing || quickPlace, observations });
   const markerRef = useRef<THREE.Group | null>(null);
   const pendingRef = useRef<THREE.Group | null>(null);
   const targetYaw = useRef(0);
@@ -103,8 +106,8 @@ export function BodyMap3D({
   const [hover, setHover] = useState<Hover | null>(null);
 
   useEffect(() => {
-    callbacks.current = { onSelect, onPlace, placing, observations };
-  }, [onSelect, onPlace, placing, observations]);
+    callbacks.current = { onSelect, onPlace, placing: placing || quickPlace, observations };
+  }, [onSelect, onPlace, placing, quickPlace, observations]);
 
   const setYaw = (yaw: number) => {
     targetYaw.current = yaw;
@@ -550,7 +553,9 @@ export function BodyMap3D({
         aria-label={
           placing
             ? "Körpermodell: Körperstelle anklicken oder unten aus der Liste wählen. Escape bricht ab."
-            : "Körpermodell: Pfeiltasten drehen, Plus und Minus vergrössern, 0 setzt zurück."
+            : quickPlace
+              ? "Körpermodell: Körperstelle anklicken, um einen Befund zu erfassen. Pfeiltasten drehen, Plus und Minus vergrössern, 0 setzt zurück."
+              : "Körpermodell: Pfeiltasten drehen, Plus und Minus vergrössern, 0 setzt zurück."
         }
         onKeyDown={onKeyDown}
       >
@@ -627,7 +632,9 @@ export function BodyMap3D({
       <p className="clinical-body-hint">
         {placing
           ? "Beim Überfahren zeigt das Modell die Körperstelle an. Escape bricht ab."
-          : "Ziehen dreht · vergrössert ziehen verschiebt · Strg + Mausrad oder zwei Finger zoomen"}
+          : quickPlace
+            ? "Stelle anklicken erfasst einen Befund · Ziehen dreht · Strg + Mausrad oder zwei Finger zoomen"
+            : "Ziehen dreht · vergrössert ziehen verschiebt · Strg + Mausrad oder zwei Finger zoomen"}
       </p>
     </div>
   );
