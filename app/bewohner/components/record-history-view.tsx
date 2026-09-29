@@ -11,7 +11,7 @@ import {
   Warning,
 } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
-import { setCareResident } from "@/app/components/care-context";
+import { setCareResident, useTerms } from "@/app/components/care-context";
 import { formatDateTime } from "@/app/components/workspace-ui";
 import { appointmentDateLabel, appointmentLocalParts } from "@/lib/resident-appointments";
 import { HistoryFilter } from "./resident-record-data";
@@ -19,6 +19,7 @@ import type { ResidentRecordState } from "./use-resident-record";
 import { RecordAuditCard } from "./record-audit-card";
 
 export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
+  const t = useTerms();
   const {
     resident,
     contentRef,
@@ -53,7 +54,7 @@ export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
     <main className="resident-record-content record-history-view" ref={contentRef} key="history">
       <div className="record-subpage-heading">
         <div>
-          <span className="record-section-label">Bewohnerakte</span>
+          <span className="record-section-label">{`${t.prefix}akte`}</span>
           <h3>Verlauf</h3>
           <p>Chronologische Übersicht aller pflege- und behandlungsrelevanten Ereignisse von {resident.name}.</p>
         </div>

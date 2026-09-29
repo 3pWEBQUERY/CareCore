@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useEffect, useState, type ChangeEvent } from "react";
 import type { ResidentRecordData } from "./resident-record-data";
 
@@ -18,6 +19,7 @@ export function useRecordMasterData({
   onPhotoChanged: (() => void) | undefined;
   residentPhotoInputRef: React.RefObject<HTMLInputElement | null>;
 }) {
+  const t = useTerms();
   const [masterDataEditing, setMasterDataEditing] = useState(false);
   const [residentGender, setResidentGender] = useState(resident.gender ?? "unspecified");
   const [genderDraft, setGenderDraft] = useState(resident.gender ?? "unspecified");
@@ -48,7 +50,7 @@ export function useRecordMasterData({
 
   async function saveGender() {
     if (!resident.id) {
-      setBodyError("Diese Akte hat keine gespeicherte Bewohner-ID.");
+      setBodyError("Diese Akte ist nicht gespeichert.");
       return;
     }
     setMasterDataSaving(true);
@@ -75,7 +77,7 @@ export function useRecordMasterData({
     const file = event.currentTarget.files?.[0];
     if (!file) return;
     if (!resident.id) {
-      onAction("Dieses Bewohnerprofil kann nicht gespeichert werden.");
+      onAction(`Dieses ${t.prefix}profil kann nicht gespeichert werden.`);
       return;
     }
     if (
@@ -125,12 +127,12 @@ export function useRecordMasterData({
         body: JSON.stringify({ photoDataUrl }),
       });
       const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(data?.error || "Bewohnerbild konnte nicht gespeichert werden.");
+      if (!response.ok) throw new Error(data?.error || `${t.prefix}bild konnte nicht gespeichert werden.`);
       setResidentPhoto(data.photoDataUrl);
       onPhotoChanged?.();
-      onAction(`Bewohnerbild für ${resident.name} gespeichert`);
+      onAction(`${t.prefix}bild für ${resident.name} gespeichert`);
     } catch (error) {
-      onAction(error instanceof Error ? error.message : "Bewohnerbild konnte nicht gespeichert werden.");
+      onAction(error instanceof Error ? error.message : `${t.prefix}bild konnte nicht gespeichert werden.`);
     } finally {
       setResidentPhotoSaving(false);
       if (residentPhotoInputRef.current) residentPhotoInputRef.current.value = "";

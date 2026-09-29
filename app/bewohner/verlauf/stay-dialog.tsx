@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import { EditorDialog, requestJson, todayInZurich } from "@/app/components/workspace-ui";
@@ -19,6 +20,7 @@ export function StayDialog({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
+  const t = useTerms();
   const [kind, setKind] = useState<ExitKind>("discharged");
   const [date, setDate] = useState(todayInZurich);
   const [note, setNote] = useState("");
@@ -44,12 +46,12 @@ export function StayDialog({
   return (
     <EditorDialog
       id="stay-dialog"
-      eyebrow={`CareCore Bewohner · ${mode.resident.name}`}
+      eyebrow={`CareCore ${t.many} · ${mode.resident.name}`}
       title={exit ? "Austritt erfassen" : "Rückkehr erfassen"}
       description={
         exit
           ? "Beim Austritt und Todesfall werden Aufenthalt und offener Pflegeplan abgeschlossen; die Akte wandert ins Archiv. Bei einer externen Verlegung bleibt das Zimmer reserviert."
-          : "Der Bewohner ist wieder im Haus und erscheint erneut in allen Pflegemodulen."
+          : `Der ${t.one} ist wieder im Haus und erscheint erneut in allen Pflegemodulen.`
       }
       onClose={onClose}
       onSubmit={submit}

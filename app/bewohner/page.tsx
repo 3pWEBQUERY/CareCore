@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { MobileNavigation } from "@/app/components/mobile-navigation";
 import AppHeader from "../components/app-header";
@@ -15,6 +16,7 @@ import { ResidentDirectory } from "./components/resident-directory";
 import { ResidentSearchDialog } from "./components/resident-search-dialog";
 
 export default function ResidentsPage() {
+  const t = useTerms();
   const r = useResidentsPage();
   const {
     setResidents,
@@ -55,13 +57,13 @@ export default function ResidentsPage() {
         <main className="workspace residents-workspace">
           <section className="page-heading residents-heading" aria-labelledby="residents-page-title">
             <div className="heading-copy">
-              <p className="eyebrow">CareCore Bewohner</p>
-              <h1 id="residents-page-title">Bewohner</h1>
-              <p>Zentrale Bewohner- und Patientenakte für den gesamten Wohnbereich.</p>
+              <p className="eyebrow">CareCore {t.many}</p>
+              <h1 id="residents-page-title">{t.many}</h1>
+              <p>Zentrale {t.prefix}akte für den gesamten Wohnbereich.</p>
             </div>
             <button className="primary-button" type="button" onClick={() => setIntakeEditorOpen(true)}>
               <Icon name="plus" className="button-icon" />
-              Bewohner aufnehmen
+              {t.oneOblique} aufnehmen
             </button>
           </section>
 

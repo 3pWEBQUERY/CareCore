@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useEscapeClose } from "@/app/components/use-escape-close";
 import { useRouter } from "next/navigation";
-import { setCareResident } from "@/app/components/care-context";
+import { setCareResident, useTerms } from "@/app/components/care-context";
 import { formatDate, formatDateTime } from "@/app/components/workspace-ui";
 import { BodyMap3D } from "./body-map-3d";
 import { RecordCareProcess } from "./record-care-process";
@@ -41,6 +41,7 @@ const BODY_KIND_LABELS = Object.fromEntries(BODY_KINDS) as Record<BodyObservatio
 const NO_HINT = "Keine aktuellen Hinweise";
 
 export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
+  const t = useTerms();
   const {
     resident,
     contentRef,
@@ -426,7 +427,7 @@ export function RecordOverviewView({ r }: { r: ResidentRecordState }) {
           <section className="record-card">
             <div className="record-card-heading">
               <div>
-                <span className="record-section-label">Bewohner</span>
+                <span className="record-section-label">{t.one}</span>
                 <h3>Stammdaten</h3>
               </div>
               <button type="button" onClick={() => setActiveView("master-data")}>

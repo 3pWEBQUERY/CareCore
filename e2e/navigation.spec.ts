@@ -80,6 +80,10 @@ test("Bezeichnung der betreuten Personen umstellen: Patient", async ({ page }) =
     await page.goto("/c");
     await expect(page.locator(".summary-label").first()).toHaveText("Patienten zugeteilt");
     await expect(page.locator(".resident-context-copy small").first()).toHaveText("Patient");
+    await page.goto("/c/bewohner");
+    await expect(page.getByRole("heading", { level: 1, name: "Patienten" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Patienten aufnehmen" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Patientenverzeichnis" })).toBeVisible();
     await page.goto("/c/leitung/kennzahlen/bewohner");
     await expect(page.locator(".page-tabs").getByRole("link", { name: "Kennzahlen Patienten" })).toBeVisible();
   } finally {

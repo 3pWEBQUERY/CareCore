@@ -1,15 +1,17 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { Check, ClipboardText, PencilSimple, Plus, Trash, Warning } from "@phosphor-icons/react";
 import type { ResidentRecordState } from "./use-resident-record";
 
 export function RecordSuppliesView({ r }: { r: ResidentRecordState }) {
+  const t = useTerms();
   const { resident, contentRef, supplies, suppliesLoading, suppliesError, openSupplyEditor, deleteSupply } = r;
   return (
     <main className="resident-record-content supplies-view" ref={contentRef} key="supplies">
       <div className="record-subpage-heading">
         <div>
-          <span className="record-section-label">Bewohnerakte</span>
+          <span className="record-section-label">{`${t.prefix}akte`}</span>
           <h3>Pflegebedarf</h3>
           <p>Persönliche Hilfs- und Verbrauchsmaterialien für {resident.name} sicher verwalten.</p>
         </div>

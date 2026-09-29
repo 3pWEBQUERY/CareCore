@@ -65,7 +65,7 @@ export function useRecordContacts({
   async function saveContact(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!resident.id || !contactEditor) {
-      setContactsError("Diese Demoakte hat keine gespeicherte Bewohner-ID.");
+      setContactsError("Diese Demoakte ist nicht gespeichert.");
       return;
     }
     setContactSaving(true);

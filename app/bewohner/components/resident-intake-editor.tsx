@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { todayInZurich, useApiData } from "@/app/components/workspace-ui";
 import { useEscapeClose } from "@/app/components/use-escape-close";
@@ -24,6 +25,7 @@ export function ResidentIntakeEditor(props: Props) {
 }
 
 function IntakeForm({ onClose, onSuccess }: Props) {
+  const t = useTerms();
   const options = useApiData<IntakeOptions>("/api/residents/intake-options");
   const units = options.data?.units ?? [];
   const [firstName, setFirstName] = useState("");
@@ -93,9 +95,9 @@ function IntakeForm({ onClose, onSuccess }: Props) {
       >
         <header className="area-editor-header">
           <div>
-            <p className="eyebrow">CareCore Bewohner · Aufnahme</p>
-            <h2 id="resident-intake-title">Bewohner aufnehmen</h2>
-            <p>Erstelle die Bewohnerakte und weise die Person direkt einem Zimmer und einer Bezugspflege zu.</p>
+            <p className="eyebrow">CareCore {t.many} · Aufnahme</p>
+            <h2 id="resident-intake-title">{t.oneOblique} aufnehmen</h2>
+            <p>Erstelle die {t.prefix}akte und weise die Person direkt einem Zimmer und einer Bezugspflege zu.</p>
           </div>
           <button className="area-editor-close" type="button" onClick={onClose} aria-label="Aufnahmeeditor schliessen">
             ×
@@ -107,7 +109,7 @@ function IntakeForm({ onClose, onSuccess }: Props) {
               <Icon name="residents" />
             </span>
             <div>
-              <strong>Neue Bewohnerakte</strong>
+              <strong>Neue {t.prefix}akte</strong>
               <p>Weitere Angaben wie Hausarzt, Kontakte und Versicherung folgen danach in den Stammdaten.</p>
             </div>
             <span className="duty-assignment-status">
@@ -227,7 +229,7 @@ function IntakeForm({ onClose, onSuccess }: Props) {
           </div>
           <div className="duty-assignment-summary">
             <span>
-              <strong>{fullName || "Neue Bewohnerakte"}</strong>
+              <strong>{fullName || `Neue ${t.prefix}akte`}</strong>
               <small>{[room || "Zimmer offen", unit, careLevel].filter(Boolean).join(" · ")}</small>
             </span>
             <span>
@@ -242,7 +244,7 @@ function IntakeForm({ onClose, onSuccess }: Props) {
               Abbrechen
             </button>
             <button className="primary-button" type="submit" disabled={saving || !unitId}>
-              <Icon name="check" /> {saving ? "Speichern…" : "Bewohner aufnehmen"}
+              <Icon name="check" /> {saving ? "Speichern…" : `${t.oneOblique} aufnehmen`}
             </button>
           </footer>
           {(error || options.error) && (

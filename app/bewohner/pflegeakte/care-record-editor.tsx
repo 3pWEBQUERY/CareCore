@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { CARE_LEVELS } from "@/lib/care-levels";
 import { useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
@@ -29,6 +30,7 @@ export function CareRecordEditor({
   onClose: () => void;
   onCreated: (residentId: string, message: string) => void;
 }) {
+  const t = useTerms();
   const candidates = residents.filter((resident) => !resident.planId);
   const label = (resident: CareRecordRow) => `${resident.name} · ${resident.room || "ohne Zimmer"}`;
   const [residentId, setResidentId] = useState(
@@ -74,7 +76,7 @@ export function CareRecordEditor({
       >
         <header className="area-editor-header">
           <div>
-            <p className="eyebrow">CareCore Bewohner · Pflegeakte</p>
+            <p className="eyebrow">CareCore {t.many} · Pflegeakte</p>
             <h2 id="care-record-editor-title">Pflegeakte erstellen</h2>
             <p>
               Lege den Pflegeplan an und definiere direkt die Zuständigkeit und die erste Evaluation. Ziele und
@@ -103,8 +105,8 @@ export function CareRecordEditor({
                 <ModuleIcon name="check" />
               </span>
               <div>
-                <strong>Alle Bewohner haben eine Pflegeakte</strong>
-                <p>Für jeden aktiven Bewohner besteht bereits ein offener Pflegeplan.</p>
+                <strong>Alle {t.many} haben eine Pflegeakte</strong>
+                <p>Für jeden aktiven {t.oneOblique} besteht bereits ein offener Pflegeplan.</p>
               </div>
             </div>
           ) : (
@@ -115,7 +117,7 @@ export function CareRecordEditor({
                 </span>
                 <div>
                   <strong>Neue Pflegeakte</strong>
-                  <p>Die Akte wird mit dem ausgewählten Bewohner verknüpft und für das Team sichtbar.</p>
+                  <p>Die Akte wird mit dem ausgewählten {t.oneOblique} verknüpft und für das Team sichtbar.</p>
                 </div>
                 <span className="duty-assignment-status">
                   <i />
@@ -124,9 +126,9 @@ export function CareRecordEditor({
               </div>
               <div className="area-editor-grid">
                 <label className="area-editor-wide">
-                  Bewohner
+                  {t.one}
                   <CareSelect
-                    label="Bewohner"
+                    label={t.one}
                     value={resident ? label(resident) : ""}
                     options={candidates.map(label)}
                     onChange={(value) => setResidentId(candidates.find((item) => label(item) === value)?.id ?? "")}

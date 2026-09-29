@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Printer, X } from "@phosphor-icons/react";
@@ -20,6 +21,7 @@ const or = (value: string | null | undefined, fallback = "–") => (value && val
 
 // Überleitungsbogen (A4 hoch) für Spitaleinweisung oder Verlegung; PDF über den Druckdialog.
 export default function TransferSheetPage() {
+  const t = useTerms();
   const params = useSearchParams();
   const residentId = params.get("resident");
   const valid = /^[0-9a-f-]{36}$/i.test(residentId ?? "");
@@ -52,7 +54,7 @@ export default function TransferSheetPage() {
       </div>
       {!valid ? (
         <p className="roster-print-message" role="alert">
-          Keine Bewohnerakte gewählt.
+          Keine {t.prefix}akte gewählt.
         </p>
       ) : error ? (
         <p className="roster-print-message" role="alert">

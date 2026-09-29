@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { CalendarDots, Check, ClipboardText, PencilSimple, Plus, Trash, User } from "@phosphor-icons/react";
 import { formatDate, formatDateTime, requestJson } from "@/app/components/workspace-ui";
@@ -22,6 +23,7 @@ const GENDERS: Record<string, string> = {
 };
 
 export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
+  const t = useTerms();
   const {
     resident,
     contentRef,
@@ -78,7 +80,7 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
     <main className="resident-record-content record-master-data-view" ref={contentRef} key="master-data">
       <div className="master-data-page-heading">
         <div>
-          <span className="record-section-label">Bewohnerakte</span>
+          <span className="record-section-label">{`${t.prefix}akte`}</span>
           <h3>Stammdaten</h3>
           <p>Persönliche, organisatorische und administrative Angaben zu {resident.name}.</p>
         </div>
@@ -143,7 +145,7 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
             <User aria-hidden="true" />
           </span>
           <p>
-            <small>Bewohnernummer</small>
+            <small>{t.prefix}nummer</small>
             <strong>{summary?.master.externalNumber ?? "Nicht vergeben"}</strong>
           </p>
         </div>
@@ -251,11 +253,11 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
             <div className="master-data-form-grid">
               <label>
                 <span>Wohnbereich</span>
-                <input value={resident.unit} readOnly title="Wird über Verlegung im Bewohnerverlauf geändert" />
+                <input value={resident.unit} readOnly title={`Wird über Verlegung im ${t.prefix}verlauf geändert`} />
               </label>
               <label>
                 <span>Zimmer</span>
-                <input value={resident.room} readOnly title="Wird über Verlegung im Bewohnerverlauf geändert" />
+                <input value={resident.room} readOnly title={`Wird über Verlegung im ${t.prefix}verlauf geändert`} />
               </label>
               <label>
                 <span>Pflegebedarf</span>
