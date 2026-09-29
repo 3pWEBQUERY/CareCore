@@ -22,6 +22,9 @@ export function LearningProgressCard({ r }: { r: LearningViewState }) {
     focusRow,
     valid,
     team,
+    teams,
+    unit,
+    setUnit,
     percent,
   } = r;
   return (
@@ -49,6 +52,29 @@ export function LearningProgressCard({ r }: { r: LearningViewState }) {
             : `noch ${active.length} ${active.length === 1 ? "Kurs" : "Kurse"} offen`}
         </strong>
       </div>
+      {teams.length > 0 && (
+        <div className="learning-teams" role="group" aria-label="Übersicht je Team">
+          <p className="eyebrow">Übersicht je Team</p>
+          {teams.map((t) => (
+            <button
+              className={`learning-team ${unit === t.name ? "selected" : ""}`}
+              type="button"
+              key={t.name}
+              aria-pressed={unit === t.name}
+              onClick={() => setUnit(unit === t.name ? null : t.name)}
+            >
+              <strong>{t.name}</strong>
+              <span className="learning-team-bar">
+                <span style={{ width: `${t.percent}%` }} />
+              </span>
+              <b>{t.percent} %</b>
+              <em>
+                {t.valid} von {t.total} gültig{t.open ? ` · ${t.open} offen oder abgelaufen` : ""}
+              </em>
+            </button>
+          ))}
+        </div>
+      )}
       {compliance && focusRow && (
         <div className="learning-focus">
           <span className={`governance-focus-icon ${COMPLIANCE_STATES[focusRow.state].tone}`}>

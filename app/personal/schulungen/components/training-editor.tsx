@@ -10,6 +10,7 @@ import {
   type TrainingFormat,
 } from "@/lib/learning-shared";
 import { ScheduleSelect } from "@/app/betrieb/components/operations-ui";
+import { QuizEditor, quizBody, quizDraft } from "./quiz-editor";
 
 export function TrainingEditor({
   data,
@@ -31,6 +32,7 @@ export function TrainingEditor({
   const [validFor, setValidFor] = useState(String(training?.validForMonths ?? ""));
   const [link, setLink] = useState(training?.linkUrl ?? "");
   const [roles, setRoles] = useState<string[]>(training?.requiredRoles ?? []);
+  const [quiz, setQuiz] = useState(() => quizDraft(training?.quiz ?? null));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   return (
@@ -54,6 +56,7 @@ export function TrainingEditor({
             validForMonths: validFor ? Number(validFor) : null,
             linkUrl: link,
             requiredRoles: mandatory ? roles : [],
+            quiz: quizBody(quiz),
           };
           if (training)
             await requestJson(`/api/learning/trainings/${training.id}`, {
@@ -152,6 +155,7 @@ export function TrainingEditor({
         </div>
         {mandatory && <p className="list-hint">Keine Rolle gewählt = gilt für alle Mitarbeitenden.</p>}
       </fieldset>
+      <QuizEditor draft={quiz} onChange={setQuiz} />
     </EditorDialog>
   );
 }

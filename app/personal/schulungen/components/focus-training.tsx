@@ -40,7 +40,7 @@ export function FocusTraining({
               : e?.dueOn && activeEnrollment
                 ? `Frist ${formatDate(e.dueOn)}${e.assignedByName ? ` · zugewiesen von ${e.assignedByName}` : ""}`
                 : e?.completedAt
-                  ? `Abgeschlossen am ${formatDate(e.completedAt)}${e.validUntil ? ` · gültig bis ${formatDate(e.validUntil)}` : ""}`
+                  ? `${e.quizPassedAt && e.quizScore !== null ? `Quiz bestanden (${e.quizScore} %) · ` : ""}Abgeschlossen am ${formatDate(e.completedAt)}${e.validUntil ? ` · gültig bis ${formatDate(e.validUntil)}` : ""}`
                   : (training.description ?? trainingMeta(training, Date.parse(data.today)))}
           </p>
         </div>
@@ -69,9 +69,14 @@ export function FocusTraining({
               {booked ? "Termin ändern" : "Termin wählen"}
             </button>
           )}
+          {activeEnrollment && training.quiz && (
+            <button className="secondary-button" type="button" onClick={() => setDialog({ kind: "quiz", training })}>
+              {e?.quizScore !== null ? "Quiz wiederholen" : "Quiz starten"}
+            </button>
+          )}
           {activeEnrollment ? (
             <button
-              className="secondary-button"
+              className={training.quiz ? "quiet-button" : "secondary-button"}
               type="button"
               onClick={() => setDialog({ kind: "evidence", trainingId: training.id, userId: null })}
             >

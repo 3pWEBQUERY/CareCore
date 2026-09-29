@@ -98,6 +98,8 @@ const ACTIONS: Record<string, string> = {
   checked_out: "ausgestempelt",
   prn_administered: "Reservegabe",
   effect_checked: "Wirkungskontrolle",
+  quiz_passed: "Quiz bestanden",
+  quiz_failed: "Quiz nicht bestanden",
   medication_allergies_updated: "Allergien geändert",
   master_data_updated: "Stammdaten geändert",
   resuscitation_updated: "Reanimationsstatus geändert",

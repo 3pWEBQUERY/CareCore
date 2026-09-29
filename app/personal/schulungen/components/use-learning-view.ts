@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { requestJson, useApiData, type ShowToast } from "@/app/components/workspace-ui";
 import { type ComplianceState, type LearningPayload } from "@/lib/learning-shared";
-import { ME, ALL_PEOPLE, STATE_ORDER, Dialog } from "./learning-utils";
+import { ME, ALL_PEOPLE, NO_UNIT, STATE_ORDER, Dialog } from "./learning-utils";
 
 export function useLearningView({
   compliance,
@@ -25,6 +25,7 @@ export function useLearningView({
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [unitChoice, setUnit] = useState<string | null>(null);
   const [now] = useState(() => Date.now());
   const learning = useApiData<LearningPayload>(
     `/api/learning${compliance && person !== ME ? `?userId=${person === ALL_PEOPLE ? "all" : person}` : ""}`,
@@ -76,7 +77,27 @@ export function useLearningView({
   const dueCourses = showAll ? [] : active.filter((t) => t.enrollment?.dueOn && !t.sessions.some((s) => s.mine));
 
   // --- Pflichtnachweise ---
-  const rows = data?.compliance ?? [];
+  const allRows = data?.compliance ?? [];
+  // Übersicht je Team (Stammwohnbereich) für die Leitung, wenn alle Mitarbeitenden gewählt sind.
+  const unitOf = new Map((data?.people ?? []).map((p) => [p.id, p.unitName ?? NO_UNIT]));
+  const teams =
+    compliance && person === ALL_PEOPLE
+      ? [...new Set(allRows.map((row) => unitOf.get(row.userId) ?? NO_UNIT))]
+          .map((name) => {
+            const own = allRows.filter((row) => (unitOf.get(row.userId) ?? NO_UNIT) === name);
+            const ok = own.filter((row) => row.state === "valid" || row.state === "due_soon").length;
+            return {
+              name,
+              total: own.length,
+              valid: ok,
+              open: own.filter((row) => row.state === "missing" || row.state === "expired").length,
+              percent: Math.round((ok / own.length) * 100),
+            };
+          })
+          .sort((a, b) => a.percent - b.percent || a.name.localeCompare(b.name, "de-CH"))
+      : [];
+  const unit = teams.some((t) => t.name === unitChoice) ? unitChoice : null;
+  const rows = unit ? allRows.filter((row) => (unitOf.get(row.userId) ?? NO_UNIT) === unit) : allRows;
   const complianceFilters = ["Alle", "Offen", "Bald fällig", "Abgelaufen", "Prüfung ausstehend", "Gültig"];
   const stateFor: Record<string, ComplianceState> = {
     Offen: "missing",
@@ -150,6 +171,9 @@ export function useLearningView({
     valid,
     deadlines,
     team,
+    teams,
+    unit,
+    setUnit,
     percent,
   };
 }
