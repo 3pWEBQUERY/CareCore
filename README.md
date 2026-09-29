@@ -61,6 +61,10 @@ Auf dem Handy (bis 960 px Breite) sitzt rechts über der unteren Leiste ein „+
 
 Alle drei laufen in der CI bei jedem Pull Request.
 
+## Zustand (Health-Check)
+
+`GET /api/health` braucht keine Anmeldung und eignet sich für Überwachung und Load-Balancer (`lib/health.ts`). Die Antwort nennt `status` (`ok`, `degraded` bei ausstehenden Migrationen, `down` ohne Datenbank), die Erreichbarkeit und Antwortzeit der Datenbank sowie die zuletzt angewendete und die noch ausstehenden Migrationen. HTTP 200 bei `ok` und `degraded`, 503 bei `down`. Sie enthält keine Geheimnisse, keine Personendaten und keine Fehlermeldungen der Datenbank und wird weder vom Browser noch vom Service Worker zwischengespeichert.
+
 ## Datenbank-Migrationen
 
 Das Schema wird ausschließlich über nummerierte SQL-Dateien in `database/migrations` verwaltet; die Anwendung legt zur Laufzeit keine Tabellen an. Das Schema deckt Organisationen, Wohnbereiche, Bewohner, Pflegeplanung, Dokumentation, Assessments, Vitalwerte, Medikation, Wunden, Ernährung, Dienste, Aufgaben, Übergaben, Kommunikation, Dokumente, Schulungen, Qualität, RAI, KI-Entwürfe, Benachrichtigungen und Auditierung ab.
