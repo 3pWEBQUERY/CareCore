@@ -161,3 +161,49 @@ test("Zwei-Faktor-Anmeldung: einrichten, mit Code anmelden, Administration setzt
   await page.context().clearCookies();
   await login(page, SRK);
 });
+
+// Branding: Logo in der Konfiguration hochladen – erscheint in der Kopfzeile, danach wieder entfernen.
+test("Branding: Logo der Einrichtung hochladen und in der Kopfzeile sehen", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  const png = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+    "base64",
+  );
+  try {
+    await page.goto("/c/leitung/administration/konfiguration");
+    const card = page.locator(".admin-branding-card");
+    await card.locator('input[type="file"]').setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: png });
+    await expect(page.locator(".toast")).toContainText("Logo gespeichert");
+    await expect(card.getByRole("img", { name: "Aktuelles Logo" })).toBeVisible();
+    await page.reload();
+    await expect(page.locator(".location-icon.has-logo img").first()).toBeVisible();
+    await card.getByRole("button", { name: "Logo entfernen" }).click();
+    await expect(page.locator(".toast")).toContainText("Logo entfernt");
+  } finally {
+    await page.request.delete("/api/branding/logo");
+  }
+  expect(errors).toEqual([]);
+});
+
+// Datenschutz: ohne Frist schlägt CareCore nichts vor; mit Frist zeigt die Karte den Stand.
+test("Löschfristen: Karte folgt der Aufbewahrungsfrist der Einrichtung", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  try {
+    await page.goto("/c/leitung/administration/konfiguration");
+    const card = page.locator(".admin-retention-card");
+    await expect(card).toContainText("Aufbewahrungsfrist ist noch nicht festgelegt");
+    expect(
+      (
+        await page.request.patch("/api/settings/residentRetentionYears", { data: { enabled: true, value: 10 } })
+      ).status(),
+    ).toBe(200);
+    await page.reload();
+    await expect(card).toContainText("10 Jahre nach dem Austritt");
+    await expect(card).toContainText("Keine Akte mit abgelaufener Frist.");
+  } finally {
+    await page.request.patch("/api/settings/residentRetentionYears", { data: { enabled: false } });
+  }
+  expect(errors).toEqual([]);
+});

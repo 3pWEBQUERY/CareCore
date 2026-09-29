@@ -108,14 +108,17 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
         RAI-Export und KI-Aufträge. Seltene Fehlermeldungen ohne Einrichtung sind neutral formuliert („Akte …“).
   - [x] Seitentitel im Browser-Tab („CareCore · Patienten“).
   - [ ] Weitere Sprachen FR / IT / EN.
-- [ ] **Admin-Konfiguration:** Ereignistypen, Vitalparameter, Branding.
+- [x] **Admin-Konfiguration:** Ereignistypen, Vitalparameter, Branding.
   - [x] Ereignisarten: eigene Arten der Einrichtung (höchstens 20) neben den eingebauten; beim Melden und in den
         Ablaufketten wählbar, protokolliert. Entfernen nimmt die Ablaufkette mit, gemeldete Ereignisse bleiben.
   - [x] Vitalparameter: die Einrichtung schaltet eingebaute Messwerte aus (Messung, Übersicht, Entwicklung, Grenzwerte);
         neue Messungen ausgeschalteter Werte werden abgelehnt, sie zählen nicht für den Status. Eigene Messwerte mit
         Plausibilitäts- und Grenzwerten bräuchten fachlich festgelegte Werte und sind bewusst nicht Teil davon.
-  - [ ] Branding.
-- [ ] **Datenschutz:** Lösch- und Aufbewahrungskonzept für Bewohnerdaten. Fristen legt die Einrichtung fest.
+  - [x] Branding: Logo der Einrichtung (JPEG, PNG, WebP bis 300 KB, Inhalt geprüft, kein SVG) in der Kopfzeile neben
+        dem Namen; ohne Logo bleibt das bisherige Symbol.
+- [x] **Datenschutz:** Lösch- und Aufbewahrungskonzept für Bewohnerdaten. Fristen legt die Einrichtung fest.
+      Konzept in `docs/DATENSCHUTZ.md`; Einstellung „Aufbewahrungsfrist Akten“ (ohne Vorgabe), Karte „Löschfristen“ mit
+      Löschung nur auf Bestätigung durch die Administration.
 - [ ] **Echtzeit** (Server-Sent Events) statt Polling.
 - [ ] **Öffentliche API, Webhooks, FHIR.**
 - [ ] **Portale (Phase 6).**

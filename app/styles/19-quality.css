@@ -614,3 +614,62 @@
 .admin-terminology-options {
   padding: 14px 18px 18px;
 }
+.admin-branding-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px 18px;
+}
+.admin-branding-preview {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--brand);
+  background: white;
+}
+.admin-branding-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.admin-branding-upload {
+  position: relative;
+  cursor: pointer;
+}
+.admin-branding-upload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.admin-retention-list {
+  display: grid;
+  padding: 6px 18px 16px;
+}
+.admin-retention-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #edf1f5;
+}
+.admin-retention-row:last-child {
+  border-bottom: 0;
+}
+.admin-retention-row span {
+  display: grid;
+  gap: 2px;
+}
+.admin-retention-row strong {
+  font-size: 12.5px;
+}
+.admin-retention-row small {
+  color: var(--muted);
+  font-size: 11px;
+}

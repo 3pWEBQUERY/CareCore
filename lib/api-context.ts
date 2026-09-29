@@ -29,11 +29,12 @@ export class ApiError extends Error {
 }
 
 // Signed-in actor with an organization and the given permission, or the error response to return.
-export async function apiContext(permission: Permission): Promise<ApiContext | NextResponse> {
+// Ohne `permission` genügt eine Anmeldung mit Organisation (z. B. für das Logo der Einrichtung).
+export async function apiContext(permission?: Permission): Promise<ApiContext | NextResponse> {
   const actor = await carecoreActor();
   if (!actor) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
   if (!actor.organizationId) return NextResponse.json({ error: "Keine Organisation zugeordnet." }, { status: 400 });
-  if (!hasPermission(actor, permission)) return forbidden();
+  if (permission && !hasPermission(actor, permission)) return forbidden();
   // Benachrichtigungen, die diese Anfrage erzeugt, gehen nach der Antwort als Push hinaus.
   schedulePush();
   return { actor: actor as ApiContext["actor"], sql: carecoreDb() };

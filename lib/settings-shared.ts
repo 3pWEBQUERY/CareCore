@@ -13,7 +13,8 @@ export type SettingKey =
   | "weightLossDays"
   | "fluidBehindDays"
   | "navigationBadges"
-  | "keyboardShortcuts";
+  | "keyboardShortcuts"
+  | "residentRetentionYears";
 
 export type SettingValue = { enabled: boolean; value: number | null };
 export type AppSettings = Record<SettingKey, SettingValue>;
@@ -135,6 +136,19 @@ export const SETTING_DEFINITIONS: Record<SettingKey, Definition> = {
     area: "Alle Seiten",
     describe: () => "Einzeltasten-Kürzel wie J/K oder D für alle Mitarbeitenden",
     defaults: { enabled: true, value: null },
+  },
+  residentRetentionYears: {
+    title: "Aufbewahrungsfrist Akten",
+    icon: "docs",
+    area: "Datenschutz",
+    describe: (value) =>
+      value
+        ? `Akten ausgetretener und verstorbener Personen können ${value} Jahre nach dem Austritt endgültig gelöscht werden`
+        : "Frist ist noch nicht festgelegt – es wird nichts zur Löschung vorgeschlagen",
+    unit: "Jahre",
+    min: 1,
+    max: 30,
+    defaults: { enabled: false, value: null },
   },
 };
 
