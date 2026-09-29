@@ -3,6 +3,7 @@ import { authenticate, isLoginThrottled, recordFailedLogin } from "./auth";
 import { ApiError, assertUuid, iso, text, type ApiContext, type Row } from "./api-context";
 import type { BtmBook, BtmBookEntry, BtmOverview } from "./medication-btm-shared";
 import { readSettings } from "./settings";
+import { auditOrigin } from "@/lib/audit-origin";
 
 // Betäubungsmittel (BtM): Buchungen brauchen eine zweite Person (Zeugin/Zeuge), die sich mit ihrem
 // eigenen Passwort bestätigt. Fehlversuche zählen wie fehlgeschlagene Anmeldungen.
@@ -275,8 +276,8 @@ export async function countStock(ctx: ApiContext, stockIdInput: unknown, body: R
       FROM updated
       RETURNING id
     )
-    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
-    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'btm_count', counted.id, 'counted',
+    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data)
+    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, ${auditOrigin(ctx.actor).sessionId}, ${auditOrigin(ctx.actor).userAgent}, 'btm_count', counted.id, 'counted',
       ${JSON.stringify({ stockId, expected, counted, difference: delta, note: note || null, witness: witness.name })}::jsonb
     FROM counted
     RETURNING id`) as Row[];
@@ -298,8 +299,8 @@ export async function setControlled(ctx: ApiContext, medicationIdInput: unknown,
       UPDATE carecore_medications SET is_controlled = ${controlled}, updated_at = NOW()
       WHERE id = ${medicationId} AND organization_id = ${ctx.actor.organizationId} AND is_controlled IS DISTINCT FROM ${controlled}
       RETURNING id, name)
-    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
-    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'medication', marked.id,
+    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data)
+    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, ${auditOrigin(ctx.actor).sessionId}, ${auditOrigin(ctx.actor).userAgent}, 'medication', marked.id,
       ${controlled ? "btm_marked" : "btm_unmarked"}, jsonb_build_object('name', marked.name, 'reason', ${reason || null}::text)
     FROM marked RETURNING entity_id`) as Row[];
   if (!rows[0]) {

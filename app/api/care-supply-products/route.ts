@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { carecoreActor, carecoreDb, hasPermission } from "@/lib/server-data";
+import { auditOrigin } from "@/lib/audit-origin";
 
 export const runtime = "nodejs";
 type ProductInput = {
@@ -22,8 +23,8 @@ async function audit(
   action: string,
   after: unknown,
 ) {
-  await sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
-    VALUES (${randomUUID()}, ${actor.organizationId}, ${actor.id}, 'care_supply_product', ${String(productId)}, ${action}, ${JSON.stringify(after)}::jsonb)`;
+  await sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data)
+    VALUES (${randomUUID()}, ${actor.organizationId}, ${actor.id}, ${auditOrigin(actor).sessionId}, ${auditOrigin(actor).userAgent}, 'care_supply_product', ${String(productId)}, ${action}, ${JSON.stringify(after)}::jsonb)`;
 }
 const quantity = (value: unknown) =>
   typeof value === "number" && Number.isInteger(value) ? Math.max(0, Math.min(100000, value)) : 0;

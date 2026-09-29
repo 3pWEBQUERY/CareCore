@@ -25,6 +25,7 @@ import {
   type TimelineEntry,
 } from "@/lib/resident-record-shared";
 import { hasPermission } from "@/lib/server-data";
+import { auditOrigin } from "@/lib/audit-origin";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -402,8 +403,8 @@ export async function archiveResidentFile(ctx: ApiContext, residentIdInput: unkn
       UPDATE carecore_documents SET status = 'archived', archived_at = NOW(), archived_by = ${ctx.actor.id}, updated_at = NOW()
       WHERE id = ${documentId} AND resident_id = ${residentId} AND status <> 'archived' RETURNING id, title),
     logged AS (
-      INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
-      SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'resident_document', archived.id, 'archived',
+      INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data)
+      SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, ${auditOrigin(ctx.actor).sessionId}, ${auditOrigin(ctx.actor).userAgent}, 'resident_document', archived.id, 'archived',
         ${JSON.stringify({ residentId })}::jsonb
       FROM archived)
     SELECT title FROM archived`;

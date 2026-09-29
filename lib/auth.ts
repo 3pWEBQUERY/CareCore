@@ -22,7 +22,8 @@ type UserRow = {
   password_hash: string;
 };
 
-export type AuthenticatedUser = Omit<UserRow, "password_hash">;
+// Mit Sitzung und Gerät der Anmeldung, damit Protokolleinträge ihre Herkunft festhalten.
+export type AuthenticatedUser = Omit<UserRow, "password_hash"> & { session_id?: string; user_agent?: string | null };
 
 let bootstrapPromise: Promise<void> | null = null;
 
@@ -137,7 +138,7 @@ export async function getSessionUser(token: string | undefined): Promise<Authent
   if (!token) return null;
   const sql = database();
   const rows = (await sql`
-    SELECT u.id, u.username, u.display_name, u.role
+    SELECT u.id, u.username, u.display_name, u.role, s.id AS session_id, s.user_agent
     FROM carecore_sessions s
     JOIN carecore_users u ON u.id = s.user_id
     WHERE s.token_hash = ${hashSessionToken(token)}

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { ResidentAuditEntry } from "@/lib/resident-audit-labels";
+import { deviceLabel } from "@/lib/audit-origin";
 import { canViewResidentAudit } from "@/lib/resident-record";
 import { carecoreActor, carecoreDb, forbidden } from "@/lib/server-data";
 
@@ -21,7 +22,7 @@ export async function GET(request: Request, context: { params: Promise<{ residen
     if (!resident[0]) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
     const limit = Math.min(Math.max(Number(new URL(request.url).searchParams.get("limit")) || 100, 1), 500);
     const rows = (await sql`
-      SELECT a.id, a.created_at, a.entity_type, a.action, a.before_data, a.after_data, COALESCE(u.display_name, 'System') AS actor
+      SELECT a.id, a.created_at, a.entity_type, a.action, a.before_data, a.after_data, a.user_agent, COALESCE(u.display_name, 'System') AS actor
       FROM carecore_audit_log a LEFT JOIN carecore_users u ON u.id = a.actor_user_id
       WHERE a.organization_id = ${actor.organizationId}
         AND (a.entity_id = ${residentId} OR COALESCE(a.after_data ->> 'residentId', a.before_data ->> 'residentId') = ${residentId})
@@ -31,6 +32,7 @@ export async function GET(request: Request, context: { params: Promise<{ residen
       id: String(row.id),
       createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
       actor: String(row.actor),
+      device: row.user_agent ? deviceLabel(row.user_agent) : null,
       entityType: String(row.entity_type),
       action: String(row.action),
       before: (row.before_data as Record<string, unknown> | null) ?? null,

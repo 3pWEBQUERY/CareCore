@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     )
       return NextResponse.json({ error: "Unvollständige Mitarbeiterangaben." }, { status: 400 });
     return NextResponse.json(
-      await createManagedUser(actor.id, {
+      await createManagedUser(actor, {
         displayName: body.displayName,
         username: body.username,
         password: body.password,
@@ -94,7 +94,7 @@ export async function PATCH(request: Request) {
     if (typeof body.userId !== "string") return NextResponse.json({ error: "Benutzer fehlt." }, { status: 400 });
     const action = body.action === "lock" || body.action === "restore" ? body.action : undefined;
     return NextResponse.json(
-      await updateManagedUser(actor.id, body.userId, {
+      await updateManagedUser(actor, body.userId, {
         displayName: typeof body.displayName === "string" ? body.displayName : undefined,
         username: typeof body.username === "string" ? body.username : undefined,
         role: typeof body.role === "string" ? body.role : undefined,
@@ -121,7 +121,7 @@ export async function DELETE(request: Request) {
     if (!actor) return NextResponse.json({ error: "Keine Administrationsberechtigung." }, { status: 403 });
     const body = (await request.json()) as { userId?: unknown };
     if (typeof body.userId !== "string") return NextResponse.json({ error: "Benutzer fehlt." }, { status: 400 });
-    return NextResponse.json(await deleteManagedUser(actor.id, body.userId));
+    return NextResponse.json(await deleteManagedUser(actor, body.userId));
   } catch (error) {
     return errorResponse(error);
   }

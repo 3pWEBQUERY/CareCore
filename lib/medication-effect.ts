@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ApiError, assertResident, assertUuid, iso, text, type ApiContext, type Row } from "@/lib/api-context";
 import { EFFECT_RESULTS, type EffectCheck, type EffectResult } from "@/lib/medication-shared";
+import { auditOrigin } from "@/lib/audit-origin";
 
 // Wirkungskontrolle nach Reservegabe: der Termin entsteht bei der Gabe aus der Verordnung
 // (dosage.effectCheckMinutes), hier werden offene Kontrollen gelistet, erfasst und erinnert.
@@ -83,8 +84,8 @@ export async function recordEffectCheck(
         ${ctx.actor.id}, 'Medikation', 'Wirkungskontrolle', ${entry}, NOW(), ${result === "effective" ? "standard" : "important"}
       FROM u
     )
-    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
-    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'medication_administration', u.id, 'effect_checked',
+    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data)
+    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, ${auditOrigin(ctx.actor).sessionId}, ${auditOrigin(ctx.actor).userAgent}, 'medication_administration', u.id, 'effect_checked',
       ${JSON.stringify({ residentId: row.resident_id, result, note })}::jsonb
     FROM u
     RETURNING id`) as Row[];

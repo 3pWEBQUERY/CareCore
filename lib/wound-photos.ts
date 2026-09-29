@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { ApiError, assertUuid, iso, num, text, type ApiContext, type Row } from "@/lib/api-context";
 import { detectImageType } from "@/lib/file-signatures";
 import { residentAudit } from "@/lib/resident-audit";
+import { auditOrigin } from "@/lib/audit-origin";
 
 // Wound photos are stored as bytea in carecore_wound_photos and only served through
 // the authenticated API. Swapping to an object store only requires changing this file.
@@ -106,8 +107,8 @@ export async function hidePhoto(ctx: ApiContext, photoIdInput: unknown, reasonIn
     WITH hidden AS (
       UPDATE carecore_wound_photos SET deleted_at = NOW(), deleted_by = ${ctx.actor.id}, delete_reason = ${reason}
       WHERE id = ${id} AND deleted_at IS NULL RETURNING id)
-    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
-    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'wound_photo', hidden.id, 'hidden',
+    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data)
+    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, ${auditOrigin(ctx.actor).sessionId}, ${auditOrigin(ctx.actor).userAgent}, 'wound_photo', hidden.id, 'hidden',
       ${JSON.stringify({ residentId: photo.resident_id, woundId: photo.wound_id, reason })}::jsonb
     FROM hidden RETURNING entity_id`) as Row[];
   if (!hidden[0]) throw new ApiError("Foto nicht gefunden.", 404);

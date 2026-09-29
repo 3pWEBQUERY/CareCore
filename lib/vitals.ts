@@ -25,6 +25,7 @@ import {
 import { initials } from "@/lib/medication-shared";
 import { residentAudit } from "@/lib/resident-audit";
 import { receiptStatements, withReceipt } from "@/lib/request-receipts";
+import { auditOrigin } from "@/lib/audit-origin";
 
 const severity: Record<VitalStatus, number> = { normal: 0, attention: 1, critical: 2 };
 
@@ -345,8 +346,8 @@ export async function removeThreshold(
   const before = { residentId, metric: String(scope.metric) };
   const rows = (await ctx.sql`
     WITH removed AS (UPDATE carecore_vital_thresholds SET active = FALSE WHERE id = ${id} AND active RETURNING id)
-    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, before_data, after_data)
-    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, 'vital_threshold', removed.id, 'removed',
+    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, before_data, after_data)
+    SELECT ${randomUUID()}, ${ctx.actor.organizationId}, ${ctx.actor.id}, ${auditOrigin(ctx.actor).sessionId}, ${auditOrigin(ctx.actor).userAgent}, 'vital_threshold', removed.id, 'removed',
       ${JSON.stringify(before)}::jsonb, ${JSON.stringify({ residentId, reason: reason || null })}::jsonb
     FROM removed RETURNING entity_id`) as Row[];
   if (!rows[0]) throw new ApiError("Grenzwert nicht gefunden.", 404);

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ApiError, iso, type Row } from "@/lib/api-context";
 import { carecoreDb, hasPermission, type CarecoreActor } from "@/lib/server-data";
+import { auditOrigin } from "@/lib/audit-origin";
 
 // Files of "Meine Dateien" (purpose 'cloud', only the uploader) and of the
 // "Gemeinsame Ablage" (purpose 'shared', the whole house, optionally in folders).
@@ -102,8 +103,8 @@ async function assertFolder(actor: CarecoreActor, value: unknown) {
 
 async function audit(actor: CarecoreActor, entityId: string, action: string, data: unknown) {
   await carecoreDb()`
-    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, entity_type, entity_id, action, after_data)
-    VALUES (${randomUUID()}, ${org(actor)}, ${actor.id}, 'shared_file', ${entityId}, ${action}, ${JSON.stringify(data)}::jsonb)`;
+    INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data)
+    VALUES (${randomUUID()}, ${org(actor)}, ${actor.id}, ${auditOrigin(actor).sessionId}, ${auditOrigin(actor).userAgent}, 'shared_file', ${entityId}, ${action}, ${JSON.stringify(data)}::jsonb)`;
 }
 
 export async function uploadFile(actor: CarecoreActor, form: FormData) {

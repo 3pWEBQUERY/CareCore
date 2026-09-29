@@ -34,7 +34,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Barrierefreiheit WCAG 2.2 AA | 🟡    | Tastatur, Fokusfalle, Schriftgrösse, Kontrast-Einstellung. `--muted` erreicht nur 4,4:1.                                                     |
 | IAM                          | 🟡    | Passwort, Login-Drossel, Sitzungen mit Gerät, automatische Abmeldung. **SSO, MFA und Passkeys fehlen.**                                      |
 | Rechte                       | 🟡    | Grobe Rechte (`medication.manage` u. a.) plus Qualifikationen. Keine Trennung Verabreichen / Verordnung bearbeiten.                          |
-| Audit                        | ✅    | Atomar, pro Bewohner. Gerät und Sitzung werden nicht mitgeschrieben.                                                                         |
+| Audit                        | ✅    | Atomar, pro Bewohner, mit Sitzung und Gerät.                                                                                                 |
 | Datenschutz                  | 🟡    | Eigener Datenexport, Quittungen nach 30 Tagen gelöscht. Kein Lösch- oder Aufbewahrungskonzept für Bewohnerdaten.                             |
 | Sicherheit                   | 🟡    | Login-, Passwort- und KI-Drossel, allgemeine Drossel für schreibende API-Anfragen.                                                           |
 | Backups / Health             | 🟡    | Health-Endpunkt `/api/health`; Backups durch den Datenbank-Anbieter.                                                                         |
@@ -69,7 +69,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - [x] **Offline-Konflikte:** Wurde eine offline bearbeitete Notiz inzwischen anderswo geändert, meldet der Server
       einen Konflikt; die Anzeige bietet „Meine Fassung übernehmen“ oder „Verwerfen“.
 - [ ] **Offline-Speicher verschlüsseln:** siehe „Braucht eine Entscheidung“.
-- [ ] **Audit mit Sitzung und Gerät** (Sitzungs-ID, User-Agent).
+- [x] **Audit mit Sitzung und Gerät** (Sitzungs-ID, User-Agent).
 - [ ] **Feinere Medikationsrechte:** verabreichen vs. Verordnung bearbeiten.
 - [ ] **Lernen:** Quiz mit Bestehensgrenze (von der Einrichtung festgelegt) und Compliance-Übersicht je Team.
 - [ ] **Dokumente:** Lesebestätigung bei neuer Version erneut anfordern (prüfen, ergänzen).

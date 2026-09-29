@@ -50,7 +50,10 @@ export function RecordAuditCard({ residentId }: { residentId: string }) {
                       </strong>
                       {text.detail && <small>{text.detail}</small>}
                     </div>
-                    <em>{entry.actor}</em>
+                    <em title={entry.device ? `Gerät: ${entry.device}` : undefined}>
+                      {entry.actor}
+                      {entry.device ? ` · ${entry.device}` : ""}
+                    </em>
                   </li>
                 );
               })}
