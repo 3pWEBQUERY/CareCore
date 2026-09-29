@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { ApiError, assertUuid, num, text, auditStatement, type ApiContext, type Row } from "@/lib/api-context";
 import { TRAINING_CATEGORIES, TRAINING_FORMATS, type TrainingFormat } from "@/lib/learning-shared";
 import { requireManage, loadTraining, DATE, TIME, orgToday, notify } from "./learning";
+import { parseQuiz, quizStatements } from "./learning-quiz";
 
 export function parseTraining(body: Record<string, unknown>, roleKeys: string[]) {
   const title = text(body.title, 220);
@@ -43,6 +44,7 @@ export async function roleKeys(ctx: ApiContext) {
 export async function createTraining(ctx: ApiContext, body: Record<string, unknown>) {
   requireManage(ctx);
   const t = parseTraining(body, await roleKeys(ctx));
+  const quiz = parseQuiz(body.quiz);
   const id = randomUUID();
   await ctx.sql.transaction([
     ctx.sql`
@@ -50,7 +52,8 @@ export async function createTraining(ctx: ApiContext, body: Record<string, unkno
       valid_for_months, link_url, required_roles, created_by)
     VALUES (${id}, ${ctx.actor.organizationId}, ${t.title}, ${t.description}, ${t.category}, ${t.format}, ${t.duration},
       ${t.mandatory}, ${t.validFor}, ${t.link}, ${JSON.stringify(t.roles)}::jsonb, ${ctx.actor.id})`,
-    auditStatement(ctx, "training", id, "created", null, t),
+    ...(quiz ? quizStatements(ctx, id, quiz) : []),
+    auditStatement(ctx, "training", id, "created", null, { ...t, quiz: quiz ?? null }),
   ]);
   return id;
 }
@@ -66,13 +69,15 @@ export async function updateTraining(ctx: ApiContext, idInput: unknown, body: Re
     return;
   }
   const t = parseTraining(body, await roleKeys(ctx));
+  const quiz = parseQuiz(body.quiz);
   await ctx.sql.transaction([
     ctx.sql`
     UPDATE carecore_trainings SET title = ${t.title}, description = ${t.description}, category = ${t.category},
       format = ${t.format}, duration_minutes = ${t.duration}, mandatory = ${t.mandatory}, valid_for_months = ${t.validFor},
       link_url = ${t.link}, required_roles = ${JSON.stringify(t.roles)}::jsonb, updated_at = NOW()
     WHERE id = ${before.id as string}`,
-    auditStatement(ctx, "training", String(before.id), "updated", before, t),
+    ...(quiz === undefined ? [] : quizStatements(ctx, String(before.id), quiz)),
+    auditStatement(ctx, "training", String(before.id), "updated", before, quiz === undefined ? t : { ...t, quiz }),
   ]);
 }
 

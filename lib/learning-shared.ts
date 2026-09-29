@@ -50,7 +50,30 @@ export type Enrollment = {
   certificateName: string | null;
   note: string | null;
   assignedByName: string | null;
+  quizScore: number | null;
+  quizPassedAt: string | null;
 };
+
+// Quiz: Einzelauswahl je Frage. Die richtige Antwort erhält nur die Leitung (zum Bearbeiten).
+export type QuizQuestion = { id: string; question: string; options: string[]; correct: number | null };
+export type TrainingQuiz = { passPercent: number; questions: QuizQuestion[] };
+export const QUIZ_MAX_QUESTIONS = 30;
+export const QUIZ_OPTIONS = { min: 2, max: 6 } as const;
+export type QuizResult = { correct: number; total: number; percent: number; passPercent: number; passed: boolean };
+
+// Bestanden, sobald der Anteil richtiger Antworten die von der Einrichtung gesetzte Grenze erreicht.
+// Die Prozentanzeige wird abgerundet, damit sie das Ergebnis nie besser darstellt.
+export function scoreQuiz(correctOptions: number[], answers: number[], passPercent: number): QuizResult {
+  const total = correctOptions.length;
+  const correct = correctOptions.filter((option, index) => answers[index] === option).length;
+  return {
+    correct,
+    total,
+    percent: total ? Math.floor((correct * 100) / total) : 0,
+    passPercent,
+    passed: total > 0 && correct * 100 >= passPercent * total,
+  };
+}
 
 export type Training = {
   id: string;
@@ -63,6 +86,7 @@ export type Training = {
   validForMonths: number | null;
   requiredRoles: string[];
   linkUrl: string | null;
+  quiz: TrainingQuiz | null;
   sessions: TrainingSession[];
   enrollment: Enrollment | null;
   enrolledCount: number;
@@ -91,7 +115,14 @@ export type ComplianceRow = {
   enrollment: Enrollment | null;
 };
 
-export type LearningPerson = { id: string; name: string; role: string; jobTitle: string };
+export type LearningPerson = {
+  id: string;
+  name: string;
+  role: string;
+  jobTitle: string;
+  unitId: string | null;
+  unitName: string | null;
+};
 
 export type LearningPayload = {
   today: string;

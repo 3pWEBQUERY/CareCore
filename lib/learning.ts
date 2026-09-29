@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ApiError, assertUuid, iso, num, type ApiContext, type Row } from "@/lib/api-context";
 import { hasPermission } from "@/lib/server-data";
+import { loadQuizzes } from "@/lib/learning-quiz";
 import {
   DUE_SOON_DAYS,
   TRAINING_FORMATS,
@@ -32,14 +33,18 @@ export async function orgToday({ sql, actor }: ApiContext) {
 
 export async function listPeople({ sql, actor }: ApiContext): Promise<LearningPerson[]> {
   const rows = (await sql`
-    SELECT u.id, u.display_name, u.role, COALESCE(p.job_title, '') AS job_title FROM carecore_users u
+    SELECT u.id, u.display_name, u.role, COALESCE(p.job_title, '') AS job_title, cu.id AS unit_id, cu.name AS unit_name
+    FROM carecore_users u
     JOIN carecore_user_profiles p ON p.user_id = u.id
+    LEFT JOIN carecore_care_units cu ON cu.id = p.primary_care_unit_id
     WHERE p.organization_id = ${actor.organizationId} AND u.active ORDER BY u.display_name`) as Row[];
   return rows.map((row) => ({
     id: String(row.id),
     name: String(row.display_name),
     role: String(row.role),
     jobTitle: String(row.job_title),
+    unitId: (row.unit_id as string | null) ?? null,
+    unitName: (row.unit_name as string | null) ?? null,
   }));
 }
 
@@ -61,6 +66,8 @@ function mapEnrollment(row: Row): Enrollment {
     certificateName: (row.cert_name as string | null) ?? null,
     note: (row.note as string | null) ?? null,
     assignedByName: (row.assigned_name as string | null) ?? null,
+    quizScore: num(row.quiz_score),
+    quizPassedAt: iso(row.quiz_passed_at),
   };
 }
 
@@ -119,6 +126,11 @@ export async function learningData(ctx: ApiContext, params: URLSearchParams): Pr
     userIds: [...new Set([actor.id, ...targets.map((p) => p.id)])],
   });
   const byKey = new Map(enrollments.map((e) => [`${e.trainingId}:${e.userId}`, e]));
+  const quizzes = await loadQuizzes(
+    ctx,
+    trainingRows.map((row) => String(row.id)),
+    manager,
+  );
 
   const trainings: Training[] = trainingRows.map((row) => ({
     id: String(row.id),
@@ -131,6 +143,7 @@ export async function learningData(ctx: ApiContext, params: URLSearchParams): Pr
     validForMonths: num(row.valid_for_months),
     requiredRoles: Array.isArray(row.required_roles) ? (row.required_roles as string[]) : [],
     linkUrl: (row.link_url as string | null) ?? null,
+    quiz: quizzes.get(String(row.id)) ?? null,
     sessions: (row.sessions as TrainingSession[]).map((s) => ({
       ...s,
       startsAt: iso(s.startsAt) ?? "",

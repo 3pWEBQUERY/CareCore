@@ -5,6 +5,7 @@ import { type LearningPayload } from "@/lib/learning-shared";
 import { Dialog } from "./learning-utils";
 import { EvidenceDialog } from "./evidence-dialog";
 import { EnrollDialog, ProgressDialog } from "./enrollment-dialogs";
+import { QuizDialog } from "./quiz-dialog";
 import { TrainingEditor } from "./training-editor";
 import { SessionDialog, AssignDialog } from "./training-admin-dialogs";
 import { useLearningView } from "./use-learning-view";
@@ -46,6 +47,9 @@ export function LearningView(props: {
       )}
       {dialog?.kind === "progress" && (
         <ProgressDialog training={dialog.training} onClose={() => setDialog(null)} onSaved={done} />
+      )}
+      {dialog?.kind === "quiz" && dialog.training.quiz && (
+        <QuizDialog training={dialog.training} onClose={() => setDialog(null)} onSaved={done} onAttempt={reload} />
       )}
       {data && dialog?.kind === "training" && (
         <TrainingEditor data={data} training={dialog.training} onClose={() => setDialog(null)} onSaved={done} />

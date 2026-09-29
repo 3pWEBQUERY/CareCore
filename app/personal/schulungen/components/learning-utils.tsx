@@ -34,6 +34,8 @@ export const ME = "Nur ich";
 
 export const ALL_PEOPLE = "Alle Mitarbeitenden";
 
+export const NO_UNIT = "Ohne Wohnbereich";
+
 export const NO_SESSION = "Ohne Termin anmelden";
 
 export const zurichDay = (value: string) =>
@@ -45,7 +47,11 @@ export const sessionLabel = (s: Training["sessions"][number]) =>
 export function trainingState(t: Training) {
   const e = t.enrollment;
   if (e?.status === "completed") return { label: "Abgeschlossen", tone: "stable" };
-  if (e?.status === "in_progress") return { label: `In Bearbeitung · ${e.progress} %`, tone: "info" };
+  if (e?.status === "in_progress")
+    return {
+      label: e.quizScore !== null ? `Quiz ${e.quizScore} % · nicht bestanden` : `In Bearbeitung · ${e.progress} %`,
+      tone: e.quizScore !== null ? "attention" : "info",
+    };
   if (e?.assignedByName) return { label: "Zugewiesen", tone: "attention" };
   if (e) return { label: "Angemeldet", tone: "attention" };
   if (t.mandatory) return { label: "Pflicht", tone: "critical" };
@@ -60,6 +66,7 @@ export function trainingMeta(t: Training, now: number) {
         ? `${String(Math.round((t.durationMinutes / 60) * 10) / 10).replace(".", ",")} h`
         : `${t.durationMinutes} Minuten`,
     );
+  if (t.quiz) parts.push(`Quiz ab ${t.quiz.passPercent} %`);
   const booked = t.sessions.find((s) => s.mine);
   const next = t.sessions.find((s) => Date.parse(s.startsAt) > now);
   if (booked) parts.push(`Dein Termin ${formatDate(zurichDay(booked.startsAt))}`);
@@ -100,5 +107,5 @@ export async function postForm(url: string, form: FormData) {
 
 export type Dialog =
   | { kind: "evidence"; trainingId: string | null; userId: string | null }
-  | { kind: "enroll" | "progress" | "session" | "assign" | "archive"; training: Training }
+  | { kind: "enroll" | "progress" | "quiz" | "session" | "assign" | "archive"; training: Training }
   | { kind: "training"; training: Training | null };

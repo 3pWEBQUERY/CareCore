@@ -15,6 +15,7 @@ import {
   canManage,
   addDays,
 } from "./learning";
+import { submitQuiz } from "./learning-quiz";
 
 export async function checkSession(ctx: ApiContext, trainingId: string, sessionIdInput: unknown) {
   if (!sessionIdInput) return null;
@@ -42,6 +43,7 @@ export async function enroll(ctx: ApiContext, body: Record<string, unknown>) {
     ON CONFLICT (training_id, user_id) DO UPDATE SET session_id = EXCLUDED.session_id,
       status = CASE WHEN carecore_training_enrollments.status = 'completed' THEN 'assigned' ELSE carecore_training_enrollments.status END,
       progress = CASE WHEN carecore_training_enrollments.status = 'completed' THEN 0 ELSE carecore_training_enrollments.progress END,
+      quiz_score = CASE WHEN carecore_training_enrollments.status = 'completed' THEN NULL ELSE carecore_training_enrollments.quiz_score END,
       updated_at = NOW()`,
     auditStatement(ctx, "training_enrollment", String(training.id), "enrolled", null, { sessionId }),
   ]);
@@ -66,6 +68,7 @@ export async function assignTraining(ctx: ApiContext, trainingIdInput: unknown, 
         ON CONFLICT (training_id, user_id) DO UPDATE SET due_on = EXCLUDED.due_on, assigned_by = EXCLUDED.assigned_by,
           status = CASE WHEN carecore_training_enrollments.status = 'completed' THEN 'assigned' ELSE carecore_training_enrollments.status END,
           progress = CASE WHEN carecore_training_enrollments.status = 'completed' THEN 0 ELSE carecore_training_enrollments.progress END,
+          quiz_score = CASE WHEN carecore_training_enrollments.status = 'completed' THEN NULL ELSE carecore_training_enrollments.quiz_score END,
           updated_at = NOW()`,
     ),
     auditStatement(ctx, "training", String(training.id), "assigned", null, { userIds, dueOn }),
@@ -86,6 +89,7 @@ export async function enrollmentAction(ctx: ApiContext, idInput: unknown, body: 
   const enrollment = (await selectEnrollments(ctx, { id }))[0];
   if (!enrollment) throw new ApiError("Anmeldung nicht gefunden.", 404);
   const own = enrollment.userId === ctx.actor.id;
+  if (body.action === "quiz") return submitQuiz(ctx, enrollment, body.answers);
   if (body.action === "progress") {
     if (!own) throw new ApiError("Nur die angemeldete Person kann den Fortschritt melden.", 403);
     const progress = num(body.progress);

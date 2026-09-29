@@ -24,7 +24,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Chat                         | ✅    | Unterhaltungen, Reaktionen, @Erwähnungen; Benachrichtigung und Push bei Direktnachricht und Erwähnung.                                       |
 | Schedule                     | ✅    | Dienstplan, Tausch, Wünsche, Zeiterfassung, KI-Planung. Offene Dienste werden nur in Insights gezählt, keine Börse.                          |
 | Docs                         | ✅    | Versionen, Freigabe, Lesebestätigung (`carecore_document_reads`). Bei neuer Version muss die Bestätigung erneut angefordert werden (prüfen). |
-| Learn                        | 🟡    | Schulungen, Pflicht, Gültigkeit, Nachweise, Link. **Kein Quiz**, Videos nur als Link.                                                        |
+| Learn                        | ✅    | Schulungen, Pflicht, Gültigkeit, Nachweise, Link, Quiz mit Bestehensgrenze, Übersicht je Team. Videos nur als Link.                          |
 | Quality                      | ✅    | Ereignisse mit Massnahmen und Status.                                                                                                        |
 | KI-Assistenten               | 🟡    | Übergabe, Risiken, Dokumentation, freie Frage, Dienstplan-KI; Entwürfe mit Prüfung. Keine Planungs- oder Such-Assistenz.                     |
 | Globale Suche ⌘K             | ✅    | `global-search-dialog.tsx`, Tastenkürzel.                                                                                                    |
@@ -71,7 +71,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - [ ] **Offline-Speicher verschlüsseln:** siehe „Braucht eine Entscheidung“.
 - [x] **Audit mit Sitzung und Gerät** (Sitzungs-ID, User-Agent).
 - [x] **Feinere Medikationsrechte:** verabreichen vs. Verordnung bearbeiten.
-- [ ] **Lernen:** Quiz mit Bestehensgrenze (von der Einrichtung festgelegt) und Compliance-Übersicht je Team.
+- [x] **Lernen:** Quiz mit Bestehensgrenze (von der Einrichtung festgelegt) und Compliance-Übersicht je Team.
 - [ ] **Dokumente:** Lesebestätigung bei neuer Version erneut anfordern (prüfen, ergänzen).
 - [ ] **Trendhinweise Ernährung:** Hinweis, wenn eine von der Einrichtung gesetzte Grenze für Gewicht oder
       Trinkmenge unterschritten wird. Keine erfundenen Werte.
