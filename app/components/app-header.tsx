@@ -12,6 +12,7 @@ import { HeaderNotificationMenu } from "./header-notification-menu";
 import { KeyboardShortcutsMenu } from "./keyboard-shortcuts";
 import { HeaderAiButton } from "./header-ai-panel";
 import { PersonalAppearance } from "./appearance";
+import { IdleLogout } from "./idle-logout";
 import { HelpPanel } from "./help-panel";
 
 export default function AppHeader(props: {
@@ -47,6 +48,7 @@ export default function AppHeader(props: {
   return (
     <>
       <PersonalAppearance />
+      <IdleLogout />
       <HelpPanel />
       <header className="topbar">
         <div className="header-context">

@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useWorkContext } from "@/app/components/care-context";
-import { isTyping } from "@/app/components/keyboard-shortcuts";
+import { isTyping, useShortcutsEnabled } from "@/app/components/keyboard-shortcuts";
 import { requestJson, timeInZurich, todayInZurich } from "@/app/components/workspace-ui";
 import { zurichTimeToIso } from "@/lib/resident-appointments";
 import type { Importance } from "@/lib/documentation-shared";
@@ -148,7 +147,7 @@ export function useResidentRecord({
     onViewChange?.(activeView);
   }, [activeView, onViewChange]);
   // Alt + arrow up/down or J/K steps to the previous or next resident.
-  const letterKeys = useWorkContext()?.settings.keyboardShortcuts.enabled ?? true;
+  const letterKeys = useShortcutsEnabled();
   useEffect(() => {
     if (!navigation) return;
     const onKey = (event: KeyboardEvent) => {

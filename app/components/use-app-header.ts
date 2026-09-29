@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { usePersonalPreferences } from "./appearance";
 import { clearOfflineData } from "./offline-queue";
+import { playNotificationSound } from "./notification-sound";
 import type { CareUnit, ContextResident, WorkContext } from "@/lib/work-context";
 import { loadWorkContext, useCareResident, useCareUnit, useResidentPickerRequests } from "./care-context";
 import { HeaderNotification } from "./header-parts";
@@ -67,18 +69,34 @@ export function useAppHeader({
   useEffect(() => {
     if (defaultResidentId) setStoredResidentId(defaultResidentId);
   }, [defaultResidentId, setStoredResidentId]);
+  const soundOn = usePersonalPreferences()?.sound ?? false;
+  const soundRef = useRef(soundOn);
+  useEffect(() => {
+    soundRef.current = soundOn;
+  }, [soundOn]);
+  // Benachrichtigungen beim Öffnen und danach jede Minute, solange der Tab sichtbar ist. Mit „Hinweiston“
+  // (Einstellungen › Benachrichtigungen) erklingt ein kurzer Ton, sobald eine neue ungelesene hinzukommt.
   useEffect(() => {
     let live = true;
-    void fetch("/api/notifications", { cache: "no-store" })
-      .then(async (response) =>
-        response.ok ? (response.json() as Promise<{ notifications: HeaderNotification[] }>) : null,
-      )
-      .then((data) => {
-        if (live && data) setHeaderNotifications(data.notifications);
-      })
-      .catch(() => undefined);
+    let known: Set<string> | null = null;
+    const load = () =>
+      fetch("/api/notifications", { cache: "no-store" })
+        .then(async (response) =>
+          response.ok ? (response.json() as Promise<{ notifications: HeaderNotification[] }>) : null,
+        )
+        .then((data) => {
+          if (!live || !data) return;
+          const unread = data.notifications.filter((item) => !item.read_at).map((item) => item.id);
+          if (known && soundRef.current && unread.some((id) => !known!.has(id))) playNotificationSound();
+          known = new Set(unread);
+          setHeaderNotifications(data.notifications);
+        })
+        .catch(() => undefined);
+    void load();
+    const timer = window.setInterval(() => document.visibilityState === "visible" && void load(), 60_000);
     return () => {
       live = false;
+      window.clearInterval(timer);
     };
   }, []);
   async function markNotificationRead(id?: string) {

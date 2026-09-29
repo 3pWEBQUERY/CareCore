@@ -4,13 +4,14 @@ import webpush from "web-push";
 import { ApiError, type ApiContext, type Row, type Sql } from "@/lib/api-context";
 import { hashSessionToken } from "@/lib/auth";
 import { carecoreDb } from "@/lib/server-data";
-import { notifyCategory, resolvePreferences } from "@/lib/user-settings-shared";
+import { inQuietHours, notifyCategory, resolvePreferences } from "@/lib/user-settings-shared";
 
 // Push-Benachrichtigungen (Web Push) für die installierte App.
 // - Schlüssel: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY und VAPID_SUBJECT (mailto: oder https:). Fehlt einer, ist Push aus.
 // - Ein Abonnement gehört zu einer Anmeldung (carecore_sessions); Abmelden beendet auch die Push-Nachrichten.
 // - Gepusht wird jede Benachrichtigung höchstens einmal (pushed_at), nur solange sie frisch ist, und nur, wenn die
 //   Person diese Kategorie in ihren Einstellungen nicht ausgeschaltet hat (kritische immer).
+// - In der persönlichen Ruhezeit (Ortszeit der Einrichtung) werden nur kritische Hinweise gepusht.
 // - Auf dem Sperrbildschirm erscheint nur der Titel, nicht der Text der Benachrichtigung.
 
 export type PushKeys = { publicKey: string; privateKey: string; subject: string };
@@ -106,18 +107,26 @@ export async function dispatchPush(sql: Sql, send: PushSender) {
       JOIN carecore_sessions s ON s.id = ps.session_id AND s.expires_at > NOW()
       JOIN carecore_users u ON u.id = ps.user_id AND u.active
       WHERE ps.user_id = ANY(${userIds}::uuid[])`,
-    sql`SELECT user_id, preferences FROM carecore_user_profiles WHERE user_id = ANY(${userIds}::uuid[])`,
+    sql`
+      SELECT p.user_id, p.preferences,
+        to_char(NOW() AT TIME ZONE COALESCE(o.timezone, 'Europe/Zurich'), 'HH24:MI') AS local_time
+      FROM carecore_user_profiles p LEFT JOIN carecore_organizations o ON o.id = p.organization_id
+      WHERE p.user_id = ANY(${userIds}::uuid[])`,
   ]);
   const preferences = new Map(profiles.map((row) => [String(row.user_id), resolvePreferences(row.preferences)]));
+  const localTime = new Map(profiles.map((row) => [String(row.user_id), String(row.local_time)]));
   let sent = 0;
   const expired = new Set<string>();
   const delivered = new Set<string>();
   for (const notification of fresh) {
     const userId = String(notification.user_id);
     const category = notifyCategory(String(notification.type));
-    const wanted =
-      notification.priority === "critical" || !category || preferences.get(userId)?.notify[category] !== false;
-    if (!wanted) continue;
+    const critical = notification.priority === "critical";
+    const personal = preferences.get(userId);
+    const wanted = critical || !category || personal?.notify[category] !== false;
+    // In der persönlichen Ruhezeit nur kritische Hinweise; die übrigen bleiben in der App sichtbar.
+    const quiet = !critical && !!personal && inQuietHours(personal.quietHours, localTime.get(userId) ?? "");
+    if (!wanted || quiet) continue;
     const message: PushMessage = {
       title: String(notification.title),
       url:

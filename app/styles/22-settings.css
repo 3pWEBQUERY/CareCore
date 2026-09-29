@@ -686,6 +686,7 @@
   cursor: pointer;
 }
 .settings-select-menu button:hover,
+.settings-select-menu button.active,
 .settings-select-menu button.selected {
   color: var(--brand-dark);
   background: var(--brand-soft);
@@ -925,4 +926,57 @@
 }
 .settings-detail-footer small {
   color: var(--muted);
+}
+/* Einstellungen: Ruhezeit, Werte der Einrichtung, Aktionen und Hinweise. */
+.settings-quiet {
+  display: grid;
+  gap: 12px;
+}
+.settings-quiet-times {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+.settings-quiet-times label {
+  display: grid;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 680;
+}
+.settings-quiet-times input {
+  min-width: 120px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: #fbfdff;
+  font: inherit;
+  font-size: 13px;
+}
+.settings-quiet-times input:focus {
+  outline: 3px solid rgba(37, 99, 235, 0.12);
+  border-color: #93c5fd;
+}
+.settings-quiet-times .secondary-button {
+  min-height: 38px;
+  font-size: 12px;
+}
+.settings-action .appointment-danger-button {
+  min-height: 36px;
+  font-size: 12px;
+}
+.settings-link-button {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+.settings-detail-body > p.settings-note {
+  padding: 9px 11px;
+  border-radius: 6px;
+  color: #885a00;
+  background: var(--attention-soft);
+  font-size: 10px;
 }

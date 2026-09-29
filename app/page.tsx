@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useSyncExternalStore, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, Eye, EyeSlash, LockKey, Pulse, ShieldCheck, User } from "@phosphor-icons/react";
 import { clearOfflineData } from "./components/offline-queue";
@@ -12,6 +12,15 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  // Nach der automatischen Abmeldung (Einstellungen › Sicherheit) den Grund nennen.
+  const idleSignOut = useSyncExternalStore(
+    () => () => undefined,
+    () => new URLSearchParams(window.location.search).get("abgemeldet") === "inaktiv",
+    () => false,
+  );
+  const message =
+    error ||
+    (idleSignOut ? "Du wurdest nach längerer Inaktivität automatisch abgemeldet. Bitte melde dich erneut an." : "");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -132,9 +141,9 @@ export default function LoginPage() {
                 {showPassword ? <EyeSlash /> : <Eye />}
               </button>
             </div>
-            {error && (
+            {message && (
               <div className="login-error" role="alert">
-                {error}
+                {message}
               </div>
             )}
             <button className="login-submit" type="submit" disabled={pending}>
