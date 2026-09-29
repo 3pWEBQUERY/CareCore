@@ -102,7 +102,7 @@ export default function GoalsView({ showToast }: { showToast: ShowToast }) {
           {filtered.length} von {goals.length} Zielen
         </small>
       </section>
-      <div className="care-goal-list care-goal-grid">
+      <div className="care-goal-board">
         {filtered.map((goal) => (
           <GoalCard
             key={goal.id}
