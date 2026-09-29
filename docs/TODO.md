@@ -21,7 +21,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Wounds                       | 🟡    | Verlauf, Fotos, Körperkarte, Erinnerungen. Verbandsmaterial ist nicht als Liste je Versorgung erfasst.                                       |
 | Nutrition                    | 🟡    | Plan, Trinken, Mahlzeiten, Screenings in den Einschätzungen. Kein automatischer Hinweis bei Gewichts- oder Trinktrend.                       |
 | Team / Kanäle                | ✅    | Kanäle, Beiträge, Lesebestätigungen (`carecore_post_reads`).                                                                                 |
-| Chat                         | 🟡    | Unterhaltungen mit Anhängen. **Reaktionen und @Erwähnungen fehlen**; kein Push bei neuer Nachricht.                                          |
+| Chat                         | ✅    | Unterhaltungen, Reaktionen, @Erwähnungen; Benachrichtigung und Push bei Direktnachricht und Erwähnung.                                       |
 | Schedule                     | ✅    | Dienstplan, Tausch, Wünsche, Zeiterfassung, KI-Planung. Offene Dienste werden nur in Insights gezählt, keine Börse.                          |
 | Docs                         | ✅    | Versionen, Freigabe, Lesebestätigung (`carecore_document_reads`). Bei neuer Version muss die Bestätigung erneut angefordert werden (prüfen). |
 | Learn                        | 🟡    | Schulungen, Pflicht, Gültigkeit, Nachweise, Link. **Kein Quiz**, Videos nur als Link.                                                        |
@@ -57,7 +57,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Der Abschluss bietet ✓ △ ✕; Abweichungen (△ ✕) erzeugen immer einen Doku-Eintrag, ✓ bei Dokumentationspflicht.
 - [x] **Wirkungskontrolle nach Reservegabe:** Kontrolle mit Termin und Erinnerung, Ergebnis dokumentiert. Den
       Zeitpunkt legt die Verordnung fest, es gibt kein erfundenes Standardintervall.
-- [ ] **Chat:** Reaktionen, @Erwähnungen mit Benachrichtigung, Push bei neuer Nachricht.
+- [x] **Chat:** Reaktionen, @Erwähnungen mit Benachrichtigung, Push bei Direktnachricht und Erwähnung.
 - [ ] **Benachrichtigungsklassen** Kritisch / Handlung / Info / Sozial, mit Bündelung. Kritisches ignoriert die
       Ruhezeiten nur, wenn die Person es erlaubt.
 

@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { ApiError } from "@/lib/api-context";
+import { reactionsFor, sendMessage, toggleReaction } from "@/lib/messenger";
 import { carecoreActor, carecoreDb } from "@/lib/server-data";
 
 export const runtime = "nodejs";
@@ -9,7 +11,8 @@ type ConversationRow = { id: string; title: string | null; kind: "direct" | "gro
 async function context() {
   const actor = await carecoreActor();
   if (!actor?.organizationId) return null;
-  return { actor, sql: carecoreDb() };
+  const sql = carecoreDb();
+  return { actor, sql, ctx: { actor: { ...actor, organizationId: actor.organizationId }, sql } };
 }
 
 function error(message: string, status = 400) {
@@ -73,7 +76,8 @@ export async function GET(request: Request) {
       await sql`UPDATE carecore_conversation_members SET last_read_at = NOW() WHERE conversation_id = ${selectedId} AND user_id = ${actor.id}`;
     const messages = selectedId
       ? ((await sql`
-      SELECT m.id, m.body, m.created_at, m.edited_at, m.author_user_id, COALESCE(u.display_name, 'Unbekannt') AS author_name
+      SELECT m.id, m.body, m.created_at, m.edited_at, m.author_user_id, COALESCE(u.display_name, 'Unbekannt') AS author_name,
+        m.mentions
       FROM carecore_messages m
       LEFT JOIN carecore_users u ON u.id = m.author_user_id
       WHERE m.conversation_id = ${selectedId}
@@ -85,8 +89,13 @@ export async function GET(request: Request) {
           edited_at: string | null;
           author_user_id: string | null;
           author_name: string;
+          mentions: string[];
         }>)
       : [];
+    const reactions = await reactionsFor(
+      active.ctx,
+      messages.map((message) => message.id),
+    );
     const memberMap = new Map<string, typeof members>();
     members.forEach((member) =>
       memberMap.set(member.conversation_id, [...(memberMap.get(member.conversation_id) ?? []), member]),
@@ -103,7 +112,7 @@ export async function GET(request: Request) {
       })),
       people,
       selectedId,
-      messages,
+      messages: messages.map((message) => ({ ...message, reactions: reactions.get(message.id) ?? [] })),
     });
   } catch (cause) {
     console.error("Conversation request failed", cause);
@@ -123,16 +132,16 @@ export async function POST(request: Request) {
       title?: string;
       kind?: string;
       memberIds?: string[];
+      messageId?: string;
+      emoji?: string;
     };
     if (body.action === "message") {
-      const text = body.text?.trim();
-      if (!body.conversationId || !text) return error("Die Nachricht darf nicht leer sein.");
-      const membership =
-        await sql`SELECT conversation_id FROM carecore_conversation_members WHERE conversation_id = ${body.conversationId} AND user_id = ${actor.id} LIMIT 1`;
-      if (!membership[0]) return error("Kein Zugriff auf diese Unterhaltung.", 403);
-      await sql`INSERT INTO carecore_messages (id, conversation_id, author_user_id, body) VALUES (${randomUUID()}, ${body.conversationId}, ${actor.id}, ${text.slice(0, 5000)})`;
-      await sql`UPDATE carecore_conversations SET updated_at = NOW() WHERE id = ${body.conversationId}`;
-      return NextResponse.json({ ok: true }, { status: 201 });
+      if (!body.conversationId) return error("Die Nachricht darf nicht leer sein.");
+      const sent = await sendMessage(active.ctx, body.conversationId, body.text);
+      return NextResponse.json({ ok: true, ...sent }, { status: 201 });
+    }
+    if (body.action === "react") {
+      return NextResponse.json(await toggleReaction(active.ctx, body.messageId, body.emoji));
     }
     if (body.action === "conversation") {
       const kind = body.kind === "direct" ? "direct" : "group";
@@ -163,6 +172,7 @@ export async function POST(request: Request) {
     }
     return error("Unbekannte Aktion.");
   } catch (cause) {
+    if (cause instanceof ApiError) return error(cause.message, cause.status);
     console.error("Conversation update failed", cause);
     return error("Die Nachricht konnte nicht gespeichert werden.", 500);
   }

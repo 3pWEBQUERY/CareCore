@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   CaretRight,
   ChatsCircle,
@@ -12,7 +13,25 @@ import {
   X,
 } from "@phosphor-icons/react";
 import ModulePageShell from "@/app/components/module-page-shell";
-import { ChatData, initials, time, dateLabel, titleFor } from "./messages-utils";
+import { MESSAGE_REACTIONS, type MessageReaction } from "@/lib/messenger-shared";
+import { ChatData, Member, initials, time, dateLabel, titleFor } from "./messages-utils";
+
+// Erwähnungen („@Name“ eines Mitglieds) im Text hervorheben.
+function withMentions(body: string, members: Member[]) {
+  const names = members.map((member) => member.display_name).sort((a, b) => b.length - a.length);
+  if (!names.length) return body;
+  const escaped = names.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const parts = body.split(new RegExp(`(@(?:${escaped.join("|")}))(?![\\p{L}\\p{N}-])`, "giu"));
+  return parts.map((part, index) =>
+    index % 2 ? (
+      <strong className="message-mention" key={index}>
+        {part}
+      </strong>
+    ) : (
+      <Fragment key={index}>{part}</Fragment>
+    ),
+  );
+}
 
 export default function MessagesWorkspace() {
   const [data, setData] = useState<ChatData | null>(null);
@@ -24,6 +43,8 @@ export default function MessagesWorkspace() {
   const [memberIds, setMemberIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [picker, setPicker] = useState<string | null>(null);
+  const requested = useSearchParams().get("conversation");
 
   const load = useCallback(async (conversationId?: string | null) => {
     const response = await fetch(`/api/conversations${conversationId ? `?conversationId=${conversationId}` : ""}`, {
@@ -40,10 +61,10 @@ export default function MessagesWorkspace() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      void load();
+      void load(requested);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [load]);
+  }, [load, requested]);
   useEffect(() => {
     const timer = window.setInterval(() => {
       void load(selectedId);
@@ -96,6 +117,34 @@ export default function MessagesWorkspace() {
     }
     setEditor(null);
     await load(result.id);
+  }
+
+  // Offene Erwähnung am Ende des Textes („@Ann“) und passende Mitglieder der Unterhaltung.
+  const mentionQuery = /(?:^|\s)@([^@\n]{0,40})$/u.exec(text)?.[1] ?? null;
+  const mentionOptions =
+    mentionQuery === null || !selected || !data
+      ? []
+      : selected.members
+          .filter((member) => member.user_id !== data.actor.id)
+          .filter((member) =>
+            member.display_name.toLocaleLowerCase("de-CH").startsWith(mentionQuery.toLocaleLowerCase("de-CH")),
+          )
+          .slice(0, 6);
+  const insertMention = (name: string) => setText((current) => current.replace(/@([^@\n]{0,40})$/u, `@${name} `));
+
+  async function react(messageId: string, emoji: MessageReaction) {
+    setPicker(null);
+    const response = await fetch("/api/conversations", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "react", messageId, emoji }),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok) {
+      setNotice(result?.error || "Reaktion konnte nicht gespeichert werden.");
+      return;
+    }
+    await load(selectedId);
   }
 
   async function sendMessage(event: FormEvent) {
@@ -232,12 +281,50 @@ export default function MessagesWorkspace() {
                         )}
                         <article className="message-bubble">
                           <small>{message.author_user_id === data.actor.id ? "Du" : message.author_name}</small>
-                          <p>{message.body}</p>
+                          <p>{withMentions(message.body, selected.members)}</p>
                           <time>
                             {time(message.created_at)}
                             {message.edited_at ? " · bearbeitet" : ""}
                           </time>
                         </article>
+                        <div className="message-reactions">
+                          {message.reactions.map((reaction) => (
+                            <button
+                              type="button"
+                              key={reaction.emoji}
+                              className={reaction.mine ? "is-mine" : ""}
+                              aria-pressed={reaction.mine}
+                              title={reaction.names.join(", ")}
+                              aria-label={`${reaction.emoji} ${reaction.count}: ${reaction.names.join(", ")}`}
+                              onClick={() => void react(message.id, reaction.emoji)}
+                            >
+                              <span aria-hidden="true">{reaction.emoji}</span> {reaction.count}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            className="message-reaction-add"
+                            aria-expanded={picker === message.id}
+                            aria-label="Reaktion hinzufügen"
+                            onClick={() => setPicker((current) => (current === message.id ? null : message.id))}
+                          >
+                            +
+                          </button>
+                          {picker === message.id && (
+                            <span className="message-reaction-picker" role="group" aria-label="Reaktion wählen">
+                              {MESSAGE_REACTIONS.map((emoji) => (
+                                <button
+                                  type="button"
+                                  key={emoji}
+                                  aria-label={`Mit ${emoji} reagieren`}
+                                  onClick={() => void react(message.id, emoji)}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ))}
                     {!data.messages.length && (
@@ -249,10 +336,27 @@ export default function MessagesWorkspace() {
                     )}
                   </div>
                   <form className="messages-composer" onSubmit={sendMessage}>
+                    {mentionOptions.length > 0 && (
+                      <div className="messages-mention-options" role="listbox" aria-label="Person erwähnen">
+                        {mentionOptions.map((member) => (
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={false}
+                            key={member.user_id}
+                            onClick={() => insertMention(member.display_name)}
+                          >
+                            <span className="messages-avatar">{initials(member.display_name)}</span>
+                            {member.display_name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <input
                       value={text}
                       onChange={(event) => setText(event.target.value)}
-                      placeholder="Nachricht schreiben…"
+                      placeholder="Nachricht schreiben… (@ erwähnt eine Person)"
+                      aria-label="Nachricht"
                       maxLength={5000}
                     />
                     <button className="primary-button" disabled={busy || !text.trim()} aria-label="Nachricht senden">

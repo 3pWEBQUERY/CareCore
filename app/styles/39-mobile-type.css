@@ -1551,6 +1551,9 @@
   .message-bubble time {
     font-size: 11.5px;
   }
+  .messages-mention-options .messages-avatar {
+    font-size: 11.5px;
+  }
   .messages-people-list .messages-avatar {
     font-size: 12px;
   }

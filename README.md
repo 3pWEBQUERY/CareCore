@@ -121,6 +121,12 @@ Unter Medikation › „BtM-Kontrolle“ (`/medikation/btm`) werden als BtM geke
 - **Ergebnis:** „Wirksam“, „Teilweise wirksam“ oder „Nicht wirksam“; die beiden letzten verlangen eine Einschätzung. Das Ergebnis erscheint als Eintrag „Wirkungskontrolle“ in der Pflegedokumentation (Kategorie Medikation, bei fehlender Wirkung als wichtig) und im Protokoll.
 - **BtM-Buch:** Pro Bestand alle Buchungen mit laufendem Bestand, Person und Zweitunterschrift, als Seitenpanel und als A4-Druckansicht (`/medikation/btm/buch?stock=…`, PDF über den Druckdialog).
 
+## Messenger
+
+- **Erwähnen:** „@“ im Eingabefeld schlägt Mitglieder der Unterhaltung vor; „@Vorname Nachname“ wird in der Nachricht hervorgehoben.
+- **Reaktionen:** 👍 ❤️ ✅ 👀 🙏 (feste Auswahl, Migration `0035_message_reactions_mentions.sql`); ein zweiter Klick nimmt die eigene Reaktion zurück. Beim Überfahren steht, wer reagiert hat.
+- **Benachrichtigung und Push:** Erwähnte Personen erhalten eine Benachrichtigung mit hoher Priorität, bei Direktnachrichten die andere Person. In Gruppen ohne Erwähnung bleibt es beim Zähler ungelesener Nachrichten. Die Kategorie „Nachrichten“ lässt sich in den persönlichen Einstellungen abschalten; der Link öffnet direkt die Unterhaltung.
+
 ## Dienstplan
 
 Das Dienstplan-Modul (Spezifikation: `docs/specs/dienstplan.md`, Entscheidungen und Stand: `docs/dienstplan/`) ersetzt die frühere Dienstplanung. Es besteht aus:
