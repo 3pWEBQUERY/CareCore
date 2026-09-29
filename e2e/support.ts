@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page, type Request } from "@playwright/test";
 import { E2E_ADMIN_PASSWORD } from "../playwright.config";
 
 export const DEMO_PASSWORD = "Dienstplan-Demo-2026";
@@ -30,3 +30,30 @@ export function watchErrors(page: Page, expected: RegExp[] = []) {
 // Feld in einem Dialog über seine Beschriftung.
 export const field = (page: Page, label: string | RegExp) =>
   page.locator(".editor-dialog label", { hasText: label }).locator("input, textarea").first();
+
+// Wie waitForLoadState("networkidle"), aber ohne die dauerhaft offene Echtzeit-Verbindung (/api/events): wartet, bis
+// 500 ms lang keine andere Anfrage mehr offen ist.
+export async function waitForNetworkIdle(page: Page, timeout = 30_000) {
+  const open = new Set<Request>();
+  const live = (request: Request) => new URL(request.url()).pathname === "/api/events";
+  const started = (request: Request) => !live(request) && open.add(request);
+  const done = (request: Request) => open.delete(request);
+  page.on("request", started);
+  page.on("requestfinished", done);
+  page.on("requestfailed", done);
+  try {
+    await page.waitForLoadState("load");
+    const deadline = Date.now() + timeout;
+    let quietSince = Date.now();
+    while (Date.now() < deadline) {
+      if (open.size) quietSince = Date.now();
+      else if (Date.now() - quietSince >= 500) return;
+      await page.waitForTimeout(100);
+    }
+    throw new Error(`Netzwerk nicht ruhig nach ${timeout} ms: ${[...open].map((r) => r.url()).join(", ")}`);
+  } finally {
+    page.off("request", started);
+    page.off("requestfinished", done);
+    page.off("requestfailed", done);
+  }
+}

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { navigation, routeFor } from "../app/components/navigation";
-import { ADMIN, login, watchErrors } from "./support";
+import { ADMIN, login, watchErrors, waitForNetworkIdle } from "./support";
 
 test("Anmeldung über das Formular führt auf die Startseite", async ({ page }) => {
   const errors = watchErrors(page);
@@ -32,7 +32,7 @@ for (const entry of pages)
     const errors = watchErrors(page);
     await page.goto(entry.url);
     await expect(page.locator("h1").first()).toBeVisible();
-    await page.waitForLoadState("networkidle");
+    await waitForNetworkIdle(page);
     expect(errors).toEqual([]);
   });
 
