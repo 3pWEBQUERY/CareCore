@@ -28,6 +28,7 @@ import {
   type QualityEventsPayload,
   type Severity,
 } from "@/lib/quality-shared";
+import { workflowTaskStatement } from "@/lib/quality-workflows";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 export const canManageQuality = (ctx: ApiContext) => hasPermission(ctx.actor, "quality.manage");
@@ -96,17 +97,22 @@ function mapEvent(row: Row): QualityEvent {
     resolvedAt: iso(row.resolved_at),
     actions: Number(row.actions ?? 0),
     openActions: Number(row.open_actions ?? 0),
+    followUps: Number(row.follow_ups ?? 0),
+    followUpsDone: Number(row.follow_ups_done ?? 0),
   };
 }
 
 export async function eventsData(ctx: ApiContext): Promise<QualityEventsPayload> {
   const manager = canManageQuality(ctx);
-  const [rows, stats, residents, careUnits, staff] = await Promise.all([
+  const [rows, stats, residents, careUnits, staff, workflowRows] = await Promise.all([
     ctx.sql`
       SELECT e.*, NULLIF(TRIM(r.first_name || ' ' || r.last_name), '') AS resident_name, cu.name AS care_unit,
         rep.display_name AS reported_by_name, own.display_name AS owner_name,
         (SELECT COUNT(*)::int FROM carecore_quality_actions a WHERE a.quality_event_id = e.id AND a.status <> 'cancelled') AS actions,
-        (SELECT COUNT(*)::int FROM carecore_quality_actions a WHERE a.quality_event_id = e.id AND a.status IN ('open', 'planned')) AS open_actions
+        (SELECT COUNT(*)::int FROM carecore_quality_actions a WHERE a.quality_event_id = e.id AND a.status IN ('open', 'planned')) AS open_actions,
+        (SELECT COUNT(*)::int FROM carecore_tasks t WHERE t.quality_event_id = e.id AND t.status <> 'cancelled') AS follow_ups,
+        (SELECT COUNT(*)::int FROM carecore_tasks t WHERE t.quality_event_id = e.id
+          AND t.status IN ('completed', 'partial', 'skipped')) AS follow_ups_done
       FROM carecore_quality_events e
       LEFT JOIN carecore_residents r ON r.id = e.resident_id
       LEFT JOIN carecore_care_units cu ON cu.id = e.care_unit_id
@@ -139,6 +145,9 @@ export async function eventsData(ctx: ApiContext): Promise<QualityEventsPayload>
       ORDER BY r.last_name, r.first_name` as Promise<Row[]>,
     careUnitsOf(ctx),
     manager ? staffOf(ctx) : Promise.resolve([]),
+    ctx.sql`
+      SELECT event_type, COUNT(*)::int AS n FROM carecore_event_workflow_steps
+      WHERE organization_id = ${ctx.actor.organizationId} GROUP BY event_type` as Promise<Row[]>,
   ]);
   const s = stats[0];
   const thisYear = Number(s.this_year);
@@ -160,6 +169,7 @@ export async function eventsData(ctx: ApiContext): Promise<QualityEventsPayload>
     careUnits,
     staff,
     canManage: manager,
+    workflowSteps: Object.fromEntries(workflowRows.map((row) => [String(row.event_type), Number(row.n)])),
   };
 }
 
@@ -191,6 +201,8 @@ export async function reportEvent(ctx: ApiContext, body: Record<string, unknown>
       VALUES (${id}, ${ctx.actor.organizationId}, ${residentId}, ${careUnitId}, ${ctx.actor.id}, ${type}, ${severity}, 'open',
         ${occurredAt.toISOString()}, ${description}, ${title}, ${immediateAction})`,
     auditStatement(ctx, "quality_event", id, "reported", null, { type, severity, residentId, careUnitId, title }),
+    // Folgeaufgaben aus der Ablaufkette dieser Ereignisart (falls die Einrichtung eine festgelegt hat).
+    workflowTaskStatement(ctx, { id, type, title, residentId, careUnitId, occurredAt: occurredAt.toISOString() }),
     ...notifyStatements(
       ctx,
       await qualityManagers(ctx),

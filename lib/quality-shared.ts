@@ -62,6 +62,9 @@ export type QualityEvent = {
   resolvedAt: string | null;
   actions: number;
   openActions: number;
+  // Folgeaufgaben aus der Ablaufkette der Ereignisart.
+  followUps: number;
+  followUpsDone: number;
 };
 
 export type QualityAction = {
@@ -108,6 +111,8 @@ export type QualityEventsPayload = {
   careUnits: Option[];
   staff: Option[];
   canManage: boolean;
+  // Ablaufketten je Ereignisart (Schrittanzahl), damit die Meldung zeigt, was daraus entsteht.
+  workflowSteps: Record<string, number>;
 };
 
 export type QualityActionsPayload = {
