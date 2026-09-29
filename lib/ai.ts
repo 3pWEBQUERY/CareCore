@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { readTerms } from "@/lib/settings";
+import type { Terms } from "@/lib/terminology";
 import Anthropic from "@anthropic-ai/sdk";
 import {
   ApiError,
@@ -66,7 +68,7 @@ const when = (value: unknown) =>
   });
 
 // Care data of the last days for the given residents, as compact text for the prompt.
-async function residentContext(ctx: ApiContext, residentIds: string[]) {
+async function residentContext(ctx: ApiContext, residentIds: string[], t: Terms) {
   if (!residentIds.length) return "";
   const [residents, docs, vitals, meds, wounds, tasks, goals] = (await Promise.all([
     ctx.sql`
@@ -106,7 +108,7 @@ async function residentContext(ctx: ApiContext, residentIds: string[]) {
         ? (resident.risk_flags as Array<{ label?: string }>).map((flag) => flag.label).filter(Boolean)
         : [];
       const lines = [
-        `Bewohner:in ${kuerzel(resident)} (${age(resident.date_of_birth) ?? "?"} J., ${resident.room || "ohne Zimmer"})`,
+        `${t.one}:in ${kuerzel(resident)} (${age(resident.date_of_birth) ?? "?"} J., ${resident.room || "ohne Zimmer"})`,
         flags.length ? `Hinweise: ${flags.join(", ")}` : "",
         ...of(goals, resident.id).map((row) => `Pflegeziel (${row.category}): ${row.statement}`),
         ...of(meds, resident.id).map(
@@ -240,7 +242,8 @@ export async function generateDraft(ctx: ApiContext, body: Record<string, unknow
   const residentId = body.residentId ? await assertResident(ctx, body.residentId) : null;
   const careUnitId = await assertUnit(ctx, body.careUnitId);
   const residentIds = residentId ? [residentId] : await unitResidentIds(ctx, careUnitId);
-  const data = await residentContext(ctx, residentIds);
+  const t = await readTerms(ctx);
+  const data = await residentContext(ctx, residentIds, t);
 
   let content = "";
   try {
@@ -256,9 +259,9 @@ export async function generateDraft(ctx: ApiContext, body: Record<string, unknow
         {
           role: "user",
           content: [
-            `Auftrag: ${INSTRUCTIONS[task]}`,
+            `Auftrag: ${INSTRUCTIONS[task].replace("Bewohner:in", `${t.one}:in`)}`,
             prompt ? `Hinweise der Pflegefachperson: ${prompt}` : "",
-            `Daten (${residentId ? "eine Bewohner:in" : `${residentIds.length} Bewohner:innen des Wohnbereichs`}, Stand ${when(new Date())}):`,
+            `Daten (${residentId ? `eine ${t.one}:in` : `${residentIds.length} ${t.one}:innen des Wohnbereichs`}, Stand ${when(new Date())}):`,
             data || "Keine Daten vorhanden.",
           ]
             .filter(Boolean)

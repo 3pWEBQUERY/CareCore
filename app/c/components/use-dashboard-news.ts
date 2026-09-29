@@ -28,7 +28,7 @@ export function useDashboardNews() {
             occurred_at: string;
           }>;
         };
-        if (!response.ok) throw new Error(data.error || "Bewohner-Neuigkeiten konnten nicht geladen werden.");
+        if (!response.ok) throw new Error(data.error || "Neuigkeiten konnten nicht geladen werden.");
         return data;
       })
       .then((data) => {
@@ -53,8 +53,7 @@ export function useDashboardNews() {
         setNewsError("");
       })
       .catch((error) => {
-        if (active)
-          setNewsError(error instanceof Error ? error.message : "Bewohner-Neuigkeiten konnten nicht geladen werden.");
+        if (active) setNewsError(error instanceof Error ? error.message : "Neuigkeiten konnten nicht geladen werden.");
       })
       .finally(() => {
         if (active) setNewsLoading(false);

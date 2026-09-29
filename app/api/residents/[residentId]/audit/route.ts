@@ -15,11 +15,11 @@ export async function GET(request: Request, context: { params: Promise<{ residen
     if (!actor?.organizationId) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
     if (!canViewResidentAudit(actor)) return forbidden("Das Änderungsprotokoll ist der Leitung vorbehalten.");
     const { residentId } = await context.params;
-    if (!UUID.test(residentId)) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (!UUID.test(residentId)) return NextResponse.json({ error: "Akte nicht verfügbar." }, { status: 404 });
     const sql = carecoreDb();
     const resident =
       await sql`SELECT id FROM carecore_residents WHERE id = ${residentId} AND organization_id = ${actor.organizationId}`;
-    if (!resident[0]) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (!resident[0]) return NextResponse.json({ error: "Akte nicht verfügbar." }, { status: 404 });
     const limit = Math.min(Math.max(Number(new URL(request.url).searchParams.get("limit")) || 100, 1), 500);
     const rows = (await sql`
       SELECT a.id, a.created_at, a.entity_type, a.action, a.before_data, a.after_data, a.user_agent, COALESCE(u.display_name, 'System') AS actor

@@ -37,7 +37,7 @@ export async function GET(_request: Request, context: { params: Promise<{ reside
   try {
     const { residentId } = await context.params;
     const active = await permittedResident(residentId);
-    if (!active) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (!active) return NextResponse.json({ error: "Akte nicht verfügbar." }, { status: 404 });
     if (!hasPermission(active.actor, "residents.read")) return forbidden();
     const rows = await active.sql`
       SELECT b.life_story, b.important_people, b.daily_routines, b.preferences, b.strengths, b.sensitive_topics, b.updated_at, u.display_name AS updated_by
@@ -71,7 +71,7 @@ export async function PUT(request: Request, context: { params: Promise<{ residen
   try {
     const { residentId } = await context.params;
     const active = await permittedResident(residentId);
-    if (!active) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (!active) return NextResponse.json({ error: "Akte nicht verfügbar." }, { status: 404 });
     if (!hasPermission(active.actor, "residents.write")) return forbidden();
     const input = (await request.json()) as BiographyInput;
     const value = (key: keyof BiographyInput) =>

@@ -1,4 +1,5 @@
 import type { ApiContext, Row } from "@/lib/api-context";
+import { readTerms } from "@/lib/settings";
 import { dueAssessments } from "@/lib/assessments";
 import {
   formatPercent,
@@ -68,7 +69,7 @@ async function careFigures(ctx: ApiContext) {
 }
 
 export async function careInsights(ctx: ApiContext): Promise<CareInsights> {
-  const f = await careFigures(ctx);
+  const [f, t] = await Promise.all([careFigures(ctx), readTerms(ctx)]);
   const documentation = percent(f.documented, f.active);
   const assessments = percent(f.active - f.assessmentsBehind, f.active);
   const planning = percent(f.plans, f.active);
@@ -77,7 +78,7 @@ export async function careInsights(ctx: ApiContext): Promise<CareInsights> {
     {
       id: "documentation",
       title: "Dokumentationsquote (24 h)",
-      detail: `${f.documented} von ${f.active} Bewohnern in den letzten 24 Stunden dokumentiert`,
+      detail: `${f.documented} von ${f.active} ${t.manyDative} in den letzten 24 Stunden dokumentiert`,
       metric: formatPercent(documentation),
       status: documentation === null ? "Keine Daten" : documentation >= DOC_TARGET ? "Im Ziel" : "Unter Ziel",
       tone: toneFor(documentation, DOC_TARGET, 70),
@@ -117,7 +118,7 @@ export async function careInsights(ctx: ApiContext): Promise<CareInsights> {
     {
       id: "planning",
       title: "Pflegeplanung",
-      detail: `${f.plans} von ${f.active} Bewohnern mit Pflegeplan · ${f.reviewsDue} Evaluationen fällig`,
+      detail: `${f.plans} von ${f.active} ${t.manyDative} mit Pflegeplan · ${f.reviewsDue} Evaluationen fällig`,
       metric: formatPercent(planning),
       status: f.reviewsDue ? "Evaluationen fällig" : planning === 100 ? "Vollständig" : "Lücken",
       tone: f.reviewsDue ? "attention" : toneFor(planning, 100, 80),
@@ -148,7 +149,7 @@ export async function careInsights(ctx: ApiContext): Promise<CareInsights> {
       {
         value: formatPercent(assessments),
         label: "Einschätzungen aktuell",
-        note: `${f.assessmentsBehind} Bewohner mit Rückstand`,
+        note: `${f.assessmentsBehind} ${f.assessmentsBehind === 1 ? t.one : t.many} mit Rückstand`,
         tone: toneFor(assessments, 90, 70),
       },
     ],
@@ -315,7 +316,7 @@ export async function workforceInsights(ctx: ApiContext): Promise<WorkforceInsig
 // ------------------------------------------------------------ leadership
 
 export async function leadershipInsights(ctx: ApiContext): Promise<LeadershipInsights> {
-  const [rows, units, care, plan, training] = await Promise.all([
+  const [rows, units, care, plan, training, t] = await Promise.all([
     ctx.sql`
       SELECT
         (SELECT COUNT(*) FROM carecore_quality_events WHERE organization_id = ${ctx.actor.organizationId}
@@ -341,6 +342,7 @@ export async function leadershipInsights(ctx: ApiContext): Promise<LeadershipIns
     careFigures(ctx),
     staffing(ctx),
     compliance(ctx),
+    readTerms(ctx),
   ]);
   const r = rows[0];
   const unitRows = units.map((row) => ({
@@ -413,7 +415,7 @@ export async function leadershipInsights(ctx: ApiContext): Promise<LeadershipIns
     },
     {
       id: "without-plan",
-      title: "Bewohner ohne Pflegeplan",
+      title: `${t.many} ohne Pflegeplan`,
       detail: care.reviewsDue
         ? `Zusätzlich ${care.reviewsDue} Pflegepläne zur Evaluation fällig`
         : "Pflegeakte mit Zielen und Massnahmen anlegen",
@@ -458,7 +460,7 @@ export async function leadershipInsights(ctx: ApiContext): Promise<LeadershipIns
       {
         label: "Pflegeplanung",
         value: formatPercent(planning),
-        note: `${care.plans} von ${care.active} Bewohnern`,
+        note: `${care.plans} von ${care.active} ${t.manyDative}`,
       },
       { label: "Dienstbesetzung", value: formatPercent(plan.coverage), note: "nächste 7 Tage" },
     ],

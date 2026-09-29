@@ -26,7 +26,7 @@ export function parseAppointmentInput(input: AppointmentInput) {
   if (kind !== "resident" && kind !== "care_unit_task")
     return { error: "Bitte eine gültige Terminart auswählen." } as const;
   if (kind === "resident" && !/^[0-9a-f-]{36}$/i.test(residentId))
-    return { error: "Bitte einen Bewohner auswählen." } as const;
+    return { error: "Bitte eine Person auswählen." } as const;
   if (kind === "care_unit_task" && !/^[0-9a-f-]{36}$/i.test(careUnitId))
     return { error: "Bitte einen Wohnbereich auswählen." } as const;
   if (!title) return { error: "Bitte eine Terminbezeichnung eingeben." } as const;

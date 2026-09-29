@@ -4,7 +4,8 @@ export type InsightTone = "stable" | "attention" | "critical" | "info";
 export type InsightIcon =
   "note" | "alert" | "wounds" | "assess" | "plan" | "building" | "quality" | "tasks" | "calendar" | "team" | "learn";
 
-export type Kpi = { value: string; label: string; note: string; tone: InsightTone };
+// `id` hält „Meine Kennzahlen“ stabil, wenn die Beschriftung der Bezeichnung der Einrichtung folgt.
+export type Kpi = { id?: string; value: string; label: string; note: string; tone: InsightTone };
 
 export type Indicator = {
   id: string;

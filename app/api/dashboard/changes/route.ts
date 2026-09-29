@@ -38,6 +38,6 @@ export async function GET() {
     return NextResponse.json({ changes, residents, scope: profile[0]?.care_unit_name ?? "Alle Wohnbereiche" });
   } catch (error) {
     console.error("Dashboard changes GET failed", error);
-    return NextResponse.json({ error: "Bewohner-Neuigkeiten konnten nicht geladen werden." }, { status: 500 });
+    return NextResponse.json({ error: "Neuigkeiten konnten nicht geladen werden." }, { status: 500 });
   }
 }

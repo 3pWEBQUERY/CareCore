@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { readTerms } from "@/lib/settings";
 import { ApiError, assertResident, assertUuid, iso, num, text, type ApiContext, type Row } from "@/lib/api-context";
 import { initials } from "@/lib/medication-shared";
 import { residentAudit } from "@/lib/resident-audit";
@@ -286,7 +287,7 @@ async function assertLinkable(
   const rows = (await ctx.sql`
     SELECT id, wound_id FROM carecore_body_observations
     WHERE id = ${assertUuid(observationId, "Markierung")} AND resident_id = ${residentId} AND archived_at IS NULL`) as Row[];
-  if (!rows[0]) throw new ApiError("Die Markierung gehört nicht zu diesem Bewohner.");
+  if (!rows[0]) throw new ApiError(`Die Markierung gehört nicht zu diesem ${(await readTerms(ctx)).oneOblique}.`);
   if (rows[0].wound_id && rows[0].wound_id !== woundId)
     throw new ApiError("Diese Markierung ist bereits mit einer anderen Wunde verknüpft.", 409);
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { ClockCounterClockwise } from "@phosphor-icons/react";
 import { formatDateTime, useApiData } from "@/app/components/workspace-ui";
@@ -8,6 +9,7 @@ import { describeAudit, type ResidentAuditEntry } from "@/lib/resident-audit-lab
 // Änderungsprotokoll der Akte: wer hat wann was geändert (Stammdaten, Kontakte, Befunde, Dokumentation …).
 // Wird erst beim Öffnen geladen.
 export function RecordAuditCard({ residentId }: { residentId: string }) {
+  const t = useTerms();
   const [open, setOpen] = useState(false);
   const [limit, setLimit] = useState(50);
   const audit = useApiData<{ entries: ResidentAuditEntry[] }>(
@@ -39,7 +41,8 @@ export function RecordAuditCard({ residentId }: { residentId: string }) {
           {entries.length > 0 && (
             <ol>
               {entries.map((entry) => {
-                const text = describeAudit(entry);
+                const described = describeAudit(entry);
+                const text = { ...described, title: described.title.replace("Bewohnerbild", `${t.prefix}bild`) };
                 return (
                   <li key={entry.id}>
                     <time dateTime={entry.createdAt}>{formatDateTime(entry.createdAt)}</time>

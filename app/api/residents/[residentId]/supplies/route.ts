@@ -50,7 +50,7 @@ export async function GET(_request: Request, context: { params: Promise<{ reside
   try {
     const { residentId } = await context.params;
     const active = await residentContext(residentId);
-    if (!active) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (!active) return NextResponse.json({ error: "Akte nicht verfügbar." }, { status: 404 });
     if (!hasPermission(active.actor, "residents.read")) return forbidden();
     const [supplies, products] = await Promise.all([
       active.sql`SELECT id, product_id, item_name, category, unit, current_quantity, target_quantity, status, notes, updated_at FROM carecore_resident_supplies WHERE resident_id = ${residentId} ORDER BY status = 'active' DESC, category, item_name`,
@@ -67,7 +67,7 @@ export async function POST(request: Request, context: { params: Promise<{ reside
   try {
     const { residentId } = await context.params;
     const active = await residentContext(residentId);
-    if (!active) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (!active) return NextResponse.json({ error: "Akte nicht verfügbar." }, { status: 404 });
     if (!hasPermission(active.actor, "residents.write")) return forbidden();
     const body = (await request.json()) as SupplyInput;
     if (typeof body.productId === "string" && body.productId) {

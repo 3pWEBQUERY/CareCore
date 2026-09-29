@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { termsFor } from "@/lib/terminology";
 import { NextResponse } from "next/server";
 import {
   carecoreActor,
@@ -52,11 +53,18 @@ export function assertUuid(value: unknown, label: string): string {
 }
 
 export async function assertResident({ sql, actor }: ApiContext, residentId: unknown) {
-  const id = assertUuid(residentId, "Bewohner");
+  // Meldungen mit der Bezeichnung der Einrichtung; gelesen nur im Fehlerfall.
+  const one = async () =>
+    termsFor(
+      (
+        (await sql`SELECT settings->'terminology' AS t FROM carecore_organizations WHERE id = ${actor.organizationId}`) as Row[]
+      )[0]?.t,
+    ).one;
+  if (typeof residentId !== "string" || !UUID.test(residentId)) throw new ApiError(`${await one()} ist ungültig.`);
   const rows =
-    await sql`SELECT id FROM carecore_residents WHERE id = ${id} AND organization_id = ${actor.organizationId} LIMIT 1`;
-  if (!rows[0]) throw new ApiError("Bewohner nicht gefunden.", 404);
-  return id;
+    await sql`SELECT id FROM carecore_residents WHERE id = ${residentId} AND organization_id = ${actor.organizationId} LIMIT 1`;
+  if (!rows[0]) throw new ApiError(`${await one()} nicht gefunden.`, 404);
+  return residentId;
 }
 
 export async function writeAudit(

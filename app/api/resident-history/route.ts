@@ -14,6 +14,6 @@ export async function GET() {
       canWrite: hasPermission(ctx.actor, "residents.write"),
     });
   } catch (error) {
-    return apiErrorResponse(error, "Bewohnerverlauf konnte nicht geladen werden.");
+    return apiErrorResponse(error, "Verlauf konnte nicht geladen werden.");
   }
 }

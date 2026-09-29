@@ -1,4 +1,5 @@
 import { iso, type ApiContext, type Row } from "@/lib/api-context";
+import { readTerms } from "@/lib/settings";
 import { SERVICES } from "@/lib/organization-shared";
 import { readSettings } from "@/lib/settings";
 import { SETTING_DEFINITIONS, type SettingKey } from "@/lib/settings-shared";
@@ -234,7 +235,7 @@ const VIEW_TYPES: Record<AdminView, string[] | null> = {
 export async function adminOverview(ctx: ApiContext, view: AdminView): Promise<AdminOverview> {
   const org = ctx.actor.organizationId;
   const types = VIEW_TYPES[view];
-  const [weeks, logRows, todo, settings] = await Promise.all([
+  const [weeks, logRows, todo, settings, t] = await Promise.all([
     trendRows(ctx, view),
     ctx.sql`
       SELECT a.id, a.created_at, a.entity_type, a.action, a.before_data, a.after_data, COALESCE(u.display_name, 'System') AS actor
@@ -265,6 +266,7 @@ export async function adminOverview(ctx: ApiContext, view: AdminView): Promise<A
       Row[]
     >,
     readSettings(ctx),
+    readTerms(ctx),
   ]);
 
   const counts = todo[0] ?? {};
@@ -280,8 +282,8 @@ export async function adminOverview(ctx: ApiContext, view: AdminView): Promise<A
     href: "/leitung/administration",
   });
   add(counts.residents_without_unit, {
-    title: "Bewohner ohne Wohnbereich",
-    detail: (n) => `${n} Bewohner einem Wohnbereich zuteilen`,
+    title: `${t.many} ohne Wohnbereich`,
+    detail: (n) => `${n} ${n === 1 ? t.oneOblique : t.many} einem Wohnbereich zuteilen`,
     tone: "critical",
     href: "/bewohner",
   });
@@ -327,7 +329,7 @@ export async function adminOverview(ctx: ApiContext, view: AdminView): Promise<A
       id: String(row.id),
       at: iso(row.created_at) ?? "",
       actor: String(row.actor),
-      area: entity.area,
+      area: entity.area === "Bewohner" ? t.many : entity.area,
       action: row.entity_type === "setting" ? "geändert" : actionLabel(String(row.action)),
       subject: subject(row),
       changes: changes(row.before_data, row.after_data),

@@ -104,7 +104,9 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
   - [x] Medikation, Wunden, Vitalwerte, Ernährung.
   - [x] Planung, Einschätzungen, RAI, Dokumentation, Betrieb (Aufgaben, Übergabe, Kalender), Qualität, Kennzahlen,
         Assistenz, Administration, Einstellungen, Hilfe und Tastaturkürzel.
-  - [ ] Meldungen des Servers (Fehlermeldungen, Benachrichtigungen, Exporte) und Seitentitel im Browser.
+  - [x] Texte des Servers: Kennzahlen (mit fester ID für „Meine Kennzahlen“), Übersichten, Fehlermeldungen,
+        RAI-Export und KI-Aufträge. Seltene Fehlermeldungen ohne Einrichtung sind neutral formuliert („Akte …“).
+  - [ ] Seitentitel im Browser-Tab (statische Metadaten, z. B. „CareCore · Bewohner“).
   - [ ] Weitere Sprachen FR / IT / EN.
 - [ ] **Admin-Konfiguration:** Ereignistypen, Vitalparameter, Branding.
 - [ ] **Datenschutz:** Lösch- und Aufbewahrungskonzept für Bewohnerdaten. Fristen legt die Einrichtung fest.
