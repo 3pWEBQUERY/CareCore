@@ -91,7 +91,8 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - [ ] **Passkeys**, danach SSO (braucht einen Identity-Provider der Einrichtung).
 - [x] **Smart Workflow Sturz** als erste Ablaufkette mit Folgeaufgaben. Umgesetzt für alle Ereignisarten; die
       Schritte (Titel, Fälligkeit nach dem Ereignis, Priorität) legt das Qualitätsmanagement fest, ohne Vorgaben.
-- [ ] **Home in Kritisch / Wichtig / Routine** gliedern, ohne das bestehende Aussehen zu verändern.
+- [x] **Home in Kritisch / Wichtig / Routine** gliedern, ohne das bestehende Aussehen zu verändern. Die Tagesliste
+      filtert nach diesen drei Stufen, mit Anzahl je Stufe; Karten und Anordnung bleiben wie bisher.
 - [ ] **Resident 360** und Personal-Dashboards in Insights.
 - [ ] **Konfigurierbare Terminologie** (Bewohner / Patient / Klient), danach FR / IT / EN.
 - [ ] **Admin-Konfiguration:** Ereignistypen, Vitalparameter, Branding.
