@@ -72,6 +72,48 @@ test("Überfällige Wundversorgung: direkt aus dem Hinweis dokumentieren, danach
   expect(errors).toEqual([]);
 });
 
+test("Wundversorgung: Verbandsmaterial aus dem Katalog dokumentieren", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  const productName = `E2E Schaumverband ${Date.now()}`;
+  const product = await page.request.post("/api/care-supply-products", {
+    data: { itemName: productName, category: "Wundversorgung", unit: "Stück" },
+  });
+  expect(product.status(), await product.text()).toBe(201);
+  const payload = await (await page.request.get("/api/wounds")).json();
+  const resident = payload.residents[payload.residents.length - 1];
+  const created = await page.request.post("/api/wounds", {
+    data: {
+      residentId: resident.id,
+      woundType: "Skin Tear",
+      bodyLocation: "Rechter Unterarm",
+      discoveredOn: new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10),
+      careIntervalDays: 1,
+      origin: "inhouse",
+    },
+  });
+  expect(created.status(), await created.text()).toBe(201);
+  const woundId = ((await created.json()) as { id: string }).id;
+
+  await page.goto("/c/wundmanagement");
+  const item = page.locator(".wound-alert li", { hasText: `${resident.name} · Rechter Unterarm` });
+  await item.getByRole("button", { name: "Versorgung dokumentieren" }).click();
+  const dialog = page.locator(".editor-dialog");
+  await dialog.getByRole("combobox", { name: "Material" }).click();
+  await page.getByRole("option", { name: `${productName} (Stück)` }).click();
+  await dialog.getByLabel("Menge").fill("2");
+  await dialog.getByRole("button", { name: "Hinzufügen" }).click();
+  await expect(dialog.locator(".wound-materials li")).toHaveText(new RegExp(`2 Stück ${productName}`));
+  await dialog.getByRole("button", { name: "Eintrag speichern" }).click();
+  await expect(dialog).toHaveCount(0);
+
+  const entries = (await (await page.request.get(`/api/wounds/${woundId}/entries`)).json()) as {
+    entries: Array<{ materials: Array<{ name: string; quantity: number }> }>;
+  };
+  expect(entries.entries[0].materials).toEqual([expect.objectContaining({ name: productName, quantity: 2 })]);
+  expect(errors).toEqual([]);
+});
+
 test("Wundübersicht folgt dem Bewohner aus der Kopfzeile – und umgekehrt", async ({ page }) => {
   await login(page, ADMIN);
   const errors = watchErrors(page);

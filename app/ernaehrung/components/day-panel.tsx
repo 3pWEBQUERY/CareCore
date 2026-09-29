@@ -83,6 +83,19 @@ export default function DayPanel({
 
   return (
     <>
+      {data.trends.length > 0 && (
+        <section className="card nutrition-trends" role="status" aria-label="Trendhinweise Ernährung">
+          <ModuleIcon name="alert" />
+          <div>
+            <p className="eyebrow">Trendhinweis</p>
+            <ul>
+              {data.trends.map((trend) => (
+                <li key={trend.kind}>{trend.text}</li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
       <section className="card nutrition-day">
         <div className="card-header">
           <div>

@@ -77,6 +77,9 @@ export type MealEntry = {
   enteredBy: string | null;
 };
 
+// Trendhinweis nach den Grenzen der Einrichtung (Einstellungen „Hinweis Gewichtsverlust“ und „Hinweis Trinkmenge“).
+export type NutritionTrend = { kind: "weight" | "fluid"; text: string };
+
 export type NutritionResident = {
   id: string;
   name: string;
@@ -92,6 +95,7 @@ export type NutritionResident = {
   lastFluidAt: string | null;
   mealsLogged: number;
   lowMeals: number;
+  trends: NutritionTrend[];
 };
 
 export type ResidentNutrition = {
@@ -100,6 +104,7 @@ export type ResidentNutrition = {
   meals: MealEntry[];
   week: Array<{ date: string; totalMl: number }>;
   weight: { latestKg: number; measuredAt: string; changeKg30d: number | null } | null;
+  trends: NutritionTrend[];
 };
 
 export type FluidStatus = "none" | "reached" | "on_track" | "behind" | "over_limit" | "no_target";

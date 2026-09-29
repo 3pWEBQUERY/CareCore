@@ -9,6 +9,9 @@ export type SettingKey =
   | "medicationOverdue"
   | "btmCountInterval"
   | "btmAdministrationWitness"
+  | "weightLossPercent"
+  | "weightLossDays"
+  | "fluidBehindDays"
   | "navigationBadges"
   | "keyboardShortcuts";
 
@@ -77,6 +80,46 @@ export const SETTING_DEFINITIONS: Record<SettingKey, Definition> = {
     icon: "med",
     area: "Medikamentenrunde & Reserven",
     describe: () => "Gaben von Betäubungsmitteln bestätigt eine zweite berechtigte Person mit ihrem Passwort",
+    defaults: { enabled: false, value: null },
+  },
+  // Trendhinweise Ernährung: Grenzen legt die Einrichtung fest, es gibt keine Vorgabewerte.
+  weightLossPercent: {
+    title: "Hinweis Gewichtsverlust",
+    icon: "nutrition",
+    area: "Ernährung",
+    describe: (value) =>
+      value
+        ? `Hinweis bei einem Gewichtsverlust ab ${value} % innerhalb des Beobachtungszeitraums`
+        : "Grenze ist noch nicht festgelegt",
+    unit: "%",
+    min: 1,
+    max: 30,
+    defaults: { enabled: false, value: null },
+  },
+  weightLossDays: {
+    title: "Beobachtungszeitraum Gewicht",
+    icon: "nutrition",
+    area: "Ernährung",
+    describe: (value) =>
+      value
+        ? `Der Gewichtsverlust wird über die letzten ${value} Tage verglichen`
+        : "Zeitraum ist noch nicht festgelegt",
+    unit: "Tage",
+    min: 7,
+    max: 365,
+    defaults: { enabled: false, value: null },
+  },
+  fluidBehindDays: {
+    title: "Hinweis Trinkmenge",
+    icon: "nutrition",
+    area: "Ernährung",
+    describe: (value) =>
+      value
+        ? `Hinweis, wenn das persönliche Trinkziel an ${value} ${value === 1 ? "Tag" : "Tagen in Folge"} nicht erreicht wurde`
+        : "Anzahl Tage ist noch nicht festgelegt",
+    unit: "Tage",
+    min: 1,
+    max: 14,
     defaults: { enabled: false, value: null },
   },
   navigationBadges: {

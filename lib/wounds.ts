@@ -10,8 +10,10 @@ import {
   PRESSURE_CATEGORIES,
   SKIN_OPTIONS,
   TISSUE_OPTIONS,
+  WOUND_MATERIALS_MAX,
   WOUND_TYPES,
   type Wound,
+  type WoundMaterial,
   type WoundEntry,
   type WoundInput,
   type WoundOrigin,
@@ -40,6 +42,7 @@ function mapEntry(row: Row): WoundEntry {
     infectionSigns: Boolean(row.infection_signs),
     painScore: num(row.pain_score),
     treatment: (row.treatment as string | null) ?? null,
+    materials: Array.isArray(row.materials) ? (row.materials as WoundMaterial[]) : [],
     note: (row.note as string | null) ?? null,
   };
 }
@@ -209,8 +212,9 @@ export async function createWound(ctx: ApiContext, body: Record<string, unknown>
   const residentId = await assertResident(ctx, input.residentId);
   await assertStaff(ctx, input.responsibleId);
   await assertNotFuture(ctx, input.discoveredOn);
-  const entry = body.initialEntry
-    ? parseEntryInput({ ...(body.initialEntry as Record<string, unknown>), entryType: "Erstbeurteilung" })
+  const initial = body.initialEntry ? (body.initialEntry as Record<string, unknown>) : null;
+  const entry = initial
+    ? parseEntryInput({ ...initial, entryType: "Erstbeurteilung" }, await parseMaterials(ctx, initial.materials))
     : null;
   await assertLinkable(ctx, null, residentId, input.bodyObservationId);
   const id = randomUUID();
@@ -326,7 +330,36 @@ export async function setWoundStatus(ctx: ApiContext, woundId: unknown, status: 
 
 type EntryInput = Omit<WoundEntry, "id" | "woundId" | "author">;
 
-export function parseEntryInput(body: Record<string, unknown>): EntryInput {
+// Material aus dem aktiven Katalog der Organisation, je Produkt eine Zeile mit ganzer Menge.
+export async function parseMaterials(ctx: ApiContext, input: unknown): Promise<WoundMaterial[]> {
+  if (input === undefined || input === null) return [];
+  if (!Array.isArray(input)) throw new ApiError("Das Verbandsmaterial ist ungültig.");
+  if (input.length > WOUND_MATERIALS_MAX)
+    throw new ApiError(`Höchstens ${WOUND_MATERIALS_MAX} Materialien je Versorgung.`);
+  const wanted = input.map((item) => {
+    const entry = (item ?? {}) as Record<string, unknown>;
+    const productId = assertUuid(entry.productId, "Material");
+    const quantity = Number(entry.quantity);
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 999)
+      throw new ApiError("Die Menge je Material muss zwischen 1 und 999 liegen.");
+    return { productId, quantity };
+  });
+  if (new Set(wanted.map((w) => w.productId)).size !== wanted.length)
+    throw new ApiError("Jedes Material bitte nur einmal mit der gesamten Menge angeben.");
+  if (!wanted.length) return [];
+  const rows = (await ctx.sql`
+    SELECT id, item_name, unit FROM carecore_care_supply_products
+    WHERE organization_id = ${ctx.actor.organizationId} AND status = 'active'
+      AND id = ANY(${wanted.map((w) => w.productId)}::uuid[])`) as Row[];
+  const products = new Map(rows.map((row) => [String(row.id), row]));
+  return wanted.map(({ productId, quantity }) => {
+    const product = products.get(productId);
+    if (!product) throw new ApiError("Ein Material ist nicht (mehr) im Katalog.", 404);
+    return { productId, name: String(product.item_name), unit: String(product.unit), quantity };
+  });
+}
+
+export function parseEntryInput(body: Record<string, unknown>, materials: WoundMaterial[] = []): EntryInput {
   const size = (value: unknown, max: number, label: string) => {
     if (value === null || value === undefined || value === "") return null;
     if (typeof value !== "number" || !Number.isFinite(value) || value <= 0 || value > max)
@@ -357,11 +390,12 @@ export function parseEntryInput(body: Record<string, unknown>): EntryInput {
         ? (body.painScore as number)
         : null,
     treatment: text(body.treatment, 4000) || null,
+    materials,
     note: text(body.note, 4000) || null,
   };
   if ((entry.lengthCm === null) !== (entry.widthCm === null))
     throw new ApiError("Bitte Länge und Breite gemeinsam angeben.");
-  if (entry.lengthCm === null && !entry.tissue && !entry.treatment && !entry.note)
+  if (entry.lengthCm === null && !entry.tissue && !entry.treatment && !entry.materials.length && !entry.note)
     throw new ApiError("Bitte mindestens Grösse, Wundgrund, Versorgung oder eine Bemerkung dokumentieren.");
   return entry;
 }
@@ -369,10 +403,10 @@ export function parseEntryInput(body: Record<string, unknown>): EntryInput {
 function insertEntry(ctx: ApiContext, woundId: string, entry: EntryInput) {
   return ctx.sql`
     INSERT INTO carecore_wound_entries (id, wound_id, author_user_id, observed_at, entry_type, length_cm, width_cm, depth_cm, tissue, exudate,
-      wound_edge, surrounding_skin, odor, infection_signs, pain_score, treatment, note)
+      wound_edge, surrounding_skin, odor, infection_signs, pain_score, treatment, materials, note)
     VALUES (${randomUUID()}, ${woundId}, ${ctx.actor.id}, ${entry.observedAt}, ${entry.entryType}, ${entry.lengthCm}, ${entry.widthCm},
       ${entry.depthCm}, ${entry.tissue}, ${entry.exudate}, ${entry.woundEdge}, ${entry.surroundingSkin}, ${entry.odor},
-      ${entry.infectionSigns}, ${entry.painScore}, ${entry.treatment}, ${entry.note})`;
+      ${entry.infectionSigns}, ${entry.painScore}, ${entry.treatment}, ${JSON.stringify(entry.materials)}::jsonb, ${entry.note})`;
 }
 
 export async function addEntry(
@@ -383,7 +417,7 @@ export async function addEntry(
 ) {
   const wound = await loadWound(ctx, woundId);
   if (wound.status === "closed") throw new ApiError("Die Wunde ist abgeschlossen. Bitte zuerst wieder eröffnen.", 409);
-  const entry = parseEntryInput(body);
+  const entry = parseEntryInput(body, await parseMaterials(ctx, body.materials));
   const nextStatus = body.woundStatus === "healing" || body.woundStatus === "active" ? body.woundStatus : wound.status;
   await withReceipt(() =>
     ctx.sql.transaction([

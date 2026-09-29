@@ -13,7 +13,7 @@ import {
   type ShowToast,
 } from "@/app/components/workspace-ui";
 import { initials } from "@/lib/medication-shared";
-import { ENTRY_TYPES, sizeLabel, type WoundEntry } from "@/lib/wounds-shared";
+import { ENTRY_TYPES, materialLabel, sizeLabel, type WoundEntry } from "@/lib/wounds-shared";
 import { WoundTimeline } from "./wound-timeline";
 import { nextCareLabel } from "./overview-utils";
 import { EntryDialog, type WoundsPayload } from "./wound-dialogs";
@@ -213,6 +213,12 @@ export default function DocumentationView({ showToast }: { showToast: ShowToast 
                   <section>
                     <span>Versorgung</span>
                     <p>{selected.treatment}</p>
+                  </section>
+                )}
+                {selected.materials.length > 0 && (
+                  <section>
+                    <span>Material</span>
+                    <p>{selected.materials.map(materialLabel).join(", ")}</p>
                   </section>
                 )}
                 {selected.note && (

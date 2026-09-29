@@ -71,6 +71,60 @@ test("Wunde anlegen, bearbeiten, dokumentieren und abschliessen – alles im Än
   );
 });
 
+test("Wundversorgung: Verbandsmaterial aus dem Katalog als Momentaufnahme je Versorgung", async () => {
+  const f = await fixture();
+  const ctx = await apiContextFor(f, "anna");
+  const residentId = await createResident(f);
+  const product = async (name: string, unit: string, status = "active", org = f.org) => {
+    const id = randomUUID();
+    await q(
+      `INSERT INTO carecore_care_supply_products (id, organization_id, item_name, unit, category, status)
+       VALUES ($1, $2, $3, $4, 'Wundversorgung', $5)`,
+      [id, org, name, unit, status],
+    );
+    return id;
+  };
+  const foam = await product("Schaumverband 10×10 cm", "Stück");
+  const saline = await product("NaCl 0,9 % 10 ml", "Ampulle");
+  const archived = await product("Alter Verband", "Stück", "archived");
+  const foreign = await product("Fremdprodukt", "Stück", "active", (await fixture()).org);
+
+  const id = await createWound(ctx, {
+    ...wound(residentId),
+    initialEntry: { materials: [{ productId: foam, quantity: 1 }] },
+  });
+  await addEntry(ctx, id, {
+    treatment: "Reinigung, Schaumverband",
+    materials: [
+      { productId: saline, quantity: 2 },
+      { productId: foam, quantity: 1 },
+    ],
+  });
+  for (const materials of [
+    [{ productId: archived, quantity: 1 }],
+    [{ productId: foreign, quantity: 1 }],
+    [{ productId: foam, quantity: 0 }],
+    [
+      { productId: foam, quantity: 1 },
+      { productId: foam, quantity: 2 },
+    ],
+    "Schaumverband",
+  ])
+    assert.ok((await failure(addEntry(ctx, id, { note: "x", materials }))).status >= 400, JSON.stringify(materials));
+
+  // Umbenennung im Katalog ändert die Dokumentation nicht.
+  await q(`UPDATE carecore_care_supply_products SET item_name = 'Umbenannt' WHERE id = $1`, [foam]);
+  const [latest, initial] = (await listEntries(ctx, id)).entries;
+  assert.equal(initial.entryType, "Erstbeurteilung");
+  assert.deepEqual(initial.materials, [
+    { productId: foam, name: "Schaumverband 10×10 cm", unit: "Stück", quantity: 1 },
+  ]);
+  assert.deepEqual(
+    latest.materials.map((m) => `${m.quantity} ${m.unit} ${m.name}`),
+    ["2 Ampulle NaCl 0,9 % 10 ml", "1 Stück Schaumverband 10×10 cm"],
+  );
+});
+
 test("Überfällige Wundversorgung: Erinnerung an die Verantwortlichen, je Versorgungszyklus einmal", async () => {
   const f = await fixture();
   const writer = async (person: string) => {

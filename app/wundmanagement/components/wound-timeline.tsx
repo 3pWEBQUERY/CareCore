@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDateTime } from "@/app/components/workspace-ui";
-import { sizeLabel, type WoundEntry } from "@/lib/wounds-shared";
+import { materialLabel, sizeLabel, type WoundEntry } from "@/lib/wounds-shared";
 
 export function WoundTimeline({ entries, loading }: { entries: WoundEntry[]; loading: boolean }) {
   if (loading) return <p className="list-hint">Verlauf wird geladen …</p>;
@@ -27,6 +27,9 @@ export function WoundTimeline({ entries, loading }: { entries: WoundEntry[]; loa
               .join(" · ") || "Keine strukturierten Befunde"}
           </small>
           {entry.treatment && <p>{entry.treatment}</p>}
+          {entry.materials.length > 0 && (
+            <p className="wound-timeline-materials">Material: {entry.materials.map(materialLabel).join(", ")}</p>
+          )}
           {entry.note && <p className="wound-timeline-note">{entry.note}</p>}
           <em>{entry.author ?? "unbekannt"}</em>
         </li>

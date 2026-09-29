@@ -75,9 +75,12 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - [x] **Dokumente:** Lesebestätigung bei neuer Version erneut anfordern. War bereits so gebaut (jede Version eigene
       Zeile, Benachrichtigung „Standard aktualisiert“), jetzt mit Test; ergänzt: nachträglich verlangte Bestätigung
       benachrichtigt alle, die noch nicht bestätigt haben.
-- [ ] **Trendhinweise Ernährung:** Hinweis, wenn eine von der Einrichtung gesetzte Grenze für Gewicht oder
-      Trinkmenge unterschritten wird. Keine erfundenen Werte.
-- [ ] **Wunden:** Verbandsmaterial je Versorgung aus dem Materialkatalog.
+- [x] **Trendhinweise Ernährung:** Hinweis, wenn eine von der Einrichtung gesetzte Grenze für Gewicht oder
+      Trinkmenge unterschritten wird. Keine erfundenen Werte. Einstellungen „Hinweis Gewichtsverlust“ (%),
+      „Beobachtungszeitraum Gewicht“ (Tage) und „Hinweis Trinkmenge“ (Tage in Folge unter dem persönlichen
+      Trinkziel), alle ohne Vorgabewert und ausgeschaltet.
+- [x] **Wunden:** Verbandsmaterial je Versorgung aus dem Materialkatalog (Momentaufnahme je Eintrag; keine
+      Lagerbuchung – das wäre eine eigene Entscheidung zur Bestandsführung).
 - [ ] **Dienstplan:** Börse für offene Dienste.
 - [ ] **Dark Mode** als Wahl in den persönlichen Einstellungen. Das Standard-Aussehen bleibt unverändert.
 
