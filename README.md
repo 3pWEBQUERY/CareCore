@@ -65,6 +65,10 @@ Alle drei laufen in der CI bei jedem Pull Request.
 
 `GET /api/health` braucht keine Anmeldung und eignet sich für Überwachung und Load-Balancer (`lib/health.ts`). Die Antwort nennt `status` (`ok`, `degraded` bei ausstehenden Migrationen, `down` ohne Datenbank), die Erreichbarkeit und Antwortzeit der Datenbank sowie die zuletzt angewendete und die noch ausstehenden Migrationen. HTTP 200 bei `ok` und `degraded`, 503 bei `down`. Sie enthält keine Geheimnisse, keine Personendaten und keine Fehlermeldungen der Datenbank und wird weder vom Browser noch vom Service Worker zwischengespeichert.
 
+## Drossel für schreibende Anfragen
+
+Schreibende API-Anfragen (POST, PATCH, PUT, DELETE) werden in `proxy.ts` gezählt (`lib/rate-limit.ts`, Migration `0036_rate_limits.sql`): je Anmeldung, ohne Anmeldung je IP-Adresse, jeweils pro Minute. Gespeichert wird nur ein Hash, kein Token und keine Adresse im Klartext. Über der Grenze antwortet die API mit 429 und `Retry-After`; die Offline-Warteschlange wartet dann und sendet später erneut. Die Grenze von 240 Änderungen pro Minute ist ein technischer Schutz gegen Skripte und Fehlschleifen, kein fachlicher Grenzwert, und lässt sich mit `CARECORE_WRITE_LIMIT_PER_MINUTE` anpassen. Anmeldung (eigene Drossel) und der Push-Zeitplan sind ausgenommen; kann die Zählung nicht erfolgen, wird die Anfrage nicht blockiert.
+
 ## Datenbank-Migrationen
 
 Das Schema wird ausschließlich über nummerierte SQL-Dateien in `database/migrations` verwaltet; die Anwendung legt zur Laufzeit keine Tabellen an. Das Schema deckt Organisationen, Wohnbereiche, Bewohner, Pflegeplanung, Dokumentation, Assessments, Vitalwerte, Medikation, Wunden, Ernährung, Dienste, Aufgaben, Übergaben, Kommunikation, Dokumente, Schulungen, Qualität, RAI, KI-Entwürfe, Benachrichtigungen und Auditierung ab.

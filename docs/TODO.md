@@ -36,7 +36,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Rechte                       | 🟡    | Grobe Rechte (`medication.manage` u. a.) plus Qualifikationen. Keine Trennung Verabreichen / Verordnung bearbeiten.                          |
 | Audit                        | ✅    | Atomar, pro Bewohner. Gerät und Sitzung werden nicht mitgeschrieben.                                                                         |
 | Datenschutz                  | 🟡    | Eigener Datenexport, Quittungen nach 30 Tagen gelöscht. Kein Lösch- oder Aufbewahrungskonzept für Bewohnerdaten.                             |
-| Sicherheit                   | 🟡    | Login-, Passwort- und KI-Drossel. Keine allgemeine API-Drossel.                                                                              |
+| Sicherheit                   | 🟡    | Login-, Passwort- und KI-Drossel, allgemeine Drossel für schreibende API-Anfragen.                                                           |
 | Backups / Health             | 🟡    | Health-Endpunkt `/api/health`; Backups durch den Datenbank-Anbieter.                                                                         |
 | Offline                      | 🟡    | Warteschlange mit Quittungen, Service Worker. **Lokaler Speicher unverschlüsselt**, keine Konfliktanzeige.                                   |
 | API / FHIR / Webhooks        | ❌    | Nur interne API.                                                                                                                             |
@@ -65,7 +65,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 
 - [x] **Mobile Schnellaktionen (FAB):** Doku, Vitalwert, Trinkmenge, Reservegabe, Wundverlauf, Übergabenotiz für den gewählten Bewohner.
 - [x] **Health-Endpunkt** `/api/health` (DB-Verbindung, Migrationsstand, ohne Geheimnisse).
-- [ ] **Allgemeine API-Drossel** für schreibende Anfragen.
+- [x] **Allgemeine API-Drossel** für schreibende Anfragen.
 - [ ] **Offline:** lokalen Speicher verschlüsseln (Schlüssel an die Sitzung gebunden) und Konflikte anzeigen, wenn
       ein Eintrag inzwischen geändert wurde.
 - [ ] **Audit mit Sitzung und Gerät** (Sitzungs-ID, User-Agent).

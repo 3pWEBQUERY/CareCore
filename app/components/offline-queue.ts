@@ -156,7 +156,8 @@ async function sendQueued() {
     } else if (outcome.response.status === 401) {
       result.signedOut = true;
       break;
-    } else if (outcome.response.status >= 500) {
+    } else if (outcome.response.status >= 500 || outcome.response.status === 429) {
+      // Serverfehler oder Drossel: später erneut senden, nicht als abgelehnt markieren.
       break;
     } else {
       await saveWrite({ ...item, error: outcome.payload?.error || "Der Eintrag wurde abgelehnt." });
