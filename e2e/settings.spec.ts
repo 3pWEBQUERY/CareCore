@@ -207,3 +207,51 @@ test("Löschfristen: Karte folgt der Aufbewahrungsfrist der Einrichtung", async 
   }
   expect(errors).toEqual([]);
 });
+
+// Schnittstelle: Administration erstellt einen Schlüssel, das angebundene System liest damit FHIR; nach dem Widerruf nicht mehr.
+test("FHIR-Schlüssel: erstellen, damit lesen, widerrufen", async ({ page, playwright }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  const name = `Praxis ${Date.now()}`;
+  await page.goto("/c/leitung/administration/konfiguration");
+  const card = page.locator(".admin-api-card");
+  await card.getByRole("button", { name: "Schlüssel erstellen" }).click();
+  const create = page.getByRole("dialog", { name: "Schlüssel erstellen" });
+  await create.getByLabel("Name", { exact: true }).fill(name);
+  await create.getByLabel("Personen (Name, Geburtsdatum, Geschlecht, Status)").check();
+  await create.getByRole("button", { name: "Erstellen" }).click();
+  const shown = page.getByRole("dialog", { name: `Schlüssel „${name}“` });
+  const key = await shown.getByLabel("Schlüssel", { exact: true }).inputValue();
+  expect(key).toMatch(/^cck_/);
+  await shown.getByRole("button", { name: "Fertig" }).click();
+  await expect(card).toContainText(name);
+
+  // Ohne Anmeldung, nur mit Schlüssel – wie ein fremdes System.
+  const api = await playwright.request.newContext({ baseURL: new URL(page.url()).origin });
+  try {
+    expect((await api.get("/api/fhir/r4/metadata")).status()).toBe(200);
+    expect((await api.get("/api/fhir/r4/Patient")).status()).toBe(401);
+    const patients = await api.get("/api/fhir/r4/Patient?active=true&_count=5", {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    expect(patients.status()).toBe(200);
+    expect(patients.headers()["content-type"]).toContain("application/fhir+json");
+    const bundle = (await patients.json()) as { resourceType: string; total: number; entry: unknown[] };
+    expect(bundle.resourceType).toBe("Bundle");
+    expect(bundle.total).toBeGreaterThan(0);
+    expect((await api.get("/api/fhir/r4/Observation", { headers: { Authorization: `Bearer ${key}` } })).status()).toBe(
+      403,
+    );
+
+    await card.locator(".admin-retention-row", { hasText: name }).getByRole("button", { name: "Widerrufen" }).click();
+    await page
+      .getByRole("dialog", { name: `„${name}“ widerrufen` })
+      .getByRole("button", { name: "Widerrufen" })
+      .click();
+    await expect(page.locator(".toast")).toContainText("widerrufen");
+    expect((await api.get("/api/fhir/r4/Patient", { headers: { Authorization: `Bearer ${key}` } })).status()).toBe(401);
+  } finally {
+    await api.dispose();
+  }
+  expect(errors).toEqual([]);
+});

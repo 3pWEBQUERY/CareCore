@@ -123,6 +123,11 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Nachrichten sowie Aufgaben/Übergaben (Prüfung alle 10 s, Stand als Event-ID fürs Wiederverbinden); Kopfzeile,
       Navigationszähler und Messenger laden sofort nach. Das bisherige Nachladen bleibt als seltene Absicherung.
 - [ ] **Öffentliche API, Webhooks, FHIR.**
+  - [x] Öffentliche Schnittstelle nach HL7 FHIR R4 (nur lesend): Patient und Observation (Vitalwerte, LOINC/UCUM),
+        `metadata` ohne Schlüssel. Schlüssel je angebundenem System mit Berechtigungen, erstellt und widerrufen durch die
+        Administration (Leitung › Konfiguration), gespeichert nur als Hash; jeder Zugriff protokolliert. Beschreibung in
+        `docs/SCHNITTSTELLE.md`.
+  - [ ] Webhooks.
 - [ ] **Portale (Phase 6).**
 
 ## Braucht eine Entscheidung oder externe Quelle
