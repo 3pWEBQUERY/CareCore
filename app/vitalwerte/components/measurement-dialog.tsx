@@ -13,7 +13,7 @@ import {
   type VitalResident,
   type VitalStatus,
 } from "@/lib/vitals-shared";
-import { useCareResident } from "@/app/components/care-context";
+import { useCareResident, useTerms } from "@/app/components/care-context";
 import { sendOrQueue } from "@/app/components/offline-queue";
 
 type Draft = Record<string, { value: string; secondary: string }>;
@@ -30,6 +30,7 @@ export default function MeasurementDialog({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
+  const t = useTerms();
   const [contextId] = useCareResident();
   const [residentId, setResidentId] = useState(
     initialResidentId ?? residents.find((r) => r.id === contextId)?.id ?? residents[0]?.id ?? "",
@@ -76,7 +77,7 @@ export default function MeasurementDialog({
       const result = await sendOrQueue<{ results: Array<{ metric: string; status: VitalStatus }> }>(
         "/api/vitals/measurements",
         { residentId, measuredAt: zurichTimeToIso(date, time), values, note },
-        `Vitalwerte · ${resident?.name ?? "Bewohner"}`,
+        `Vitalwerte · ${resident?.name ?? t.one}`,
         { field: "note", label: "Bemerkung" },
       );
       if (result.queued) {
@@ -104,7 +105,7 @@ export default function MeasurementDialog({
       id="vital-measurement"
       eyebrow="CareCore Vitalwerte"
       title="Vitalwerte erfassen"
-      description="Nur ausgefüllte Felder werden gespeichert. Die Einstufung erfolgt anhand der Grenzwerte des Bewohners."
+      description={`Nur ausgefüllte Felder werden gespeichert. Die Einstufung erfolgt anhand der Grenzwerte des ${t.oneOblique}.`}
       onClose={onClose}
       onSubmit={save}
       saving={saving}
@@ -112,13 +113,13 @@ export default function MeasurementDialog({
       submitLabel="Messung speichern"
     >
       <label className="area-editor-wide">
-        <span>Bewohner</span>
+        <span>{t.one}</span>
         {initialResidentId ? (
           <input value={resident ? labelOf(resident) : ""} readOnly />
         ) : (
           <CareSelect
-            label="Bewohner"
-            value={resident ? labelOf(resident) : "Bewohner wählen"}
+            label={t.one}
+            value={resident ? labelOf(resident) : `${t.oneOblique} wählen`}
             options={residents.map(labelOf)}
             onChange={(value) => setResidentId(residents.find((item) => labelOf(item) === value)?.id ?? residentId)}
           />
@@ -171,7 +172,7 @@ export default function MeasurementDialog({
           maxLength={2000}
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="z. B. nach Mobilisation gemessen, Bewohner klagt über Schwindel"
+          placeholder={`z. B. nach Mobilisation gemessen, ${t.one} klagt über Schwindel`}
         />
       </label>
     </EditorDialog>

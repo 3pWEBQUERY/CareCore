@@ -14,7 +14,7 @@ import {
   type WoundOrigin,
 } from "@/lib/wounds-shared";
 import EntryFields, { emptyEntry, entryPayload, type EntryDraft } from "./entry-fields";
-import { useCareResident } from "@/app/components/care-context";
+import { useCareResident, useTerms } from "@/app/components/care-context";
 import { sendOrQueue } from "@/app/components/offline-queue";
 
 export type WoundsPayload = {
@@ -43,6 +43,7 @@ export function WoundDialog({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
+  const t = useTerms();
   const [contextId] = useCareResident();
   const [residentId, setResidentId] = useState(
     wound?.residentId ??
@@ -95,7 +96,7 @@ export function WoundDialog({
       };
       if (wound) await requestJson(`/api/wounds/${wound.id}`, { method: "PATCH", body });
       else await requestJson("/api/wounds", { method: "POST", body });
-      onSaved(wound ? "Wunddaten aktualisiert" : `Wunde für ${resident?.name ?? "Bewohner"} erfasst`);
+      onSaved(wound ? "Wunddaten aktualisiert" : `Wunde für ${resident?.name ?? t.oneOblique} erfasst`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Wunde konnte nicht gespeichert werden.");
       setSaving(false);
@@ -119,13 +120,13 @@ export function WoundDialog({
       submitLabel={wound ? "Änderungen speichern" : "Wunde erfassen"}
     >
       <label className="area-editor-wide">
-        <span>Bewohner</span>
+        <span>{t.one}</span>
         {wound || initialResidentId ? (
           <input value={resident ? residentLabel(resident) : (wound?.residentName ?? "")} readOnly />
         ) : (
           <CareSelect
-            label="Bewohner"
-            value={resident ? residentLabel(resident) : "Bewohner wählen"}
+            label={t.one}
+            value={resident ? residentLabel(resident) : `${t.oneOblique} wählen`}
             options={data.residents.map(residentLabel)}
             onChange={(value) =>
               setResidentId(data.residents.find((r) => residentLabel(r) === value)?.id ?? residentId)

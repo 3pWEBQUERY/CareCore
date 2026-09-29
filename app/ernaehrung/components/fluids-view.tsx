@@ -24,11 +24,12 @@ import {
 } from "@/lib/nutrition-shared";
 import DayPanel from "./day-panel";
 import { residentFluidStatus, type NutritionOverview } from "./plan-view";
-import { useCareResident } from "@/app/components/care-context";
+import { useCareResident, useTerms } from "@/app/components/care-context";
 
 const ALL_UNITS = "Gesamtes Haus";
 
 export default function FluidsView({ showToast }: { showToast: ShowToast }) {
+  const t = useTerms();
   const [date, setDate] = useState(todayInZurich);
   const [unit, setUnit] = useState(ALL_UNITS);
   const [onlyBehind, setOnlyBehind] = useState(false);
@@ -105,7 +106,7 @@ export default function FluidsView({ showToast }: { showToast: ShowToast }) {
           </div>
           <div className="fluids-table">
             <div className="fluids-table-head">
-              <span>Bewohner</span>
+              <span>{t.one}</span>
               <span>Aufgenommen</span>
               <span>Fortschritt</span>
               <span>Letzter Eintrag</span>
@@ -159,7 +160,7 @@ export default function FluidsView({ showToast }: { showToast: ShowToast }) {
             {!overview.loading && !rows.length && (
               <EmptyState
                 icon="nutrition"
-                title="Keine Bewohner"
+                title={`Keine ${t.many}`}
                 text={onlyBehind ? "Alle liegen im Soll." : "Filter anpassen."}
               />
             )}

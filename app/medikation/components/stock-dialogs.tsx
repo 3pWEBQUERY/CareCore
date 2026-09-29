@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import type { StockItem } from "@/lib/medication-shared";
@@ -36,6 +37,7 @@ export function ReceiptDialog({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
+  const t = useTerms();
   const [mode, setMode] = useState<"existing" | "new">(items.length && !preset ? "existing" : "new");
   const [stockId, setStockId] = useState(items[0]?.id ?? "");
   const [owner, setOwner] = useState<"unit" | "resident">(preset?.residentId ? "resident" : "unit");
@@ -155,13 +157,13 @@ export function ReceiptDialog({
                 aria-pressed={owner === "resident"}
                 onClick={() => setOwner("resident")}
               >
-                Bewohnereigener Bestand
+                {t.prefix}eigener Bestand
               </button>
             </div>
           )}
           {!preset?.residentId && (
             <label className="area-editor-wide">
-              <span>{owner === "unit" ? "Wohnbereich" : "Bewohner"}</span>
+              <span>{owner === "unit" ? "Wohnbereich" : t.one}</span>
               {owner === "unit" ? (
                 <CareSelect
                   label="Wohnbereich"
@@ -171,8 +173,8 @@ export function ReceiptDialog({
                 />
               ) : (
                 <CareSelect
-                  label="Bewohner"
-                  value={residents.find((r) => r.id === residentId)?.name ?? "Bewohner wählen"}
+                  label={t.one}
+                  value={residents.find((r) => r.id === residentId)?.name ?? `${t.oneOblique} wählen`}
                   options={residents.map((r) => r.name)}
                   onChange={(value) => setResidentId(residents.find((r) => r.name === value)?.id ?? residentId)}
                 />

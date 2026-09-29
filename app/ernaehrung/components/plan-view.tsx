@@ -20,7 +20,7 @@ import {
 } from "@/lib/nutrition-shared";
 import DayPanel from "./day-panel";
 import { PlanDialog } from "./nutrition-dialogs";
-import { useHeaderResident } from "@/app/components/care-context";
+import { useHeaderResident, useTerms } from "@/app/components/care-context";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
 
 export type NutritionOverview = {
@@ -37,6 +37,7 @@ export function residentFluidStatus(r: NutritionResident, share: number) {
 }
 
 export default function PlanView({ showToast }: { showToast: ShowToast }) {
+  const t = useTerms();
   const overview = useApiData<NutritionOverview>("/api/nutrition");
   const [editing, setEditing] = useState(false);
   const residents = overview.data?.residents ?? [];
@@ -57,7 +58,7 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
       <PageHeading
         eyebrow="CareCore Ernährung"
         title="Ernährungsplan"
-        description="Kostform, Konsistenz, Trinkziele und Hilfestellung je Bewohner – mit Tagesverlauf und Gewicht."
+        description={`Kostform, Konsistenz, Trinkziele und Hilfestellung je ${t.one} – mit Tagesverlauf und Gewicht.`}
         action={
           canWrite && resident
             ? { label: plan ? "Plan anpassen" : "Plan anlegen", onClick: () => setEditing(true) }
@@ -150,7 +151,7 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
                     text={
                       canWrite
                         ? "Über „Plan anlegen“ Kostform, Konsistenz und Trinkziel festlegen."
-                        : "Für diesen Bewohner ist kein Plan hinterlegt."
+                        : `Für diesen ${t.oneOblique} ist kein Plan hinterlegt.`
                     }
                   />
                 )}

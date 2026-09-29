@@ -101,8 +101,9 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
   - [x] Grundlage: Wahl in „Leitung › Konfiguration“ (mit Protokoll), feste Wortformen je Bezeichnung
         (`lib/terminology.ts`), gilt in Navigation, Kopfzeile, Handy-Navigation, Suche und Startseite.
   - [x] Bewohner-Modul: Übersicht, Verzeichnis, Aufnahme, Akte mit allen Bereichen, Pflegeakte, Verlauf & Archiv.
-  - [ ] Übrige Module (Medikation, Wunden, Vitalwerte, Planung, RAI, Qualität, Ernährung, Kennzahlen) und Meldungen
-        des Servers.
+  - [x] Medikation, Wunden, Vitalwerte, Ernährung.
+  - [ ] Übrige Module (Planung, Einschätzungen, RAI, Dokumentation, Betrieb, Qualität, Kennzahlen, Hilfe) und
+        Meldungen des Servers.
   - [ ] Weitere Sprachen FR / IT / EN.
 - [ ] **Admin-Konfiguration:** Ereignistypen, Vitalparameter, Branding.
 - [ ] **Datenschutz:** Lösch- und Aufbewahrungskonzept für Bewohnerdaten. Fristen legt die Einrichtung fest.

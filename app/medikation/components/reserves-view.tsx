@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useWorkContext } from "@/app/components/care-context";
+import { useWorkContext, useTerms } from "@/app/components/care-context";
+import type { Terms } from "@/lib/terminology";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { EFFECT_RESULTS, type EffectCheck, type EffectResult, type MedOrder } from "@/lib/medication-shared";
 import {
@@ -31,13 +32,14 @@ function nextAllowedAt(order: MedOrder) {
   return next > Date.now() ? new Date(next) : null;
 }
 
-function availableStock(order: MedOrder) {
-  if (order.residentStock !== null) return { amount: order.residentStock, source: "Bewohnerbestand" };
+function availableStock(order: MedOrder, t: Terms) {
+  if (order.residentStock !== null) return { amount: order.residentStock, source: `${t.prefix}bestand` };
   if (order.wardStock !== null) return { amount: order.wardStock, source: "Stationsbestand" };
   return null;
 }
 
 export default function ReservesView({ showToast }: { showToast: ShowToast }) {
+  const t = useTerms();
   const { residents, resident, missing, detail, reloadAll } = useSelectedResident();
   const canManage = residents.data?.canManage ?? false;
   const canAdminister = residents.data?.canAdminister ?? false;
@@ -71,7 +73,7 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
           { icon: "med", value: reserves.length, caption: "aktive Reserveverordnungen" },
           {
             icon: "alert",
-            value: reserves.filter((o) => (availableStock(o)?.amount ?? 0) <= 3).length,
+            value: reserves.filter((o) => (availableStock(o, t)?.amount ?? 0) <= 3).length,
             caption: "Bestand knapp",
             tone: "attention",
           },
@@ -84,7 +86,9 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
           {
             icon: "residents",
             value: resident ? resident.name : "–",
-            caption: resident ? [resident.room, resident.careUnit].filter(Boolean).join(" · ") : "Bewohner wählen",
+            caption: resident
+              ? [resident.room, resident.careUnit].filter(Boolean).join(" · ")
+              : `${t.oneOblique} wählen`,
           },
         ]}
       />
@@ -169,7 +173,7 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
                 </div>
                 <div className="med-reserve-list">
                   {reserves.map((order) => {
-                    const stock = availableStock(order);
+                    const stock = availableStock(order, t);
                     const next = nextAllowedAt(order);
                     const limitsMissing = !order.maxDosesPer24h || !order.minIntervalHours;
                     const maxReached =

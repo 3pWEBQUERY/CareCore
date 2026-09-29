@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import {
@@ -60,6 +61,7 @@ const asStockItem = (item: BtmStockItem): StockItem => ({
 
 // BtM-Kontrolle: Betäubungsmittel mit Bestandsbuch, Bestandskontrollen und Zweitunterschrift.
 export default function BtmView({ showToast }: { showToast: ShowToast }) {
+  const t = useTerms();
   const { data, error, loading, reload } = useApiData<Payload>("/api/medication/btm");
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [marking, setMarking] = useState("");
@@ -170,7 +172,7 @@ export default function BtmView({ showToast }: { showToast: ShowToast }) {
                   <strong>{item.owner}</strong>
                   <small>
                     {item.location ||
-                      (item.ownerKind === "resident" ? "Bewohnereigener Bestand" : "Kein Lagerort erfasst")}
+                      (item.ownerKind === "resident" ? `${t.prefix}eigener Bestand` : "Kein Lagerort erfasst")}
                   </small>
                 </span>
                 <span>
@@ -400,6 +402,7 @@ function DisposalDialog({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
+  const t = useTerms();
   const [quantity, setQuantity] = useState("");
   const [note, setNote] = useState("");
   const [witness, setWitness] = useState(emptyWitness);
@@ -445,7 +448,7 @@ function DisposalDialog({
           maxLength={1000}
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          placeholder="z. B. verfallen, Bewohner verstorben"
+          placeholder={`z. B. verfallen, ${t.one} verstorben`}
         />
       </label>
       <WitnessFields value={witness} onChange={setWitness} />
@@ -510,6 +513,7 @@ const printedAt = new Intl.DateTimeFormat("de-CH", {
 });
 
 export function BtmBookTable({ book, print = false }: { book: BtmBook; print?: boolean }) {
+  const t = useTerms();
   const unit = book.stock.unit;
   return (
     <table className="btm-book">
@@ -517,7 +521,7 @@ export function BtmBookTable({ book, print = false }: { book: BtmBook; print?: b
         <tr>
           <th>Datum</th>
           <th>Art</th>
-          <th>Bewohner / Hinweis</th>
+          <th>{t.one} / Hinweis</th>
           <th className="number">Menge</th>
           <th className="number">Bestand</th>
           <th>Person</th>

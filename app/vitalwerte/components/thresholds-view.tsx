@@ -15,7 +15,7 @@ import {
 } from "@/app/components/workspace-ui";
 import { VITAL_METRICS, formatRange, metricByKey, type ThresholdRow, formatDecimal } from "@/lib/vitals-shared";
 import type { VitalsOverview } from "./overview-view";
-import { useCareResident } from "@/app/components/care-context";
+import { useCareResident, useTerms } from "@/app/components/care-context";
 
 type ThresholdPayload = { house: ThresholdRow[]; personal: ThresholdRow[] };
 type Editing = { scope: "organization" | "resident"; row: ThresholdRow | null };
@@ -38,6 +38,7 @@ function limits(row: ThresholdRow, unit: string) {
 }
 
 export default function ThresholdsView({ showToast }: { showToast: ShowToast }) {
+  const t = useTerms();
   const thresholds = useApiData<ThresholdPayload>("/api/vitals/thresholds");
   const overview = useApiData<VitalsOverview>("/api/vitals/overview");
   const [editing, setEditing] = useState<Editing | null>(null);
@@ -73,7 +74,7 @@ export default function ThresholdsView({ showToast }: { showToast: ShowToast }) 
               <p className="eyebrow">Sicherheitslogik</p>
               <h2 className="card-title">Hausweite Grenzwerte</h2>
               <p className="card-subtitle">
-                Gelten für alle Bewohner ohne persönlichen Zielbereich. Voreinstellungen bitte durch die Pflegeleitung
+                Gelten für alle {t.many} ohne persönlichen Zielbereich. Voreinstellungen bitte durch die Pflegeleitung
                 bestätigen.
               </p>
             </div>
@@ -138,7 +139,7 @@ export default function ThresholdsView({ showToast }: { showToast: ShowToast }) 
             <div className="card-header">
               <div>
                 <p className="eyebrow">Persönliche Zielbereiche</p>
-                <h2 className="card-title">Bewohnerbezogen</h2>
+                <h2 className="card-title">{t.prefix}bezogen</h2>
               </div>
               <span className="status-badge info">{personal.length}</span>
             </div>
@@ -174,7 +175,7 @@ export default function ThresholdsView({ showToast }: { showToast: ShowToast }) 
             {!thresholds.loading && !personal.length && (
               <EmptyState
                 title="Keine persönlichen Zielbereiche"
-                text="Alle Bewohner werden mit den Haus-Grenzwerten bewertet."
+                text={`Alle ${t.many} werden mit den Haus-Grenzwerten bewertet.`}
                 icon="vitals"
               />
             )}
@@ -224,6 +225,7 @@ function ThresholdDialog({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
+  const t = useTerms();
   const row = editing.row;
   const [metric, setMetric] = useState(row?.metric ?? VITAL_METRICS[0].key);
   const [contextId] = useCareResident();
@@ -294,13 +296,13 @@ function ThresholdDialog({
     >
       {personal && (
         <label className="area-editor-wide">
-          <span>Bewohner</span>
+          <span>{t.one}</span>
           {row ? (
             <input value={row.residentName ?? ""} readOnly />
           ) : (
             <CareSelect
-              label="Bewohner"
-              value={residents.find((r) => r.id === residentId)?.name ?? "Bewohner wählen"}
+              label={t.one}
+              value={residents.find((r) => r.id === residentId)?.name ?? `${t.oneOblique} wählen`}
               options={residents.map((r) => r.name)}
               onChange={(value) => setResidentId(residents.find((r) => r.name === value)?.id ?? residentId)}
             />

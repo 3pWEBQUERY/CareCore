@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useCareResident } from "@/app/components/care-context";
+import { useCareResident, useTerms } from "@/app/components/care-context";
 import { ModuleIcon } from "@/app/components/module-icon";
 import {
   EmptyState,
@@ -24,6 +24,7 @@ import { FILTERS, Dialog, statusText, nextCareLabel, overdueSince } from "./over
 import { WoundTimeline } from "./wound-timeline";
 
 export default function OverviewView({ showToast }: { showToast: ShowToast }) {
+  const t = useTerms();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("Alle");
   const [query, setQuery] = useState("");
   // Links from the resident record: ?wound=<id> selects a wound, ?resident=&observation= opens
@@ -73,7 +74,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
   const selected =
     residentWounds.find((w) => w.id === selectedId) ?? residentWounds[0] ?? (contextId ? null : (filtered[0] ?? null));
   const contextName =
-    data.data?.residents.find((resident) => resident.id === contextId)?.name ?? "Ausgewählter Bewohner";
+    data.data?.residents.find((resident) => resident.id === contextId)?.name ?? `Ausgewählter ${t.one}`;
   const history = useApiData<{ entries: WoundEntry[] }>(selected ? `/api/wounds/${selected.id}/entries` : null);
   const overdue = open.filter((w) => w.overdue);
   const dueToday = open.filter((w) => w.dueToday);
@@ -181,7 +182,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Bewohner oder Wunde suchen"
+                placeholder={`${t.one} oder Wunde suchen`}
                 aria-label="Wunden durchsuchen"
               />
             </label>
@@ -200,7 +201,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
             </div>
           </div>
           <div className="wound-table-head" aria-hidden="true">
-            <span>Bewohner &amp; Wunde</span>
+            <span>{t.one} &amp; Wunde</span>
             <span>Versorgung</span>
             <span>Heilung</span>
             <span>Status</span>
@@ -304,7 +305,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
                         ? `${selected.bodyObservation.label} · ${selected.bodyObservation.location}`
                         : "Nicht verknüpft"}
                       {" · "}
-                      <Link href={`/bewohner?resident=${selected.residentId}`}>Bewohnerakte</Link>
+                      <Link href={`/bewohner?resident=${selected.residentId}`}>{t.prefix}akte</Link>
                     </dd>
                   </div>
                   {selected.treatmentPlan && (
@@ -407,7 +408,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
             <section className="card wound-focus-card" aria-live="polite">
               <div className="card-header">
                 <div>
-                  <p className="eyebrow">Ausgewählter Bewohner</p>
+                  <p className="eyebrow">Ausgewählter {t.one}</p>
                   <h2 className="card-title">{contextName}</h2>
                   <p className="card-subtitle">Gewählt in der Kopfzeile</p>
                 </div>

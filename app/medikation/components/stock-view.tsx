@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { movementLabels, type StockItem, type StockMovement } from "@/lib/medication-shared";
@@ -66,6 +67,7 @@ export function MovementJournal({
 }
 
 export default function StockView({ showToast }: { showToast: ShowToast }) {
+  const t = useTerms();
   const { data, error, loading, reload } = useApiData<StockPayload>("/api/medication/stock");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("Alle");
@@ -175,7 +177,7 @@ export default function StockView({ showToast }: { showToast: ShowToast }) {
                   <strong>{item.owner}</strong>
                   <small>
                     {item.location ||
-                      (item.ownerKind === "resident" ? "Bewohnereigener Bestand" : "Kein Lagerort erfasst")}
+                      (item.ownerKind === "resident" ? `${t.prefix}eigener Bestand` : "Kein Lagerort erfasst")}
                   </small>
                 </span>
                 <span className={`med-stock-level ${low ? "low" : ""}`}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { useWorkContext } from "@/app/components/care-context";
+import { useWorkContext, useTerms } from "@/app/components/care-context";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import { ModuleIcon } from "@/app/components/module-icon";
 import {
@@ -65,6 +65,7 @@ const noSubscribe = () => () => undefined;
 const currentRound = () => roundForTime(timeInZurich());
 
 export default function RoundView({ showToast }: { showToast: ShowToast }) {
+  const t = useTerms();
   const nowRound = useSyncExternalStore(noSubscribe, currentRound, () => null);
   const today = useSyncExternalStore(noSubscribe, todayInZurich, () => null);
   const [roundChoice, setRound] = useState<RoundKey | null>(null);
@@ -118,7 +119,7 @@ export default function RoundView({ showToast }: { showToast: ShowToast }) {
       <SummaryTiles
         label="Status der Medikamentenrunde"
         tiles={[
-          { icon: "residents", value: residentsInRound, caption: "Bewohner in der Runde" },
+          { icon: "residents", value: residentsInRound, caption: `${t.many} in der Runde` },
           { icon: "check", value: documented, caption: "Gaben dokumentiert" },
           { icon: "alert", value: doses.length - documented, caption: "noch offen", tone: "attention" },
           { icon: "med", value: doses.length, caption: "Einzelgaben geplant", tone: "info" },
@@ -254,7 +255,7 @@ export default function RoundView({ showToast }: { showToast: ShowToast }) {
           title={reasonCopy[pending.status].title}
           description={`${pending.dose.residentName} · ${pending.dose.time} · ${pending.dose.medication}`}
           label={reasonCopy[pending.status].label}
-          placeholder={reasonCopy[pending.status].placeholder}
+          placeholder={reasonCopy[pending.status].placeholder.replace("Bewohner", t.one)}
           submitLabel={administrationLabels[pending.status]}
           danger={pending.status === "declined"}
           onClose={() => setPending(null)}

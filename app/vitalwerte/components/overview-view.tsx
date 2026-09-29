@@ -24,7 +24,7 @@ import {
 import MeasurementDialog from "./measurement-dialog";
 import TrendChart from "./trend-chart";
 import { History, FILTERS, WEEK, ClinicalNote, MeasurementList } from "./overview-parts";
-import { useCareResident } from "@/app/components/care-context";
+import { useCareResident, useTerms } from "@/app/components/care-context";
 
 export type VitalsOverview = {
   residents: VitalResident[];
@@ -49,6 +49,7 @@ export function abnormalValues(residents: VitalResident[]) {
 }
 
 export default function OverviewView({ showToast }: { showToast: ShowToast }) {
+  const t = useTerms();
   const overview = useApiData<VitalsOverview>("/api/vitals/overview");
   const [query, setQuery] = useState("");
   const [unit, setUnit] = useState("Gesamtes Haus");
@@ -90,7 +91,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
       <PageHeading
         eyebrow="CareCore Vitalwerte"
         title="Vitalwerte im Überblick"
-        description="Aktuelle Messungen aller Bewohner, Auffälligkeiten und empfohlene Kontrollen an einem Ort."
+        description={`Aktuelle Messungen aller ${t.many}, Auffälligkeiten und empfohlene Kontrollen an einem Ort.`}
         action={
           overview.data?.canRecord
             ? { label: "Vitalwerte erfassen", onClick: () => setDialog({ residentId: null }) }
@@ -100,7 +101,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
       <SummaryTiles
         label="Vitalwertstatus im Haus"
         tiles={[
-          { icon: "residents", value: residents.length, caption: "Bewohner" },
+          { icon: "residents", value: residents.length, caption: t.many },
           { icon: "vitals", value: overview.data?.measurementsToday ?? "–", caption: "Messungen heute" },
           { icon: "alert", value: abnormal.length, caption: "auffällige Werte", tone: "attention" },
           {
@@ -149,7 +150,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
                 Aktuelle Vitalwerte
               </h2>
               <p className="card-subtitle">
-                {filtered.length} von {residents.length} Bewohnern · jeweils letzter Wert
+                {filtered.length} von {residents.length} {t.manyDative} · jeweils letzter Wert
               </p>
             </div>
             <label className="resident-search">
@@ -157,7 +158,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Bewohner, Zimmer oder Bereich"
+                placeholder={`${t.one}, Zimmer oder Bereich`}
                 aria-label="Vitalwerte durchsuchen"
               />
             </label>
@@ -219,7 +220,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
             {!overview.loading && !filtered.length && (
               <EmptyState
                 icon="search"
-                title="Keine Bewohner gefunden"
+                title={`Keine ${t.many} gefunden`}
                 text="Suchbegriff, Wohnbereich oder Statusfilter anpassen."
               />
             )}
@@ -234,7 +235,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
                 <div className="care-profile-identity">
                   <span className="resident-avatar">{selected.initials}</span>
                   <div>
-                    <p className="eyebrow">Ausgewählter Bewohner</p>
+                    <p className="eyebrow">Ausgewählter {t.one}</p>
                     <h2>{selected.name}</h2>
                     <span>{[selected.room, selected.careUnit].filter(Boolean).join(" · ")}</span>
                   </div>
@@ -255,7 +256,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
                   </button>
                 )}
                 <Link className="secondary-button" href="/bewohner">
-                  Bewohnerakte
+                  {t.prefix}akte
                 </Link>
               </div>
             </section>

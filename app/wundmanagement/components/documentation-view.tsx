@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { CareSelect } from "@/app/components/care-form-controls";
 import { ModuleIcon } from "@/app/components/module-icon";
@@ -29,6 +30,7 @@ type FeedEntry = WoundEntry & {
 const RANGES = [7, 30, 90];
 
 export default function DocumentationView({ showToast }: { showToast: ShowToast }) {
+  const t = useTerms();
   const [days, setDays] = useState(30);
   const [type, setType] = useState<string>("Alle");
   const [query, setQuery] = useState("");
@@ -99,7 +101,7 @@ export default function DocumentationView({ showToast }: { showToast: ShowToast 
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Bewohner, Wunde oder Person"
+                placeholder={`${t.one}, Wunde oder Person`}
                 aria-label="Wunddokumentation durchsuchen"
               />
             </label>
@@ -124,7 +126,7 @@ export default function DocumentationView({ showToast }: { showToast: ShowToast 
             </div>
           </div>
           <div className="wound-doc-table-head" aria-hidden="true">
-            <span>Bewohner &amp; Wunde</span>
+            <span>{t.one} &amp; Wunde</span>
             <span>Eintrag</span>
             <span>Zeitpunkt</span>
             <span>Befund</span>
