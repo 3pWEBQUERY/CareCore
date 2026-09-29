@@ -11,10 +11,17 @@ import {
   useApiData,
   type ShowToast,
 } from "@/app/components/workspace-ui";
-import { TASK_PRIORITIES, TASK_RECURRENCE, personInitials, type Task, type TasksPayload } from "@/lib/tasks-shared";
+import {
+  TASK_PRIORITIES,
+  TASK_RECURRENCE,
+  isActiveTask,
+  personInitials,
+  type Task,
+  type TasksPayload,
+} from "@/lib/tasks-shared";
 import { ScheduleSelect, Summary, type Tone } from "./operations-ui";
 import { useTaskToggle } from "./task-parts";
-import { zurichDay, shortDate, statusLabel, statusTone, ALL_PEOPLE, UNASSIGNED } from "./task-utils";
+import { zurichDay, shortDate, statusLabel, statusTone, isFinishedTask, ALL_PEOPLE, UNASSIGNED } from "./task-utils";
 import { TaskDetailDialog } from "./task-detail-dialog";
 
 export function TaskView({
@@ -40,16 +47,17 @@ export function TaskView({
   const payload = data.data;
   const tasks = useMemo(() => payload?.tasks ?? [], [payload]);
   const today = todayInZurich();
-  const { toggle, dialog } = useTaskToggle(showToast, reload);
+  const { toggle, finish, dialog } = useTaskToggle(showToast, reload);
   const detail = detailId ? tasks.find((task) => task.id === detailId) : undefined;
   const setDetail = (id: string | null) => router.replace(id ? `${pathname}?task=${id}` : pathname, { scroll: false });
 
   const visible = tasks.filter((task) => task.status !== "cancelled" || filter === "Abgebrochen");
   const filtered = visible.filter((task) => {
-    const open = task.status === "open" || task.status === "in_progress";
+    const open = isActiveTask(task.status);
     if (filter === "Offen" && task.status !== "open") return false;
     if (filter === "In Bearbeitung" && task.status !== "in_progress") return false;
-    if (filter === "Erledigt" && task.status !== "completed") return false;
+    if (filter === "Eskaliert" && task.status !== "escalated") return false;
+    if (filter === "Erledigt" && !isFinishedTask(task)) return false;
     if (filter === "Abgebrochen" && task.status !== "cancelled") return false;
     if (filter === "Überfällig" && !(open && task.overdue)) return false;
     if (filter === "Heute fällig" && !(open && task.dueAt && zurichDay(task.dueAt) === today)) return false;
@@ -65,9 +73,9 @@ export function TaskView({
       return false;
     return true;
   });
-  const openTasks = visible.filter((task) => task.status === "open" || task.status === "in_progress");
+  const openTasks = visible.filter((task) => isActiveTask(task.status));
   const filters = team
-    ? ["Alle", "Offen", "In Bearbeitung", "Überfällig", "Erledigt", "Abgebrochen"]
+    ? ["Alle", "Offen", "In Bearbeitung", "Eskaliert", "Überfällig", "Erledigt", "Abgebrochen"]
     : ["Alle", "Offen", "Heute fällig", "Überfällig", "Erledigt"];
 
   return (
@@ -93,7 +101,7 @@ export function TaskView({
           },
           {
             icon: "check",
-            value: String(visible.filter((task) => task.status === "completed").length),
+            value: String(visible.filter(isFinishedTask).length),
             label: "erledigt (7 Tage)",
             tone: "info",
           },
@@ -143,7 +151,7 @@ export function TaskView({
         {data.error && <LoadError message={data.error} onRetry={reload} />}
         <div className="task-list">
           {filtered.map((task) => {
-            const done = task.status === "completed";
+            const done = isFinishedTask(task);
             const inactive = done || task.status === "cancelled";
             const tone: Tone =
               task.priority === "critical" ? "critical" : task.priority === "high" ? "attention" : "info";
@@ -218,7 +226,7 @@ export function TaskView({
           }}
           onToggle={() => {
             setDetail(null);
-            void toggle({ ...detail, done: false });
+            finish(detail);
           }}
           onChanged={(message) => {
             setDetail(null);

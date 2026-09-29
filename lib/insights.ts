@@ -326,7 +326,9 @@ export async function leadershipInsights(ctx: ApiContext): Promise<LeadershipIns
           AND a.organization_id = ${ctx.actor.organizationId} AND a.status IN ('open', 'planned')
           AND a.due_on < (NOW() AT TIME ZONE o.timezone)::date)::int AS overdue_actions,
         (SELECT COUNT(*) FROM carecore_tasks WHERE organization_id = ${ctx.actor.organizationId}
-          AND status IN ('open', 'in_progress') AND due_at < NOW())::int AS overdue_tasks` as Promise<Row[]>,
+          AND status IN ('open', 'in_progress', 'escalated') AND due_at < NOW())::int AS overdue_tasks` as Promise<
+      Row[]
+    >,
     ctx.sql`
       SELECT cu.name,
         COALESCE((SELECT SUM(ro.beds) FROM carecore_rooms ro WHERE ro.care_unit_id = cu.id AND ro.active), 0)::int AS beds,

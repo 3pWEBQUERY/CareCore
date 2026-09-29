@@ -76,7 +76,7 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
       SELECT t.resident_id, t.title, t.priority, (t.due_at < NOW()) AS overdue,
         to_char(t.due_at AT TIME ZONE o.timezone, 'HH24:MI') AS time
       FROM carecore_tasks t JOIN carecore_organizations o ON o.id = t.organization_id
-      WHERE t.organization_id = ${org} AND t.resident_id IS NOT NULL AND t.status IN ('open', 'in_progress')
+      WHERE t.organization_id = ${org} AND t.resident_id IS NOT NULL AND t.status IN ('open', 'in_progress', 'escalated')
         AND t.due_at < ((NOW() AT TIME ZONE o.timezone)::date + 1) AT TIME ZONE o.timezone
       ORDER BY t.due_at` as Promise<Row[]>,
     Promise.all((Object.keys(ROUNDS) as RoundKey[]).map((round) => listRound(ctx, round, null))),

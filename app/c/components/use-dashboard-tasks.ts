@@ -59,7 +59,7 @@ export function useDashboardTasks({
               time: item.dueAt
                 ? new Date(item.dueAt).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })
                 : "—",
-              completed: item.status === "completed",
+              completed: ["completed", "partial", "skipped"].includes(item.status),
               overdue: item.overdue,
             })),
         );

@@ -16,7 +16,9 @@ import {
   TASK_CATEGORIES,
   TASK_DOC_CATEGORY,
   TASK_PRIORITIES,
+  TASK_OUTCOMES,
   TASK_RECURRENCE,
+  isActiveTask,
   type Task,
   type TaskPerson,
   type TaskPriority,
@@ -52,6 +54,9 @@ function mapTask(row: Row, ctx: ApiContext, manager: boolean): Task {
     completedByName: (row.completed_by_name as string | null) ?? null,
     completionNote: (row.completion_note as string | null) ?? null,
     cancelReason: (row.cancel_reason as string | null) ?? null,
+    escalatedAt: iso(row.escalated_at),
+    escalatedByName: (row.escalated_by_name as string | null) ?? null,
+    escalationReason: (row.escalation_reason as string | null) ?? null,
     teamVisible: Boolean(row.team_visible),
     remind: Boolean(row.remind),
     documentOnCompletion: Boolean(row.document_on_completion),
@@ -63,9 +68,10 @@ function mapTask(row: Row, ctx: ApiContext, manager: boolean): Task {
 async function selectTasks(ctx: ApiContext, where: { taskId?: string; scope?: "mine" | "team"; residentId?: string }) {
   const { sql, actor } = ctx;
   return (await sql`
-    SELECT t.*, (t.status IN ('open', 'in_progress') AND t.due_at < NOW()) AS overdue,
+    SELECT t.*, (t.status IN ('open', 'in_progress', 'escalated') AND t.due_at < NOW()) AS overdue,
       r.first_name || ' ' || r.last_name AS resident_name, ro.name AS room, cu.name AS care_unit,
-      ua.display_name AS assignee_name, uc.display_name AS creator_name, ud.display_name AS completed_by_name
+      ua.display_name AS assignee_name, uc.display_name AS creator_name, ud.display_name AS completed_by_name,
+      ue.display_name AS escalated_by_name
     FROM carecore_tasks t
     LEFT JOIN carecore_residents r ON r.id = t.resident_id
     LEFT JOIN LATERAL (SELECT room_id FROM carecore_resident_stays WHERE resident_id = r.id AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1) stay ON TRUE
@@ -74,15 +80,16 @@ async function selectTasks(ctx: ApiContext, where: { taskId?: string; scope?: "m
     LEFT JOIN carecore_users ua ON ua.id = t.assigned_to
     LEFT JOIN carecore_users uc ON uc.id = t.created_by
     LEFT JOIN carecore_users ud ON ud.id = t.completed_by
+    LEFT JOIN carecore_users ue ON ue.id = t.escalated_by
     WHERE t.organization_id = ${actor.organizationId}
       AND (${where.taskId ?? null}::uuid IS NULL OR t.id = ${where.taskId ?? null}::uuid)
       AND (${where.residentId ?? null}::uuid IS NULL OR t.resident_id = ${where.residentId ?? null}::uuid)
-      AND (${where.taskId ?? null}::uuid IS NOT NULL OR t.status IN ('open', 'in_progress') OR t.updated_at > NOW() - INTERVAL '7 days')
+      AND (${where.taskId ?? null}::uuid IS NOT NULL OR t.status IN ('open', 'in_progress', 'escalated') OR t.updated_at > NOW() - INTERVAL '7 days')
       AND CASE ${where.scope ?? "all"}
         WHEN 'mine' THEN t.assigned_to = ${actor.id}
         ELSE t.team_visible OR t.assigned_to = ${actor.id} OR t.created_by = ${actor.id}
       END
-    ORDER BY t.status IN ('completed', 'cancelled'), t.due_at NULLS LAST, t.created_at DESC
+    ORDER BY t.status NOT IN ('open', 'in_progress', 'escalated'), t.status <> 'escalated', t.due_at NULLS LAST, t.created_at DESC
     LIMIT 500`) as Row[];
 }
 
@@ -232,8 +239,8 @@ export async function updateTask(ctx: ApiContext, taskIdInput: unknown, body: Re
   const before = await loadTask(ctx, taskIdInput);
   if (!before.canEdit)
     throw new ApiError("Nur Ersteller, Verantwortliche oder die Leitung dürfen die Aufgabe ändern.", 403);
-  if (before.status === "completed" || before.status === "cancelled")
-    throw new ApiError("Erledigte oder abgebrochene Aufgaben können nicht mehr geändert werden.", 409);
+  if (!isActiveTask(before.status))
+    throw new ApiError("Abgeschlossene oder abgebrochene Aufgaben können nicht mehr geändert werden.", 409);
   const input = await parseTask(ctx, { assignedTo: before.assignedTo, ...body });
   await ctx.sql.transaction([
     ctx.sql`
@@ -260,15 +267,17 @@ function nextDue(dueAt: string, recurrence: TaskRecurrence) {
 export async function setTaskStatus(ctx: ApiContext, taskIdInput: unknown, body: Record<string, unknown>) {
   const task = await loadTask(ctx, taskIdInput);
   const { sql, actor } = ctx;
-  const status = body.status;
-  if (status !== "open" && status !== "in_progress" && status !== "completed" && status !== "cancelled")
+  const status = String(body.status);
+  if (!["open", "in_progress", "escalated", "cancelled"].includes(status) && !(status in TASK_OUTCOMES))
     throw new ApiError("Unbekannter Status.");
   if (status === task.status) return;
   if (task.status === "cancelled")
     throw new ApiError("Abgebrochene Aufgaben können nicht wieder aufgenommen werden.", 409);
+  const active = isActiveTask(task.status);
 
   if (status === "cancelled") {
     if (!task.canEdit) throw new ApiError("Nur Ersteller, Verantwortliche oder die Leitung dürfen abbrechen.", 403);
+    if (!active) throw new ApiError("Abgeschlossene Aufgaben können nicht abgebrochen werden.", 409);
     const reason = text(body.reason, 1000);
     if (!reason) throw new ApiError("Bitte den Grund für den Abbruch angeben.");
     await sql.transaction([
@@ -278,23 +287,57 @@ export async function setTaskStatus(ctx: ApiContext, taskIdInput: unknown, body:
     return;
   }
 
-  if (status === "completed") {
+  // Eskalieren: die Aufgabe bleibt offen, die Leitung (Recht „team.manage“) wird benachrichtigt.
+  if (status === "escalated") {
+    if (!active) throw new ApiError("Nur offene Aufgaben können eskaliert werden.", 409);
+    const reason = text(body.reason, 1000);
+    if (!reason) throw new ApiError("Bitte den Grund für die Eskalation angeben.");
+    const title = `Aufgabe eskaliert: ${task.title}`;
+    const detail = `${actor.display_name}${task.residentName ? ` · ${task.residentName}` : ""}: ${reason}`;
+    await sql.transaction([
+      sql`UPDATE carecore_tasks SET status = 'escalated', escalated_at = NOW(), escalated_by = ${actor.id},
+        escalation_reason = ${reason}, updated_at = NOW() WHERE id = ${task.id}`,
+      sql`
+        INSERT INTO carecore_notifications (id, user_id, title, body, type, priority, link_url, entity_type, entity_id)
+        SELECT gen_random_uuid(), u.id, ${title}, ${detail}, 'task_escalated', 'high',
+          ${`/c/betrieb/aufgaben/team?task=${task.id}`}, 'task', ${task.id}::uuid
+        FROM carecore_users u JOIN carecore_user_profiles p ON p.user_id = u.id
+        WHERE p.organization_id = ${actor.organizationId} AND u.active AND u.id <> ${actor.id}
+          AND COALESCE(carecore_effective_permissions(u.id), '[]'::jsonb) ? 'team.manage'`,
+      auditStatement(ctx, "task", task.id, "escalated", { status: task.status }, { status, reason }),
+    ]);
+    return;
+  }
+
+  if (status in TASK_OUTCOMES) {
+    if (!active) throw new ApiError("Die Aufgabe ist bereits abgeschlossen.", 409);
+    const outcome = status as keyof typeof TASK_OUTCOMES;
     const note = text(body.note, 10000);
     // Offline erledigt: der Zeitpunkt der Erledigung, nicht der Übertragung.
     const completedAt = capturedAt(body.completedAt);
-    if (task.documentOnCompletion && note.length < 3)
+    if (outcome !== "completed" && note.length < 3)
+      throw new ApiError(
+        outcome === "partial"
+          ? "Bitte kurz beschreiben, was erledigt wurde und was offen bleibt."
+          : "Bitte den Grund angeben, warum die Aufgabe nicht erledigt wurde.",
+      );
+    if (outcome === "completed" && task.documentOnCompletion && note.length < 3)
       throw new ApiError("Diese Aufgabe verlangt eine Dokumentation. Bitte kurz beschreiben, was durchgeführt wurde.");
     const statements = [
-      sql`UPDATE carecore_tasks SET status = 'completed', completed_at = COALESCE(${completedAt}::timestamptz, NOW()), completed_by = ${actor.id},
+      sql`UPDATE carecore_tasks SET status = ${outcome}, completed_at = COALESCE(${completedAt}::timestamptz, NOW()), completed_by = ${actor.id},
         completion_note = ${note || null}, updated_at = NOW() WHERE id = ${task.id}`,
     ];
-    if (note && task.residentId && task.documentOnCompletion)
+    // Abweichungen (teilweise / nicht erledigt) gehören immer in die Pflegedokumentation, Erledigtes auf Wunsch.
+    if (note && task.residentId && (outcome !== "completed" || task.documentOnCompletion)) {
+      const prefix =
+        outcome === "completed" ? task.title : `${task.title} (${TASK_OUTCOMES[outcome].label.toLowerCase()})`;
       statements.push(sql`
         INSERT INTO carecore_documentation_entries (id, resident_id, care_unit_id, author_user_id, category, title, body, occurred_at, importance)
         SELECT ${randomUUID()}, ${task.residentId},
           (SELECT care_unit_id FROM carecore_resident_stays WHERE resident_id = ${task.residentId} AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1),
-          ${actor.id}, ${TASK_DOC_CATEGORY[task.category] ?? "Pflege"}, ${task.title}, ${`${task.title}: ${note}`},
-          COALESCE(${completedAt}::timestamptz, NOW()), 'standard'`);
+          ${actor.id}, ${TASK_DOC_CATEGORY[task.category] ?? "Pflege"}, ${task.title}, ${`${prefix}: ${note}`},
+          COALESCE(${completedAt}::timestamptz, NOW()), ${outcome === "completed" ? "standard" : "important"}`);
+    }
     let followUpId: string | null = null;
     if (task.recurrence !== "none" && task.dueAt) {
       followUpId = randomUUID();
@@ -307,7 +350,7 @@ export async function setTaskStatus(ctx: ApiContext, taskIdInput: unknown, body:
       statements.push(sql`UPDATE carecore_tasks SET follow_up_task_id = ${followUpId} WHERE id = ${task.id}`);
     }
     statements.push(
-      auditStatement(ctx, "task", task.id, "completed", { status: task.status }, { status, note, followUpId }),
+      auditStatement(ctx, "task", task.id, outcome, { status: task.status }, { status: outcome, note, followUpId }),
     );
     await sql.transaction(statements);
     return;
@@ -336,7 +379,7 @@ export async function createDueReminders(ctx: ApiContext) {
     WITH due AS (
       UPDATE carecore_tasks SET reminded_at = NOW()
       WHERE organization_id = ${ctx.actor.organizationId} AND assigned_to = ${ctx.actor.id} AND remind
-        AND reminded_at IS NULL AND status IN ('open', 'in_progress') AND due_at <= NOW() + INTERVAL '15 minutes'
+        AND reminded_at IS NULL AND status IN ('open', 'in_progress', 'escalated') AND due_at <= NOW() + INTERVAL '15 minutes'
         AND due_at > NOW() - INTERVAL '24 hours'
       RETURNING id, title, priority, due_at
     )

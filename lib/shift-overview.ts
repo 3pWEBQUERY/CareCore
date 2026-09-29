@@ -124,8 +124,8 @@ export async function shiftOverview(ctx: ApiContext, params: URLSearchParams): P
         LEFT JOIN carecore_rooms ro ON ro.id = st.room_id
         WHERE t.organization_id = ${actor.organizationId} AND t.status <> 'cancelled' AND t.due_at IS NOT NULL
           AND (t.assigned_to = ${actor.id} OR (t.assigned_to IS NULL AND t.team_visible AND (${unitId}::uuid IS NULL OR t.care_unit_id = ${unitId}::uuid)))
-          AND ((t.due_at >= ${window.from} AND t.due_at < ${window.to}) OR (t.status IN ('open', 'in_progress') AND t.due_at < ${window.from})
-            OR (t.status = 'completed' AND t.completed_at >= ${window.from} AND t.completed_at < ${window.to}))
+          AND ((t.due_at >= ${window.from} AND t.due_at < ${window.to}) OR (t.status IN ('open', 'in_progress', 'escalated') AND t.due_at < ${window.from})
+            OR (t.status IN ('completed', 'partial', 'skipped') AND t.completed_at >= ${window.from} AND t.completed_at < ${window.to}))
         ORDER BY t.due_at LIMIT 100` as Promise<Row[]>,
     sql`
         SELECT w.id, w.title, r.first_name || ' ' || r.last_name AS resident_name, ro.name AS room, last.observed AS last_at,
@@ -189,7 +189,7 @@ export async function shiftOverview(ctx: ApiContext, params: URLSearchParams): P
     priority === "critical" ? "critical" : priority === "high" ? "attention" : ("info" as const);
   const timeline: TimelineItem[] = [
     ...taskRows.map((row): TimelineItem => {
-      const done = row.status === "completed";
+      const done = ["completed", "partial", "skipped"].includes(String(row.status));
       return {
         id: `task-${row.id}`,
         kind: "task",
