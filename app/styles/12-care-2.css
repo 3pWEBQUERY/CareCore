@@ -907,3 +907,160 @@
   color: var(--muted);
   font-size: 9px;
 }
+/* Dokument hochladen (Bewohnerakte): Ablagefläche für PDF oder Bild. */
+.document-file-field {
+  position: relative;
+  display: grid;
+  gap: 7px;
+}
+.document-file-label {
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 750;
+}
+.document-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+.document-file-drop {
+  min-height: 138px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  padding: 20px 16px;
+  border: 1.5px dashed #bfdbfe;
+  border-radius: 8px;
+  color: var(--ink);
+  background: #f8fbff;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease;
+}
+.document-file-drop:hover,
+.document-file-drop.dragging,
+.document-file-input:focus-visible + .document-file-drop {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+.document-file-input:focus-visible + .document-file-drop,
+.document-file-input:focus-visible + .document-file-selected {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.document-file-drop-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  color: var(--brand);
+  background: white;
+  box-shadow: 0 1px 3px rgba(15, 42, 67, 0.12);
+}
+.document-file-drop-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.document-file-drop strong {
+  color: var(--brand-dark);
+  font-size: 13px;
+  font-weight: 750;
+}
+.document-file-drop small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.document-file-selected {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+.document-file-selected.dragging {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+.document-file-thumb {
+  width: 48px;
+  height: 52px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background-position: center;
+  background-size: cover;
+}
+.document-file-thumb.pdf {
+  color: #a43b2d;
+  background-color: var(--critical-soft);
+}
+.document-file-thumb.image {
+  color: var(--brand);
+  background-color: var(--brand-soft);
+}
+.document-file-thumb svg {
+  width: 24px;
+  height: 24px;
+}
+.document-file-meta {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: grid;
+  gap: 3px;
+}
+.document-file-meta strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.document-file-meta small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.document-file-change {
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.document-file-remove {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+.document-file-remove:hover {
+  color: #a43b2d;
+  background: var(--critical-soft);
+}
+.document-file-remove svg {
+  width: 16px;
+  height: 16px;
+}

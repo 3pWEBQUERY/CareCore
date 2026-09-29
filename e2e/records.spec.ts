@@ -47,3 +47,32 @@ test("Qualität: Bearbeiten einer Massnahme speichert Titel und Termin", async (
   expect(list.actions.find((action) => action.id === id)?.title).toBe("E2E Doppelkontrolle Hochrisiko");
   expect(errors).toEqual([]);
 });
+
+test("Bewohnerakte: Dokument (PDF) über die Ablagefläche hochladen, Word-Datei wird abgewiesen", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  await page.goto("/c/bewohner");
+  await page.locator(".resident-list-row").first().click();
+  await page.locator(".resident-record-tabs button", { hasText: "Dokumente" }).click();
+  await page.getByRole("button", { name: "Dokument hochladen" }).click();
+  const dialog = page.locator(".editor-dialog");
+  const input = dialog.locator('input[type="file"]');
+  await expect(input).toHaveAttribute("accept", "application/pdf,image/jpeg,image/png,image/webp");
+  await input.setInputFiles({
+    name: "Brief.docx",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    buffer: Buffer.from("PK\u0003\u0004"),
+  });
+  await expect(dialog.getByRole("alert")).toContainText("PDF oder ein Bild");
+  await input.setInputFiles({
+    name: "Austrittsbericht Spital.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.4\n"),
+  });
+  await expect(dialog.locator(".document-file-selected")).toContainText("Austrittsbericht Spital.pdf");
+  await expect(field(page, "Titel")).toHaveValue("Austrittsbericht Spital");
+  await dialog.getByRole("button", { name: "Hochladen", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByText("Austrittsbericht Spital").first()).toBeVisible();
+  expect(errors).toEqual([]);
+});

@@ -9,6 +9,10 @@ export const LANGUAGES: Record<string, string> = {
   en: "Englisch",
   other: "Andere",
 };
+// Dokumente der Bewohnerakte: PDFs und Bilder (z. B. fotografierte Arztberichte), höchstens 4 MB.
+export const RESIDENT_FILE_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"] as const;
+export const RESIDENT_FILE_MAX_BYTES = 4 * 1024 * 1024;
+
 export const RESIDENT_DOCUMENT_CATEGORIES = ["Arztberichte", "Pflege", "Medikation", "Administration"] as const;
 
 export type MasterData = {

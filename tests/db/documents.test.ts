@@ -2,7 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ApiError, type ApiContext } from "@/lib/api-context";
 import { createDocument, documentAction, listDocuments, newVersion } from "@/lib/documents";
-import { apiContextFor, fixture, q } from "../support/db";
+import { uploadResidentFile } from "@/lib/resident-record";
+import { apiContextFor, createResident, fixture, q } from "../support/db";
 
 const failure = async (promise: Promise<unknown>) =>
   promise.then(
@@ -90,4 +91,29 @@ test("Standards: je Dokument nur eine Folgeversion, nie zwei gültige Fassungen"
   assert.deepEqual(await activeVersions(title), []);
   const other = quality(await apiContextFor(await fixture(), "leadA"));
   assert.equal((await failure(documentAction(other, v2, { action: "read" }))).status, 404);
+});
+
+test("Bewohnerakte: nur PDFs und Bilder, keine Office-Dateien", async () => {
+  const f = await fixture();
+  const ctx = await apiContextFor(f, "anna");
+  const residentId = await createResident(f);
+  const upload = (name: string, type: string, bytes: Uint8Array<ArrayBuffer>) => {
+    const data = new FormData();
+    data.set("title", "Arztbericht Kardiologie");
+    data.set("category", "Arztberichte");
+    data.set("file", new File([bytes], name, { type }));
+    return uploadResidentFile(ctx, residentId, data);
+  };
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+  const docx = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0, 0, 0, 0]);
+  await upload("bericht.pdf", "application/pdf", new TextEncoder().encode("%PDF-1.4\n"));
+  await upload("bericht.png", "image/png", png);
+  const word = await failure(
+    upload("bericht.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docx),
+  );
+  assert.equal(word.status, 415);
+  const [row] = await q<{ count: string }>(`SELECT COUNT(*) AS count FROM carecore_documents WHERE resident_id = $1`, [
+    residentId,
+  ]);
+  assert.equal(Number(row.count), 2);
 });
