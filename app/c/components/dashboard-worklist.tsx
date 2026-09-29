@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { setCareResident, useCareUnit, useWorkContext } from "@/app/components/care-context";
+import { setCareResident, useCareUnit, useTerms, useWorkContext } from "@/app/components/care-context";
 import { ModuleIcon, type ModuleIconName } from "@/app/components/module-icon";
 import { useApiData } from "@/app/components/workspace-ui";
 import type { WorkItem, WorkItemKind, Worklist } from "@/lib/worklist";
@@ -29,6 +29,7 @@ type Filter = (typeof FILTERS)[number]["id"];
 export function DashboardWorklistCard() {
   const router = useRouter();
   const context = useWorkContext();
+  const terms = useTerms();
   const [storedUnitId] = useCareUnit();
   const unitId = storedUnitId ?? context?.profile.primaryCareUnitId ?? null;
   const unitName = context?.careUnits.find((unit) => unit.id === unitId)?.name ?? "alle Wohnbereiche";
@@ -58,7 +59,7 @@ export function DashboardWorklistCard() {
           <p className="card-subtitle">
             {data.loading && !data.data
               ? "Wird geladen …"
-              : `${total} offene Punkte bei ${residents.length} Bewohner${residents.length === 1 ? "" : "n"} · ${unitName}`}
+              : `${total} offene Punkte bei ${residents.length} ${residents.length === 1 ? terms.oneOblique : terms.manyDative} · ${unitName}`}
           </p>
         </div>
         <div className="worklist-filters" role="group" aria-label="Tagesliste filtern">
@@ -87,7 +88,7 @@ export function DashboardWorklistCard() {
                 setCareResident(resident.id);
                 router.push(`/c/bewohner?resident=${resident.id}`);
               }}
-              title="Bewohnerakte öffnen"
+              title={`${terms.prefix}akte öffnen`}
             >
               <span
                 className={`resident-avatar ${resident.items.some((item) => item.tone === "critical") ? "critical" : ""}`}

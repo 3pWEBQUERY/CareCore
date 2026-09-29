@@ -98,6 +98,11 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - [x] **Personal-Dashboards** in Insights: „Meine Kennzahlen“ – jede Person heftet Kennzahlen aus Pflege, Bewohnern,
       Leitung und Personal an (höchstens 16), gespeichert in den persönlichen Einstellungen.
 - [ ] **Konfigurierbare Terminologie** (Bewohner / Patient / Klient), danach FR / IT / EN.
+  - [x] Grundlage: Wahl in „Leitung › Konfiguration“ (mit Protokoll), feste Wortformen je Bezeichnung
+        (`lib/terminology.ts`), gilt in Navigation, Kopfzeile, Handy-Navigation, Suche und Startseite.
+  - [ ] Übrige Module (Akte, Medikation, Wunden, Vitalwerte, Planung, RAI, Qualität, Ernährung, Kennzahlen) und
+        Meldungen des Servers.
+  - [ ] Weitere Sprachen FR / IT / EN.
 - [ ] **Admin-Konfiguration:** Ereignistypen, Vitalparameter, Branding.
 - [ ] **Datenschutz:** Lösch- und Aufbewahrungskonzept für Bewohnerdaten. Fristen legt die Einrichtung fest.
 - [ ] **Echtzeit** (Server-Sent Events) statt Polling.

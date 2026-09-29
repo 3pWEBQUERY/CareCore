@@ -14,7 +14,7 @@ export function DashboardSummaryStrip({ r }: { r: DashboardState }) {
         </span>
         <span>
           <strong className="summary-value">{assignedResidents.length}</strong>
-          <span className="summary-label">Bewohner zugeteilt</span>
+          <span className="summary-label">{r.terms.many} zugeteilt</span>
         </span>
       </div>
       <div className="summary-item">
@@ -158,7 +158,7 @@ export function DashboardResidentsCard({ r }: { r: DashboardState }) {
       <div className="card-header">
         <div>
           <h2 className="card-title" id="residents-title">
-            Bewohner im Blick
+            {r.terms.many} im Blick
           </h2>
           <p className="card-subtitle">
             {assignedResidents.length} in {currentScope}

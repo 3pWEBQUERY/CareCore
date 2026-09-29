@@ -4,11 +4,14 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useNavigationBadges, useWorkContext } from "./care-context";
 import { badgeFor, moduleById, navigationFor, routeFor } from "./navigation";
+import { navigationLabel, termsFor } from "@/lib/terminology";
 
 // The pages of the current module as tabs, e.g. "Mein Dienst": Heute · Übergabe · Termine.
 // Replaces the former submenus of the sidebar.
 export function PageTabs({ moduleId, child }: { moduleId: string; child: string }) {
   const context = useWorkContext();
+  const terms = termsFor(context?.terminology);
+  const L = (label: string) => navigationLabel(label, terms);
   const badges = useNavigationBadges();
   const entry = navigationFor(context?.profile.permissions)
     .flatMap((group) => group.modules)
@@ -24,7 +27,7 @@ export function PageTabs({ moduleId, child }: { moduleId: string; child: string 
   }, [child, tabs.length]);
   if (tabs.length < 2) return null;
   return (
-    <nav ref={ref} className="page-tabs" aria-label={`${entry?.label ?? "Bereich"}: Seiten`}>
+    <nav ref={ref} className="page-tabs" aria-label={`${entry ? L(entry.label) : "Bereich"}: Seiten`}>
       {tabs.map((tab) => {
         const href = routeFor(moduleId, tab);
         if (!href) return null;
@@ -37,7 +40,7 @@ export function PageTabs({ moduleId, child }: { moduleId: string; child: string 
             className={tab === child ? "active" : ""}
             aria-current={tab === child ? "page" : undefined}
           >
-            {tab}
+            {L(tab)}
             {count > 0 && <em>{count > 99 ? "99+" : count}</em>}
           </Link>
         );

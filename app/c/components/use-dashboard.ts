@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTerms } from "@/app/components/care-context";
 import { IconName } from "./dashboard-shared";
 import { useDashboardNotes } from "./use-dashboard-notes";
 import { useDashboardLayout } from "./use-dashboard-layout";
@@ -9,6 +10,7 @@ import { useDashboardNews } from "./use-dashboard-news";
 import { useDashboardTasks } from "./use-dashboard-tasks";
 
 export function useDashboard() {
+  const terms = useTerms();
   const {
     changes,
     setChanges,
@@ -144,13 +146,13 @@ export function useDashboard() {
       [
         ...residentNews.map((resident) => ({
           title: `${resident.first_name} ${resident.last_name}`,
-          meta: `Bewohner · ${resident.room}`,
+          meta: `${terms.one} · ${resident.room}`,
           icon: "residents" as IconName,
           href: `/c/bewohner?resident=${resident.id}`,
         })),
         {
-          title: "Bewohnerverzeichnis",
-          meta: "Alle aktiven Bewohner",
+          title: `${terms.prefix}verzeichnis`,
+          meta: `Alle aktiven ${terms.many}`,
           icon: "residents" as IconName,
           href: "/c/bewohner",
         },
@@ -164,7 +166,7 @@ export function useDashboard() {
       ]
         .filter((result) => `${result.title} ${result.meta}`.toLowerCase().includes(query.toLowerCase()))
         .slice(0, 8),
-    [query, residentNews],
+    [query, residentNews, terms],
   );
 
   const formattedDate =
@@ -193,6 +195,7 @@ export function useDashboard() {
   const currentScope = primaryCareUnitName || "alle Wohnbereiche";
   const criticalChange = changes.find((item) => item.type === "critical");
   return {
+    terms,
     router,
     tasks,
     setTasks,

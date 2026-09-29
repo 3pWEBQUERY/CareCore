@@ -1,6 +1,6 @@
 "use client";
 
-import { dashboardWidgets } from "./dashboard-shared";
+import { dashboardWidgets, widgetText } from "./dashboard-shared";
 import type { DashboardState } from "./use-dashboard";
 
 export function DashboardCustomizer({ r }: { r: DashboardState }) {
@@ -10,7 +10,7 @@ export function DashboardCustomizer({ r }: { r: DashboardState }) {
       <div>
         <p className="eyebrow">Weitere Bausteine</p>
         <h2>Arbeitsplatz anpassen</h2>
-        <p>Ordne die Zusatzbereiche unterhalb der Bewohner-Neuigkeiten an oder blende sie aus.</p>
+        <p>Ordne die Zusatzbereiche unterhalb der {r.terms.prefix}-Neuigkeiten an oder blende sie aus.</p>
       </div>
       <div className="dashboard-customizer-list">
         {dashboardWidgets.map((widget) => (
@@ -22,8 +22,8 @@ export function DashboardCustomizer({ r }: { r: DashboardState }) {
           >
             <span>{!hiddenWidgets.includes(widget.id) ? "✓" : "+"}</span>
             <div>
-              <strong>{widget.label}</strong>
-              <small>{widget.description}</small>
+              <strong>{widgetText(widget, r.terms).label}</strong>
+              <small>{widgetText(widget, r.terms).description}</small>
             </div>
           </button>
         ))}

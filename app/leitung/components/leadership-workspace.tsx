@@ -1,5 +1,6 @@
 "use client";
 
+import type { TerminologyKey } from "@/lib/terminology";
 import { useEffect, useState } from "react";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { ModuleIcon } from "@/app/components/module-icon";
@@ -35,7 +36,7 @@ export default function LeadershipWorkspace({ view }: { view: LeadershipView }) 
   }, [view]);
   const organization = useApiData<OrganizationStructure>(view === "organization" ? "/api/organization" : null);
   const orgTotals = organization.data?.totals;
-  const configuration = useApiData<{ settings: AppSettings; system: SystemStatus }>(
+  const configuration = useApiData<{ settings: AppSettings; system: SystemStatus; terminology: TerminologyKey }>(
     view === "configuration" ? "/api/settings" : null,
   );
   const config = configuration.data;

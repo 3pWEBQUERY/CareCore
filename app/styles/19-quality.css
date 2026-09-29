@@ -607,3 +607,10 @@
 .quality-risk-card > a.secondary-button {
   display: flex;
 }
+.admin-config-side {
+  display: grid;
+  gap: 20px;
+}
+.admin-terminology-options {
+  padding: 14px 18px 18px;
+}

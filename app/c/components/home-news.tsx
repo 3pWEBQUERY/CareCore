@@ -1,5 +1,6 @@
 "use client";
 
+import { countOf } from "@/lib/terminology";
 import { Icon } from "./dashboard-shared";
 import type { DashboardState } from "./use-dashboard";
 
@@ -9,18 +10,18 @@ export function HomeNews({ r }: { r: DashboardState }) {
     <section className="home-news" aria-labelledby="home-news-title">
       <div className="home-news-head">
         <div>
-          <p className="eyebrow">Bewohner im Blick</p>
+          <p className="eyebrow">{r.terms.many} im Blick</p>
           <h2 id="home-news-title">Neues aus {newsScope}</h2>
-          <p>Letzte Dokumentation und aktuelle Hinweise für jeden Bewohner in deinem Arbeitsbereich.</p>
+          <p>Letzte Dokumentation und aktuelle Hinweise für jeden {r.terms.oneOblique} in deinem Arbeitsbereich.</p>
         </div>
-        <span>{residentNews.length} Bewohner</span>
+        <span>{countOf(residentNews.length, r.terms)}</span>
       </div>
       {newsError ? (
         <div className="home-news-empty" role="alert">
           {newsError}
         </div>
       ) : newsLoading ? (
-        <div className="home-news-empty">Bewohner-Neuigkeiten werden geladen…</div>
+        <div className="home-news-empty">{r.terms.prefix}-Neuigkeiten werden geladen…</div>
       ) : residentNews.length ? (
         <div className="home-news-list">
           {residentNews.map((resident) => {
@@ -58,7 +59,7 @@ export function HomeNews({ r }: { r: DashboardState }) {
                   <p>
                     {resident.body ||
                       (resident.flag_label
-                        ? "Aktuellen Hinweis in der Bewohnerakte prüfen."
+                        ? `Aktuellen Hinweis in der ${r.terms.prefix}akte prüfen.`
                         : "Aktuell liegt keine Pflegedokumentation vor.")}
                   </p>
                 </div>
@@ -82,11 +83,11 @@ export function HomeNews({ r }: { r: DashboardState }) {
           })}
         </div>
       ) : (
-        <div className="home-news-empty">In diesem Wohnbereich sind aktuell keine aktiven Bewohner erfasst.</div>
+        <div className="home-news-empty">In diesem Wohnbereich sind aktuell keine aktiven {r.terms.many} erfasst.</div>
       )}
       <div className="home-news-foot">
         <button type="button" onClick={() => router.push("/c/bewohner")}>
-          Bewohnerverzeichnis öffnen <Icon name="chevron" />
+          {r.terms.prefix}verzeichnis öffnen <Icon name="chevron" />
         </button>
         <button type="button" onClick={() => router.push("/c/pflegedokumentation/verlauf")}>
           Pflegeverlauf ansehen <Icon name="chevron" />

@@ -5,11 +5,12 @@ import { ModuleIcon } from "@/app/components/module-icon";
 import { EditorDialog, LoadError, formatDateTime, requestJson } from "@/app/components/workspace-ui";
 import { loadWorkContext } from "@/app/components/care-context";
 import type { SystemStatus } from "@/lib/settings";
+import { TERMINOLOGIES, type TerminologyKey } from "@/lib/terminology";
 import { SETTING_DEFINITIONS, SETTING_KEYS, type AppSettings, type SettingKey } from "@/lib/settings-shared";
 import { notifyAdminChanged } from "./admin-board";
 
 export type ConfigurationData = {
-  data?: { settings: AppSettings; system: SystemStatus };
+  data?: { settings: AppSettings; system: SystemStatus; terminology: TerminologyKey };
   error?: string;
   loading: boolean;
   reload: () => void;
@@ -32,7 +33,7 @@ export function ConfigurationView({
   onCloseEditor: () => void;
 }) {
   const { data, error, reload } = configuration;
-  const [saving, setSaving] = useState<SettingKey | null>(null);
+  const [saving, setSaving] = useState<SettingKey | "terminology" | null>(null);
   if (error && !data) return <LoadError message={error} onRetry={reload} />;
 
   const save = async (key: SettingKey, change: { enabled?: boolean; value?: number }) => {
@@ -52,6 +53,20 @@ export function ConfigurationView({
     } catch (reason) {
       showToast((reason as Error).message);
       return false;
+    } finally {
+      setSaving(null);
+    }
+  };
+  const saveTerminology = async (value: TerminologyKey) => {
+    setSaving("terminology");
+    try {
+      await requestJson("/api/settings/terminology", { method: "PATCH", body: { value } });
+      reload();
+      notifyAdminChanged();
+      void loadWorkContext(true);
+      showToast(`Bezeichnung „${TERMINOLOGIES[value].label}“ gespeichert – gilt nach dem Neuladen überall`);
+    } catch (reason) {
+      showToast((reason as Error).message);
     } finally {
       setSaving(null);
     }
@@ -109,45 +124,72 @@ export function ConfigurationView({
           })}
         </div>
       </section>
-      <aside className="card admin-system-card">
-        <div className="card-header">
-          <div>
-            <p className="eyebrow">Systemstatus</p>
-            <h2 className="card-title">Integrität</h2>
+      <div className="admin-config-side">
+        <aside className="card admin-system-card">
+          <div className="card-header">
+            <div>
+              <p className="eyebrow">Systemstatus</p>
+              <h2 className="card-title">Integrität</h2>
+            </div>
           </div>
-        </div>
-        <div className="admin-system-score">
-          <strong>{system ? `${system.databaseMs} ms` : "–"}</strong>
-          <span>Antwortzeit der Datenbank</span>
-        </div>
-        <ul>
-          <li>
-            <ModuleIcon name={system ? "check" : "pulse"} />{" "}
-            {system ? "Datenbank verbunden" : "Verbindung wird geprüft …"}
-          </li>
-          <li>
-            <ModuleIcon name="check" />{" "}
-            {system?.schemaVersion
-              ? `Datenbankstand ${system.schemaVersion} · ${system.migrations} Migrationen`
-              : "Datenbankstand wird geladen"}
-          </li>
-          <li>
-            <ModuleIcon name="check" />{" "}
-            {system
-              ? `${system.auditEntries30Days} protokollierte Änderungen in 30 Tagen${
-                  system.lastAuditAt ? ` · zuletzt ${formatDateTime(system.lastAuditAt)}` : ""
-                }`
-              : "Protokoll wird geladen"}
-          </li>
-        </ul>
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={() => document.getElementById("admin-log")?.scrollIntoView({ behavior: "smooth" })}
-        >
-          Protokoll ansehen <ModuleIcon name="chevron" />
-        </button>
-      </aside>
+          <div className="admin-system-score">
+            <strong>{system ? `${system.databaseMs} ms` : "–"}</strong>
+            <span>Antwortzeit der Datenbank</span>
+          </div>
+          <ul>
+            <li>
+              <ModuleIcon name={system ? "check" : "pulse"} />{" "}
+              {system ? "Datenbank verbunden" : "Verbindung wird geprüft …"}
+            </li>
+            <li>
+              <ModuleIcon name="check" />{" "}
+              {system?.schemaVersion
+                ? `Datenbankstand ${system.schemaVersion} · ${system.migrations} Migrationen`
+                : "Datenbankstand wird geladen"}
+            </li>
+            <li>
+              <ModuleIcon name="check" />{" "}
+              {system
+                ? `${system.auditEntries30Days} protokollierte Änderungen in 30 Tagen${
+                    system.lastAuditAt ? ` · zuletzt ${formatDateTime(system.lastAuditAt)}` : ""
+                  }`
+                : "Protokoll wird geladen"}
+            </li>
+          </ul>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={() => document.getElementById("admin-log")?.scrollIntoView({ behavior: "smooth" })}
+          >
+            Protokoll ansehen <ModuleIcon name="chevron" />
+          </button>
+        </aside>
+        <section className="card admin-terminology-card" aria-labelledby="admin-terminology-title">
+          <div className="card-header">
+            <div>
+              <p className="eyebrow">Sprache</p>
+              <h2 className="card-title" id="admin-terminology-title">
+                Bezeichnung der betreuten Personen
+              </h2>
+              <p className="card-subtitle">Gilt für alle Mitarbeitenden, z. B. „Patientenakte“ statt „Bewohnerakte“</p>
+            </div>
+          </div>
+          <div className="worklist-filters admin-terminology-options" role="group" aria-label="Bezeichnung wählen">
+            {(Object.keys(TERMINOLOGIES) as TerminologyKey[]).map((key) => (
+              <button
+                className={data?.terminology === key ? "active" : ""}
+                type="button"
+                key={key}
+                aria-pressed={data?.terminology === key}
+                disabled={!data || saving === "terminology"}
+                onClick={() => data?.terminology !== key && void saveTerminology(key)}
+              >
+                {TERMINOLOGIES[key].label}
+              </button>
+            ))}
+          </div>
+        </section>
+      </div>
       {editorOpen && data && (
         <SettingEditor
           key={selectedKey}

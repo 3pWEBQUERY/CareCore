@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { setCareResident, useWorkContext } from "./care-context";
 import { ModuleIcon } from "./module-icon";
 import { navigationFor, routeFor, type ModuleIconName } from "./navigation";
+import { navigationLabel, termsFor } from "@/lib/terminology";
 
 type SearchResult = {
   key: string;
@@ -24,10 +25,12 @@ export function GlobalSearchDialog({ onClose }: { onClose: () => void }) {
   const context = useWorkContext();
   const [query, setQuery] = useState("");
   const all = useMemo(() => {
+    const terms = termsFor(context?.terminology);
+    const L = (label: string) => navigationLabel(label, terms);
     const residents: SearchResult[] = (context?.residents ?? []).map((resident) => ({
       key: `resident-${resident.id}`,
       title: resident.name,
-      meta: `Bewohner · ${[resident.room, resident.group].filter(Boolean).join(" · ")}`,
+      meta: `${terms.one} · ${[resident.room, resident.group].filter(Boolean).join(" · ")}`,
       icon: "residents",
       href: `/c/bewohner?resident=${resident.id}`,
       residentId: resident.id,
@@ -40,8 +43,8 @@ export function GlobalSearchDialog({ onClose }: { onClose: () => void }) {
             ? [
                 {
                   key: href,
-                  title: child === module.label || module.children.length === 1 ? module.label : child,
-                  meta: `${group.label} · ${module.label}`,
+                  title: L(child === module.label || module.children.length === 1 ? module.label : child),
+                  meta: `${L(group.label)} · ${L(module.label)}`,
                   icon: module.icon,
                   href,
                 },

@@ -1,3 +1,5 @@
+import { TERMINOLOGIES, navigationLabel, type Terms } from "@/lib/terminology";
+
 export type ModuleIconName =
   | "home"
   | "residents"
@@ -410,8 +412,11 @@ export function rememberPage(moduleId: string, child: string) {
   }
 }
 
-export function moduleLabel(moduleId: string, child: string) {
+export function moduleLabel(moduleId: string, child: string, terms: Terms = TERMINOLOGIES.resident) {
   const entry = navigation.flatMap((group) => group.modules).find((item) => item.id === moduleId);
-  if (!entry) return child;
-  return entry.children.length === 1 || entry.label === child ? entry.label : `${entry.label} · ${child}`;
+  const label = (text: string) => navigationLabel(text, terms);
+  if (!entry) return label(child);
+  return entry.children.length === 1 || entry.label === child
+    ? label(entry.label)
+    : `${label(entry.label)} · ${label(child)}`;
 }

@@ -3,7 +3,7 @@
 import { type ReactNode } from "react";
 import AppHeader from "../components/app-header";
 import AppSidebar from "../components/app-sidebar";
-import { Icon, DashboardWidgetId, dashboardWidgets } from "./components/dashboard-shared";
+import { Icon, DashboardWidgetId, dashboardWidgets, widgetText } from "./components/dashboard-shared";
 import { useDashboard } from "./components/use-dashboard";
 import {
   DashboardSummaryStrip,
@@ -81,8 +81,11 @@ export default function Home() {
                     onDrop={() => moveWidget(id)}
                   >
                     {dashboardEditing && (
-                      <div className="dashboard-widget-handle" aria-label={`${widget.label} verschieben`}>
-                        ⠿ <span>{widget.label}</span>
+                      <div
+                        className="dashboard-widget-handle"
+                        aria-label={`${widgetText(widget, r.terms).label} verschieben`}
+                      >
+                        ⠿ <span>{widgetText(widget, r.terms).label}</span>
                       </div>
                     )}
                     {dashboardContent[id]}

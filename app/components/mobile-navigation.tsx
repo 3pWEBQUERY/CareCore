@@ -12,6 +12,7 @@ import {
   type NavigationBadges,
 } from "./care-context";
 import { moduleBadges, quickLinks, routeFor, sidebarNavigation, type ModuleIconName } from "./navigation";
+import { navigationLabel, termsFor } from "@/lib/terminology";
 
 type BarItem = { id: string; label: string; icon: ModuleIconName; moduleId: string; child: string };
 
@@ -38,6 +39,8 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const context = useWorkContext();
+  const terms = termsFor(context?.terminology);
+  const L = (label: string) => navigationLabel(label, terms);
   const permissions = context?.profile.permissions;
   const [residentId] = useCareResident();
   const resident = context?.residents.find((item) => item.id === residentId) ?? null;
@@ -103,7 +106,7 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
                         onClick={() => go(link.moduleId, link.child)}
                       >
                         <ModuleIcon name={link.icon} />
-                        <span>{link.label}</span>
+                        <span>{L(link.label)}</span>
                         {value > 0 && <em>{value}</em>}
                       </button>
                     );
@@ -113,7 +116,7 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
             )}
             {groups.map((group) => (
               <section className="mobile-nav-section" key={group.id}>
-                <h3>{group.label}</h3>
+                <h3>{L(group.label)}</h3>
                 <div className="mobile-nav-groups">
                   {group.modules.map((module) => {
                     const value = count(moduleBadges(module.id));
@@ -129,7 +132,7 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
                           <ModuleIcon name={module.icon} />
                         </span>
                         <span>
-                          <strong>{module.label}</strong>
+                          <strong>{L(module.label)}</strong>
                           {module.children.length > 1 && <small>{module.children.join(" · ")}</small>}
                         </span>
                         {value > 0 ? <em className="mobile-nav-count">{value}</em> : <ModuleIcon name="chevron" />}
@@ -188,7 +191,7 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
             <div className="mobile-nav-menu-head">
               <div>
                 <p className="eyebrow">Schnellaktionen</p>
-                <strong>{resident ? resident.name : "Kein Bewohner gewählt"}</strong>
+                <strong>{resident ? resident.name : `Kein ${terms.one} gewählt`}</strong>
               </div>
               <button type="button" aria-label="Schnellaktionen schliessen" onClick={() => setActionsOpen(false)}>
                 <ModuleIcon name="close" />
@@ -199,7 +202,7 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
                 {actions.map((item) => (
                   <button type="button" key={item.id} onClick={() => go(item.moduleId, item.child)}>
                     <ModuleIcon name={item.icon} />
-                    <span>{item.label}</span>
+                    <span>{L(item.label)}</span>
                   </button>
                 ))}
               </div>
@@ -217,8 +220,8 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
                     <ModuleIcon name="residents" />
                   </span>
                   <span>
-                    <strong>{resident ? "Anderen Bewohner wählen" : "Bewohner wählen"}</strong>
-                    <small>Die Erfassung gilt für den Bewohner aus der Kopfzeile.</small>
+                    <strong>{resident ? `Anderen ${terms.oneOblique} wählen` : `${terms.oneOblique} wählen`}</strong>
+                    <small>Die Erfassung gilt für den {terms.oneOblique} aus der Kopfzeile.</small>
                   </span>
                   <ModuleIcon name="chevron" />
                 </button>
@@ -263,11 +266,11 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
               type="button"
               key={item.id}
               aria-current={active ? "page" : undefined}
-              aria-label={value ? `${item.label} (${value} überfällig)` : undefined}
+              aria-label={value ? `${L(item.label)} (${value} überfällig)` : undefined}
               onClick={() => go(item.moduleId, item.child)}
             >
               <ModuleIcon name={item.icon} />
-              <span>{item.label}</span>
+              <span>{L(item.label)}</span>
               {value > 0 && <em className="bottom-nav-badge">{value > 99 ? "99+" : value}</em>}
             </button>
           );

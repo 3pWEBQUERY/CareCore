@@ -1,6 +1,6 @@
 "use client";
 
-import { openResidentPicker } from "./care-context";
+import { openResidentPicker, useTerms } from "./care-context";
 import { EmptyState } from "./workspace-ui";
 
 // Shown on resident-centred pages until a resident is chosen in the header.
@@ -13,6 +13,7 @@ export default function HeaderResidentHint({
   missing: boolean;
   text?: string;
 }) {
+  const t = useTerms();
   return (
     <section className="card header-resident-hint">
       <EmptyState
@@ -21,14 +22,14 @@ export default function HeaderResidentHint({
           loading
             ? "Wird geladen …"
             : missing
-              ? "Für den gewählten Bewohner sind hier keine Daten verfügbar"
-              : "Bitte in der Kopfzeile einen Bewohner auswählen"
+              ? `Für den gewählten ${t.oneOblique} sind hier keine Daten verfügbar`
+              : `Bitte in der Kopfzeile einen ${t.oneOblique} auswählen`
         }
-        text={text ?? "Alle Angaben dieser Seite beziehen sich auf den Bewohner in der Kopfzeile."}
+        text={text ?? `Alle Angaben dieser Seite beziehen sich auf den ${t.oneOblique} in der Kopfzeile.`}
       />
       {!loading && (
         <button className="primary-button" type="button" onClick={openResidentPicker}>
-          Bewohner auswählen
+          {t.oneOblique} auswählen
         </button>
       )}
     </section>

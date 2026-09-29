@@ -49,6 +49,7 @@ import {
   type ModuleIconName,
   type RecentPage,
 } from "./navigation";
+import { navigationLabel, termsFor } from "@/lib/terminology";
 
 const icons = {
   home: House,
@@ -169,6 +170,8 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
   const router = useRouter();
   const [flyoutGroup, setFlyoutGroup] = useState<string | null>(null);
   const context = useWorkContext();
+  const terms = termsFor(context?.terminology);
+  const L = (label: string) => navigationLabel(label, terms);
   const visibleNavigation = sidebarNavigation(context?.profile.permissions);
   const badges = useNavigationBadges();
   const [recentPages, setRecentPages] = useState<RecentPage[]>([]);
@@ -208,7 +211,7 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
       setFlyoutGroup(null);
       router.push(href);
     } else {
-      onToast?.(`${child} geöffnet`);
+      onToast?.(`${L(child)} geöffnet`);
     }
   }
 
@@ -276,13 +279,13 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
                 className={`sidebar-rail-button ${activeGroup?.id === group.id && !visibleQuickLinks.some((link) => link.moduleId === activeModule && link.child === activeChild) ? "active" : ""}`}
                 type="button"
                 key={group.id}
-                aria-label={count ? `${group.label} (${count} ungelesen)` : group.label}
+                aria-label={count ? `${L(group.label)} (${count} ungelesen)` : L(group.label)}
                 aria-expanded={flyoutGroup === group.id}
                 onClick={() => openGroup(group.id)}
               >
                 <RailIcon name={groupIcons[group.id] ?? "pulse"} />
                 {count > 0 && <span className="sidebar-rail-badge">{count > 99 ? "99+" : count}</span>}
-                <SidebarTooltip label={`${group.label}${count ? ` · ${count} ungelesen` : ""}`} />
+                <SidebarTooltip label={`${L(group.label)}${count ? ` · ${count} ungelesen` : ""}`} />
               </button>
             );
           })}
@@ -336,7 +339,7 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
                     key={`${page.moduleId}:${page.child}`}
                     onClick={() => selectChild(page.moduleId, page.child)}
                   >
-                    <span>{moduleLabel(page.moduleId, page.child)}</span>
+                    <span>{moduleLabel(page.moduleId, page.child, terms)}</span>
                     <RailIcon name="chevron" />
                   </button>
                 ))}
@@ -353,7 +356,7 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
                     key={module.id}
                     onClick={() => selectChild(module.id, module.children[0])}
                   >
-                    <span>{module.label}</span>
+                    <span>{L(module.label)}</span>
                     {count > 0 && <em className="sidebar-flyout-badge">{count}</em>}
                     <RailIcon name="chevron" />
                   </button>
