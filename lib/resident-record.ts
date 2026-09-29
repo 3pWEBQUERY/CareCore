@@ -10,7 +10,6 @@ import {
   type Row,
 } from "@/lib/api-context";
 import { staffOf } from "@/lib/care-planning";
-import { DOCUMENT_TYPES } from "@/lib/documents-shared";
 import { storeFile } from "@/lib/files";
 import { listRound } from "@/lib/medication-round";
 import { ROUNDS, type RoundKey } from "@/lib/medication-shared";
@@ -18,6 +17,7 @@ import {
   LANGUAGES,
   MARITAL_STATUSES,
   RESIDENT_DOCUMENT_CATEGORIES,
+  RESIDENT_FILE_TYPES,
   type MasterData,
   type RecordSummary,
   type ResidentFile,
@@ -327,7 +327,7 @@ export async function uploadResidentFile(ctx: ApiContext, residentIdInput: unkno
   const category = String(form.get("category") ?? "");
   if (!(RESIDENT_DOCUMENT_CATEGORIES as readonly string[]).includes(category))
     throw new ApiError("Bitte eine Kategorie wählen.");
-  const file = await storeFile(ctx, form.get("file"), "document", DOCUMENT_TYPES);
+  const file = await storeFile(ctx, form.get("file"), "document", RESIDENT_FILE_TYPES);
   const id = randomUUID();
   await ctx.sql.transaction([
     ctx.sql`

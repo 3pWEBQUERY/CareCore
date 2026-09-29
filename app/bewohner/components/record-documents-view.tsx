@@ -6,6 +6,7 @@ import { CareSelect } from "@/app/components/care-form-controls";
 import { EditorDialog, formatDate } from "@/app/components/workspace-ui";
 import { PREVIEW_TYPES, fileSizeLabel, fileTypeLabel } from "@/lib/documents-shared";
 import { RESIDENT_DOCUMENT_CATEGORIES } from "@/lib/resident-record-shared";
+import DocumentFileField from "./document-file-field";
 import type { ResidentRecordState } from "./use-resident-record";
 
 const WEEK = 7 * 86_400_000;
@@ -32,11 +33,11 @@ function UploadDialog({
       id="resident-document-upload"
       eyebrow={`Bewohnerakte · ${residentName}`}
       title="Dokument hochladen"
-      description="PDF, Bilder und Office-Dateien bis 4 MB. Das Dokument ist nur in dieser Bewohnerakte sichtbar."
+      description="PDF oder Bild (z. B. ein fotografierter Arztbericht), höchstens 4 MB. Das Dokument ist nur in dieser Bewohnerakte sichtbar."
       onClose={onClose}
       onSubmit={async () => {
         if (!file) {
-          setError("Bitte eine Datei auswählen.");
+          setError("Bitte ein PDF oder ein Bild auswählen.");
           return;
         }
         setSaving(true);
@@ -59,18 +60,14 @@ function UploadDialog({
       error={error}
       submitLabel="Hochladen"
     >
-      <label className="area-editor-wide">
-        <span>Datei</span>
-        <input
-          type="file"
-          required
-          onChange={(event) => {
-            const next = event.target.files?.[0] ?? null;
-            setFile(next);
-            if (next && !title) setTitle(next.name.replace(/\.[^.]+$/, ""));
-          }}
-        />
-      </label>
+      <DocumentFileField
+        file={file}
+        onError={setError}
+        onChange={(next) => {
+          setFile(next);
+          if (next && !title) setTitle(next.name.replace(/\.[^.]+$/, ""));
+        }}
+      />
       <label>
         <span>Titel</span>
         <input required minLength={3} maxLength={220} value={title} onChange={(e) => setTitle(e.target.value)} />
