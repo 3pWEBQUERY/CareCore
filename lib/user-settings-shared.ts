@@ -40,6 +40,7 @@ export const TEXT_SIZES = { standard: "Standard", large: "Gross", xlarge: "Sehr 
 export type TextSize = keyof typeof TEXT_SIZES;
 export const CONTRASTS = { standard: "Standard", high: "Hoher Kontrast" } as const;
 export const MOTIONS = { standard: "Standard", reduced: "Reduziert" } as const;
+export const THEMES = { light: "Hell", dark: "Dunkel" } as const;
 
 // Automatische Abmeldung nach so vielen Minuten ohne Bedienung (0 = aus).
 export const AUTO_LOGOUT_MINUTES = [0, 15, 30, 60, 120, 240] as const;
@@ -60,6 +61,7 @@ export type UserPreferences = {
   textSize: TextSize;
   contrast: "standard" | "high";
   motion: "standard" | "reduced";
+  theme: "light" | "dark";
   shortcuts: boolean;
   sound: boolean;
   startPage: StartPage;
@@ -83,6 +85,7 @@ export function resolvePreferences(stored: unknown): UserPreferences {
     textSize: typeof raw.textSize === "string" && raw.textSize in TEXT_SIZES ? (raw.textSize as TextSize) : "standard",
     contrast: raw.contrast === "high" ? "high" : "standard",
     motion: raw.motion === "reduced" ? "reduced" : "standard",
+    theme: raw.theme === "dark" ? "dark" : "light",
     shortcuts: raw.shortcuts !== false,
     sound: raw.sound === true,
     startPage:

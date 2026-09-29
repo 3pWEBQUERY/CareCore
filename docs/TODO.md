@@ -30,7 +30,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Globale Suche ⌘K             | ✅    | `global-search-dialog.tsx`, Tastenkürzel.                                                                                                    |
 | Benachrichtigungen           | ✅    | Klassen Kritisch / Handlung / Info / Sozial, Bündelung, Push mit Ruhezeiten.                                                                 |
 | Mobile                       | 🟡    | Untere Navigation, Hauptmenü, Schnellaktions-Knopf (FAB).                                                                                    |
-| Dark Mode                    | ❌    | Keine dunkle Darstellung.                                                                                                                    |
+| Dark Mode                    | ✅    | Persönliche Wahl „Erscheinungsbild: Dunkel“; Standard bleibt hell.                                                                           |
 | Barrierefreiheit WCAG 2.2 AA | 🟡    | Tastatur, Fokusfalle, Schriftgrösse, Kontrast-Einstellung. `--muted` erreicht nur 4,4:1.                                                     |
 | IAM                          | 🟡    | Passwort, Login-Drossel, Sitzungen mit Gerät, automatische Abmeldung. **SSO, MFA und Passkeys fehlen.**                                      |
 | Rechte                       | 🟡    | Rechte plus Qualifikationen; Medikation getrennt in verabreichen / verwalten.                                                                |
@@ -83,7 +83,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Lagerbuchung – das wäre eine eigene Entscheidung zur Bestandsführung).
 - [x] **Dienstplan:** Börse für offene Dienste (fehlende Mindestbesetzung im veröffentlichten Plan; Interesse
       melden, Leitung teilt über die Regelprüfung zu oder lehnt ab).
-- [ ] **Dark Mode** als Wahl in den persönlichen Einstellungen. Das Standard-Aussehen bleibt unverändert.
+- [x] **Dark Mode** als Wahl in den persönlichen Einstellungen. Das Standard-Aussehen bleibt unverändert.
 
 ## Niedrig / später
 
