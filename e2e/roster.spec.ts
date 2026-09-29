@@ -13,6 +13,14 @@ test("Dienstplan: Kürzel ins Raster tippen und den Monat mit Begründung veröf
   const before = await firstCell.getAttribute("aria-label");
   await page.getByRole("button", { name: "Nächster Monat" }).click();
   await expect(firstCell).not.toHaveAttribute("aria-label", before!);
+  // In den letzten zwei Wochen des Monats ist der Folgemonat schon veröffentlicht (Demodaten); dann der übernächste.
+  const state = page.getByRole("button", { name: /^Veröffentlich(t|en)$/ });
+  await expect(state).toBeVisible();
+  if (await page.getByRole("button", { name: "Veröffentlicht", exact: true }).count()) {
+    const shown = await firstCell.getAttribute("aria-label");
+    await page.getByRole("button", { name: "Nächster Monat" }).click();
+    await expect(firstCell).not.toHaveAttribute("aria-label", shown!);
+  }
   const free = page.locator('[role=gridcell][aria-label^="Carla Frey"][aria-label$=", frei"]').nth(5);
   const label = (await free.getAttribute("aria-label"))!;
   const day = label.replace(/^Carla Frey, /, "").replace(/, frei$/, "");
