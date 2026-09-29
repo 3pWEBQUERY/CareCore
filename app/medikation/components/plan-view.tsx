@@ -22,7 +22,13 @@ import { AllergyBadge } from "@/app/components/resident-list";
 import { useHeaderResident } from "@/app/components/care-context";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
 
-export type ResidentsPayload = { residents: MedResident[]; canManage: boolean; canEditAllergies: boolean };
+export type ResidentsPayload = {
+  residents: MedResident[];
+  // Verordnungen und Bestände verwalten bzw. Gaben dokumentieren.
+  canManage: boolean;
+  canAdminister: boolean;
+  canEditAllergies: boolean;
+};
 export type ResidentDetail = { orders: MedOrder[]; movements: StockMovement[]; effectChecks: EffectCheck[] };
 
 export function scheduleLabel(order: MedOrder) {

@@ -94,7 +94,7 @@ export async function recordEffectCheck(
 
 // Erinnerung an die Person, die die Reserve gegeben hat, sobald die Kontrolle fällig ist (einmal je Gabe).
 export async function createEffectCheckReminders(ctx: ApiContext) {
-  if (!ctx.actor.permissions.includes("medication.manage")) return;
+  if (!ctx.actor.permissions.includes("medication.administer")) return;
   await ctx.sql`
     WITH due AS (
       UPDATE carecore_medication_administrations a SET effect_reminded_at = NOW()

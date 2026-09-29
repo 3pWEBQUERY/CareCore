@@ -78,6 +78,40 @@ test("Rollen ohne Qualifikationspflicht behalten die Medikation unverändert", a
   assert.ok(arzt.permissions.includes("medication.manage"), "Ärztlicher Dienst unverändert");
 });
 
+test("Medikationsrechte getrennt: verabreichen und verwalten, beide an die Qualifikation gebunden", async () => {
+  const f = await fixture();
+  const effective = async (person: string) =>
+    (
+      await q<{ permissions: string[] | null }>(`SELECT carecore_effective_permissions($1) AS permissions`, [
+        f.people[person],
+      ])
+    )[0].permissions ?? [];
+  // Bestehende Rollen mit Medikationsrecht erhalten beide Rechte (keine Änderung für die Einrichtung).
+  for (const key of ["admin", "leitung", "pflege", "arzt"]) {
+    const [role] = await q<{ permissions: string[] }>(`SELECT permissions FROM carecore_roles WHERE key = $1`, [key]);
+    assert.ok(role.permissions.includes("medication.administer"), `${key}: verabreichen`);
+    assert.ok(role.permissions.includes("medication.manage"), `${key}: verwalten`);
+  }
+  // Pflege ohne Qualifikation: keines der beiden Rechte; mit Qualifikation beide.
+  assert.ok(!(await effective("anna")).some((p) => p.startsWith("medication.")));
+  await qualify(f, "anna", "FAGE");
+  assert.deepEqual((await effective("anna")).filter((p) => p.startsWith("medication.")).sort(), [
+    "medication.administer",
+    "medication.manage",
+  ]);
+  // Eine Rolle nur zum Verabreichen: keine Verwaltung, auch mit Qualifikationspflicht korrekt gefiltert.
+  const key = `test-${randomUUID().slice(0, 8)}`;
+  await q(
+    `INSERT INTO carecore_roles (id, key, name, permissions, medication_requires_qualification)
+     VALUES ($1, $2, 'Nur verabreichen', '["residents.read", "medication.administer"]'::jsonb, TRUE)`,
+    [randomUUID(), key],
+  );
+  await q(`UPDATE carecore_users SET role = $2 WHERE id = $1`, [f.people.max, key]);
+  assert.deepEqual(await effective("max"), ["residents.read"]);
+  await qualify(f, "max", "HF");
+  assert.deepEqual((await effective("max")).sort(), ["medication.administer", "residents.read"]);
+});
+
 test("Mitarbeiterverwaltung: Qualifikationen setzen und entfernen, Verlauf bleibt, Protokoll mit Organisation", async () => {
   const f = await fixture();
   const quals = await q<{ id: string; code: string }>(

@@ -15,6 +15,7 @@ export async function GET() {
       residents,
       careUnits,
       canManage: hasPermission(ctx.actor, "medication.manage"),
+      canAdminister: hasPermission(ctx.actor, "medication.administer"),
       canEditAllergies: hasPermission(ctx.actor, "residents.write"),
     });
   } catch (error) {

@@ -118,6 +118,8 @@ Medikation (`medication.manage`: Gaben dokumentieren, Verordnungen, Bestände, B
 - Ob eine Rolle das Recht nur mit Qualifikation erhält, ist unter Mitarbeitende › Profile & Rollen einstellbar.
 - Maßgeblich ist die Datenbankfunktion `carecore_effective_permissions`, die Anmeldung, Navigation und Zweitunterschrift gleichermaßen verwenden.
 
+- **Verabreichen und verwalten getrennt** (Migration `0038_medication_administer.sql`): „Medikation verabreichen“ (`medication.administer`) erlaubt Gaben in Runde und Reserve, die Wirkungskontrolle und die Zweitunterschrift. „Medikation verwalten“ (`medication.manage`) erlaubt Verordnungen, Bestände und die BtM-Kontrolle. Jede Rolle mit dem bisherigen Medikationsrecht hat beide erhalten, damit sich nichts ändert. Wer nur verabreichen soll, bekommt unter Mitarbeitende › Profile & Rollen das Verwalten entzogen. Verlangt eine Rolle eine Qualifikation, gilt das für beide Rechte.
+
 ## Betäubungsmittel (BtM)
 
 Unter Medikation › „BtM-Kontrolle“ (`/medikation/btm`) werden als BtM gekennzeichnete Präparate mit lückenlosem Bestandsbuch geführt (Migration `0026_btm.sql`, `lib/medication-btm.ts`). Welche Präparate als BtM gelten und in welchen Abständen kontrolliert wird, legt die Einrichtung fest; CareCore gibt dafür keine Regeln vor.

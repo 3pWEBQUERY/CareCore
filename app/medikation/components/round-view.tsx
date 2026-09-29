@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useWorkContext } from "@/app/components/care-context";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import { ModuleIcon } from "@/app/components/module-icon";
@@ -59,9 +59,18 @@ const reasonCopy: Record<
   },
 };
 
+// Aktuelle Runde und heutiges Datum erst im Browser bestimmen: die Seite wird beim Build vorgerendert, eine dort
+// berechnete Uhrzeit wiche später ab (z. B. „Mittag“ im Build, „Abend“ beim Aufruf) und störte die Hydration.
+const noSubscribe = () => () => undefined;
+const currentRound = () => roundForTime(timeInZurich());
+
 export default function RoundView({ showToast }: { showToast: ShowToast }) {
-  const [round, setRound] = useState<RoundKey>(() => roundForTime(timeInZurich()));
-  const [date, setDate] = useState(todayInZurich);
+  const nowRound = useSyncExternalStore(noSubscribe, currentRound, () => null);
+  const today = useSyncExternalStore(noSubscribe, todayInZurich, () => null);
+  const [roundChoice, setRound] = useState<RoundKey | null>(null);
+  const [dateChoice, setDate] = useState<string | null>(null);
+  const round = roundChoice ?? nowRound ?? "morning";
+  const date = dateChoice ?? today ?? "";
   const [pending, setPending] = useState<{
     dose: RoundDose;
     status: Exclude<AdministrationStatus, "administered">;
@@ -70,9 +79,9 @@ export default function RoundView({ showToast }: { showToast: ShowToast }) {
   const [witnessDose, setWitnessDose] = useState<RoundDose | null>(null);
   const witnessRequired = useWorkContext()?.settings.btmAdministrationWitness.enabled ?? false;
   const permissions = useApiData<ResidentsPayload>("/api/medication/residents");
-  const canManage = permissions.data?.canManage ?? false;
+  const canManage = permissions.data?.canAdminister ?? false;
   const { data, error, loading, reload } = useApiData<{ date: string; doses: RoundDose[] }>(
-    `/api/medication/round?round=${round}&date=${date}`,
+    nowRound && today ? `/api/medication/round?round=${round}&date=${date}` : null,
   );
   const doses = data?.doses ?? [];
   const documented = doses.filter((dose) => dose.status !== "scheduled").length;

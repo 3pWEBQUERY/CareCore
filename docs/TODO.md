@@ -33,7 +33,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Dark Mode                    | ❌    | Keine dunkle Darstellung.                                                                                                                    |
 | Barrierefreiheit WCAG 2.2 AA | 🟡    | Tastatur, Fokusfalle, Schriftgrösse, Kontrast-Einstellung. `--muted` erreicht nur 4,4:1.                                                     |
 | IAM                          | 🟡    | Passwort, Login-Drossel, Sitzungen mit Gerät, automatische Abmeldung. **SSO, MFA und Passkeys fehlen.**                                      |
-| Rechte                       | 🟡    | Grobe Rechte (`medication.manage` u. a.) plus Qualifikationen. Keine Trennung Verabreichen / Verordnung bearbeiten.                          |
+| Rechte                       | 🟡    | Rechte plus Qualifikationen; Medikation getrennt in verabreichen / verwalten.                                                                |
 | Audit                        | ✅    | Atomar, pro Bewohner, mit Sitzung und Gerät.                                                                                                 |
 | Datenschutz                  | 🟡    | Eigener Datenexport, Quittungen nach 30 Tagen gelöscht. Kein Lösch- oder Aufbewahrungskonzept für Bewohnerdaten.                             |
 | Sicherheit                   | 🟡    | Login-, Passwort- und KI-Drossel, allgemeine Drossel für schreibende API-Anfragen.                                                           |
@@ -70,7 +70,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       einen Konflikt; die Anzeige bietet „Meine Fassung übernehmen“ oder „Verwerfen“.
 - [ ] **Offline-Speicher verschlüsseln:** siehe „Braucht eine Entscheidung“.
 - [x] **Audit mit Sitzung und Gerät** (Sitzungs-ID, User-Agent).
-- [ ] **Feinere Medikationsrechte:** verabreichen vs. Verordnung bearbeiten.
+- [x] **Feinere Medikationsrechte:** verabreichen vs. Verordnung bearbeiten.
 - [ ] **Lernen:** Quiz mit Bestehensgrenze (von der Einrichtung festgelegt) und Compliance-Übersicht je Team.
 - [ ] **Dokumente:** Lesebestätigung bei neuer Version erneut anfordern (prüfen, ergänzen).
 - [ ] **Trendhinweise Ernährung:** Hinweis, wenn eine von der Einrichtung gesetzte Grenze für Gewicht oder

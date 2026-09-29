@@ -40,6 +40,7 @@ function availableStock(order: MedOrder) {
 export default function ReservesView({ showToast }: { showToast: ShowToast }) {
   const { residents, resident, missing, detail, reloadAll } = useSelectedResident();
   const canManage = residents.data?.canManage ?? false;
+  const canAdminister = residents.data?.canAdminister ?? false;
   const { openCreate, openEdit, dialogs } = useOrderDialogs({ resident, showToast, onChanged: reloadAll });
   const [administer, setAdminister] = useState<MedOrder | null>(null);
   const [receipt, setReceipt] = useState<MedOrder | null>(null);
@@ -146,7 +147,7 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
                             {check.overdue ? "Fällig seit" : "Fällig um"} {timeInZurich(new Date(check.dueAt))} Uhr
                           </span>
                         </div>
-                        {canManage && (
+                        {canAdminister && (
                           <div className="med-reserve-actions">
                             <button type="button" onClick={() => setChecking(check)}>
                               Wirkung erfassen
@@ -246,24 +247,30 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
                             {order.prnInstructions}
                           </p>
                         )}
-                        {canManage && (
+                        {(canManage || canAdminister) && (
                           <div className="med-reserve-actions">
-                            <button type="button" onClick={() => setReceipt(order)}>
-                              <ModuleIcon name="plus" />
-                              Eingang eintragen
-                            </button>
-                            <button type="button" onClick={() => openEdit(order)}>
-                              Verordnung
-                            </button>
-                            <button
-                              type="button"
-                              disabled={Boolean(blocked)}
-                              title={blocked ?? undefined}
-                              onClick={() => setAdminister(order)}
-                            >
-                              <span aria-hidden="true">−</span>
-                              {blocked ?? "Gabe dokumentieren"}
-                            </button>
+                            {canManage && (
+                              <button type="button" onClick={() => setReceipt(order)}>
+                                <ModuleIcon name="plus" />
+                                Eingang eintragen
+                              </button>
+                            )}
+                            {canManage && (
+                              <button type="button" onClick={() => openEdit(order)}>
+                                Verordnung
+                              </button>
+                            )}
+                            {canAdminister && (
+                              <button
+                                type="button"
+                                disabled={Boolean(blocked)}
+                                title={blocked ?? undefined}
+                                onClick={() => setAdminister(order)}
+                              >
+                                <span aria-hidden="true">−</span>
+                                {blocked ?? "Gabe dokumentieren"}
+                              </button>
+                            )}
                           </div>
                         )}
                       </article>

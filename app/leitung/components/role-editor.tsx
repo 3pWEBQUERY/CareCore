@@ -103,23 +103,24 @@ export function RoleEditor({
               ))}
             </div>
           </fieldset>
-          {selected.includes("medication.manage") && role?.key !== "admin" && (
-            <fieldset className="user-editor-role">
-              <legend>Medikation</legend>
-              <div>
-                <button
-                  type="button"
-                  className={needsQualification ? "active" : ""}
-                  aria-pressed={needsQualification}
-                  onClick={() => setNeedsQualification((value) => !value)}
-                >
-                  <strong>Nur mit Qualifikation</strong>
-                  <small>Medikation nur für Personen mit berechtigender Qualifikation (z. B. HF, FaGe)</small>
-                  {needsQualification && <ModuleIcon name="check" />}
-                </button>
-              </div>
-            </fieldset>
-          )}
+          {(selected.includes("medication.manage") || selected.includes("medication.administer")) &&
+            role?.key !== "admin" && (
+              <fieldset className="user-editor-role">
+                <legend>Medikation</legend>
+                <div>
+                  <button
+                    type="button"
+                    className={needsQualification ? "active" : ""}
+                    aria-pressed={needsQualification}
+                    onClick={() => setNeedsQualification((value) => !value)}
+                  >
+                    <strong>Nur mit Qualifikation</strong>
+                    <small>Medikation nur für Personen mit berechtigender Qualifikation (z. B. HF, FaGe)</small>
+                    {needsQualification && <ModuleIcon name="check" />}
+                  </button>
+                </div>
+              </fieldset>
+            )}
           {error && <p className="user-editor-error">{error}</p>}
           <footer className="user-editor-footer">
             {role && !role.systemRole && (
