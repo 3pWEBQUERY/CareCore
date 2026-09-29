@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import DialogFocus from "./components/dialog-focus";
 import OfflineSync from "./components/offline-sync";
 
 const geistSans = Geist({
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         {children}
         <OfflineSync />
+        <DialogFocus />
       </body>
     </html>
   );
