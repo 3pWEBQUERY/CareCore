@@ -35,3 +35,32 @@ for (const entry of pages)
     await page.waitForLoadState("networkidle");
     expect(errors).toEqual([]);
   });
+
+// Startseite: Tagesliste nach Kritisch / Wichtig / Routine gegliedert; Zahl im Filter = gezeigte Punkte.
+test("Tagesliste gliedert nach Kritisch, Wichtig und Routine", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  await page.goto("/c");
+  const filters = page.getByRole("group", { name: "Tagesliste filtern" });
+  await expect(filters.getByRole("button", { name: /^Alle \d+$/ })).toBeVisible();
+  const items = page.locator(".worklist-card .worklist-item");
+  let sum = 0;
+  for (const [label, tone] of [
+    ["Kritisch", "critical"],
+    ["Wichtig", "attention"],
+    ["Routine", "info"],
+  ] as const) {
+    const button = filters.getByRole("button", { name: new RegExp(`^${label} \\d+$`) });
+    const count = Number((await button.textContent())?.replace(/\D/g, ""));
+    await button.click();
+    await expect(button).toHaveAttribute("aria-pressed", "true");
+    await expect(items).toHaveCount(count);
+    await expect(page.locator(`.worklist-card .worklist-item:not(.${tone})`)).toHaveCount(0);
+    sum += count;
+  }
+  const all = filters.getByRole("button", { name: /^Alle \d+$/ });
+  expect(Number((await all.textContent())?.replace(/\D/g, ""))).toBe(sum);
+  await all.click();
+  await expect(items).toHaveCount(sum);
+  expect(errors).toEqual([]);
+});

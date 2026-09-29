@@ -4,6 +4,7 @@
 }
 .worklist-filters {
   display: flex;
+  flex-wrap: wrap;
   gap: 5px;
 }
 .worklist-filters button {
@@ -142,6 +143,9 @@
   }
   .worklist-item {
     max-width: 100%;
+  }
+  .worklist-card .card-header {
+    flex-wrap: wrap;
   }
 }
 

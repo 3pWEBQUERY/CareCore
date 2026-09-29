@@ -16,10 +16,14 @@ const KIND_ICONS: Record<WorkItemKind, ModuleIconName> = {
   documentation: "note",
   task: "tasks",
 };
+// Gliederung nach Dringlichkeit: Kritisch, Wichtig, Routine (entspricht der Einstufung der Punkte).
 const FILTERS = [
-  { id: "all", label: "Alle" },
-  { id: "urgent", label: "Dringend" },
+  { id: "all", label: "Alle", empty: "Alles erledigt – keine offenen Punkte." },
+  { id: "critical", label: "Kritisch", empty: "Nichts Kritisches offen." },
+  { id: "attention", label: "Wichtig", empty: "Nichts Wichtiges offen." },
+  { id: "info", label: "Routine", empty: "Keine Routinepunkte offen." },
 ] as const;
+type Filter = (typeof FILTERS)[number]["id"];
 
 // "Mein Dienst": what is due today, per resident of the care unit chosen in the header.
 export function DashboardWorklistCard() {
@@ -29,11 +33,13 @@ export function DashboardWorklistCard() {
   const unitId = storedUnitId ?? context?.profile.primaryCareUnitId ?? null;
   const unitName = context?.careUnits.find((unit) => unit.id === unitId)?.name ?? "alle Wohnbereiche";
   const data = useApiData<Worklist>(context ? `/api/worklist${unitId ? `?careUnitId=${unitId}` : ""}` : null);
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
+  const [filter, setFilter] = useState<Filter>("all");
+  const allItems = (data.data?.residents ?? []).flatMap((resident) => resident.items);
+  const count = (id: Filter) => (id === "all" ? allItems.length : allItems.filter((item) => item.tone === id).length);
   const residents = (data.data?.residents ?? [])
     .map((resident) => ({
       ...resident,
-      items: filter === "urgent" ? resident.items.filter((item) => item.tone !== "info") : resident.items,
+      items: filter === "all" ? resident.items : resident.items.filter((item) => item.tone === filter),
     }))
     .filter((resident) => resident.items.length);
   const open = (residentId: string, item: WorkItem) => {
@@ -65,6 +71,7 @@ export function DashboardWorklistCard() {
               onClick={() => setFilter(item.id)}
             >
               {item.label}
+              {data.data ? ` ${count(item.id)}` : ""}
             </button>
           ))}
         </div>
@@ -113,8 +120,7 @@ export function DashboardWorklistCard() {
         ))}
         {!data.loading && data.data && !residents.length && (
           <p className="worklist-empty">
-            <ModuleIcon name="check" />{" "}
-            {filter === "urgent" ? "Nichts Dringendes offen." : "Alles erledigt – keine offenen Punkte."}
+            <ModuleIcon name="check" /> {FILTERS.find((item) => item.id === filter)?.empty}
           </p>
         )}
       </div>
