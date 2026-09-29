@@ -127,6 +127,11 @@ export default function FluidsView({ showToast }: { showToast: ShowToast }) {
                     <span>
                       <strong>{resident.name}</strong>
                       <small>{[resident.room, resident.careUnit].filter(Boolean).join(" · ")}</small>
+                      {resident.trends.length > 0 && (
+                        <small className="status-text critical" title={resident.trends.map((t) => t.text).join("\n")}>
+                          Trendhinweis
+                        </small>
+                      )}
                     </span>
                   </span>
                   <span>

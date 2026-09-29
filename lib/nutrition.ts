@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ApiError, assertResident, assertUuid, iso, num, text, type ApiContext, type Row } from "@/lib/api-context";
 import { residentAudit } from "@/lib/resident-audit";
+import { nutritionTrends } from "@/lib/nutrition-trends";
 import { receiptStatements, withReceipt } from "@/lib/request-receipts";
 import { initials } from "@/lib/medication-shared";
 import {
@@ -75,6 +76,11 @@ export async function nutritionOverview(ctx: ApiContext, dateInput: unknown) {
       SELECT cu.id, cu.name FROM carecore_care_units cu JOIN carecore_sites si ON si.id = cu.site_id
       WHERE si.organization_id = ${ctx.actor.organizationId} AND cu.active ORDER BY cu.name`,
   ])) as [Row[], Row[]];
+  const trends = await nutritionTrends(
+    ctx,
+    rows.map((row) => String(row.id)),
+    date,
+  );
   return {
     date,
     careUnits: units.map((u) => ({ id: String(u.id), name: String(u.name) })),
@@ -95,6 +101,7 @@ export async function nutritionOverview(ctx: ApiContext, dateInput: unknown) {
         lastFluidAt: iso(row.last_at),
         mealsLogged: Number(row.meals_logged),
         lowMeals: Number(row.low_meals),
+        trends: trends.get(String(row.id)) ?? [],
       };
     }),
   };
@@ -135,6 +142,7 @@ export async function residentNutrition(
       WHERE resident_id = ${residentId} AND metric = 'Gewicht' AND measured_at > NOW() - INTERVAL '60 days'
       ORDER BY measured_at DESC`,
   ])) as Row[][];
+  const trends = (await nutritionTrends(ctx, [residentId], date)).get(residentId) ?? [];
   // Weight change: latest value compared with the oldest measurement of the last 30 days.
   const latest = weights[0];
   const monthAgo = weights
@@ -170,6 +178,7 @@ export async function residentNutrition(
               : null,
         }
       : null,
+    trends,
   };
 }
 
