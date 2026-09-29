@@ -94,6 +94,7 @@ export async function savePreferences(actor: CarecoreActor, body: Record<string,
   choose("textSize", "Schriftgrösse", Object.keys(TEXT_SIZES));
   choose("contrast", "Kontrast", ["standard", "high"]);
   choose("motion", "Animationen", ["standard", "reduced"]);
+  choose("theme", "Erscheinungsbild", ["light", "dark"]);
   choose("shortcuts", "Tastaturkürzel", [true, false]);
   choose("sound", "Hinweiston", [true, false]);
   choose("startPage", "Startseite", Object.keys(START_PAGES));

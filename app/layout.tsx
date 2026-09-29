@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import DialogFocus from "./components/dialog-focus";
 import OfflineSync from "./components/offline-sync";
@@ -32,8 +33,16 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="de" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    // suppressHydrationWarning: das Skript unten setzt das dunkle Erscheinungsbild vor der Hydrierung.
+    <html
+      lang="de"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
       <body className="min-h-full flex flex-col">
+        <Script id="carecore-theme" strategy="beforeInteractive">
+          {`try{if(localStorage.getItem("carecore-theme")==="dark")document.documentElement.classList.add("theme-dark")}catch(e){}`}
+        </Script>
         {children}
         <OfflineSync />
         <DialogFocus />

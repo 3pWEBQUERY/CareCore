@@ -5,9 +5,18 @@ import type { UserPreferences } from "@/lib/user-settings-shared";
 import { useWorkContext } from "./care-context";
 
 const PREFERENCES_EVENT = "carecore:preferences";
+// Merkt sich das Erscheinungsbild im Browser, damit es beim nächsten Laden vor der Anzeige gilt (app/layout.tsx).
+export const THEME_KEY = "carecore-theme";
 
-function apply(preferences: Pick<UserPreferences, "textSize" | "contrast" | "motion">) {
+function apply(preferences: Pick<UserPreferences, "textSize" | "contrast" | "motion" | "theme">) {
   const root = document.documentElement;
+  root.classList.toggle("theme-dark", preferences.theme === "dark");
+  try {
+    if (preferences.theme === "dark") localStorage.setItem(THEME_KEY, "dark");
+    else localStorage.removeItem(THEME_KEY);
+  } catch {
+    // Ohne Speicher gilt das Erscheinungsbild erst nach dem Laden der Einstellungen.
+  }
   root.classList.toggle("text-large", preferences.textSize === "large");
   root.classList.toggle("text-xlarge", preferences.textSize === "xlarge");
   root.classList.toggle("contrast-high", preferences.contrast === "high");
@@ -18,7 +27,7 @@ function apply(preferences: Pick<UserPreferences, "textSize" | "contrast" | "mot
 export const announcePreferences = (preferences: UserPreferences) =>
   window.dispatchEvent(new CustomEvent(PREFERENCES_EVENT, { detail: preferences }));
 
-// Applies the personal appearance settings (text size, contrast, animations) to the page.
+// Applies the personal appearance settings (text size, contrast, animations, theme) to the page.
 export function PersonalAppearance() {
   const preferences = useWorkContext()?.preferences;
   useEffect(() => {
