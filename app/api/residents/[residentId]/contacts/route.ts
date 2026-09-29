@@ -40,7 +40,7 @@ export async function GET(_request: Request, context: { params: Promise<{ reside
   try {
     const { residentId } = await context.params;
     const active = await residentContext(residentId);
-    if (!active) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (!active) return NextResponse.json({ error: "Akte nicht verfügbar." }, { status: 404 });
     if (!hasPermission(active.actor, "residents.read")) return forbidden();
     const contacts =
       await active.sql`SELECT id, full_name, relationship, phone, email, is_primary, is_emergency_contact, updated_at FROM carecore_resident_contacts WHERE resident_id = ${residentId} ORDER BY is_primary DESC, is_emergency_contact DESC, full_name ASC`;
@@ -55,7 +55,7 @@ export async function POST(request: Request, context: { params: Promise<{ reside
   try {
     const { residentId } = await context.params;
     const active = await residentContext(residentId);
-    if (!active) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (!active) return NextResponse.json({ error: "Akte nicht verfügbar." }, { status: 404 });
     if (!hasPermission(active.actor, "residents.write")) return forbidden();
     const input = contactValues((await request.json()) as ContactInput);
     if (!input.fullName) return NextResponse.json({ error: "Bitte gib einen Namen an." }, { status: 400 });

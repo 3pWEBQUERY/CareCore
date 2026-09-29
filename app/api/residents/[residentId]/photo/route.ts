@@ -32,7 +32,7 @@ export async function GET(request: Request, context: { params: Promise<{ residen
   try {
     const { residentId } = await context.params;
     const allowed = await access(residentId, "residents.read");
-    if (!allowed) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (!allowed) return NextResponse.json({ error: "Akte nicht verfügbar." }, { status: 404 });
     if (allowed === "forbidden") return forbidden();
     const { sql } = allowed;
     const rows =
@@ -63,7 +63,7 @@ export async function GET(request: Request, context: { params: Promise<{ residen
     );
   } catch (error) {
     console.error("Resident photo GET failed", error);
-    return NextResponse.json({ error: "Bewohnerbild konnte nicht geladen werden." }, { status: 500 });
+    return NextResponse.json({ error: "Bild konnte nicht geladen werden." }, { status: 500 });
   }
 }
 
@@ -71,7 +71,7 @@ export async function PUT(request: Request, context: { params: Promise<{ residen
   try {
     const { residentId } = await context.params;
     const allowed = await access(residentId, "residents.write");
-    if (!allowed) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (!allowed) return NextResponse.json({ error: "Akte nicht verfügbar." }, { status: 404 });
     if (allowed === "forbidden") return forbidden();
     const { sql, actor } = allowed;
     const input = (await request.json()) as { photoDataUrl?: unknown };
@@ -96,14 +96,14 @@ export async function PUT(request: Request, context: { params: Promise<{ residen
         after: { mimeType: match[1], bytes: image.length },
       }),
     ]);
-    if (!rows[0]) return NextResponse.json({ error: "Bewohnerakte nicht gefunden." }, { status: 404 });
+    if (!rows[0]) return NextResponse.json({ error: "Akte nicht gefunden." }, { status: 404 });
     return NextResponse.json({
       photoDataUrl: `data:${match[1]};base64,${base64}`,
       updatedAt: rows[0].photo_updated_at,
     });
   } catch (error) {
     console.error("Resident photo PUT failed", error);
-    return NextResponse.json({ error: "Bewohnerbild konnte nicht gespeichert werden." }, { status: 500 });
+    return NextResponse.json({ error: "Bild konnte nicht gespeichert werden." }, { status: 500 });
   }
 }
 
@@ -111,7 +111,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ res
   try {
     const { residentId } = await context.params;
     const allowed = await access(residentId, "residents.write");
-    if (!allowed) return NextResponse.json({ error: "Bewohnerakte nicht verfügbar." }, { status: 404 });
+    if (!allowed) return NextResponse.json({ error: "Akte nicht verfügbar." }, { status: 404 });
     if (allowed === "forbidden") return forbidden();
     const { sql, actor } = allowed;
     await sql.transaction([
@@ -121,6 +121,6 @@ export async function DELETE(_request: Request, context: { params: Promise<{ res
     return NextResponse.json({ photoDataUrl: null });
   } catch (error) {
     console.error("Resident photo DELETE failed", error);
-    return NextResponse.json({ error: "Bewohnerbild konnte nicht entfernt werden." }, { status: 500 });
+    return NextResponse.json({ error: "Bild konnte nicht entfernt werden." }, { status: 500 });
   }
 }

@@ -19,6 +19,6 @@ export async function GET() {
       canEditAllergies: hasPermission(ctx.actor, "residents.write"),
     });
   } catch (error) {
-    return apiErrorResponse(error, "Bewohner konnten nicht geladen werden.");
+    return apiErrorResponse(error, "Liste konnte nicht geladen werden.");
   }
 }

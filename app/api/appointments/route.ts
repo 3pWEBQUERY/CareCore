@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     const from = params.get("from");
     const to = params.get("to");
     if (residentId && !/^[0-9a-f-]{36}$/i.test(residentId))
-      return NextResponse.json({ error: "Ungültiger Bewohner." }, { status: 400 });
+      return NextResponse.json({ error: "Ungültige Auswahl." }, { status: 400 });
     if (
       (from && !Number.isFinite(Date.parse(from))) ||
       (to && !Number.isFinite(Date.parse(to))) ||
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
       const resident =
         await sql`SELECT id FROM carecore_residents WHERE id = ${parsed.residentId} AND organization_id = ${actor.organizationId} AND status IN ('active', 'planned') LIMIT 1`;
       if (!resident[0])
-        return NextResponse.json({ error: "Bewohner nicht gefunden oder nicht mehr aktiv." }, { status: 404 });
+        return NextResponse.json({ error: "Akte nicht gefunden oder nicht mehr aktiv." }, { status: 404 });
     } else {
       const careUnit =
         await sql`SELECT cu.id FROM carecore_care_units cu JOIN carecore_sites s ON s.id = cu.site_id WHERE cu.id = ${parsed.careUnitId} AND s.organization_id = ${actor.organizationId} AND cu.active = TRUE LIMIT 1`;

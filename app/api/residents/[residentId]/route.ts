@@ -16,7 +16,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ resid
     const sql = carecoreDb();
     const current =
       await sql`SELECT gender FROM carecore_residents WHERE id = ${residentId} AND organization_id = ${actor.organizationId}`;
-    if (!current[0]) return NextResponse.json({ error: "Bewohnerakte nicht gefunden." }, { status: 404 });
+    if (!current[0]) return NextResponse.json({ error: "Akte nicht gefunden." }, { status: 404 });
     const [rows] = await sql.transaction([
       sql`UPDATE carecore_residents SET gender = ${body.gender}, updated_at = NOW() WHERE id = ${residentId} AND organization_id = ${actor.organizationId} RETURNING gender`,
       residentAudit(sql, actor, {
@@ -28,7 +28,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ resid
         after: { gender: body.gender },
       }),
     ]);
-    if (!rows[0]) return NextResponse.json({ error: "Bewohnerakte nicht gefunden." }, { status: 404 });
+    if (!rows[0]) return NextResponse.json({ error: "Akte nicht gefunden." }, { status: 404 });
     return NextResponse.json({ gender: rows[0].gender });
   } catch (error) {
     console.error("Resident PATCH failed", error);

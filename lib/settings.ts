@@ -1,6 +1,6 @@
 import { ApiError, iso, auditStatement, type ApiContext } from "@/lib/api-context";
 import { SETTING_DEFINITIONS, resolveSettings, type AppSettings, type SettingKey } from "@/lib/settings-shared";
-import { TERMINOLOGIES, resolveTerminology, type TerminologyKey } from "@/lib/terminology";
+import { TERMINOLOGIES, resolveTerminology, termsFor, type TerminologyKey } from "@/lib/terminology";
 
 // Organisation-wide settings (see settings-shared.ts).
 
@@ -15,6 +15,9 @@ export async function readTerminology(ctx: ApiContext): Promise<TerminologyKey> 
     await ctx.sql`SELECT settings->'terminology' AS terminology FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}`;
   return resolveTerminology(rows[0]?.terminology);
 }
+
+// Wortformen der Bezeichnung für Texte, die der Server erzeugt (Kennzahlen, Übersichten).
+export const readTerms = async (ctx: ApiContext) => termsFor(await readTerminology(ctx));
 
 // Bezeichnung der betreuten Personen (Bewohner / Patient / Klient) für die ganze Einrichtung.
 export async function saveTerminology(ctx: ApiContext, body: Record<string, unknown>) {

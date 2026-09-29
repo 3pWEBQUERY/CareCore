@@ -6,6 +6,7 @@ import { useState } from "react";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { EditorDialog, LoadError, requestJson, useApiData } from "@/app/components/workspace-ui";
 import type { Kpi } from "@/lib/insights-shared";
+import { navigationLabel } from "@/lib/terminology";
 import {
   INSIGHT_PINS_MAX,
   INSIGHT_VIEWS,
@@ -36,6 +37,7 @@ function PinPicker({
   onClose: () => void;
   onSaved: (pins: string[]) => void;
 }) {
+  const t = useTerms();
   const [selected, setSelected] = useState<string[]>(pins);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -68,10 +70,10 @@ function PinPicker({
     >
       {VIEWS.map((view) => (
         <fieldset className="my-insights-group" key={view}>
-          <legend>{INSIGHT_VIEWS[view]}</legend>
+          <legend>{navigationLabel(INSIGHT_VIEWS[view], t)}</legend>
           {!kpis[view] && <p className="list-hint">Wird geladen …</p>}
           {kpis[view]?.map((kpi) => {
-            const pin = insightPin(view, kpi.label);
+            const pin = insightPin(view, kpi.id ?? kpi.label);
             return (
               <label className="my-insights-option" key={pin}>
                 <input type="checkbox" checked={selected.includes(pin)} onChange={() => toggle(pin)} />
@@ -116,7 +118,7 @@ export default function MyInsights() {
     view,
     items: pins
       .filter((pin) => pin.startsWith(`${view}:`))
-      .map((pin) => kpis[view]?.find((kpi) => insightPin(view, kpi.label) === pin))
+      .map((pin) => kpis[view]?.find((kpi) => insightPin(view, kpi.id ?? kpi.label) === pin))
       .filter((kpi): kpi is Kpi => Boolean(kpi)),
     pinned: pins.some((pin) => pin.startsWith(`${view}:`)),
     error: views[view].error,
@@ -149,9 +151,13 @@ export default function MyInsights() {
             </section>
           )}
           {groups.map((group) => (
-            <section className="my-insights-section" key={group.view} aria-label={INSIGHT_VIEWS[group.view]}>
+            <section
+              className="my-insights-section"
+              key={group.view}
+              aria-label={navigationLabel(INSIGHT_VIEWS[group.view], t)}
+            >
               <div className="my-insights-section-head">
-                <p className="eyebrow">{INSIGHT_VIEWS[group.view]}</p>
+                <p className="eyebrow">{navigationLabel(INSIGHT_VIEWS[group.view], t)}</p>
                 <Link href={VIEW_PATHS[group.view]}>Alle anzeigen</Link>
               </div>
               {group.error && <LoadError message={group.error} onRetry={group.reload} />}

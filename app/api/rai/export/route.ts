@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readTerms } from "@/lib/settings";
 import { toCsv } from "@/lib/roster/csv";
 import { apiContext, apiErrorResponse } from "@/lib/api-context";
 import { raiWorkplace } from "@/lib/rai";
@@ -11,10 +12,10 @@ export async function GET() {
   try {
     const ctx = await apiContext("rai.manage");
     if (ctx instanceof NextResponse) return ctx;
-    const { residents } = await raiWorkplace(ctx);
+    const [{ residents }, t] = await Promise.all([raiWorkplace(ctx), readTerms(ctx)]);
     const lines = [
       [
-        "Bewohner",
+        t.one,
         "Zimmer",
         "Wohnbereich",
         "Status",

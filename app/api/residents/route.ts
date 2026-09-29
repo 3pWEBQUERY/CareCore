@@ -35,7 +35,7 @@ export async function GET() {
     return NextResponse.json({ residents: rows, units, primaryCareUnitName: profile[0]?.name ?? null });
   } catch (error) {
     console.error("Residents GET failed", error);
-    return NextResponse.json({ error: "Bewohner konnten nicht geladen werden." }, { status: 500 });
+    return NextResponse.json({ error: "Liste konnte nicht geladen werden." }, { status: 500 });
   }
 }
 
@@ -108,6 +108,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ id: residentId }, { status: 201 });
   } catch (error) {
     console.error("Residents POST failed", error);
-    return NextResponse.json({ error: "Bewohner konnte nicht aufgenommen werden." }, { status: 500 });
+    return NextResponse.json({ error: "Aufnahme konnte nicht gespeichert werden." }, { status: 500 });
   }
 }

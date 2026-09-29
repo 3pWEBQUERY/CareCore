@@ -701,6 +701,7 @@ function itemsFor(
     THEMES[preferences.theme],
   ].join(" · ");
   const onOff = (value: boolean) => (value ? "Ein" : "Aus");
+  const startLabel = (key: StartPage) => (key === "residents" ? extras.terms.many : START_PAGES[key].label);
   const quiet = preferences.quietHours;
   const quietValue = quiet.enabled ? `${quiet.from}–${quiet.to} Uhr` : "Aus";
 
@@ -740,7 +741,7 @@ function itemsFor(
         description: "Schrift, Kontrast, Animationen, Startseite, Kürzel",
         value: appearance,
         icon: "pulse",
-        detail: { kind: "open", view: "appearance", text: `Startseite: ${START_PAGES[preferences.startPage].label}.` },
+        detail: { kind: "open", view: "appearance", text: `Startseite: ${startLabel(preferences.startPage)}.` },
       },
       {
         id: "privacy",
@@ -1149,19 +1150,18 @@ function itemsFor(
       id: "app-start",
       title: "Startseite",
       description: "Seite nach der Anmeldung",
-      value: START_PAGES[preferences.startPage].label,
+      value: startLabel(preferences.startPage),
       icon: "home",
       detail: {
         kind: "select",
         text: "Diese Seite öffnet sich nach der Anmeldung.",
         label: "Startseite",
-        value: START_PAGES[preferences.startPage].label,
-        options: Object.values(START_PAGES).map((page) => page.label),
+        value: startLabel(preferences.startPage),
+        options: (Object.keys(START_PAGES) as StartPage[]).map(startLabel),
         save: (label) =>
           save(
             {
-              startPage:
-                (Object.keys(START_PAGES) as StartPage[]).find((key) => START_PAGES[key].label === label) ?? "home",
+              startPage: (Object.keys(START_PAGES) as StartPage[]).find((key) => startLabel(key) === label) ?? "home",
             },
             `Startseite: ${label}`,
           ),

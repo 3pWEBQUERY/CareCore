@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { readTerms } from "@/lib/settings";
 import { ApiError, assertUuid, iso, num, text, type ApiContext, type Row } from "@/lib/api-context";
 import {
   ADMINISTRATION_STATUSES,
@@ -254,7 +255,7 @@ export async function administerPrn(ctx: ApiContext, body: Record<string, unknow
   const stockId = await findStock(ctx, String(order.resident_id), order.medication_id as string | null, quantity);
   if (!stockId)
     throw new ApiError(
-      "Kein ausreichender Bestand im Bewohner- oder Stationsbestand. Bitte zuerst einen Eingang buchen.",
+      `Kein ausreichender Bestand im ${(await readTerms(ctx)).prefix}- oder Stationsbestand. Bitte zuerst einen Eingang buchen.`,
       409,
     );
 

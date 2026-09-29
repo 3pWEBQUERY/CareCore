@@ -13,7 +13,7 @@ export async function GET(_request: Request, { params }: Context) {
     const { residentId } = await params;
     return NextResponse.json(await recordSummary(ctx, residentId));
   } catch (error) {
-    return apiErrorResponse(error, "Bewohnerakte konnte nicht geladen werden.");
+    return apiErrorResponse(error, "Akte konnte nicht geladen werden.");
   }
 }
 

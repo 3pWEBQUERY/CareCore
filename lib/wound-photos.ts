@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { readTerms } from "@/lib/settings";
 import { ApiError, assertUuid, iso, num, text, type ApiContext, type Row } from "@/lib/api-context";
 import { detectImageType } from "@/lib/file-signatures";
 import { residentAudit } from "@/lib/resident-audit";
@@ -97,7 +98,8 @@ export async function readPhoto(ctx: ApiContext, photoIdInput: unknown) {
 export async function hidePhoto(ctx: ApiContext, photoIdInput: unknown, reasonInput: unknown) {
   const id = assertUuid(photoIdInput, "Foto");
   const reason = text(reasonInput, 1000);
-  if (!reason) throw new ApiError("Bitte einen Grund angeben, z. B. „falscher Bewohner“ oder „unscharf“.");
+  if (!reason)
+    throw new ApiError(`Bitte einen Grund angeben, z. B. „falscher ${(await readTerms(ctx)).one}“ oder „unscharf“.`);
   const [photo] = (await ctx.sql`
     SELECT p.wound_id, w.resident_id FROM carecore_wound_photos p JOIN carecore_wounds w ON w.id = p.wound_id
     WHERE p.id = ${id} AND p.organization_id = ${ctx.actor.organizationId} AND p.deleted_at IS NULL`) as Row[];

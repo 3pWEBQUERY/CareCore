@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { readTerms } from "@/lib/settings";
 import {
   ApiError,
   assertResident,
@@ -242,7 +243,7 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
     ]);
   } catch (error) {
     if (String(error).includes("external_number"))
-      throw new ApiError("Diese Bewohnernummer ist bereits vergeben.", 409);
+      throw new ApiError(`Diese ${(await readTerms(ctx)).prefix}nummer ist bereits vergeben.`, 409);
     throw error;
   }
 }

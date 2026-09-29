@@ -13,6 +13,6 @@ export async function GET(_request: Request, { params }: Context) {
     const { residentId } = await params;
     return NextResponse.json(await historyDetail(ctx, residentId));
   } catch (error) {
-    return apiErrorResponse(error, "Bewohnerverlauf konnte nicht geladen werden.");
+    return apiErrorResponse(error, "Verlauf konnte nicht geladen werden.");
   }
 }

@@ -1,5 +1,6 @@
 import { iso, type ApiContext, type Row } from "@/lib/api-context";
 import { today } from "@/lib/care-planning";
+import { readTerms } from "@/lib/settings";
 import type { InsightTone, ResidentInsights, ResidentOverview } from "@/lib/insights-shared";
 import { nutritionTrends } from "@/lib/nutrition-trends";
 import { dailyWorklist } from "@/lib/worklist";
@@ -12,7 +13,7 @@ const TONE_ORDER: Record<InsightTone, number> = { critical: 0, attention: 1, inf
 // Resident 360: je aktivem Bewohner der Stand aus allen Modulen, die dringendsten zuerst.
 export async function residentInsights(ctx: ApiContext): Promise<ResidentInsights> {
   const org = ctx.actor.organizationId;
-  const [worklist, wounds, events, docs, date] = await Promise.all([
+  const [worklist, wounds, events, docs, date, t] = await Promise.all([
     dailyWorklist(ctx, null),
     ctx.sql`
       SELECT w.resident_id, COUNT(*)::int AS active, COUNT(*) FILTER (WHERE w.severity = 'critical')::int AS critical
@@ -32,6 +33,7 @@ export async function residentInsights(ctx: ApiContext): Promise<ResidentInsight
       WHERE r.organization_id = ${org} AND r.status = 'active'
       GROUP BY d.resident_id` as Promise<Row[]>,
     today(ctx),
+    readTerms(ctx),
   ]);
   const ids = worklist.residents.map((resident) => resident.id);
   const trends = await nutritionTrends(ctx, ids, date);
@@ -89,14 +91,15 @@ export async function residentInsights(ctx: ApiContext): Promise<ResidentInsight
     kpis: [
       {
         value: String(critical),
-        label: "Bewohner kritisch",
-        note: `von ${residents.length} aktiven Bewohnern`,
+        id: "Bewohner kritisch",
+        label: `${t.many} kritisch`,
+        note: `von ${residents.length} aktiven ${t.manyDative}`,
         tone: critical ? "critical" : "stable",
       },
       {
         value: String(woundsActive),
         label: "aktive Wunden",
-        note: `bei ${residents.filter((resident) => resident.wounds.active).length} Bewohnern`,
+        note: `bei ${residents.filter((resident) => resident.wounds.active).length} ${t.manyDative}`,
         tone: woundsActive ? "info" : "stable",
       },
       {

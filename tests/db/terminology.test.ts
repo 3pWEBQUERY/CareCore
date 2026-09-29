@@ -1,8 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ApiError } from "@/lib/api-context";
+import { ApiError, assertResident } from "@/lib/api-context";
+import { careInsights } from "@/lib/insights";
+import { residentInsights } from "@/lib/resident-insights";
 import { readSettings, readTerminology, saveTerminology } from "@/lib/settings";
-import { apiContextFor, fixture, q } from "../support/db";
+import { apiContextFor, createResident, fixture, q } from "../support/db";
 
 const status = async (promise: Promise<unknown>) =>
   promise.then(
@@ -26,4 +28,23 @@ test("Terminologie: Einrichtung wählt Patient, ungültige Werte abgelehnt, Prot
     [f.org],
   );
   assert.deepEqual(audit, { before_data: { value: "resident" }, after_data: { value: "patient" } });
+});
+
+test("Terminologie: Kennzahlen und Meldungen des Servers folgen der Bezeichnung, die Kennzahl-ID bleibt", async () => {
+  const f = await fixture();
+  const ctx = await apiContextFor(f, "leadA");
+  await createResident(f);
+  const before = (await residentInsights(ctx)).kpis[0];
+  assert.equal(before.label, "Bewohner kritisch");
+  await saveTerminology(ctx, { value: "patient" });
+  const after = (await residentInsights(ctx)).kpis[0];
+  assert.equal(after.label, "Patienten kritisch");
+  assert.equal(after.id, before.id, "„Meine Kennzahlen“ bleibt gültig");
+  assert.match(after.note, /aktiven Patienten$/);
+  assert.match(
+    (await careInsights(ctx)).indicators.find((item) => item.id === "documentation")!.detail,
+    /Patienten in den letzten 24 Stunden/,
+  );
+  const error = await assertResident(ctx, "00000000-0000-4000-8000-000000000000").catch((cause: Error) => cause);
+  assert.equal((error as Error).message, "Patient nicht gefunden.");
 });

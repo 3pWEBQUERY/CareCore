@@ -103,7 +103,7 @@ export async function listPeople({ sql, actor }: ApiContext): Promise<TaskPerson
 
 export async function listTasks(ctx: ApiContext, params: URLSearchParams): Promise<TasksPayload> {
   const scope = params.get("scope") === "mine" ? "mine" : "team";
-  const residentId = params.get("residentId") ? assertUuid(params.get("residentId"), "Bewohner") : undefined;
+  const residentId = params.get("residentId") ? assertUuid(params.get("residentId"), "Auswahl") : undefined;
   const manager = canManage(ctx);
   const [rows, people, careUnits] = await Promise.all([
     selectTasks(ctx, { scope, residentId }),

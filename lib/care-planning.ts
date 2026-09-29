@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { readTerms } from "@/lib/settings";
 import { ApiError, assertResident, assertUuid, iso, text, type ApiContext, type Row } from "@/lib/api-context";
 import { residentAudit } from "@/lib/resident-audit";
 import { initials } from "@/lib/medication-shared";
@@ -242,7 +243,10 @@ export async function createPlan(ctx: ApiContext, body: Record<string, unknown>)
     ]);
   } catch (error) {
     if (String(error).includes("carecore_care_plans_one_open_idx"))
-      throw new ApiError("Für diesen Bewohner besteht bereits ein offener Pflegeplan.", 409);
+      throw new ApiError(
+        `Für diesen ${(await readTerms(ctx)).oneOblique} besteht bereits ein offener Pflegeplan.`,
+        409,
+      );
     throw error;
   }
   return id;

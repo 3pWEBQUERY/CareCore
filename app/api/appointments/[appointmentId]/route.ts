@@ -27,8 +27,7 @@ export async function PATCH(request: Request, context: Context) {
           OR (${parsed.kind} = 'care_unit_task' AND EXISTS (SELECT 1 FROM carecore_care_units cu JOIN carecore_sites s ON s.id = cu.site_id WHERE cu.id = ${parsed.careUnitId} AND s.organization_id = ${actor.organizationId} AND cu.active = TRUE))
         )
       RETURNING a.id`;
-    if (!rows[0])
-      return NextResponse.json({ error: "Termin, Bewohner oder Wohnbereich nicht gefunden." }, { status: 404 });
+    if (!rows[0]) return NextResponse.json({ error: "Termin, Akte oder Wohnbereich nicht gefunden." }, { status: 404 });
     return NextResponse.json({ id: appointmentId });
   } catch (error) {
     console.error("Appointments PATCH failed", error);

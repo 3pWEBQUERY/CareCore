@@ -1,4 +1,6 @@
 import { iso, type ApiContext, type Row } from "@/lib/api-context";
+import { readTerms } from "@/lib/settings";
+import { countOf } from "@/lib/terminology";
 import { listRound } from "@/lib/medication-round";
 import type { RoundKey } from "@/lib/medication-shared";
 import { type ShiftHint, type ShiftOverview, type TimelineItem } from "@/lib/shift-shared";
@@ -38,7 +40,10 @@ export async function medicationItems(
     nextDay.setUTCDate(nextDay.getUTCDate() + 1);
     day = nextDay.toISOString().slice(0, 10);
   }
-  const rounds = await Promise.all(calls.map(([round, day]) => listRound(ctx, round, day)));
+  const [rounds, t] = await Promise.all([
+    Promise.all(calls.map(([round, day]) => listRound(ctx, round, day))),
+    readTerms(ctx),
+  ]);
   const slots = new Map<
     string,
     { at: string; total: number; documented: number; changed: number; residents: Set<string> }
@@ -66,7 +71,7 @@ export async function medicationItems(
       kind: "medication",
       at: slot.at,
       title: "Medikamentenrunde",
-      detail: `${slot.residents.size} Bewohner · ${slot.total} ${slot.total === 1 ? "Gabe" : "Gaben"} · ${slot.documented} dokumentiert${slot.changed ? ` · ${slot.changed} Anpassung${slot.changed > 1 ? "en" : ""}` : ""}`,
+      detail: `${countOf(slot.residents.size, t)} · ${slot.total} ${slot.total === 1 ? "Gabe" : "Gaben"} · ${slot.documented} dokumentiert${slot.changed ? ` · ${slot.changed} Anpassung${slot.changed > 1 ? "en" : ""}` : ""}`,
       tone: slot.changed ? "attention" : "info",
       done,
       overdue: !done && Date.parse(slot.at) < Date.now() - 30 * 60_000,

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { readTerms } from "@/lib/settings";
 import { ApiError, assertResident, iso, text, auditStatement, type ApiContext, type Row } from "@/lib/api-context";
 import { initials } from "@/lib/medication-shared";
 import {
@@ -180,7 +181,8 @@ export async function recordExit(ctx: ApiContext, residentIdInput: unknown, body
 // Return after an external transfer; the reserved stay continues.
 export async function recordReturn(ctx: ApiContext, residentIdInput: unknown, body: Record<string, unknown>) {
   const resident = await loadResident(ctx, residentIdInput);
-  if (resident.status !== "transferred") throw new ApiError("Nur verlegte Bewohner können zurückkehren.", 409);
+  if (resident.status !== "transferred")
+    throw new ApiError(`Nur verlegte ${(await readTerms(ctx)).many} können zurückkehren.`, 409);
   const day = parseDay(body.date, resident, "Rückkehrdatum");
   const note = text(body.note, 2000) || "Rückkehr nach externer Verlegung.";
   const residentId = String(resident.id);
