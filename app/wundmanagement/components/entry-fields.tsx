@@ -1,7 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { CareSelect } from "@/app/components/care-form-controls";
-import { EDGE_OPTIONS, EXUDATE_OPTIONS, SKIN_OPTIONS, TISSUE_OPTIONS } from "@/lib/wounds-shared";
+import { useApiData } from "@/app/components/workspace-ui";
+import {
+  EDGE_OPTIONS,
+  EXUDATE_OPTIONS,
+  SKIN_OPTIONS,
+  TISSUE_OPTIONS,
+  WOUND_MATERIALS_MAX,
+  materialLabel,
+} from "@/lib/wounds-shared";
+
+type CatalogProduct = { id: string; item_name: string; unit: string; category: string };
+type DraftMaterial = { productId: string; name: string; unit: string; quantity: number };
 
 export type EntryDraft = {
   lengthCm: string;
@@ -15,6 +27,7 @@ export type EntryDraft = {
   infectionSigns: boolean;
   painScore: string;
   treatment: string;
+  materials: DraftMaterial[];
   note: string;
 };
 
@@ -30,6 +43,7 @@ export const emptyEntry: EntryDraft = {
   infectionSigns: false,
   painScore: "",
   treatment: "",
+  materials: [],
   note: "",
 };
 
@@ -50,6 +64,7 @@ export function entryPayload(draft: EntryDraft) {
     infectionSigns: draft.infectionSigns,
     painScore: draft.painScore === "" ? null : Number(draft.painScore),
     treatment: draft.treatment,
+    materials: draft.materials.map(({ productId, quantity }) => ({ productId, quantity })),
     note: draft.note,
   };
 }
@@ -140,6 +155,7 @@ export default function EntryFields({ draft, onChange }: { draft: EntryDraft; on
           placeholder="z. B. Reinigung mit NaCl 0,9 %, Hydrokolloidverband, Druckentlastung"
         />
       </label>
+      <MaterialFields materials={draft.materials} onChange={(materials) => set("materials", materials)} />
       <label className="area-editor-wide">
         <span>Bemerkung</span>
         <textarea
@@ -151,5 +167,85 @@ export default function EntryFields({ draft, onChange }: { draft: EntryDraft; on
         />
       </label>
     </>
+  );
+}
+
+const CHOOSE = "Material wählen";
+const productLabel = (p: CatalogProduct) => `${p.item_name} (${p.unit})`;
+
+// Verbandsmaterial aus dem Materialkatalog (Administration · Pflegebedarf) mit Menge je Versorgung.
+function MaterialFields({
+  materials,
+  onChange,
+}: {
+  materials: DraftMaterial[];
+  onChange: (materials: DraftMaterial[]) => void;
+}) {
+  const catalog = useApiData<{ products: CatalogProduct[] }>("/api/care-supply-products");
+  const [choice, setChoice] = useState(CHOOSE);
+  const [quantity, setQuantity] = useState("1");
+  const products = (catalog.data?.products ?? []).filter((p) => !materials.some((m) => m.productId === p.id));
+  const product = products.find((p) => productLabel(p) === choice);
+  const amount = Number(quantity);
+  const valid = Boolean(product) && Number.isInteger(amount) && amount >= 1 && amount <= 999;
+  return (
+    <div className="area-editor-wide form-field wound-materials">
+      <span>Verbandsmaterial</span>
+      {materials.length > 0 && (
+        <ul>
+          {materials.map((m) => (
+            <li key={m.productId}>
+              {materialLabel(m)}
+              <button
+                className="quiet-button"
+                type="button"
+                aria-label={`${m.name} entfernen`}
+                onClick={() => onChange(materials.filter((x) => x.productId !== m.productId))}
+              >
+                Entfernen
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {catalog.data && !catalog.data.products.length ? (
+        <small>Im Materialkatalog (Administration · Pflegebedarf) sind keine Produkte hinterlegt.</small>
+      ) : (
+        materials.length < WOUND_MATERIALS_MAX && (
+          <div className="wound-material-add">
+            <CareSelect
+              label="Material"
+              value={product ? choice : CHOOSE}
+              options={[CHOOSE, ...products.map(productLabel)]}
+              onChange={setChoice}
+            />
+            <input
+              type="number"
+              min={1}
+              max={999}
+              aria-label="Menge"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+            />
+            <button
+              className="quiet-button"
+              type="button"
+              disabled={!valid}
+              onClick={() => {
+                if (!product) return;
+                onChange([
+                  ...materials,
+                  { productId: product.id, name: product.item_name, unit: product.unit, quantity: amount },
+                ]);
+                setChoice(CHOOSE);
+                setQuantity("1");
+              }}
+            >
+              Hinzufügen
+            </button>
+          </div>
+        )
+      )}
+    </div>
   );
 }

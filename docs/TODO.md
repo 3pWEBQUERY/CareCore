@@ -79,7 +79,8 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Trinkmenge unterschritten wird. Keine erfundenen Werte. Einstellungen „Hinweis Gewichtsverlust“ (%),
       „Beobachtungszeitraum Gewicht“ (Tage) und „Hinweis Trinkmenge“ (Tage in Folge unter dem persönlichen
       Trinkziel), alle ohne Vorgabewert und ausgeschaltet.
-- [ ] **Wunden:** Verbandsmaterial je Versorgung aus dem Materialkatalog.
+- [x] **Wunden:** Verbandsmaterial je Versorgung aus dem Materialkatalog (Momentaufnahme je Eintrag; keine
+      Lagerbuchung – das wäre eine eigene Entscheidung zur Bestandsführung).
 - [ ] **Dienstplan:** Börse für offene Dienste.
 - [ ] **Dark Mode** als Wahl in den persönlichen Einstellungen. Das Standard-Aussehen bleibt unverändert.
 

@@ -40,6 +40,10 @@ export const STATUS_LABELS: Record<WoundStatus, string> = {
   closed: "Abgeschlossen",
 };
 
+// Verbandsmaterial einer Versorgung (Momentaufnahme aus dem Materialkatalog).
+export type WoundMaterial = { productId: string; name: string; unit: string; quantity: number };
+export const WOUND_MATERIALS_MAX = 20;
+
 export type WoundEntry = {
   id: string;
   woundId: string;
@@ -57,6 +61,7 @@ export type WoundEntry = {
   infectionSigns: boolean;
   painScore: number | null;
   treatment: string | null;
+  materials: WoundMaterial[];
   note: string | null;
 };
 
@@ -132,3 +137,6 @@ export function woundTone(wound: Pick<Wound, "status" | "overdue" | "latest">) {
   if (wound.overdue || wound.latest?.infectionSigns) return "critical";
   return wound.status === "healing" ? "stable" : "attention";
 }
+
+export const materialLabel = (m: Pick<WoundMaterial, "name" | "unit" | "quantity">) =>
+  `${m.quantity} ${m.unit} ${m.name}`;
