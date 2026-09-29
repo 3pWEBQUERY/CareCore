@@ -38,7 +38,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Datenschutz                  | 🟡    | Eigener Datenexport, Quittungen nach 30 Tagen gelöscht. Kein Lösch- oder Aufbewahrungskonzept für Bewohnerdaten.                             |
 | Sicherheit                   | 🟡    | Login-, Passwort- und KI-Drossel, allgemeine Drossel für schreibende API-Anfragen.                                                           |
 | Backups / Health             | 🟡    | Health-Endpunkt `/api/health`; Backups durch den Datenbank-Anbieter.                                                                         |
-| Offline                      | 🟡    | Warteschlange mit Quittungen, Service Worker. **Lokaler Speicher unverschlüsselt**, keine Konfliktanzeige.                                   |
+| Offline                      | 🟡    | Warteschlange mit Quittungen, Service Worker, Konfliktanzeige. **Lokaler Speicher unverschlüsselt** (Entscheidung offen).                    |
 | API / FHIR / Webhooks        | ❌    | Nur interne API.                                                                                                                             |
 | Mandanten                    | 🟡    | Organisation, Standort, Wohnbereich. Eigene Rollen gelten global.                                                                            |
 | Domain Events / Echtzeit     | ❌    | Polling, keine Ereignisse.                                                                                                                   |
@@ -66,8 +66,9 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - [x] **Mobile Schnellaktionen (FAB):** Doku, Vitalwert, Trinkmenge, Reservegabe, Wundverlauf, Übergabenotiz für den gewählten Bewohner.
 - [x] **Health-Endpunkt** `/api/health` (DB-Verbindung, Migrationsstand, ohne Geheimnisse).
 - [x] **Allgemeine API-Drossel** für schreibende Anfragen.
-- [ ] **Offline:** lokalen Speicher verschlüsseln (Schlüssel an die Sitzung gebunden) und Konflikte anzeigen, wenn
-      ein Eintrag inzwischen geändert wurde.
+- [x] **Offline-Konflikte:** Wurde eine offline bearbeitete Notiz inzwischen anderswo geändert, meldet der Server
+      einen Konflikt; die Anzeige bietet „Meine Fassung übernehmen“ oder „Verwerfen“.
+- [ ] **Offline-Speicher verschlüsseln:** siehe „Braucht eine Entscheidung“.
 - [ ] **Audit mit Sitzung und Gerät** (Sitzungs-ID, User-Agent).
 - [ ] **Feinere Medikationsrechte:** verabreichen vs. Verordnung bearbeiten.
 - [ ] **Lernen:** Quiz mit Bestehensgrenze (von der Einrichtung festgelegt) und Compliance-Übersicht je Team.
@@ -93,6 +94,11 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 
 ## Braucht eine Entscheidung oder externe Quelle
 
+- **Offline-Verschlüsselung:** Ein Schlüssel, der nur im Arbeitsspeicher liegt, schützt den Gerätespeicher wirksam,
+  macht aber vorgemerkte Einträge nach einem Neuladen ohne Verbindung unlesbar (nicht mehr anzeigen oder bearbeiten,
+  gesendet werden sie erst mit Verbindung). Ein im Browser gespeicherter Schlüssel erhält die heutige Bedienung, liegt
+  aber selbst auf dem Gerät und schützt deshalb kaum. Zu entscheiden: welcher Weg, und ob auch der Seiten- und
+  Daten-Zwischenspeicher des Service Workers verschlüsselt werden soll.
 - **Leitung:** Soll die Rolle „Leitung“ das Medikationsrecht nur mit Qualifikation erhalten? Heute hat sie es immer.
   Umsetzbar ohne Code über Mitarbeitende › Profile & Rollen › „Nur mit Qualifikation“.
 - **Interaktionsprüfung:** Braucht eine lizenzierte Arzneimitteldatenbank. Es werden keine Regeln erfunden.

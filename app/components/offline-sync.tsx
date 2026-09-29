@@ -4,8 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   QUEUE_EVENT,
+  canOverride,
   discardWrite,
   editWrite,
+  overrideWrite,
   flushQueue,
   offlineUser,
   queuedWrites,
@@ -169,7 +171,9 @@ export default function OfflineSync() {
                 <strong>{item.label}</strong>
                 <small>
                   erfasst {time(item.createdAt)}
-                  {item.error ? ` · abgelehnt: ${item.error}` : " · wartet auf Verbindung"}
+                  {item.error
+                    ? ` · ${item.conflict ? "Konflikt" : "abgelehnt"}: ${item.error}`
+                    : " · wartet auf Verbindung"}
                 </small>
               </span>
               <span className="offline-status-actions">
@@ -182,6 +186,11 @@ export default function OfflineSync() {
                     }}
                   >
                     Bearbeiten
+                  </button>
+                )}
+                {canOverride(item) && (
+                  <button type="button" onClick={() => void overrideWrite(item).then(() => void flush())}>
+                    Meine Fassung übernehmen
                   </button>
                 )}
                 {item.error && (

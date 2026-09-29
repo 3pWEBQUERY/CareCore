@@ -65,3 +65,46 @@ test("Persönliche Notizen: archivieren, wiederherstellen, nur eigene, wiederhol
     [second],
   );
 });
+
+test("Persönliche Notizen: Bearbeitung auf veraltetem Stand meldet einen Konflikt", async () => {
+  const f = await fixture();
+  const anna = { sql: carecoreDb(), userId: f.people.anna, organizationId: f.org };
+  const id = randomUUID();
+  const created = await createNote(anna, { id, title: "Einkauf", body: "Handschuhe", pinned: false });
+  // Gerät A ändert die Notiz auf dem geladenen Stand.
+  const first = await updateNote(anna, {
+    id,
+    title: "Einkauf",
+    body: "Handschuhe M",
+    pinned: false,
+    baseUpdatedAt: created.updated_at,
+  });
+  // Gerät B schickt später eine Änderung auf demselben, inzwischen veralteten Stand.
+  assert.equal(
+    await status(
+      updateNote(anna, {
+        id,
+        title: "Einkauf",
+        body: "Handschuhe L",
+        pinned: false,
+        baseUpdatedAt: created.updated_at,
+      }),
+    ),
+    409,
+  );
+  // Auf dem aktuellen Stand – oder ausdrücklich ohne Vergleich („Meine Fassung übernehmen“) – geht es.
+  await updateNote(anna, {
+    id,
+    title: "Einkauf",
+    body: "Handschuhe S",
+    pinned: false,
+    baseUpdatedAt: first.updated_at,
+  });
+  const forced = await updateNote(anna, { id, title: "Einkauf", body: "Handschuhe L", pinned: false });
+  assert.equal(forced.body, "Handschuhe L");
+  // Nur archivieren braucht keinen Vergleich; eine fremde oder fehlende Notiz bleibt „nicht gefunden“.
+  assert.equal(
+    await status(updateNote(anna, { id: randomUUID(), archived: true, baseUpdatedAt: created.updated_at })),
+    404,
+  );
+});

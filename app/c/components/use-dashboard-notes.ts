@@ -155,7 +155,9 @@ export function useDashboardNotes({ setToast }: { setToast: (message: string) =>
         ]);
       } else {
         const id = noteEditor.id;
-        await change("PATCH", { id, ...content }, `Notiz · ${content.title}`, "Notiz gespeichert", (current) =>
+        // Stand der bearbeiteten Fassung: der Server meldet einen Konflikt, falls sie inzwischen anderswo geändert wurde.
+        const base = { baseUpdatedAt: noteEditor.updated_at };
+        await change("PATCH", { id, ...content, ...base }, `Notiz · ${content.title}`, "Notiz gespeichert", (current) =>
           current.map((note) => (note.id === id ? { ...note, ...content, updated_at: now } : note)),
         );
       }
