@@ -113,6 +113,12 @@ Unter Medikation › „BtM-Kontrolle“ (`/medikation/btm`) werden als BtM geke
 - **Unveränderlichkeit:** Buchungen von BtM und Bestandskontrollen können per Datenbank-Trigger weder geändert noch gelöscht werden; Fehler werden durch neue Buchungen korrigiert.
 - **Kontrollintervall:** Unter Leitung › Konfiguration › „BtM-Bestandskontrolle“ legt die Einrichtung fest, nach wie vielen Tagen eine Kontrolle fällig ist (ohne Standardwert, anfangs ausgeschaltet). Fällige Bestände werden auf der BtM-Seite markiert; Personen mit Medikationsrecht erhalten je Bestand und Kontrollzyklus eine Benachrichtigung (mit Stammwohnbereich nur für dessen Bestände; abschaltbar unter Einstellungen › Benachrichtigungen › „BtM-Kontrolle“).
 - **Gaben:** In Medikamentenrunde, Medikamentenplan, Reserven und im Überleitungsbogen sind BtM gekennzeichnet.
+
+### Wirkungskontrolle nach Reservegabe
+
+- **Zeitpunkt aus der Verordnung:** In der Reserveverordnung steht optional „Wirkungskontrolle nach (Minuten)“ (5 Minuten bis 24 Stunden). Es gibt keinen Vorgabewert; auch Maximaldosis und Mindestabstand einer neuen Reserve müssen aus der ärztlichen Verordnung eingetragen werden.
+- **Termin und Erinnerung:** Jede Reservegabe mit dieser Angabe erhält einen Kontrolltermin (Migration `0034_prn_effect_check.sql`). Die Reserven-Seite zeigt offene Kontrollen des Bewohners. Wird der Termin erreicht, erhält die Person, die die Reserve gegeben hat, einmal eine Benachrichtigung (Kategorie „Wirkungskontrolle“, auch als Push).
+- **Ergebnis:** „Wirksam“, „Teilweise wirksam“ oder „Nicht wirksam“; die beiden letzten verlangen eine Einschätzung. Das Ergebnis erscheint als Eintrag „Wirkungskontrolle“ in der Pflegedokumentation (Kategorie Medikation, bei fehlender Wirkung als wichtig) und im Protokoll.
 - **BtM-Buch:** Pro Bestand alle Buchungen mit laufendem Bestand, Person und Zweitunterschrift, als Seitenpanel und als A4-Druckansicht (`/medikation/btm/buch?stock=…`, PDF über den Druckdialog).
 
 ## Dienstplan

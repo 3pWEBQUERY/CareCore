@@ -224,6 +224,8 @@ export async function administerPrn(ctx: ApiContext, body: Record<string, unknow
   const dosage = (order.dosage ?? {}) as Record<string, unknown>;
   const maxDoses = num(dosage.maxDosesPer24h);
   const minInterval = num(dosage.minIntervalHours);
+  // Wirkungskontrolle nur, wenn die Verordnung einen Zeitpunkt vorgibt.
+  const effectMinutes = num(dosage.effectCheckMinutes);
   if (!maxDoses || !minInterval)
     throw new ApiError(
       "Der Verordnung fehlen Maximaldosis oder Mindestabstand. Bitte zuerst die Verordnung ergänzen.",
@@ -266,8 +268,9 @@ export async function administerPrn(ctx: ApiContext, body: Record<string, unknow
         AND NOT EXISTS (SELECT 1 FROM carecore_medication_administrations WHERE medication_order_id = ${orderId} AND status = 'administered' AND administered_at > NOW() - make_interval(mins => ${Math.round(minInterval * 60)}))
       RETURNING id, medication_id
     ), a AS (
-      INSERT INTO carecore_medication_administrations (id, medication_order_id, resident_id, scheduled_at, administered_at, administered_by, status, note, witness_user_id)
-      SELECT ${administrationId}, ${orderId}, ${order.resident_id}, date_trunc('second', NOW()), NOW(), ${ctx.actor.id}, 'administered', ${note}, ${witness?.id ?? null} FROM s
+      INSERT INTO carecore_medication_administrations (id, medication_order_id, resident_id, scheduled_at, administered_at, administered_by, status, note, witness_user_id, effect_check_due_at)
+      SELECT ${administrationId}, ${orderId}, ${order.resident_id}, date_trunc('second', NOW()), NOW(), ${ctx.actor.id}, 'administered', ${note}, ${witness?.id ?? null},
+        CASE WHEN ${effectMinutes}::int IS NULL THEN NULL ELSE NOW() + make_interval(mins => ${effectMinutes}::int) END FROM s
       RETURNING id
     )
     , m AS (

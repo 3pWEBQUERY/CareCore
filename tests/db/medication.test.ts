@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { ApiError } from "@/lib/api-context";
 import { createOrder, listOrders, parseOrderInput, setOrderStatus } from "@/lib/medication-orders";
 import { administerPrn, documentScheduledDose } from "@/lib/medication-round";
+import { createEffectCheckReminders, listEffectChecks, recordEffectCheck } from "@/lib/medication-effect";
 import { localDate, zonedToUtc } from "@/lib/roster/time";
 import { apiContextFor as api, createResident as resident, fixture, q } from "../support/db";
 
@@ -162,6 +163,93 @@ test("Reservegabe: Mindestabstand, Maximaldosis und Bestand werden eingehalten",
   const orders = await listOrders(ctx, residentId);
   assert.equal(orders[0].administeredLast24h, 2);
   assert.equal(orders[0].wardStock, 3);
+});
+
+test("Wirkungskontrolle: Termin aus der Verordnung, Erinnerung einmal, Ergebnis in der Dokumentation", async () => {
+  const f = await fixture();
+  const base = await api(f, "anna");
+  const ctx = { ...base, actor: { ...base.actor, permissions: [...base.actor.permissions, "medication.manage"] } };
+  const residentId = await resident(f);
+  const order = (effectCheckMinutes?: number) =>
+    parseOrderInput({
+      name: effectCheckMinutes ? "Morphin" : "Ibuprofen",
+      strength: "10 mg",
+      amount: "1 Tablette",
+      stockQuantity: 1,
+      prescribedBy: "Dr. Weber",
+      startOn: weekAgo(),
+      isPrn: true,
+      maxDosesPer24h: 4,
+      minIntervalHours: 4,
+      indication: "Schmerzen",
+      effectCheckMinutes,
+    });
+  // Ausserhalb von 5 Minuten bis 24 Stunden wird die Verordnung abgewiesen.
+  assert.match(
+    await message(Promise.resolve().then(() => order(2))),
+    /Wirkungskontrolle muss zwischen 5 Minuten und 24 Stunden/,
+  );
+  const withCheck = await createOrder(ctx, residentId, order(60));
+  const withoutCheck = await createOrder(ctx, residentId, order());
+  assert.equal((await listOrders(ctx, residentId)).find((o) => o.id === withCheck)?.effectCheckMinutes, 60);
+  for (const orderId of [withCheck, withoutCheck]) {
+    const [med] = await q<{ medication_id: string }>(
+      `SELECT medication_id FROM carecore_medication_orders WHERE id = $1`,
+      [orderId],
+    );
+    await q(
+      `INSERT INTO carecore_medication_stock (id, organization_id, care_unit_id, medication_id, quantity, unit) VALUES ($1, $2, $3, $4, 5, 'Tabletten')`,
+      [randomUUID(), f.org, f.units.a, med.medication_id],
+    );
+    await administerPrn(ctx, { orderId, note: "Schmerzen NRS 6" });
+  }
+
+  // Nur die Gabe mit Vorgabe erhält einen Kontrolltermin (60 Minuten nach der Gabe).
+  const [check] = await listEffectChecks(ctx, residentId);
+  assert.equal((await listEffectChecks(ctx, residentId)).length, 1);
+  assert.equal(check.medication, "Morphin 10 mg");
+  assert.equal(check.overdue, false);
+  const minutes = (Date.parse(check.dueAt) - Date.parse(check.administeredAt)) / 60_000;
+  assert.ok(Math.abs(minutes - 60) < 1);
+
+  // Noch nicht fällig: keine Erinnerung. Fällig: genau eine Erinnerung.
+  const reminders = () =>
+    q<{ n: number }>(
+      "SELECT COUNT(*)::int AS n FROM carecore_notifications WHERE user_id = $1 AND type = 'medication_effect_check'",
+      [f.people.anna],
+    );
+  await createEffectCheckReminders(ctx);
+  assert.equal((await reminders())[0].n, 0);
+  await q(
+    "UPDATE carecore_medication_administrations SET effect_check_due_at = NOW() - INTERVAL '1 minute' WHERE id = $1",
+    [check.administrationId],
+  );
+  await createEffectCheckReminders(ctx);
+  await createEffectCheckReminders(ctx);
+  assert.equal((await reminders())[0].n, 1);
+  assert.equal((await listEffectChecks(ctx, residentId))[0].overdue, true);
+
+  // „Nicht wirksam“ verlangt eine Beschreibung; das Ergebnis geht als wichtiger Eintrag in die Dokumentation.
+  assert.equal(await status(recordEffectCheck(ctx, check.administrationId, { result: "none" })), 400);
+  assert.equal(await status(recordEffectCheck(ctx, check.administrationId, { result: "vielleicht" })), 400);
+  await recordEffectCheck(ctx, check.administrationId, { result: "none", note: "NRS 6, Hausarzt informiert" });
+  assert.equal(await status(recordEffectCheck(ctx, check.administrationId, { result: "effective" })), 409);
+  assert.equal((await listEffectChecks(ctx, residentId)).length, 0);
+  const [entry] = await q<{ body: string; importance: string; category: string }>(
+    "SELECT body, importance, category FROM carecore_documentation_entries WHERE resident_id = $1 AND title = 'Wirkungskontrolle'",
+    [residentId],
+  );
+  assert.match(
+    entry.body,
+    /^Wirkungskontrolle Morphin 10 mg \(Gabe \d{2}:\d{2} Uhr\): Nicht wirksam – NRS 6, Hausarzt informiert$/,
+  );
+  assert.equal(entry.importance, "important");
+  assert.equal(entry.category, "Medikation");
+  const [audit] = await q<{ n: number }>(
+    "SELECT COUNT(*)::int AS n FROM carecore_audit_log WHERE entity_id = $1 AND action = 'effect_checked'",
+    [check.administrationId],
+  );
+  assert.equal(audit.n, 1);
 });
 
 test("Verordnung pausieren und absetzen: Grund ist Pflicht, abgesetzte erscheinen nicht mehr", async () => {

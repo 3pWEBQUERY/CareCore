@@ -1,7 +1,13 @@
 "use client";
 
 import { ModuleIcon } from "@/app/components/module-icon";
-import { WEEKDAYS, type MedOrder, type MedResident, type StockMovement } from "@/lib/medication-shared";
+import {
+  WEEKDAYS,
+  type EffectCheck,
+  type MedOrder,
+  type MedResident,
+  type StockMovement,
+} from "@/lib/medication-shared";
 import {
   EmptyState,
   LoadError,
@@ -17,7 +23,7 @@ import { useHeaderResident } from "@/app/components/care-context";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
 
 export type ResidentsPayload = { residents: MedResident[]; canManage: boolean; canEditAllergies: boolean };
-export type ResidentDetail = { orders: MedOrder[]; movements: StockMovement[] };
+export type ResidentDetail = { orders: MedOrder[]; movements: StockMovement[]; effectChecks: EffectCheck[] };
 
 export function scheduleLabel(order: MedOrder) {
   const days = order.weekdays.length ? order.weekdays.map((d) => WEEKDAYS[d - 1]).join(", ") : "täglich";

@@ -25,6 +25,7 @@ export function parseOrderInput(body: Record<string, unknown>): OrderInput {
     isPrn,
     maxDosesPer24h: Number.isInteger(body.maxDosesPer24h) ? (body.maxDosesPer24h as number) : null,
     minIntervalHours: typeof body.minIntervalHours === "number" ? body.minIntervalHours : null,
+    effectCheckMinutes: Number.isInteger(body.effectCheckMinutes) ? (body.effectCheckMinutes as number) : null,
     prnInstructions: text(body.prnInstructions, 2000),
     indication: text(body.indication, 240),
     prescribedBy: text(body.prescribedBy, 160),
@@ -42,6 +43,8 @@ export function parseOrderInput(body: Record<string, unknown>): OrderInput {
     if (!input.minIntervalHours || input.minIntervalHours < 0.5 || input.minIntervalHours > 72)
       throw new ApiError("Für eine Reserve ist ein Mindestabstand zwischen 0,5 und 72 Stunden erforderlich.");
     if (!input.indication) throw new ApiError("Für eine Reserve ist die Indikation erforderlich.");
+    if (input.effectCheckMinutes !== null && (input.effectCheckMinutes < 5 || input.effectCheckMinutes > 1440))
+      throw new ApiError("Die Wirkungskontrolle muss zwischen 5 Minuten und 24 Stunden nach der Gabe liegen.");
     input.times = [];
     input.weekdays = [];
   } else {
@@ -49,6 +52,7 @@ export function parseOrderInput(body: Record<string, unknown>): OrderInput {
     if (input.times.length > 12) throw new ApiError("Höchstens 12 Einnahmezeiten pro Verordnung.");
     input.maxDosesPer24h = null;
     input.minIntervalHours = null;
+    input.effectCheckMinutes = null;
   }
   return input;
 }
@@ -172,6 +176,7 @@ export async function listOrders(ctx: ApiContext, residentIdInput: unknown): Pro
       isPrn: Boolean(row.is_prn),
       maxDosesPer24h: num(dosage.maxDosesPer24h),
       minIntervalHours: num(dosage.minIntervalHours),
+      effectCheckMinutes: num(dosage.effectCheckMinutes),
       prnInstructions: String(row.prn_instructions),
       indication: String(row.indication),
       prescribedBy: String(row.prescribed_by),
@@ -197,6 +202,7 @@ export function orderJson(input: OrderInput) {
             quantity: input.stockQuantity,
             maxDosesPer24h: input.maxDosesPer24h,
             minIntervalHours: input.minIntervalHours,
+            effectCheckMinutes: input.effectCheckMinutes,
           }
         : { amount: input.amount, quantity: input.stockQuantity },
     ),

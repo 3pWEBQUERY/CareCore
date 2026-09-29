@@ -58,6 +58,7 @@ const ACTION_LABELS: Record<string, string> = {
   gender_updated: "Geschlecht geändert",
   medication_allergies_updated: "Allergien geändert",
   prn_administered: "Reservegabe erfasst",
+  effect_checked: "Wirkungskontrolle erfasst",
   replaced: "ersetzt",
   evaluated: "evaluiert",
   status_review: "zur Überprüfung markiert",

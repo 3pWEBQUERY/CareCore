@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { carecoreActor, carecoreDb } from "@/lib/server-data";
 import { createLearningReminders } from "@/lib/learning";
 import { createBtmReminders } from "@/lib/medication-btm";
+import { createEffectCheckReminders } from "@/lib/medication-effect";
 import { schedulePush } from "@/lib/push";
 import { createRosterReminders } from "@/lib/roster/reminders";
 import { createDueReminders } from "@/lib/tasks";
@@ -24,6 +25,7 @@ export async function GET() {
         createLearningReminders(ctx),
         createBtmReminders(ctx),
         createWoundReminders(ctx),
+        createEffectCheckReminders(ctx),
       ]).catch((error) => console.error("Reminders failed", error));
       schedulePush();
     }

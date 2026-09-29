@@ -76,3 +76,62 @@ test("Medikationsrecht: Pflegehelferin SRK nur Ansicht, Fachperson Gesundheit do
   await expect(page.locator(".med-round-card")).toBeVisible();
   await expect(page.locator(".med-round-readonly")).toHaveCount(0);
 });
+
+test("Wirkungskontrolle: nach Reservegabe fällig, Ergebnis wird dokumentiert", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  const { residents } = (await (await page.request.get("/api/medication/residents")).json()) as {
+    residents: Array<{ id: string; name: string }>;
+  };
+  const target = residents[residents.length - 1];
+  const name = `E2E Novalgin ${Date.now()}`;
+  const medication = { name, strength: "500 mg", form: "Tablette" };
+  const order = await page.request.post("/api/medication/orders", {
+    data: {
+      ...medication,
+      residentId: target.id,
+      amount: "1 Tablette",
+      stockQuantity: 1,
+      prescribedBy: "Dr. Weber",
+      startOn: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10),
+      isPrn: true,
+      maxDosesPer24h: 3,
+      minIntervalHours: 6,
+      indication: "Schmerzen",
+      effectCheckMinutes: 30,
+    },
+  });
+  expect(order.status()).toBe(201);
+  const { id: orderId } = (await order.json()) as { id: string };
+  const stock = await page.request.post("/api/medication/stock", {
+    data: { ...medication, residentId: target.id, quantity: 10, unit: "Tabletten" },
+  });
+  expect(stock.status()).toBe(201);
+  const given = await page.request.post("/api/medication/prn", { data: { orderId, note: "Schmerzen NRS 6" } });
+  expect(given.status()).toBe(201);
+
+  await page.addInitScript((id) => window.sessionStorage.setItem("carecore.residentId", id), target.id);
+  await page.goto("/c/medikation/reserven");
+  const card = page.locator(".med-effect-card");
+  const item = card.locator("article", { hasText: name });
+  await expect(item).toContainText("Schmerzen NRS 6");
+  await expect(item.locator(".status-badge")).toContainText("Fällig um");
+  await item.getByRole("button", { name: "Wirkung erfassen" }).click();
+  const dialog = page.locator(".editor-dialog");
+  await dialog.getByRole("button", { name: "Teilweise wirksam" }).click();
+  await field(page, "Einschätzung und Massnahme").fill("NRS 3, Lagerung angepasst");
+  await dialog.getByRole("button", { name: "Wirkung dokumentieren" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator(".toast")).toContainText("Wirkungskontrolle dokumentiert");
+  await expect(card.locator("article", { hasText: name })).toHaveCount(0);
+
+  const docs = (await (await page.request.get(`/api/documentation?residentId=${target.id}&days=1`)).json()) as {
+    entries: Array<{ body: string }>;
+  };
+  expect(
+    docs.entries.some(
+      (entry) => entry.body.includes(`${name} 500 mg`) && entry.body.includes("Teilweise wirksam – NRS 3"),
+    ),
+  ).toBe(true);
+  expect(errors).toEqual([]);
+});
