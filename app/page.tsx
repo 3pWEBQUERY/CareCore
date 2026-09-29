@@ -12,6 +12,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  // Zwei-Faktor-Anmeldung: nach richtigem Passwort folgt der Code aus der Authenticator-App.
+  const [challenge, setChallenge] = useState<string | null>(null);
+  const [code, setCode] = useState("");
   // Nach der automatischen Abmeldung (Einstellungen › Sicherheit) den Grund nennen.
   const idleSignOut = useSyncExternalStore(
     () => () => undefined,
@@ -27,14 +30,29 @@ export default function LoginPage() {
     setPending(true);
     setError("");
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(challenge ? "/api/auth/mfa" : "/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify(challenge ? { challenge, code } : { username, password }),
       });
-      const result = (await response.json()) as { error?: string; startPath?: string };
+      const result = (await response.json()) as {
+        error?: string;
+        startPath?: string;
+        mfaRequired?: boolean;
+        challenge?: string;
+        restart?: boolean;
+      };
       if (!response.ok) {
         setError(result.error ?? "Anmeldung fehlgeschlagen.");
+        if (result.restart) {
+          setChallenge(null);
+          setCode("");
+        }
+        return;
+      }
+      if (result.mfaRequired && result.challenge) {
+        setChallenge(result.challenge);
+        setCode("");
         return;
       }
       // Seiten und Daten einer früheren Anmeldung auf diesem Gerät verwerfen.
@@ -103,44 +121,80 @@ export default function LoginPage() {
             <p>Melde dich mit deinem persönlichen Benutzerkonto an.</p>
           </div>
           <form className="login-form" method="post" onSubmit={submit}>
-            <label htmlFor="username">Benutzername</label>
-            <div className="login-input">
-              <User />
-              <input
-                id="username"
-                name="username"
-                autoComplete="username"
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                placeholder="Benutzername eingeben"
-                required
-              />
-            </div>
-            <div className="login-password-label">
-              <label htmlFor="password">Passwort</label>
-              <span>Geschützter Zugang</span>
-            </div>
-            <div className="login-input">
-              <LockKey />
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Passwort eingeben"
-                required
-              />
-              <button
-                type="button"
-                aria-label={showPassword ? "Passwort ausblenden" : "Passwort anzeigen"}
-                aria-pressed={showPassword}
-                onClick={() => setShowPassword((value) => !value)}
-              >
-                {showPassword ? <EyeSlash /> : <Eye />}
-              </button>
-            </div>
+            {challenge ? (
+              <>
+                <label htmlFor="mfa-code">Bestätigungscode</label>
+                <div className="login-input">
+                  <ShieldCheck />
+                  <input
+                    id="mfa-code"
+                    name="code"
+                    inputMode="text"
+                    autoComplete="one-time-code"
+                    autoFocus
+                    maxLength={12}
+                    value={code}
+                    onChange={(event) => setCode(event.target.value)}
+                    placeholder="6-stelliger Code"
+                    required
+                  />
+                </div>
+                <p className="login-mfa-hint">
+                  Code aus deiner Authenticator-App eingeben – oder einen Wiederherstellungscode.{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChallenge(null);
+                      setCode("");
+                      setError("");
+                    }}
+                  >
+                    Zurück
+                  </button>
+                </p>
+              </>
+            ) : (
+              <>
+                <label htmlFor="username">Benutzername</label>
+                <div className="login-input">
+                  <User />
+                  <input
+                    id="username"
+                    name="username"
+                    autoComplete="username"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    placeholder="Benutzername eingeben"
+                    required
+                  />
+                </div>
+                <div className="login-password-label">
+                  <label htmlFor="password">Passwort</label>
+                  <span>Geschützter Zugang</span>
+                </div>
+                <div className="login-input">
+                  <LockKey />
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="Passwort eingeben"
+                    required
+                  />
+                  <button
+                    type="button"
+                    aria-label={showPassword ? "Passwort ausblenden" : "Passwort anzeigen"}
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword((value) => !value)}
+                  >
+                    {showPassword ? <EyeSlash /> : <Eye />}
+                  </button>
+                </div>
+              </>
+            )}
             {message && (
               <div className="login-error" role="alert">
                 {message}

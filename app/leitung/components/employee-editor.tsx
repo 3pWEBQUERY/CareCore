@@ -26,7 +26,7 @@ export function EmployeeEditor({
     [phone, setPhone] = useState(user.phone),
     [unit, setUnit] = useState(user.primaryCareUnitId ?? ""),
     [held, setHeld] = useState<string[]>(user.qualificationIds),
-    [mode, setMode] = useState<"edit" | "lock" | "delete">("edit"),
+    [mode, setMode] = useState<"edit" | "lock" | "delete" | "mfa">("edit"),
     [error, setError] = useState(""),
     [saving, setSaving] = useState(false);
   async function send(method: "PATCH" | "DELETE", body: object, success: string) {
@@ -64,6 +64,15 @@ export function EmployeeEditor({
             >
               {user.active ? "Sperren & archivieren" : "Wiederherstellen"}
             </button>
+            {user.mfa && (
+              <button
+                className={mode === "mfa" ? "active warning" : "warning"}
+                type="button"
+                onClick={() => setMode("mfa")}
+              >
+                Zwei-Faktor zurücksetzen
+              </button>
+            )}
             <button
               className={mode === "delete" ? "active danger" : "danger"}
               type="button"
@@ -132,8 +141,10 @@ export function EmployeeEditor({
                   mode === "delete" ? "DELETE" : "PATCH",
                   mode === "delete"
                     ? { userId: user.id }
-                    : { userId: user.id, action: user.active ? "lock" : "restore" },
-                  "Mitarbeiter aktualisiert",
+                    : mode === "mfa"
+                      ? { userId: user.id, action: "resetMfa" }
+                      : { userId: user.id, action: user.active ? "lock" : "restore" },
+                  mode === "mfa" ? "Zwei-Faktor-Anmeldung zurückgesetzt" : "Mitarbeiter aktualisiert",
                 )
               }
             />

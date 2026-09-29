@@ -126,7 +126,7 @@ export function Confirm({
   onBack,
   onConfirm,
 }: {
-  mode: "lock" | "delete";
+  mode: "lock" | "delete" | "mfa";
   active: boolean;
   saving: boolean;
   error: string;
@@ -134,16 +134,25 @@ export function Confirm({
   onConfirm: () => void;
 }) {
   const del = mode === "delete";
+  const mfa = mode === "mfa";
   return (
     <div className="user-editor-confirm">
-      <p className="eyebrow">{del ? "Irreversible Aktion" : "Kontostatus"}</p>
+      <p className="eyebrow">{del ? "Irreversible Aktion" : mfa ? "Anmeldung" : "Kontostatus"}</p>
       <h3>
-        {del ? "Mitarbeiter endgültig löschen" : active ? "Mitarbeiter archivieren" : "Mitarbeiter wiederherstellen"}
+        {del
+          ? "Mitarbeiter endgültig löschen"
+          : mfa
+            ? "Zwei-Faktor-Anmeldung zurücksetzen"
+            : active
+              ? "Mitarbeiter archivieren"
+              : "Mitarbeiter wiederherstellen"}
       </h3>
       <p>
         {del
           ? "Das Konto und seine Sitzungen werden dauerhaft entfernt."
-          : "Das Profil wird als Archiv geführt und kann später wiederhergestellt werden."}
+          : mfa
+            ? "Für verlorene Handys: Die Person meldet sich danach nur mit dem Passwort an und kann die Zwei-Faktor-Anmeldung neu einrichten. Wird im Protokoll festgehalten."
+            : "Das Profil wird als Archiv geführt und kann später wiederhergestellt werden."}
       </p>
       {error && <p className="user-editor-error">{error}</p>}
       <div className="user-editor-footer">
@@ -151,12 +160,12 @@ export function Confirm({
           Abbrechen
         </button>
         <button
-          className={del || active ? "danger-button" : "primary-button"}
+          className={del || active || mfa ? "danger-button" : "primary-button"}
           type="button"
           onClick={onConfirm}
           disabled={saving}
         >
-          {del ? "Endgültig löschen" : active ? "Archivieren" : "Wiederherstellen"}
+          {del ? "Endgültig löschen" : mfa ? "Zurücksetzen" : active ? "Archivieren" : "Wiederherstellen"}
         </button>
       </div>
     </div>

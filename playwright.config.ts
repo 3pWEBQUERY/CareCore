@@ -5,6 +5,8 @@ import { defineConfig, devices } from "@playwright/test";
 const port = Number(process.env.E2E_PORT ?? 3200);
 // Nur für die Testdatenbank; in CI und lokal ohne Geheimnis.
 export const E2E_ADMIN_PASSWORD = "E2E-Admin-Passwort-2026";
+// Schlüssel für die Zwei-Faktor-Anmeldung, nur für die Klicktests (32 Bytes, Base64).
+export const E2E_MFA_KEY = Buffer.alloc(32, 42).toString("base64");
 
 export default defineConfig({
   testDir: "e2e",
@@ -32,6 +34,7 @@ export default defineConfig({
       NODE_OPTIONS: "--import ./tests/support/neon-pg.mjs",
       TEST_DATABASE_URL: process.env.TEST_DATABASE_URL ?? "",
       CARECORE_ADMIN_PASSWORD: E2E_ADMIN_PASSWORD,
+      CARECORE_MFA_KEY: E2E_MFA_KEY,
     },
   },
 });

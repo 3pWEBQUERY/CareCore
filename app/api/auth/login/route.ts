@@ -1,20 +1,10 @@
 import { NextResponse } from "next/server";
-import {
-  authenticate,
-  clearFailedLogins,
-  createSession,
-  isLoginThrottled,
-  recordFailedLogin,
-  SESSION_COOKIE,
-} from "@/lib/auth";
-import { readPreferences } from "@/lib/user-settings";
-import { START_PAGES } from "@/lib/user-settings-shared";
+import { authenticate, clearFailedLogins, isLoginThrottled, recordFailedLogin } from "@/lib/auth";
+import { clientIp, sessionResponse } from "@/lib/login-session";
+import { createChallenge, isMfaEnabled } from "@/lib/mfa";
+import { carecoreDb } from "@/lib/server-data";
 
 export const runtime = "nodejs";
-
-function clientIp(request: Request) {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
-}
 
 export async function POST(request: Request) {
   try {
@@ -36,23 +26,15 @@ export async function POST(request: Request) {
       await recordFailedLogin(username, ip);
       return NextResponse.json({ error: "Benutzername oder Passwort ist nicht korrekt." }, { status: 401 });
     }
+    // Mit Zwei-Faktor-Anmeldung entsteht die Sitzung erst nach dem Code (POST /api/auth/mfa).
+    const sql = carecoreDb();
+    if (await isMfaEnabled(sql, user.id))
+      return NextResponse.json({
+        mfaRequired: true,
+        challenge: await createChallenge(sql, user.id, request.headers.get("user-agent")),
+      });
     await clearFailedLogins(username);
-    const session = await createSession(user.id, request.headers.get("user-agent"));
-    // The start page chosen in the personal settings.
-    const startPath = START_PAGES[(await readPreferences(user.id)).startPage].path;
-    const response = NextResponse.json({
-      user: { username: user.username, displayName: user.display_name, role: user.role },
-      startPath,
-    });
-    response.cookies.set(SESSION_COOKIE, session.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      expires: session.expiresAt,
-      priority: "high",
-    });
-    return response;
+    return sessionResponse(user, request.headers.get("user-agent"));
   } catch (error) {
     if (error instanceof Error && error.message === "DATABASE_URL_NOT_CONFIGURED") {
       return NextResponse.json(

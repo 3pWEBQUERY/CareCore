@@ -87,7 +87,8 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 
 ## Niedrig / später
 
-- [ ] **MFA (TOTP) und Passkeys**, danach SSO (braucht einen Identity-Provider der Einrichtung).
+- [x] **MFA (TOTP)** mit Wiederherstellungscodes und Zurücksetzen durch die Administration. Braucht `CARECORE_MFA_KEY`.
+- [ ] **Passkeys**, danach SSO (braucht einen Identity-Provider der Einrichtung).
 - [ ] **Smart Workflow Sturz** als erste Ablaufkette mit Folgeaufgaben.
 - [ ] **Home in Kritisch / Wichtig / Routine** gliedern, ohne das bestehende Aussehen zu verändern.
 - [ ] **Resident 360** und Personal-Dashboards in Insights.
