@@ -409,6 +409,37 @@ export async function listEntries(ctx: ApiContext, woundId: unknown) {
   return { wound, entries: rows.map(mapEntry) };
 }
 
+// Erinnerung beim Laden der Benachrichtigungen (und im Push-Zeitplan): überfällige Wundversorgungen, je Wunde
+// einmal pro Versorgungszyklus. Empfänger ist die verantwortliche Person; ohne Verantwortliche alle, die
+// dokumentieren dürfen und diesen Wohnbereich als festen Wohnbereich haben. Mit dem nächsten Verlaufseintrag
+// beginnt ein neuer Zyklus.
+export async function createWoundReminders(ctx: ApiContext) {
+  if (!ctx.actor.permissions.includes("documentation.write")) return;
+  await ctx.sql`
+    WITH home AS (SELECT primary_care_unit_id AS unit FROM carecore_user_profiles WHERE user_id = ${ctx.actor.id}),
+    due AS (
+      SELECT w.id, w.body_location, r.first_name || ' ' || r.last_name AS resident,
+        COALESCE(latest.observed_at, w.discovered_at, w.created_at) + make_interval(days => w.care_interval_days) AS due_at
+      FROM carecore_wounds w
+      JOIN carecore_residents r ON r.id = w.resident_id AND r.organization_id = ${ctx.actor.organizationId}
+      LEFT JOIN LATERAL (SELECT care_unit_id FROM carecore_resident_stays WHERE resident_id = r.id AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1) stay ON TRUE
+      LEFT JOIN LATERAL (SELECT observed_at FROM carecore_wound_entries WHERE wound_id = w.id ORDER BY observed_at DESC LIMIT 1) latest ON TRUE
+      WHERE w.status IN ('active', 'healing') AND w.care_interval_days IS NOT NULL
+        AND (w.responsible_user_id = ${ctx.actor.id}
+          OR (w.responsible_user_id IS NULL AND stay.care_unit_id IS NOT NULL AND stay.care_unit_id = (SELECT unit FROM home)))
+    )
+    INSERT INTO carecore_notifications (id, user_id, title, body, type, priority, link_url, entity_type, entity_id)
+    SELECT gen_random_uuid(), ${ctx.actor.id}, 'Wundversorgung überfällig: ' || due.resident,
+      due.body_location || ' · fällig seit ' ||
+        to_char(due.due_at AT TIME ZONE COALESCE((SELECT timezone FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}), 'Europe/Zurich'), 'DD.MM.YYYY HH24:MI') || ' Uhr.',
+      'wound_overdue', 'high', '/c/wundmanagement?wound=' || due.id, 'wound', due.id
+    FROM due
+    WHERE due.due_at < NOW()
+      AND NOT EXISTS (SELECT 1 FROM carecore_notifications n
+        WHERE n.user_id = ${ctx.actor.id} AND n.type = 'wound_overdue' AND n.entity_type = 'wound' AND n.entity_id = due.id
+          AND n.created_at >= due.due_at)`;
+}
+
 // Recent entries across the house for the documentation feed.
 export async function recentEntries(ctx: ApiContext, daysInput: unknown) {
   const days = [7, 30, 90].includes(Number(daysInput)) ? Number(daysInput) : 30;
