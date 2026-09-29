@@ -32,7 +32,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Mobile                       | 🟡    | Untere Navigation, Hauptmenü, Schnellaktions-Knopf (FAB).                                                                                    |
 | Dark Mode                    | ✅    | Persönliche Wahl „Erscheinungsbild: Dunkel“; Standard bleibt hell.                                                                           |
 | Barrierefreiheit WCAG 2.2 AA | 🟡    | Tastatur, Fokusfalle, Schriftgrösse, Kontrast-Einstellung. `--muted` erreicht nur 4,4:1.                                                     |
-| IAM                          | 🟡    | Passwort, Login-Drossel, Sitzungen mit Gerät, automatische Abmeldung. **SSO, MFA und Passkeys fehlen.**                                      |
+| IAM                          | 🟡    | Passwort, Login-Drossel, Sitzungen mit Gerät, automatische Abmeldung, MFA (TOTP), Passkeys. **SSO fehlt.**                                   |
 | Rechte                       | 🟡    | Rechte plus Qualifikationen; Medikation getrennt in verabreichen / verwalten.                                                                |
 | Audit                        | ✅    | Atomar, pro Bewohner, mit Sitzung und Gerät.                                                                                                 |
 | Datenschutz                  | 🟡    | Eigener Datenexport, Quittungen nach 30 Tagen gelöscht. Kein Lösch- oder Aufbewahrungskonzept für Bewohnerdaten.                             |
@@ -88,7 +88,10 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 ## Niedrig / später
 
 - [x] **MFA (TOTP)** mit Wiederherstellungscodes und Zurücksetzen durch die Administration. Braucht `CARECORE_MFA_KEY`.
-- [ ] **Passkeys**, danach SSO (braucht einen Identity-Provider der Einrichtung).
+- [x] **Passkeys** (WebAuthn): in Einstellungen › Sicherheit hinzufügen und entfernen (protokolliert); Anmeldung
+      über den Vorschlag im Feld „Benutzername“ oder „Mit Passkey anmelden“. Bestätigung am Gerät ist Pflicht, deshalb
+      ersetzt ein Passkey Passwort und Code. Gespeichert wird nur der öffentliche Schlüssel.
+- [ ] **SSO** – braucht einen Identity-Provider der Einrichtung (siehe „Braucht eine Entscheidung oder externe Quelle“).
 - [x] **Smart Workflow Sturz** als erste Ablaufkette mit Folgeaufgaben. Umgesetzt für alle Ereignisarten; die
       Schritte (Titel, Fälligkeit nach dem Ereignis, Priorität) legt das Qualitätsmanagement fest, ohne Vorgaben.
 - [x] **Home in Kritisch / Wichtig / Routine** gliedern, ohne das bestehende Aussehen zu verändern. Die Tagesliste
@@ -141,6 +144,8 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
   aber selbst auf dem Gerät und schützt deshalb kaum. Zu entscheiden: welcher Weg, und ob auch der Seiten- und
   Daten-Zwischenspeicher des Service Workers verschlüsselt werden soll.
 - **Leitung:** Soll die Rolle „Leitung“ das Medikationsrecht nur mit Qualifikation erhalten? Heute hat sie es immer.
+- **SSO:** Welcher Identity-Provider (z. B. Microsoft Entra ID, Google Workspace, HIN) und welches Protokoll (OpenID
+  Connect oder SAML)? Dazu Client-ID und Geheimnis der Einrichtung.
   Umsetzbar ohne Code über Mitarbeitende › Profile & Rollen › „Nur mit Qualifikation“.
 - **Interaktionsprüfung:** Braucht eine lizenzierte Arzneimitteldatenbank. Es werden keine Regeln erfunden.
 - **SSO:** Braucht den Identity-Provider der Einrichtung.

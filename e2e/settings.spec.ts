@@ -297,3 +297,45 @@ test("Webhooks: anlegen mit Geheimnis, interne oder http-Adressen abgelehnt, ent
   }
   expect(errors).toEqual([]);
 });
+
+// Passkeys: mit dem virtuellen Authenticator von Chromium (Bestätigung am Gerät simuliert) einrichten und anmelden.
+test("Passkeys: einrichten, ohne Passwort anmelden, entfernen", async ({ page }) => {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("WebAuthn.enable");
+  await cdp.send("WebAuthn.addVirtualAuthenticator", {
+    options: {
+      protocol: "ctap2",
+      transport: "internal",
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+      automaticPresenceSimulation: true,
+    },
+  });
+  await login(page, FAGE);
+  const errors = watchErrors(page);
+  await page.goto("/c/einstellungen/security");
+  const detail = page.locator(".settings-detail");
+  await page.locator(".settings-list button", { hasText: "Passkeys" }).click();
+  await detail.getByLabel("Name für dieses Gerät").fill("Stationstablet");
+  await detail.getByRole("button", { name: "Passkey hinzufügen" }).click();
+  await expect(page.locator(".toast")).toContainText("Passkey gespeichert");
+  await expect(detail).toContainText("Stationstablet");
+  await expect(page.locator(".settings-list button", { hasText: "Passkeys" })).toContainText("1 gespeichert");
+
+  // Abmelden, dann nur mit dem Passkey wieder anmelden – ohne Benutzername und Passwort.
+  await page.context().clearCookies();
+  await page.goto("/");
+  // Der virtuelle Authenticator beantwortet den Vorschlag im Feld „Benutzername“ (Autofill) sofort; sonst der Knopf.
+  await page.waitForURL(/\/c(\/|$)/, { timeout: 5000 }).catch(async () => {
+    await page.getByRole("button", { name: "Mit Passkey anmelden" }).click();
+    await page.waitForURL(/\/c(\/|$)/);
+  });
+  await page.goto("/c/einstellungen/security");
+  await page.locator(".settings-list button", { hasText: "Passkeys" }).click();
+  await expect(detail).toContainText("zuletzt verwendet");
+  await detail.getByRole("button", { name: "Entfernen" }).click();
+  await expect(page.locator(".toast")).toContainText("entfernt");
+  await expect(page.locator(".settings-list button", { hasText: "Passkeys" })).toContainText("Keine");
+  expect(errors).toEqual([]);
+});
