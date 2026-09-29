@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import Image from "next/image";
 import { useRef, useState, type ChangeEvent } from "react";
 import { Camera, X } from "@phosphor-icons/react";
@@ -40,6 +41,7 @@ export default function WoundPhotos({
   showToast: ShowToast;
   onChanged: () => void;
 }) {
+  const t = useTerms();
   const photos = useApiData<{ photos: WoundPhoto[] }>(`/api/wounds/${wound.id}/photos`);
   const [file, setFile] = useState<File | null>(null);
   const [viewing, setViewing] = useState<WoundPhoto | null>(null);
@@ -141,7 +143,7 @@ export default function WoundPhotos({
           title="Foto ausblenden"
           description="Das Foto bleibt als Teil der Pflegedokumentation gespeichert, wird aber nicht mehr angezeigt."
           label="Grund"
-          placeholder="z. B. falscher Bewohner, unscharf, versehentlich aufgenommen"
+          placeholder={`z. B. falscher ${t.one}, unscharf, versehentlich aufgenommen`}
           submitLabel="Ausblenden"
           danger
           onClose={() => setHiding(null)}
@@ -178,6 +180,7 @@ function PhotoUploadDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTerms();
   const [caption, setCaption] = useState("");
   const [consent, setConsent] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -245,7 +248,7 @@ function PhotoUploadDialog({
       </label>
       <label className="form-checkbox area-editor-wide">
         <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-        Die Einwilligung des Bewohners bzw. der Vertretung zur Fotodokumentation liegt vor.
+        Die Einwilligung des {t.oneOblique} bzw. der Vertretung zur Fotodokumentation liegt vor.
       </label>
     </EditorDialog>
   );

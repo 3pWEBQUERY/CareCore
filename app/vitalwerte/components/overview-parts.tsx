@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { formatDateTime } from "@/app/components/workspace-ui";
 import {
@@ -20,6 +21,7 @@ export const FILTERS = ["Alle", "Kritisch", "Beobachten", "Im Zielbereich", "Ohn
 export const WEEK = 7 * 86_400_000;
 
 export function ClinicalNote({ resident }: { resident: VitalResident }) {
+  const t = useTerms();
   const entries = Object.entries(resident.latest).filter(([, v]) => v.status !== "normal");
   const tone: VitalStatus | null = resident.status;
   return (
@@ -29,7 +31,7 @@ export function ClinicalNote({ resident }: { resident: VitalResident }) {
         <strong>Klinische Einordnung</strong>
         <span>
           {!tone
-            ? "Für diesen Bewohner ist noch keine Messung erfasst."
+            ? `Für diesen ${t.oneOblique} ist noch keine Messung erfasst.`
             : entries.length
               ? entries
                   .map(

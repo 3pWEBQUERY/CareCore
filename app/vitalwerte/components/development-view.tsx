@@ -16,7 +16,7 @@ import {
 } from "@/lib/vitals-shared";
 import { abnormalValues, type VitalsOverview } from "./overview-view";
 import TrendChart from "./trend-chart";
-import { useCareResident, useHeaderResident } from "@/app/components/care-context";
+import { useCareResident, useHeaderResident, useTerms } from "@/app/components/care-context";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
 
 type History = { measurements: VitalMeasurement[]; threshold: EffectiveThreshold };
@@ -33,6 +33,7 @@ const sourceLabel = {
 };
 
 export default function DevelopmentView() {
+  const t = useTerms();
   const overview = useApiData<VitalsOverview>("/api/vitals/overview");
   const residents = overview.data?.residents ?? [];
   const [, setResidentId] = useCareResident();
@@ -65,7 +66,7 @@ export default function DevelopmentView() {
               <p className="card-subtitle">
                 {history.data
                   ? `Bewertet mit ${sourceLabel[history.data.threshold.source]} (${formatRange(history.data.threshold, definition.unit)})`
-                  : "Messwerte je Bewohner im Zeitverlauf."}
+                  : `Messwerte je ${t.one} im Zeitverlauf.`}
               </p>
             </div>
           </div>

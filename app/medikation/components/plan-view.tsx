@@ -19,7 +19,7 @@ import {
 } from "@/app/components/workspace-ui";
 import { useOrderDialogs } from "./order-dialogs";
 import { AllergyBadge } from "@/app/components/resident-list";
-import { useHeaderResident } from "@/app/components/care-context";
+import { useHeaderResident, useTerms } from "@/app/components/care-context";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
 
 export type ResidentsPayload = {
@@ -68,6 +68,7 @@ export function useSelectedResident() {
 }
 
 export default function PlanView({ showToast }: { showToast: ShowToast }) {
+  const t = useTerms();
   const { residents, resident, missing, detail, reloadAll } = useSelectedResident();
   const canManage = residents.data?.canManage ?? false;
   const { openCreate, openEdit, openAllergies, dialogs } = useOrderDialogs({
@@ -183,7 +184,7 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
                       text={
                         canManage
                           ? "Über „Verordnung erfassen“ eine ärztliche Verordnung eintragen."
-                          : "Für diesen Bewohner sind keine Verordnungen erfasst."
+                          : `Für diesen ${t.oneOblique} sind keine Verordnungen erfasst.`
                       }
                     />
                   )}

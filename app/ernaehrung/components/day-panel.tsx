@@ -1,5 +1,6 @@
 "use client";
 
+import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import {
@@ -42,6 +43,7 @@ export default function DayPanel({
   showToast: ShowToast;
   onChanged: () => void;
 }) {
+  const t = useTerms();
   const [dialog, setDialog] = useState<{ kind: "fluid" } | { kind: "meal"; meal?: string } | null>(null);
   const [hiding, setHiding] = useState<
     { kind: "fluid"; entry: FluidEntry } | { kind: "meal"; entry: MealEntry } | null
@@ -247,7 +249,7 @@ export default function DayPanel({
               : `${hiding.entry.meal} ${hiding.entry.portionPercent} % · ${formatDateTime(hiding.entry.eatenAt)}. Der Eintrag wird ausgeblendet.`
           }
           label="Grund"
-          placeholder="z. B. falscher Bewohner, doppelt erfasst, falsche Menge"
+          placeholder={`z. B. falscher ${t.one}, doppelt erfasst, falsche Menge`}
           submitLabel="Ausblenden"
           danger
           onClose={() => setHiding(null)}
