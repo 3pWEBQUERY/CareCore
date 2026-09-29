@@ -51,6 +51,13 @@ export const SWAP_STATUS_LABELS: Record<SwapStatus, string> = {
   REJECTED: "Von Leitung abgelehnt",
   FAILED: "Fehlgeschlagen",
 };
+export const OPEN_SHIFT_STATUS_LABELS: Record<"OPEN" | "ASSIGNED" | "DECLINED" | "WITHDRAWN" | "CLOSED", string> = {
+  OPEN: "Interesse gemeldet",
+  ASSIGNED: "Zugeteilt",
+  DECLINED: "Nicht zugeteilt",
+  WITHDRAWN: "Zurückgezogen",
+  CLOSED: "Anderweitig besetzt",
+};
 export const TIME_ENTRY_STATUS_LABELS: Record<TimeEntryStatus, string> = {
   OPEN: "Läuft",
   COMPLETE: "Erfasst",
@@ -304,6 +311,9 @@ export const NOTIFICATION_TYPES = [
   "TIME_CORRECTION_DECIDED",
   "STAFFING_PROBLEM",
   "UNPLANNED_WORK",
+  "OPEN_SHIFT_INTEREST",
+  "OPEN_SHIFT_DECLINED",
+  "OPEN_SHIFT_CLOSED",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 export const notificationTypeKey = (type: NotificationType) => `shift_${type.toLowerCase()}`;

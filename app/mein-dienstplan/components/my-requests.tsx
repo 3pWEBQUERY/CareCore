@@ -20,6 +20,7 @@ import {
   type TimeOffStatus,
 } from "@/lib/roster/types";
 import { AbsenceDialog, PreferenceDialog, TimeOffDialog, type PreferenceValue } from "./request-forms";
+import { OpenShiftsCard, type OpenShiftsPayload } from "./open-shifts";
 
 type Preference = PreferenceValue & { id: string; shiftType: string | null; date: string | null; active: boolean };
 type Payload = {
@@ -36,6 +37,7 @@ type Payload = {
     decisionComment: string | null;
     createdAt: string;
   }>;
+  openShifts: OpenShiftsPayload;
   userId: string;
 };
 type Dialog = { kind: "time-off" | "absence" } | { kind: "preference"; value: Preference | null };
@@ -205,6 +207,8 @@ export default function MyRequests() {
                       </div>
                     </section>
                   )}
+
+                  <OpenShiftsCard data={data.openShifts} busy={busy} act={act} />
 
                   <RequestTable
                     title="Wunschfrei"

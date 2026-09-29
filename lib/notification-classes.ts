@@ -32,6 +32,7 @@ const ACTION_TYPES = [
   "shift_time_correction_requested",
   "shift_staffing_problem",
   "shift_unplanned_work",
+  "shift_open_shift_interest",
 ];
 // Austausch im Team ohne Handlungsbedarf.
 const SOCIAL_TYPES = ["message_direct", "team_post"];

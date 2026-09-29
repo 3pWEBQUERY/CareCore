@@ -22,7 +22,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Nutrition                    | 🟡    | Plan, Trinken, Mahlzeiten, Screenings in den Einschätzungen. Kein automatischer Hinweis bei Gewichts- oder Trinktrend.                       |
 | Team / Kanäle                | ✅    | Kanäle, Beiträge, Lesebestätigungen (`carecore_post_reads`).                                                                                 |
 | Chat                         | ✅    | Unterhaltungen, Reaktionen, @Erwähnungen; Benachrichtigung und Push bei Direktnachricht und Erwähnung.                                       |
-| Schedule                     | ✅    | Dienstplan, Tausch, Wünsche, Zeiterfassung, KI-Planung. Offene Dienste werden nur in Insights gezählt, keine Börse.                          |
+| Schedule                     | ✅    | Dienstplan, Tausch, Wünsche, Zeiterfassung, KI-Planung. Börse für offene Dienste.                                                            |
 | Docs                         | ✅    | Versionen, Freigabe, Lesebestätigung (`carecore_document_reads`). Bei neuer Version muss die Bestätigung erneut angefordert werden (prüfen). |
 | Learn                        | ✅    | Schulungen, Pflicht, Gültigkeit, Nachweise, Link, Quiz mit Bestehensgrenze, Übersicht je Team. Videos nur als Link.                          |
 | Quality                      | ✅    | Ereignisse mit Massnahmen und Status.                                                                                                        |
@@ -81,7 +81,8 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Trinkziel), alle ohne Vorgabewert und ausgeschaltet.
 - [x] **Wunden:** Verbandsmaterial je Versorgung aus dem Materialkatalog (Momentaufnahme je Eintrag; keine
       Lagerbuchung – das wäre eine eigene Entscheidung zur Bestandsführung).
-- [ ] **Dienstplan:** Börse für offene Dienste.
+- [x] **Dienstplan:** Börse für offene Dienste (fehlende Mindestbesetzung im veröffentlichten Plan; Interesse
+      melden, Leitung teilt über die Regelprüfung zu oder lehnt ab).
 - [ ] **Dark Mode** als Wahl in den persönlichen Einstellungen. Das Standard-Aussehen bleibt unverändert.
 
 ## Niedrig / später
