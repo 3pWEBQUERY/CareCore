@@ -56,3 +56,50 @@ Die Einstufung einer Messung übernimmt CareCore aus den Grenzwerten der Einrich
 - `N`: im Zielbereich
 - `A`: beobachten
 - `AA`: kritisch
+
+## Webhooks
+
+Mit Webhooks erfährt ein angebundenes System von Änderungen, ohne regelmässig nachfragen zu müssen. Die
+Administration legt sie unter **Leitung › Konfiguration › Webhooks** an. Pro Webhook gibt es eine https-Adresse und die
+gewählten Ereignisse.
+
+### Ereignisse
+
+| Ereignis              | Auslöser                                                             |
+| --------------------- | -------------------------------------------------------------------- |
+| `Patient.created`     | Person aufgenommen                                                   |
+| `Patient.updated`     | Name, Geburtsdatum, Geschlecht, Sprache, Status oder Nummer geändert |
+| `Observation.created` | Vitalwert erfasst                                                    |
+| `ping`                | Probemeldung aus der Konfiguration                                   |
+
+### Meldung
+
+- **Inhalt:** Die Meldung enthält nur den Verweis. Die Daten liest das System über FHIR mit seinem Schlüssel:
+
+  ```json
+  {
+    "id": "…",
+    "type": "Observation.created",
+    "occurredAt": "2026-09-29T07:00:00.000Z",
+    "resource": "Observation/…",
+    "patient": "Patient/…"
+  }
+  ```
+
+- **Kopfzeilen:** `X-CareCore-Event`, `X-CareCore-Delivery` und `X-CareCore-Signature: t=<Unix-Zeit>,v1=<Signatur>`.
+  - Die Signatur ist der HMAC-SHA256 (hex) über `<t>.<Inhalt>`, gebildet mit dem Geheimnis des Webhooks.
+  - Das Geheimnis wird einmal beim Anlegen angezeigt.
+  - Empfänger sollten die Signatur prüfen und zu alte Zeitstempel ablehnen.
+- **Zustellung:**
+  - Die Meldungen werden in der Datenbank vorgemerkt (Trigger) und nach der nächsten Anfrage an CareCore zugestellt.
+  - Als Erfolg gilt eine Antwort `2xx`. Weiterleitungen werden nicht verfolgt.
+  - Das Zeitlimit beträgt 5 s.
+  - Wiederholungen erfolgen nach 1, 5, 30, 120 und 720 Minuten; danach gilt die Meldung als gescheitert.
+  - Die Karte zeigt ausstehende und gescheiterte Meldungen sowie die letzte Antwort.
+- **Sicherheit:**
+  - Erlaubt sind nur `https`-Adressen ohne Zugangsdaten.
+  - Ziele im internen Netz (private, lokale und reservierte Adressen) sind gesperrt, auch wenn ein Name erst bei der
+    Zustellung auf eine solche Adresse zeigt.
+  - Das Geheimnis liegt verschlüsselt in der Datenbank (AES-256-GCM, Schlüssel aus `CARECORE_MFA_KEY`). Ohne diesen
+    Schlüssel lassen sich keine Webhooks anlegen.
+  - Anlegen und Entfernen werden protokolliert.

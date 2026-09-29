@@ -673,3 +673,13 @@
   color: var(--muted);
   font-size: 11px;
 }
+.admin-retention-row strong small {
+  font-weight: 400;
+  word-break: break-all;
+}
+.admin-webhook-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
