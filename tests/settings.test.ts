@@ -87,3 +87,14 @@ test("new personal preferences: defaults, invalid values and quiet hours across 
   assert.equal(inQuietHours(day, "13:30"), false);
   assert.equal(inQuietHours({ ...night, enabled: false }, "23:15"), false);
 });
+
+test("Meine Kennzahlen: nur gültige, eindeutige Kennzahlen, höchstens 16", async () => {
+  const { INSIGHT_PINS_MAX, insightPin } = await import("../lib/user-settings-shared.ts");
+  assert.deepEqual(resolvePreferences(null).insightPins, []);
+  const pins = resolvePreferences({
+    insightPins: [insightPin("care", "Dokumentation"), "care:Dokumentation", "unbekannt:X", 5, "residents:"],
+  }).insightPins;
+  assert.deepEqual(pins, ["care:Dokumentation"]);
+  const many = Array.from({ length: 20 }, (_, index) => insightPin("leadership", `Kennzahl ${index}`));
+  assert.equal(resolvePreferences({ insightPins: many }).insightPins.length, INSIGHT_PINS_MAX);
+});

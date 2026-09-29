@@ -5,9 +5,11 @@ import { carecoreDb, type CarecoreActor } from "@/lib/server-data";
 import {
   AUTO_LOGOUT_MINUTES,
   DEFAULT_PREFERENCES,
+  INSIGHT_PINS_MAX,
   NOTIFY_CATEGORIES,
   START_PAGES,
   TEXT_SIZES,
+  isInsightPin,
   resolvePreferences,
   type NotifyCategory,
   type UserPreferences,
@@ -115,6 +117,13 @@ export async function savePreferences(actor: CarecoreActor, body: Record<string,
     if (quiet.enabled && quiet.from === quiet.to)
       throw new ApiError("Ruhezeit: Beginn und Ende müssen sich unterscheiden.");
     next.quietHours = { enabled: quiet.enabled, from: quiet.from, to: quiet.to, critical: quiet.critical };
+  }
+  if (body.insightPins !== undefined) {
+    const pins = body.insightPins;
+    if (!Array.isArray(pins) || !pins.every(isInsightPin)) throw invalid("Meine Kennzahlen");
+    if (new Set(pins).size > INSIGHT_PINS_MAX)
+      throw new ApiError(`Meine Kennzahlen: Höchstens ${INSIGHT_PINS_MAX} Kennzahlen auswählen.`);
+    next.insightPins = [...new Set(pins)];
   }
   const resolved = resolvePreferences(next);
   await carecoreDb()`
