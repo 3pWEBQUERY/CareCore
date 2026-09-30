@@ -4,6 +4,7 @@ export const AI_TASKS = {
   handover: { label: "Übergabe zusammenfassen", icon: "handover" },
   risks: { label: "Risiken für die Visite prüfen", icon: "alert" },
   documentation: { label: "Dokumentation vorbereiten", icon: "note" },
+  carePlan: { label: "Pflegeplanung vorschlagen", icon: "plan" },
   question: { label: "Freie Frage", icon: "ai" },
 } as const;
 export type AiTask = keyof typeof AI_TASKS;
