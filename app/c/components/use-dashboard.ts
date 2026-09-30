@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTerms } from "@/app/components/care-context";
-import { IconName } from "./dashboard-shared";
 import { useDashboardNotes } from "./use-dashboard-notes";
 import { useDashboardLayout } from "./use-dashboard-layout";
 import { useDashboardNews } from "./use-dashboard-news";
@@ -40,7 +39,6 @@ export function useDashboard() {
   const router = useRouter();
   const [now, setNow] = useState<Date | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [query, setQuery] = useState("");
   const [toast, setToast] = useState("");
   const {
     notes,
@@ -141,33 +139,6 @@ export function useDashboard() {
 
   const completed = tasks.filter((task) => task.completed).length;
   const progress = tasks.length ? Math.round((completed / tasks.length) * 100) : 0;
-  const filteredResults = useMemo(
-    () =>
-      [
-        ...residentNews.map((resident) => ({
-          title: `${resident.first_name} ${resident.last_name}`,
-          meta: `${terms.one} · ${resident.room}`,
-          icon: "residents" as IconName,
-          href: `/c/bewohner?resident=${resident.id}`,
-        })),
-        {
-          title: `${terms.prefix}verzeichnis`,
-          meta: `Alle aktiven ${terms.many}`,
-          icon: "residents" as IconName,
-          href: "/c/bewohner",
-        },
-        { title: "Aufgaben", meta: "Meine offenen Aufgaben", icon: "tasks" as IconName, href: "/c/betrieb/aufgaben" },
-        {
-          title: "Kalender",
-          meta: "Termine im Wohnbereich",
-          icon: "calendar" as IconName,
-          href: "/c/carecore-one/kalender",
-        },
-      ]
-        .filter((result) => `${result.title} ${result.meta}`.toLowerCase().includes(query.toLowerCase()))
-        .slice(0, 8),
-    [query, residentNews, terms],
-  );
 
   const formattedDate =
     now?.toLocaleDateString("de-CH", {
@@ -243,8 +214,6 @@ export function useDashboard() {
     setNow,
     searchOpen,
     setSearchOpen,
-    query,
-    setQuery,
     toast,
     setToast,
     employeeName,
@@ -264,7 +233,6 @@ export function useDashboard() {
     loadNotes,
     completed,
     progress,
-    filteredResults,
     toggleTask,
     persistDashboardLayout,
     toggleWidget,

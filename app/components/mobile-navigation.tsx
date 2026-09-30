@@ -12,6 +12,7 @@ import {
   type NavigationBadges,
 } from "./care-context";
 import { moduleBadges, quickLinks, routeFor, sidebarNavigation, type ModuleIconName } from "./navigation";
+import { availableActions, runAction, type CareAction } from "./actions";
 import { navigationLabel, termsFor } from "@/lib/terminology";
 
 type BarItem = { id: string; label: string; icon: ModuleIconName; moduleId: string; child: string };
@@ -21,16 +22,6 @@ const BAR: BarItem[] = [
   { id: "residents", label: "Bewohner", icon: "residents", moduleId: "residents", child: "Übersicht" },
   { id: "chart", label: "Doku", icon: "note", moduleId: "chart", child: "Schnelldokumentation" },
   { id: "med", label: "Medikation", icon: "med", moduleId: "med", child: "Medikamentenrunde" },
-];
-
-// Schnellaktionen (Knopf über der unteren Leiste): häufige Erfassungen für den Bewohner aus der Kopfzeile.
-const QUICK_ACTIONS: BarItem[] = [
-  { id: "doc", label: "Dokumentation", icon: "note", moduleId: "chart", child: "Schnelldokumentation" },
-  { id: "vitals", label: "Vitalwerte", icon: "vitals", moduleId: "vitals", child: "Vitalwerte" },
-  { id: "fluid", label: "Trinkmenge", icon: "nutrition", moduleId: "vitals", child: "Trinkprotokoll" },
-  { id: "prn", label: "Reservegabe", icon: "med", moduleId: "med", child: "Reserven" },
-  { id: "wound", label: "Wundverlauf", icon: "wounds", moduleId: "wounds", child: "Dokumentation" },
-  { id: "handover", label: "Übergabenotiz", icon: "handover", moduleId: "shift", child: "Übergabe" },
 ];
 
 // Mobile bottom bar and main menu; shows only the areas the signed-in person may use.
@@ -51,7 +42,8 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
   const allowed = new Set(groups.flatMap((group) => group.modules.map((module) => module.id)));
   const bar = BAR.filter((item) => allowed.has(item.moduleId));
   const quick = quickLinks.filter((link) => allowed.has(link.moduleId));
-  const actions = QUICK_ACTIONS.filter((item) => allowed.has(item.moduleId) && routeFor(item.moduleId, item.child));
+  // Schnellaktionen (Knopf über der unteren Leiste): häufige Erfassungen für den Bewohner aus der Kopfzeile.
+  const actions = availableActions(permissions);
   const inBar = activeModule === "home" || bar.some((item) => item.moduleId === activeModule);
   const menuCount = count(["tasks", "handover", "messages"]);
 
@@ -70,6 +62,12 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
       document.body.classList.remove("mobile-menu-open");
     };
   }, [sheetOpen]);
+
+  function act(action: CareAction) {
+    setMenuOpen(false);
+    setActionsOpen(false);
+    runAction(action, (href) => router.push(href));
+  }
 
   function go(moduleId: string, child: string) {
     const href = routeFor(moduleId, child);
@@ -200,7 +198,7 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
             <section className="mobile-nav-section">
               <div className="mobile-nav-quick">
                 {actions.map((item) => (
-                  <button type="button" key={item.id} onClick={() => go(item.moduleId, item.child)}>
+                  <button type="button" key={item.id} onClick={() => act(item)}>
                     <ModuleIcon name={item.icon} />
                     <span>{L(item.label)}</span>
                   </button>
