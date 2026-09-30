@@ -3,13 +3,18 @@
 import { useEffect, useState } from "react";
 import type { UserPreferences } from "@/lib/user-settings-shared";
 import { useWorkContext } from "./care-context";
+import { LANGUAGE_EVENT, activeLanguage, reviewing } from "./translator";
 
 const PREFERENCES_EVENT = "carecore:preferences";
 // Merkt sich das Erscheinungsbild im Browser, damit es beim nächsten Laden vor der Anzeige gilt (app/layout.tsx).
 export const THEME_KEY = "carecore-theme";
 
-function apply(preferences: Pick<UserPreferences, "textSize" | "contrast" | "motion" | "theme">) {
+function apply(preferences: Pick<UserPreferences, "textSize" | "contrast" | "motion" | "theme" | "language">) {
   const root = document.documentElement;
+  // Andere Sprache gewählt (auch auf einem anderen Gerät): die Übersetzung lädt die Seite neu.
+  // Während der Vorschau zum Prüfen (Administration) bleibt die gewählte Vorschausprache.
+  if (preferences.language && preferences.language !== activeLanguage() && !reviewing())
+    window.dispatchEvent(new CustomEvent(LANGUAGE_EVENT, { detail: preferences.language }));
   root.classList.toggle("theme-dark", preferences.theme === "dark");
   try {
     if (preferences.theme === "dark") localStorage.setItem(THEME_KEY, "dark");

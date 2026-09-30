@@ -1,0 +1,20 @@
+/* Sprache: bis die Übersetzung angewendet ist (app/components/translator.tsx). */
+.i18n-pending body {
+  visibility: hidden;
+}
+
+.languages-search {
+  min-height: 36px;
+  min-width: 220px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+.languages-entry strong {
+  white-space: pre-wrap;
+}
+.languages-source p {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+}

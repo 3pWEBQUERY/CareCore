@@ -19,7 +19,7 @@ const PAGES = `carecore-pages-${VERSION}`;
 const DATA = `carecore-data-${VERSION}`;
 
 // Nicht zwischengespeichert: Anmeldung, Dateien und Fotos, Exporte, KI, Portal (eigene Zugänge, nie auf dem Gerät).
-const NO_CACHE = /^\/api\/(auth|cloud|ai|intelligenz|push|health|events|portal|me\/offline-key)\b|\/photos\/|\/export\b|\/files?\//;
+const NO_CACHE = /^\/api\/(auth|cloud|ai|intelligenz|push|health|events|portal|i18n|me\/offline-key)\b|\/photos\/|\/export\b|\/files?\//;
 
 self.addEventListener("install", () => self.skipWaiting());
 

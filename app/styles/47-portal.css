@@ -150,3 +150,16 @@
   color: var(--muted);
   font-size: 12px;
 }
+.portal-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.portal-language select {
+  min-height: 36px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface, #fff);
+  font: inherit;
+}

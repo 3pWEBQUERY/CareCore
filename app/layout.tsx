@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import DialogFocus from "./components/dialog-focus";
 import OfflineSync from "./components/offline-sync";
+import Translator from "./components/translator";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,8 +44,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Script id="carecore-theme" strategy="beforeInteractive">
           {`try{if(localStorage.getItem("carecore-theme")==="dark")document.documentElement.classList.add("theme-dark")}catch(e){}`}
         </Script>
+        {/* Andere Sprache als Deutsch: Seite kurz verbergen, bis die Übersetzung angewendet ist (höchstens 1,5 s). */}
+        <Script id="carecore-language" strategy="beforeInteractive">
+          {`try{var l=localStorage.getItem("carecore-language");if(l&&l!=="de"){var d=document.documentElement;d.classList.add("i18n-pending");setTimeout(function(){d.classList.remove("i18n-pending")},1500)}}catch(e){}`}
+        </Script>
         {children}
         <OfflineSync />
+        <Translator />
         <DialogFocus />
       </body>
     </html>
