@@ -1,3 +1,4 @@
+import { mediaContent, removeMedia, storeMedia } from "@/lib/storage";
 import { NextResponse } from "next/server";
 import { residentAudit } from "@/lib/resident-audit";
 import { carecoreActor, carecoreDb, forbidden, hasPermission, type Permission } from "@/lib/server-data";
@@ -36,13 +37,17 @@ export async function GET(request: Request, context: { params: Promise<{ residen
     if (allowed === "forbidden") return forbidden();
     const { sql } = allowed;
     const rows =
-      await sql`SELECT photo_base64, photo_mime_type, photo_updated_at FROM carecore_residents WHERE id = ${residentId} LIMIT 1`;
+      await sql`SELECT photo_base64, photo_storage_key, photo_mime_type, photo_updated_at FROM carecore_residents WHERE id = ${residentId} LIMIT 1`;
     const resident = rows[0];
+    const stored =
+      resident && allowedTypes.has(String(resident.photo_mime_type))
+        ? await mediaContent(resident.photo_storage_key, resident.photo_base64)
+        : null;
     if (new URL(request.url).searchParams.get("format") === "raw") {
-      if (!resident?.photo_base64 || !allowedTypes.has(String(resident.photo_mime_type))) {
+      if (!stored) {
         return new NextResponse(null, { status: 404, headers: { "Cache-Control": "private, no-store" } });
       }
-      const image = Buffer.from(String(resident.photo_base64), "base64");
+      const image = stored;
       return new NextResponse(new Uint8Array(image), {
         headers: {
           "Content-Type": String(resident.photo_mime_type),
@@ -53,10 +58,7 @@ export async function GET(request: Request, context: { params: Promise<{ residen
         },
       });
     }
-    const photoDataUrl =
-      resident?.photo_base64 && allowedTypes.has(String(resident.photo_mime_type))
-        ? `data:${resident.photo_mime_type};base64,${resident.photo_base64}`
-        : null;
+    const photoDataUrl = stored ? `data:${resident.photo_mime_type};base64,${stored.toString("base64")}` : null;
     return NextResponse.json(
       { photoDataUrl, updatedAt: resident?.photo_updated_at ?? null },
       { headers: { "Cache-Control": "no-store" } },
@@ -86,8 +88,12 @@ export async function PUT(request: Request, context: { params: Promise<{ residen
     if (!hasValidImageSignature(image, match[1]))
       return NextResponse.json({ error: "Die Bilddatei ist ungültig." }, { status: 400 });
     const base64 = image.toString("base64");
+    const [previous] = await sql`SELECT photo_storage_key FROM carecore_residents WHERE id = ${residentId}`;
+    // Jede Fassung unter eigenem Schlüssel; die alte wird nach dem Speichern entfernt.
+    const organizationId = actor.organizationId ?? "unknown";
+    const key = await storeMedia("resident-photos", organizationId, crypto.randomUUID(), image, match[1]);
     const [rows] = await sql.transaction([
-      sql`UPDATE carecore_residents SET photo_base64 = ${base64}, photo_mime_type = ${match[1]}, photo_updated_at = NOW(), updated_at = NOW() WHERE id = ${residentId} RETURNING photo_updated_at`,
+      sql`UPDATE carecore_residents SET photo_base64 = ${key ? null : base64}, photo_storage_key = ${key}, photo_mime_type = ${match[1]}, photo_updated_at = NOW(), updated_at = NOW() WHERE id = ${residentId} RETURNING photo_updated_at`,
       residentAudit(sql, actor, {
         residentId,
         entityType: "resident_photo",
@@ -97,6 +103,7 @@ export async function PUT(request: Request, context: { params: Promise<{ residen
       }),
     ]);
     if (!rows[0]) return NextResponse.json({ error: "Akte nicht gefunden." }, { status: 404 });
+    await removeMedia([previous?.photo_storage_key]);
     return NextResponse.json({
       photoDataUrl: `data:${match[1]};base64,${base64}`,
       updatedAt: rows[0].photo_updated_at,
@@ -114,10 +121,12 @@ export async function DELETE(_request: Request, context: { params: Promise<{ res
     if (!allowed) return NextResponse.json({ error: "Akte nicht verfügbar." }, { status: 404 });
     if (allowed === "forbidden") return forbidden();
     const { sql, actor } = allowed;
+    const [previous] = await sql`SELECT photo_storage_key FROM carecore_residents WHERE id = ${residentId}`;
     await sql.transaction([
-      sql`UPDATE carecore_residents SET photo_base64 = NULL, photo_mime_type = NULL, photo_updated_at = NULL, updated_at = NOW() WHERE id = ${residentId}`,
+      sql`UPDATE carecore_residents SET photo_base64 = NULL, photo_storage_key = NULL, photo_mime_type = NULL, photo_updated_at = NULL, updated_at = NOW() WHERE id = ${residentId}`,
       residentAudit(sql, actor, { residentId, entityType: "resident_photo", entityId: residentId, action: "deleted" }),
     ]);
+    await removeMedia([previous?.photo_storage_key]);
     return NextResponse.json({ photoDataUrl: null });
   } catch (error) {
     console.error("Resident photo DELETE failed", error);

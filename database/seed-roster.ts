@@ -7,6 +7,7 @@
 import { createHash, randomBytes, scrypt as scryptCallback } from "node:crypto";
 import { promisify } from "node:util";
 import { neon } from "@neondatabase/serverless";
+import "./pg-fetch.mjs";
 import {
   addDays,
   localDate,

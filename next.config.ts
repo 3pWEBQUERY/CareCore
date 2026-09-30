@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Postgres-Verbindungspool (Railway) nur auf dem Server, nicht gebündelt.
+  serverExternalPackages: ["pg"],
   // /api/health vergleicht die angewendeten Migrationen mit den Dateien im Deployment.
   outputFileTracingIncludes: {
     "/api/health": ["./database/migrations/*.sql"],

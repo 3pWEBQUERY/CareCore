@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ApiError, type ApiContext } from "@/lib/api-context";
 import { contentMatchesType } from "@/lib/file-signatures";
+import { storeMedia } from "@/lib/storage";
 
 const MAX_FILE_BYTES = 4 * 1024 * 1024;
 
@@ -24,9 +25,10 @@ export async function storeFile(
   if (!contentMatchesType(type, bytes))
     throw new ApiError("Der Inhalt der Datei passt nicht zum Dateityp. Bitte die Originaldatei hochladen.", 415);
   const id = randomUUID();
+  const key = await storeMedia("files", ctx.actor.organizationId, id, bytes, type);
   await ctx.sql`
-    INSERT INTO carecore_cloud_files (id, organization_id, name, mime_type, size_bytes, content_base64, uploaded_by, purpose)
+    INSERT INTO carecore_cloud_files (id, organization_id, name, mime_type, size_bytes, content_base64, storage_key, uploaded_by, purpose)
     VALUES (${id}, ${ctx.actor.organizationId}, ${name}, ${type}, ${file.size},
-      ${bytes.toString("base64")}, ${ctx.actor.id}, ${purpose})`;
+      ${key ? null : bytes.toString("base64")}, ${key}, ${ctx.actor.id}, ${purpose})`;
   return { id, name, type, size: file.size };
 }

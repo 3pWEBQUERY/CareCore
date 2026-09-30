@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless";
+import "@/database/pg-fetch.mjs";
 
 export type DashboardLayout = { order: string[]; hidden: string[] };
 

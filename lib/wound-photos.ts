@@ -1,3 +1,4 @@
+import { mediaContent, storeMedia } from "@/lib/storage";
 import { randomUUID } from "node:crypto";
 import { readTerms } from "@/lib/settings";
 import { ApiError, assertUuid, iso, num, text, type ApiContext, type Row } from "@/lib/api-context";
@@ -70,11 +71,12 @@ export async function storePhoto(ctx: ApiContext, woundIdInput: unknown, form: F
     return Number.isInteger(value) && value > 0 && value < 20000 ? value : null;
   };
   const id = randomUUID();
+  const key = await storeMedia("wound-photos", ctx.actor.organizationId, id, bytes, mimeType);
   await ctx.sql.transaction([
     ctx.sql`
-      INSERT INTO carecore_wound_photos (id, organization_id, wound_id, mime_type, size_bytes, width, height, content, caption, taken_at, consent_confirmed, uploaded_by)
+      INSERT INTO carecore_wound_photos (id, organization_id, wound_id, mime_type, size_bytes, width, height, content, storage_key, caption, taken_at, consent_confirmed, uploaded_by)
       VALUES (${id}, ${ctx.actor.organizationId}, ${wound.id}, ${mimeType}, ${bytes.length}, ${dimension("width")}, ${dimension("height")},
-        ${bytes}, ${text(form.get("caption"), 240) || null}, ${takenAt.toISOString()}, TRUE, ${ctx.actor.id})`,
+        ${key ? null : bytes}, ${key}, ${text(form.get("caption"), 240) || null}, ${takenAt.toISOString()}, TRUE, ${ctx.actor.id})`,
     residentAudit(ctx.sql, ctx.actor, {
       residentId: wound.residentId,
       entityType: "wound_photo",
@@ -89,10 +91,12 @@ export async function storePhoto(ctx: ApiContext, woundIdInput: unknown, form: F
 export async function readPhoto(ctx: ApiContext, photoIdInput: unknown) {
   const id = assertUuid(photoIdInput, "Foto");
   const rows = (await ctx.sql`
-    SELECT mime_type, content FROM carecore_wound_photos
+    SELECT mime_type, content, storage_key FROM carecore_wound_photos
     WHERE id = ${id} AND organization_id = ${ctx.actor.organizationId} AND deleted_at IS NULL`) as Row[];
   if (!rows[0]) throw new ApiError("Foto nicht gefunden.", 404);
-  return { mimeType: String(rows[0].mime_type), content: Buffer.from(rows[0].content as Uint8Array) };
+  const content = await mediaContent(rows[0].storage_key, rows[0].content);
+  if (!content) throw new ApiError("Foto nicht gefunden.", 404);
+  return { mimeType: String(rows[0].mime_type), content };
 }
 
 export async function hidePhoto(ctx: ApiContext, photoIdInput: unknown, reasonInput: unknown) {

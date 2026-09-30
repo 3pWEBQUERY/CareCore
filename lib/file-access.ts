@@ -1,5 +1,6 @@
 import { mayReadFile } from "@/lib/file-access-rules";
 import { carecoreDb, type CarecoreActor } from "@/lib/server-data";
+import { mediaContent } from "@/lib/storage";
 
 // Who may open a stored file. The file store holds personal files ("Meine Dateien"),
 // documents of residents and of the house, and training certificates, so every
@@ -11,12 +12,12 @@ import { carecoreDb, type CarecoreActor } from "@/lib/server-data";
 
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export type StoredFile = { name: string; mime_type: string; content_base64: string };
+export type StoredFile = { name: string; mime_type: string; content: Buffer };
 
 export async function readableFile(actor: CarecoreActor, fileId: string): Promise<StoredFile | null> {
   if (!actor.organizationId || !UUID.test(fileId)) return null;
   const rows = (await carecoreDb()`
-    SELECT f.name, f.mime_type, f.content_base64, f.purpose, f.uploaded_by,
+    SELECT f.name, f.mime_type, f.content_base64, f.storage_key, f.purpose, f.uploaded_by,
       d.id AS document_id, d.resident_id AS document_resident_id,
       (SELECT e.user_id FROM carecore_training_enrollments e WHERE e.certificate_file_id = f.id LIMIT 1) AS certificate_user_id
     FROM carecore_cloud_files f
@@ -34,7 +35,7 @@ export async function readableFile(actor: CarecoreActor, fileId: string): Promis
     },
     actor,
   );
-  return allowed
-    ? { name: String(file.name), mime_type: String(file.mime_type ?? ""), content_base64: String(file.content_base64) }
-    : null;
+  if (!allowed) return null;
+  const content = await mediaContent(file.storage_key, file.content_base64);
+  return content ? { name: String(file.name), mime_type: String(file.mime_type ?? ""), content } : null;
 }

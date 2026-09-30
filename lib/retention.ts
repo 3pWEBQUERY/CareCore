@@ -1,3 +1,4 @@
+import { removeMedia } from "@/lib/storage";
 import { ApiError, assertUuid, auditStatement, iso, type ApiContext, type Row } from "@/lib/api-context";
 import { hasPermission } from "@/lib/server-data";
 import { readSettings } from "@/lib/settings";
@@ -74,6 +75,15 @@ export async function deleteResidentRecord(ctx: ApiContext, residentIdInput: unk
   if (typeof confirmation !== "string" || confirmation.trim() !== name)
     throw new ApiError("Bitte zur Bestätigung den vollständigen Namen eingeben.");
   const org = ctx.actor.organizationId;
+  // Medien im Bucket: Schlüssel vorher merken, nach dem Löschen in der Datenbank entfernen.
+  const media = (await ctx.sql`
+    SELECT storage_key FROM carecore_cloud_files WHERE organization_id = ${org} AND storage_key IS NOT NULL AND id IN (
+      SELECT file_id FROM carecore_documents WHERE resident_id = ${residentId} AND file_id IS NOT NULL)
+    UNION ALL
+    SELECT p.storage_key FROM carecore_wound_photos p JOIN carecore_wounds w ON w.id = p.wound_id
+    WHERE w.resident_id = ${residentId} AND p.storage_key IS NOT NULL
+    UNION ALL
+    SELECT photo_storage_key FROM carecore_residents WHERE id = ${residentId} AND photo_storage_key IS NOT NULL`) as Row[];
   await ctx.sql.transaction([
     ctx.sql`
       DELETE FROM carecore_cloud_files WHERE organization_id = ${org} AND id IN (
@@ -101,4 +111,5 @@ export async function deleteResidentRecord(ctx: ApiContext, residentIdInput: unk
       retentionYears: years,
     }),
   ]);
+  await removeMedia(media.map((entry) => entry.storage_key));
 }

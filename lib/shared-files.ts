@@ -1,3 +1,4 @@
+import { removeMedia, storeMedia } from "@/lib/storage";
 import { randomUUID } from "node:crypto";
 import { ApiError, iso, type Row } from "@/lib/api-context";
 import { carecoreDb, hasPermission, type CarecoreActor } from "@/lib/server-data";
@@ -116,10 +117,13 @@ export async function uploadFile(actor: CarecoreActor, form: FormData) {
   if (!name) throw new ApiError("Der Dateiname ist ungültig.");
   const folderId = scope === "shared" ? await assertFolder(actor, form.get("folderId")) : null;
   const id = randomUUID();
+  const type = file.type || "application/octet-stream";
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const key = await storeMedia("files", org(actor), id, bytes, type);
   const rows = await carecoreDb()`
-    INSERT INTO carecore_cloud_files (id, organization_id, name, mime_type, size_bytes, content_base64, uploaded_by, purpose, folder_id)
-    VALUES (${id}, ${org(actor)}, ${name}, ${file.type || "application/octet-stream"}, ${file.size},
-      ${Buffer.from(await file.arrayBuffer()).toString("base64")}, ${actor.id}, ${scope === "shared" ? "shared" : "cloud"}, ${folderId})
+    INSERT INTO carecore_cloud_files (id, organization_id, name, mime_type, size_bytes, content_base64, storage_key, uploaded_by, purpose, folder_id)
+    VALUES (${id}, ${org(actor)}, ${name}, ${type}, ${file.size},
+      ${key ? null : bytes.toString("base64")}, ${key}, ${actor.id}, ${scope === "shared" ? "shared" : "cloud"}, ${folderId})
     RETURNING id, name, mime_type, size_bytes, uploaded_by, folder_id, purpose, created_at, updated_at`;
   if (scope === "shared") await audit(actor, id, "uploaded", { name, folderId });
   return mapFile({ ...rows[0], uploaded_by_name: actor.display_name }, actor);
@@ -161,7 +165,9 @@ export async function updateFile(actor: CarecoreActor, fileId: string, body: Rec
 
 export async function deleteFile(actor: CarecoreActor, fileId: string) {
   const file = await editableFile(actor, fileId);
-  await carecoreDb()`DELETE FROM carecore_cloud_files WHERE id = ${fileId}`;
+  const removed =
+    (await carecoreDb()`DELETE FROM carecore_cloud_files WHERE id = ${fileId} RETURNING storage_key`) as Row[];
+  await removeMedia(removed.map((row) => row.storage_key));
   if (file.purpose === "shared") await audit(actor, fileId, "deleted", { name: file.name });
 }
 
