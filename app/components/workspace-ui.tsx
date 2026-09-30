@@ -8,6 +8,7 @@ import { Check, X } from "@phosphor-icons/react";
 import { type ModuleIconName } from "@/app/components/module-icon";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { useEscapeClose } from "./use-escape-close";
+import { LOCKED_EVENT, UNLOCK_EVENT } from "./offline-queue";
 import "./workspace-ui.css";
 
 export type ShowToast = (message: string) => void;
@@ -20,6 +21,7 @@ export async function requestJson<T>(url: string, init?: { method?: string; body
     body: init?.body === undefined ? undefined : JSON.stringify(init.body),
   });
   const payload = await response.json().catch(() => null);
+  if (payload?.locked === true) window.dispatchEvent(new Event(LOCKED_EVENT));
   if (!response.ok) throw new Error(payload?.error || "Die Anfrage ist fehlgeschlagen.");
   return payload as T;
 }
@@ -41,6 +43,11 @@ export function useApiData<T>(url: string | null) {
     };
   }, [url, key]);
   const reload = useCallback(() => setVersion((current) => current + 1), []);
+  // Ohne Verbindung mit dem Passwort entsperrt: gesperrte Daten neu laden.
+  useEffect(() => {
+    window.addEventListener(UNLOCK_EVENT, reload);
+    return () => window.removeEventListener(UNLOCK_EVENT, reload);
+  }, [reload]);
   const sameUrl = state && state.url === url ? state : null;
   return { data: sameUrl?.data, error: sameUrl?.error, loading: !state || state.key !== key, reload };
 }

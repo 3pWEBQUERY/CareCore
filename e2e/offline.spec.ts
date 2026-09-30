@@ -184,6 +184,73 @@ test("Meine Notizen: offline bearbeitet, inzwischen anderswo geändert – Konfl
   expect(saved.notes.find((note) => note.id === id)?.body).toBe("Meine Fassung");
 });
 
+test("Offline-Daten: nur verschlüsselt gespeichert; ohne Verbindung mit dem Passwort entsperrt, beim Abmelden gelöscht", async ({
+  page,
+  context,
+}) => {
+  // Anmeldung über das Formular: dabei wird der Schlüssel mit dem Passwort verschlüsselt auf dem Gerät abgelegt.
+  await page.goto("/");
+  await page.getByLabel("Benutzername").fill(ADMIN.username);
+  await page.getByLabel("Passwort", { exact: true }).fill(ADMIN.password);
+  await page.locator(".login-submit").click();
+  await page.waitForURL(/\/c/);
+  await page.waitForFunction(() => Object.keys(localStorage).some((key) => key.startsWith("carecore.offline.unlock.")));
+  await page.goto("/c/pflegedokumentation");
+  await page.waitForFunction(
+    () => navigator.serviceWorker?.controller !== null && navigator.serviceWorker?.controller !== undefined,
+  );
+  await page.reload();
+  const form = page.locator("form", { has: page.locator("textarea") }).first();
+  await expect(form.locator("button.primary-button")).toBeEnabled();
+  await waitForNetworkIdle(page);
+
+  // Im Zwischenspeicher liegen Daten nur verschlüsselt.
+  const name = ((await (await page.request.get("/api/work-context")).json()) as { profile: { displayName: string } })
+    .profile.displayName;
+  const cached = await page.evaluate(async () => {
+    const cache = await caches.open("carecore-data-v2");
+    return Promise.all((await cache.keys()).map(async (request) => (await cache.match(request))!.text()));
+  });
+  expect(cached.length).toBeGreaterThan(0);
+  for (const body of cached) {
+    expect(JSON.parse(body)).toMatchObject({ v: 1, epk: { crv: "P-256" } });
+    expect(body).not.toContain(name);
+  }
+
+  // Ohne Verbindung erfassen, neu laden: der Eintrag ist gesperrt. Falsches Passwort abgelehnt, richtiges entsperrt.
+  const text = `Entsperr-Test ${Date.now()}`;
+  await context.setOffline(true);
+  await form.locator("textarea").fill(text);
+  await form.locator("button.primary-button").click();
+  await expect(page.locator(".toast")).toContainText("Offline gespeichert");
+  await page.reload();
+  const status = page.locator(".offline-status");
+  await expect(status).toContainText("1 Eintrag wartet");
+  await status.getByRole("button", { name: "Entsperren" }).click();
+  await status.getByLabel("Passwort (ohne Verbindung entsperren)").fill("falsch");
+  await status.locator("form").getByRole("button", { name: "Entsperren" }).click();
+  await expect(status).toContainText("Das Passwort stimmt nicht.");
+  await status.getByLabel("Passwort (ohne Verbindung entsperren)").fill(ADMIN.password);
+  await status.locator("form").getByRole("button", { name: "Entsperren" }).click();
+  await expect(status.locator("form")).toHaveCount(0);
+  await status.getByRole("button", { name: "Anzeigen" }).click();
+  await expect(status.locator(".offline-status-list")).toContainText("wartet auf Verbindung");
+  await status.getByRole("button", { name: "Bearbeiten" }).click();
+  await expect(status.locator(".offline-status-edit textarea")).toHaveValue(text);
+  await status.locator(".offline-status-edit").getByRole("button", { name: "Abbrechen" }).click();
+
+  // Mit Verbindung gesendet; Abmelden löscht den verpackten Schlüssel vom Gerät.
+  await context.setOffline(false);
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await expect(status).toContainText(/offline erfasste(r Eintrag| Einträge) gesendet/, { timeout: 20_000 });
+  await page.locator(".profile-trigger").first().click();
+  await page.getByRole("menuitem", { name: "Ausloggen" }).click();
+  await page.waitForURL((url) => url.pathname === "/");
+  expect(
+    await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith("carecore.offline.unlock."))),
+  ).toEqual([]);
+});
+
 test("Manifest und Service Worker sind erreichbar (installierbar)", async ({ page }) => {
   const manifest = await page.request.get("/manifest.webmanifest");
   expect(manifest.status()).toBe(200);

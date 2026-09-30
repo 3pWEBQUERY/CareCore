@@ -9,7 +9,7 @@ import {
   type PublicKeyCredentialRequestOptionsJSON,
 } from "@simplewebauthn/browser";
 import { CheckCircle, Eye, EyeSlash, LockKey, Pulse, ShieldCheck, User } from "@phosphor-icons/react";
-import { clearOfflineData } from "./components/offline-queue";
+import { clearOfflineData, rememberOfflineUnlock } from "./components/offline-queue";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -151,6 +151,8 @@ export default function LoginPage() {
         return;
       }
       enter(result.startPath);
+      // Für das Entsperren ohne Verbindung (Schlüssel mit dem Passwort verschlüsselt auf dem Gerät).
+      void rememberOfflineUnlock(password).catch(() => undefined);
     } catch {
       setError("Die Verbindung zum CareCore-Arbeitsplatz konnte nicht hergestellt werden.");
     } finally {

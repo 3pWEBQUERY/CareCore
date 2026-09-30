@@ -9,7 +9,12 @@ const subtle = () => globalThis.crypto.subtle;
 const ECDH = { name: "ECDH", namedCurve: "P-256" } as const;
 const INFO = new TextEncoder().encode("carecore-offline-v1");
 
-const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
+const toBase64 = (bytes: Uint8Array) => {
+  let text = "";
+  for (let index = 0; index < bytes.length; index += 0x8000)
+    text += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+  return btoa(text);
+};
 const fromBase64 = (value: string) => Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
 
 export const importPublicKey = (jwk: JsonWebKey) => subtle().importKey("jwk", jwk, ECDH, false, []);
@@ -49,3 +54,58 @@ export const isSealed = (value: unknown): value is SealedValue =>
   typeof value === "object" &&
   (value as SealedValue).v === 1 &&
   typeof (value as SealedValue).data === "string";
+
+// ---------- Entsperren ohne Verbindung ----------
+// Nach der Anmeldung mit Passwort legt die App den privaten Schlüssel mit dem Passwort verschlüsselt auf dem Gerät ab
+// (PBKDF2-SHA-256, 600 000 Runden, AES-256-GCM). Ohne Verbindung entsperrt die Person die gespeicherten Daten mit
+// ihrem Passwort; der Schlüssel liegt danach wieder nur im Arbeitsspeicher. Beim Abmelden wird er gelöscht.
+
+export type WrappedSecret = { v: 1; iterations: number; salt: string; iv: string; data: string };
+export const WRAP_ITERATIONS = 600_000;
+
+async function passwordKey(password: string, salt: Uint8Array<ArrayBuffer>, iterations: number, usage: KeyUsage) {
+  const material = await subtle().importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
+  return subtle().deriveKey(
+    { name: "PBKDF2", hash: "SHA-256", salt, iterations },
+    material,
+    { name: "AES-GCM", length: 256 },
+    false,
+    [usage],
+  );
+}
+
+export async function wrapSecret(
+  value: unknown,
+  password: string,
+  iterations = WRAP_ITERATIONS,
+): Promise<WrappedSecret> {
+  const salt = globalThis.crypto.getRandomValues(new Uint8Array(16));
+  const iv = globalThis.crypto.getRandomValues(new Uint8Array(12));
+  const key = await passwordKey(password, salt, iterations, "encrypt");
+  const data = new Uint8Array(
+    await subtle().encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(JSON.stringify(value))),
+  );
+  return { v: 1, iterations, salt: toBase64(salt), iv: toBase64(iv), data: toBase64(data) };
+}
+
+// Falsches Passwort (oder veränderte Daten): null.
+export async function unwrapSecret<T>(wrapped: WrappedSecret, password: string): Promise<T | null> {
+  try {
+    const key = await passwordKey(password, fromBase64(wrapped.salt), wrapped.iterations, "decrypt");
+    const plain = await subtle().decrypt(
+      { name: "AES-GCM", iv: fromBase64(wrapped.iv) },
+      key,
+      fromBase64(wrapped.data),
+    );
+    return JSON.parse(new TextDecoder().decode(plain)) as T;
+  } catch {
+    return null;
+  }
+}
+
+export const isWrapped = (value: unknown): value is WrappedSecret =>
+  !!value &&
+  typeof value === "object" &&
+  (value as WrappedSecret).v === 1 &&
+  typeof (value as WrappedSecret).salt === "string" &&
+  Number.isInteger((value as WrappedSecret).iterations);
