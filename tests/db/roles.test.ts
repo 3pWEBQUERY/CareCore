@@ -111,3 +111,40 @@ test("Leitung: verabreicht Medikamente immer – weder entziehbar noch an eine Q
     ]);
   }
 });
+
+test("Rollen kopieren: Systemrolle oder eigene Rolle als neue eigene Rolle, nicht aus einer fremden Einrichtung", async () => {
+  const mine = await fixture();
+  const other = await fixture();
+  const [pflege] = await q<{ id: string; permissions: string[]; medication_requires_qualification: boolean }>(
+    `SELECT id, permissions, medication_requires_qualification FROM carecore_roles WHERE key = 'pflege'`,
+  );
+  const key = `pflege-kopie-${randomUUID().slice(0, 8)}`;
+  const roles = await createManagedRole(mine.people.leadA, {
+    key,
+    name: "Pflege Nacht",
+    permissions: pflege.permissions,
+    medicationRequiresQualification: pflege.medication_requires_qualification,
+    copyOf: pflege.id,
+  });
+  const copy = roles.find((role) => role.key === key);
+  assert.ok(copy, "Kopie in der eigenen Einrichtung");
+  assert.equal(copy.systemRole, false);
+  assert.deepEqual([...copy.permissions].sort(), [...pflege.permissions].sort());
+  const [audit] = await q<{ action: string; after_data: { copyOf: string } }>(
+    `SELECT action, after_data FROM carecore_audit_log WHERE entity_type = 'role' AND entity_id = $1`,
+    [copy.id],
+  );
+  assert.equal(audit.action, "copied");
+  assert.equal(audit.after_data.copyOf, "pflege");
+
+  // Die Kopie der Kopie geht; die eigene Rolle einer anderen Einrichtung lässt sich nicht als Vorlage nehmen.
+  const second = `${key}-2`;
+  await createManagedRole(mine.people.leadA, { key: second, name: "Pflege Nacht 2", copyOf: copy.id });
+  assert.equal(
+    await rejected(
+      createManagedRole(other.people.leadA, { key: `${key}-fremd`, name: "Fremd", copyOf: copy.id, permissions: [] }),
+    ),
+    "ROLE_NOT_FOUND",
+  );
+  assert.equal((await q(`SELECT 1 FROM carecore_roles WHERE key = $1`, [`${key}-fremd`])).length, 0, "nichts angelegt");
+});

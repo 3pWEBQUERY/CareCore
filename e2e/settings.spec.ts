@@ -396,3 +396,28 @@ test("SSO: einrichten, Verbindung prüfen, über den Identity-Provider anmelden"
   }
   expect(errors).toEqual([]);
 });
+
+test("Rollen: Systemrolle kopieren – neue eigene Rolle mit denselben Berechtigungen", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  await page.goto("/c/leitung/administration/mitarbeiter");
+  const roles = page.locator(".admin-roles-card");
+  await roles.locator(".admin-role-row", { hasText: "Pflege" }).first().click();
+  const panel = page.locator(".user-editor-panel");
+  const granted = await panel.locator(".user-editor-role button.active small").allTextContents();
+  await panel.getByRole("button", { name: "Rolle kopieren" }).click();
+  await expect(panel.getByRole("heading", { name: "Kopie als eigene Rolle" })).toBeVisible();
+  const key = `pflege-e2e-${Date.now().toString(36)}`;
+  await panel.getByLabel("Name").fill("Pflege Nachtdienst");
+  await panel.getByLabel("Rollen-Schlüssel").fill(key);
+  await panel.getByRole("button", { name: "Rolle speichern" }).click();
+  await expect(page.getByText("Rolle kopiert")).toBeVisible();
+  const copy = roles.locator(".admin-role-row", { hasText: "Pflege Nachtdienst" });
+  await expect(copy).toContainText("Eigene Rolle");
+  await copy.click();
+  expect(await panel.locator(".user-editor-role button.active small").allTextContents()).toEqual(granted);
+  // Aufräumen: die Kopie ist niemandem zugeordnet und lässt sich löschen.
+  await panel.getByRole("button", { name: "Rolle löschen" }).click();
+  await expect(copy).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

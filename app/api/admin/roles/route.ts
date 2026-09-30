@@ -58,6 +58,7 @@ export async function POST(request: Request) {
           description: typeof body.description === "string" ? body.description : undefined,
           permissions: body.permissions,
           medicationRequiresQualification: body.medicationRequiresQualification === true,
+          copyOf: typeof body.copyOf === "string" ? body.copyOf : undefined,
         }),
       },
       { status: 201 },
