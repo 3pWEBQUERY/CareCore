@@ -416,9 +416,10 @@ export async function updateManagedRole(
   // Ohne Angabe bleibt die bisherige Einstellung erhalten.
   const medicationRequiresQualification =
     typeof input.medicationRequiresQualification === "boolean" ? input.medicationRequiresQualification : null;
-  // The admin role always keeps every permission so administrators cannot lock themselves out.
+  // The admin role always keeps every permission so administrators cannot lock themselves out. Die Leitung verabreicht
+  // Medikamente immer, ohne Qualifikation (Entscheidung der Einrichtung, docs/TODO.md).
   const [updated] = (await sql.transaction([
-    sql`UPDATE carecore_roles SET name = ${name}, description = ${input.description?.trim().slice(0, 500) ?? ""}, permissions = CASE WHEN key = 'admin' THEN ${JSON.stringify(roleKeys)}::jsonb ELSE ${JSON.stringify(permissions)}::jsonb END, medication_requires_qualification = CASE WHEN key = 'admin' THEN FALSE ELSE COALESCE(${medicationRequiresQualification}::boolean, medication_requires_qualification) END, updated_at = NOW() WHERE id = ${roleId} AND (system_role OR organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId})) RETURNING id`,
+    sql`UPDATE carecore_roles SET name = ${name}, description = ${input.description?.trim().slice(0, 500) ?? ""}, permissions = CASE WHEN key = 'admin' THEN ${JSON.stringify(roleKeys)}::jsonb WHEN key = 'leitung' THEN ${JSON.stringify([...new Set([...permissions, "medication.administer"])])}::jsonb ELSE ${JSON.stringify(permissions)}::jsonb END, medication_requires_qualification = CASE WHEN key IN ('admin', 'leitung') THEN FALSE ELSE COALESCE(${medicationRequiresQualification}::boolean, medication_requires_qualification) END, updated_at = NOW() WHERE id = ${roleId} AND (system_role OR organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId})) RETURNING id`,
     // Nur protokolliert, wenn die Rolle existiert.
     sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data)
       SELECT ${randomUUID()}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}), ${actorId},

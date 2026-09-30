@@ -68,7 +68,11 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - [x] **Allgemeine API-Drossel** für schreibende Anfragen.
 - [x] **Offline-Konflikte:** Wurde eine offline bearbeitete Notiz inzwischen anderswo geändert, meldet der Server
       einen Konflikt; die Anzeige bietet „Meine Fassung übernehmen“ oder „Verwerfen“.
-- [ ] **Offline-Speicher verschlüsseln:** siehe „Braucht eine Entscheidung“.
+- [ ] **Offline-Speicher verschlüsseln:** Schlüssel nur im Arbeitsspeicher (Entscheidung vom 30.09.2026).
+- [x] **Leitung verabreicht Medikamente immer:** Die Rollenverwaltung hält „Medikation verabreichen“ und „ohne
+      Qualifikation“ für die Leitung fest (wie die Rechte der Administration); Migration 0049 gleicht bestehende
+      Installationen an.
+- [ ] **Spracheingabe** nur mit Erkennung auf dem Gerät (Entscheidung vom 30.09.2026).
 - [x] **Audit mit Sitzung und Gerät** (Sitzungs-ID, User-Agent).
 - [x] **Feinere Medikationsrechte:** verabreichen vs. Verordnung bearbeiten.
 - [x] **Lernen:** Quiz mit Bestehensgrenze (von der Einrichtung festgelegt) und Compliance-Übersicht je Team.
@@ -91,7 +95,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - [x] **Passkeys** (WebAuthn): in Einstellungen › Sicherheit hinzufügen und entfernen (protokolliert); Anmeldung
       über den Vorschlag im Feld „Benutzername“ oder „Mit Passkey anmelden“. Bestätigung am Gerät ist Pflicht, deshalb
       ersetzt ein Passkey Passwort und Code. Gespeichert wird nur der öffentliche Schlüssel.
-- [ ] **SSO** – braucht einen Identity-Provider der Einrichtung (siehe „Braucht eine Entscheidung oder externe Quelle“).
+- [ ] **SSO** selbst gebaut mit Open-Source-Bausteinen (Entscheidung vom 30.09.2026).
 - [x] **Smart Workflow Sturz** als erste Ablaufkette mit Folgeaufgaben. Umgesetzt für alle Ereignisarten; die
       Schritte (Titel, Fälligkeit nach dem Ereignis, Priorität) legt das Qualitätsmanagement fest, ohne Vorgaben.
 - [x] **Home in Kritisch / Wichtig / Routine** gliedern, ohne das bestehende Aussehen zu verändern. Die Tagesliste
@@ -147,21 +151,16 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Vitalwerten und Wunden (pseudonymisiert). Bestehende Ziele werden nicht doppelt vorgeschlagen, keine erfundenen
       Werte; der Vorschlag bleibt ein Entwurf, den die Pflegefachperson prüft und selbst in die Planung überträgt.
 
+## Entschieden (30.09.2026)
+
+- **Offline-Verschlüsselung:** Schlüssel nur im Arbeitsspeicher.
+- **Leitung:** hat das Recht zur Medikamentenvergabe, immer und ohne Qualifikation.
+- **Spracheingabe:** nur mit Erkennung auf dem Gerät bzw. einem eigenen Dienst, keine Übermittlung an Hersteller.
+- **SSO:** selbst gebaut mit Open-Source-Bausteinen.
+
 ## Braucht eine Entscheidung oder externe Quelle
 
-- **Offline-Verschlüsselung:** Ein Schlüssel, der nur im Arbeitsspeicher liegt, schützt den Gerätespeicher wirksam,
-  macht aber vorgemerkte Einträge nach einem Neuladen ohne Verbindung unlesbar (nicht mehr anzeigen oder bearbeiten,
-  gesendet werden sie erst mit Verbindung). Ein im Browser gespeicherter Schlüssel erhält die heutige Bedienung, liegt
-  aber selbst auf dem Gerät und schützt deshalb kaum. Zu entscheiden: welcher Weg, und ob auch der Seiten- und
-  Daten-Zwischenspeicher des Service Workers verschlüsselt werden soll.
-- **Leitung:** Soll die Rolle „Leitung“ das Medikationsrecht nur mit Qualifikation erhalten? Heute hat sie es immer.
-- **Spracheingabe:** Die Spracherkennung der Browser schickt die Aufnahme meist an den Hersteller (z. B. Google). Soll
-  das für Pflegedokumentation erlaubt sein, oder nur mit Erkennung auf dem Gerät bzw. einem eigenen Dienst?
-- **SSO:** Welcher Identity-Provider (z. B. Microsoft Entra ID, Google Workspace, HIN) und welches Protokoll (OpenID
-  Connect oder SAML)? Dazu Client-ID und Geheimnis der Einrichtung.
-  Umsetzbar ohne Code über Mitarbeitende › Profile & Rollen › „Nur mit Qualifikation“.
 - **Interaktionsprüfung:** Braucht eine lizenzierte Arzneimitteldatenbank. Es werden keine Regeln erfunden.
-- **SSO:** Braucht den Identity-Provider der Einrichtung.
 - **Backups / Disaster Recovery:** Laufen beim Datenbank-Anbieter; Ziele für RPO und RTO legt der Betreiber fest.
 
 ## Bekannte Grenzen
