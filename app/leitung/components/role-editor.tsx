@@ -96,6 +96,8 @@ export function RoleEditor({
                   type="button"
                   key={p}
                   className={selected.includes(p) ? "active" : ""}
+                  // Die Leitung verabreicht Medikamente immer.
+                  disabled={role?.key === "leitung" && p === "medication.administer"}
                   onClick={() => toggle(p)}
                 >
                   <strong>{permissionLabel(p, t)}</strong>
@@ -106,7 +108,8 @@ export function RoleEditor({
             </div>
           </fieldset>
           {(selected.includes("medication.manage") || selected.includes("medication.administer")) &&
-            role?.key !== "admin" && (
+            role?.key !== "admin" &&
+            role?.key !== "leitung" && (
               <fieldset className="user-editor-role">
                 <legend>Medikation</legend>
                 <div>

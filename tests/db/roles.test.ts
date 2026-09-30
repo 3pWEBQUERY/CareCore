@@ -82,3 +82,32 @@ test("Rollen: eigene Rollen gehören der Einrichtung – andere sehen, vergeben,
     false,
   );
 });
+
+test("Leitung: verabreicht Medikamente immer – weder entziehbar noch an eine Qualifikation gebunden", async () => {
+  const f = await fixture();
+  const [leitung] = await q<{ id: string; permissions: string[]; medication_requires_qualification: boolean }>(
+    `SELECT id, permissions, medication_requires_qualification FROM carecore_roles WHERE key = 'leitung'`,
+  );
+  const effective = async () =>
+    (await q<{ p: string[] }>(`SELECT carecore_effective_permissions($1) AS p`, [f.people.leadA]))[0].p;
+  try {
+    await updateManagedRole(f.people.leadA, leitung.id, {
+      name: "Leitung",
+      permissions: leitung.permissions.filter((permission) => permission !== "medication.administer"),
+      medicationRequiresQualification: true,
+    });
+    const [after] = await q<{ permissions: string[]; medication_requires_qualification: boolean }>(
+      `SELECT permissions, medication_requires_qualification FROM carecore_roles WHERE id = $1`,
+      [leitung.id],
+    );
+    assert.ok(after.permissions.includes("medication.administer"), "Recht bleibt");
+    assert.equal(after.medication_requires_qualification, false, "keine Qualifikation verlangt");
+    assert.ok((await effective()).includes("medication.administer"), "Leitung ohne Qualifikation darf verabreichen");
+  } finally {
+    await q(`UPDATE carecore_roles SET permissions = $2::jsonb, medication_requires_qualification = $3 WHERE id = $1`, [
+      leitung.id,
+      JSON.stringify(leitung.permissions),
+      leitung.medication_requires_qualification,
+    ]);
+  }
+});
