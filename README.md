@@ -168,10 +168,10 @@ Jede Änderung läuft serverseitig durch die Regel-Engine (`lib/roster/rules.ts`
 
 **Umgebungsvariablen**
 
-| Variable         | Pflicht | Zweck                                                                                                                   |
-| ---------------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `GEMINI_API_KEY` | nein    | Google Gemini für KI-Dienstplanung und Übersetzungsentwürfe. Ohne Schlüssel sind beide deaktiviert, alles andere läuft. |
-| `GEMINI_MODEL`   | nein    | Modell, Standard `gemini-3.5-flash-lite`.                                                                               |
+| Variable         | Pflicht | Zweck                                                                                                                                |
+| ---------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `GEMINI_API_KEY` | nein    | Google Gemini für CareCore KI, KI-Dienstplanung und Übersetzungsentwürfe. Ohne Schlüssel sind diese deaktiviert, alles andere läuft. |
+| `GEMINI_MODEL`   | nein    | Modell, Standard `gemini-3.5-flash-lite`.                                                                                            |
 
 An die KI gehen nur pseudonymisierte Daten (E1, E2, …, Diensttyp-Codes, Zahlen) – keine Namen, Abwesenheitsgründe oder Freitexte. Jede vorgeschlagene Zuweisung wird von der Regel-Engine geprüft; übernommen wird nur in Entwürfe.
 

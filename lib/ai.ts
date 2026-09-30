@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { readTerms } from "@/lib/settings";
 import type { Terms } from "@/lib/terminology";
-import Anthropic from "@anthropic-ai/sdk";
 import {
   ApiError,
   assertResident,
@@ -16,17 +15,20 @@ import { AI_TASKS, type AiDraft, type AiOverview, type AiTask } from "@/lib/ai-s
 import { createEntry } from "@/lib/documentation";
 import { createNote } from "@/lib/handover";
 import { auditOrigin } from "@/lib/audit-origin";
+import { GeminiError, geminiConfigured, geminiModel, geminiText } from "@/lib/gemini";
 
-// CareCore KI: drafts from Claude based on the care data of one resident or one care
+// CareCore KI: drafts from Google Gemini based on the care data of one resident or one care
 // unit. Drafts are never saved to the record automatically; staff review, edit and
 // accept or discard them. Residents are sent pseudonymised (initials, age, room).
 
-const MODEL = "claude-opus-5";
+export const aiConfigured = geminiConfigured;
 
-export const aiConfigured = () => Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
-
-let client: Anthropic | null = null;
-const anthropic = () => (client ??= new Anthropic());
+// Standard: Google Gemini. Tests setzen ein Test-Double.
+type DraftCall = typeof geminiText;
+let draftCall: DraftCall = geminiText;
+export const setDraftCall = (call: DraftCall) => {
+  draftCall = call;
+};
 
 const SYSTEM = `Du bist die Assistenz von CareCore, einer Pflegedokumentation für Alters- und Pflegeheime in der Schweiz.
 Du unterstützt Pflegefachpersonen mit Entwürfen. Schreibe auf Deutsch (Schweizer Rechtschreibung, kein ß), sachlich, knapp und fachlich korrekt.
@@ -269,7 +271,7 @@ async function draftById(ctx: ApiContext, id: string) {
 
 export async function generateDraft(ctx: ApiContext, body: Record<string, unknown>): Promise<AiDraft> {
   if (!aiConfigured())
-    throw new ApiError("CareCore KI ist noch nicht eingerichtet: ANTHROPIC_API_KEY fehlt in der Umgebung.", 503);
+    throw new ApiError("CareCore KI ist noch nicht eingerichtet: GEMINI_API_KEY fehlt in der Umgebung.", 503);
   const task = (typeof body.task === "string" && body.task in AI_TASKS ? body.task : "question") as AiTask;
   const prompt = text(body.prompt, 2000);
   if (task === "question" && prompt.length < 3) throw new ApiError("Bitte eine Frage oder einen Auftrag eingeben.");
@@ -284,46 +286,23 @@ export async function generateDraft(ctx: ApiContext, body: Record<string, unknow
 
   let content = "";
   try {
-    const response = await anthropic().beta.messages.create({
-      model: MODEL,
-      max_tokens: 16000,
-      thinking: { type: "adaptive" },
-      // On a policy decline the API retries on a fallback model inside the same call.
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
+    const response = await draftCall({
       system: SYSTEM,
-      messages: [
-        {
-          role: "user",
-          content: [
-            `Auftrag: ${INSTRUCTIONS[task].replace("Bewohner:in", `${t.one}:in`)}`,
-            prompt ? `Hinweise der Pflegefachperson: ${prompt}` : "",
-            `Daten (${residentId ? `eine ${t.one}:in` : `${residentIds.length} ${t.one}:innen des Wohnbereichs`}, Stand ${when(new Date())}):`,
-            data || "Keine Daten vorhanden.",
-          ]
-            .filter(Boolean)
-            .join("\n\n"),
-        },
-      ],
+      user: [
+        `Auftrag: ${INSTRUCTIONS[task].replace("Bewohner:in", `${t.one}:in`)}`,
+        prompt ? `Hinweise der Pflegefachperson: ${prompt}` : "",
+        `Daten (${residentId ? `eine ${t.one}:in` : `${residentIds.length} ${t.one}:innen des Wohnbereichs`}, Stand ${when(new Date())}):`,
+        data || "Keine Daten vorhanden.",
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+      maxOutputTokens: 16000,
     });
-    if (response.stop_reason === "refusal")
-      throw new ApiError("Die KI hat diese Anfrage abgelehnt. Bitte den Auftrag anders formulieren.", 422);
-    content = response.content
-      .filter((block) => block.type === "text")
-      .map((block) => block.text)
-      .join("\n")
-      .trim();
-    if (response.stop_reason === "max_tokens") content += "\n\n[Antwort gekürzt]";
+    content = response.text;
+    if (content && response.truncated) content += "\n\n[Antwort gekürzt]";
   } catch (error) {
-    if (error instanceof ApiError) throw error;
-    if (error instanceof Anthropic.AuthenticationError)
-      throw new ApiError("CareCore KI: Der API-Schlüssel ist ungültig.", 503);
-    if (error instanceof Anthropic.RateLimitError)
-      throw new ApiError("CareCore KI ist gerade ausgelastet. Bitte in einer Minute erneut versuchen.", 429);
-    if (error instanceof Anthropic.APIError) {
-      console.error("Claude API error", error.status, error.message);
-      throw new ApiError("CareCore KI ist im Moment nicht erreichbar.", 502);
-    }
+    if (error instanceof GeminiError)
+      throw new ApiError(error.status === 503 ? `CareCore KI: ${error.message}` : error.message, error.status);
     throw error;
   }
   if (!content) throw new ApiError("Die KI hat keinen Text geliefert. Bitte erneut versuchen.", 502);
@@ -333,7 +312,7 @@ export async function generateDraft(ctx: ApiContext, body: Record<string, unknow
     ctx.sql`
     INSERT INTO carecore_ai_drafts (id, organization_id, resident_id, care_unit_id, requested_by, type, prompt, content, model)
     VALUES (${id}, ${ctx.actor.organizationId}, ${residentId}, ${careUnitId}, ${ctx.actor.id}, ${task}, ${prompt || null},
-      ${content}, ${MODEL})`,
+      ${content}, ${geminiModel()})`,
     auditStatement(ctx, "ai_draft", id, "created", null, { task, residentId, careUnitId }),
   ]);
   return mapDraft(await draftById(ctx, id));
