@@ -2,8 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { loadWorkContext } from "./care-context";
 import {
+  LOCKED_EVENT,
   QUEUE_EVENT,
+  answerKeyRequest,
+  canUnlockOffline,
+  lastOfflineUser,
+  unlockOffline,
   canOverride,
   discardWrite,
   editWrite,
@@ -64,6 +70,9 @@ export default function OfflineSync() {
   const [signedOut, setSignedOut] = useState(false);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<{ id: string; value: string } | null>(null);
+  // Gespeicherte Daten gesperrt (kein Schlüssel im Arbeitsspeicher); Entsperren mit dem Passwort.
+  const [locked, setLocked] = useState(false);
+  const [unlocking, setUnlocking] = useState<{ password: string; error: string; busy: boolean } | null>(null);
 
   const refresh = useCallback(async () => setItems(await queuedWrites(offlineUser()).catch(() => [])), []);
 
@@ -84,24 +93,31 @@ export default function OfflineSync() {
       setOnline(navigator.onLine);
       if (navigator.onLine) {
         setCachedAt(null);
+        setLocked(false);
+        setUnlocking(null);
         void flush();
       }
     };
+    const markLocked = () => !navigator.onLine && setLocked(true);
     const fromWorker = (event: MessageEvent) => {
+      if (event.data?.type === "need-offline-keys") return void answerKeyRequest();
       if (event.data?.type !== "offline-data") return;
       setOnline(false);
       setCachedAt((current) => current ?? event.data.cachedAt ?? null);
+      if (event.data.locked) setLocked(true);
     };
     update();
     window.addEventListener("online", update);
     window.addEventListener("offline", update);
     window.addEventListener(QUEUE_EVENT, refresh);
+    window.addEventListener(LOCKED_EVENT, markLocked);
     navigator.serviceWorker?.addEventListener("message", fromWorker);
     const timer = window.setInterval(() => void flush(), 30_000);
     return () => {
       window.removeEventListener("online", update);
       window.removeEventListener("offline", update);
       window.removeEventListener(QUEUE_EVENT, refresh);
+      window.removeEventListener(LOCKED_EVENT, markLocked);
       navigator.serviceWorker?.removeEventListener("message", fromWorker);
       window.clearInterval(timer);
     };
@@ -112,14 +128,22 @@ export default function OfflineSync() {
     if (!inApp) return;
     let cancelled = false;
     fetch("/api/work-context", { cache: "no-store" })
-      .then((response) => (response.ok ? response.json() : null))
+      .then(async (response) => {
+        const payload = await response.json().catch(() => null);
+        if (payload?.locked === true && !navigator.onLine) setLocked(true);
+        return response.ok ? payload : null;
+      })
       .then(async (context: { profile?: { userId?: string } } | null) => {
-        if (cancelled || !context?.profile?.userId) return;
-        setOfflineUser(context.profile.userId);
+        if (cancelled) return;
+        // Ohne Verbindung und gesperrten Daten: zuletzt angemeldete Person des Geräts (zum Erfassen und Entsperren).
+        const userId = context?.profile?.userId ?? (navigator.onLine ? null : lastOfflineUser());
+        if (!userId) return;
+        setOfflineUser(userId);
+        if (!context?.profile?.userId) return void refresh();
         await refresh();
         await flush();
         // Einmal täglich je Person vorab laden.
-        const warmed = `${context.profile.userId}:${new Date().toISOString().slice(0, 10)}`;
+        const warmed = `${userId}:${new Date().toISOString().slice(0, 10)}`;
         const worker = navigator.serviceWorker?.controller;
         if (navigator.onLine && worker && readStorage(WARM_KEY) !== warmed) {
           worker.postMessage({ type: "warm", urls: OFFLINE_PAGES });
@@ -141,9 +165,21 @@ export default function OfflineSync() {
   const pending = items.filter((item) => !item.error);
   const rejected = items.filter((item) => item.error);
   if (!inApp || (online && !pending.length && !rejected.length && !notice)) return null;
+  const showUnlock = !online && (locked || items.some((item) => item.locked)) && canUnlockOffline();
+
+  const unlock = async () => {
+    if (!unlocking) return;
+    setUnlocking({ ...unlocking, busy: true, error: "" });
+    if (await unlockOffline(unlocking.password).catch(() => false)) {
+      setUnlocking(null);
+      setLocked(false);
+      void loadWorkContext(true);
+      await refresh();
+    } else setUnlocking({ password: "", busy: false, error: "Das Passwort stimmt nicht." });
+  };
 
   const message = !online
-    ? `Offline${cachedAt ? ` · Stand der Daten ${time(cachedAt)}` : ""}${
+    ? `Offline${locked ? " · Gespeicherte Daten gesperrt" : cachedAt ? ` · Stand der Daten ${time(cachedAt)}` : ""}${
         pending.length ? ` · ${pending.length} Eintr${pending.length === 1 ? "ag wartet" : "äge warten"}` : ""
       }`
     : signedOut && pending.length
@@ -158,10 +194,44 @@ export default function OfflineSync() {
     <div className={`offline-status ${online ? "" : "offline"}`} role="status" aria-live="polite">
       <span className="offline-status-dot" aria-hidden="true" />
       <span>{message}</span>
+      {showUnlock && !unlocking && (
+        <button type="button" onClick={() => setUnlocking({ password: "", error: "", busy: false })}>
+          Entsperren
+        </button>
+      )}
       {(pending.length > 0 || rejected.length > 0) && (
         <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
           {open ? "Ausblenden" : "Anzeigen"}
         </button>
+      )}
+      {showUnlock && unlocking && (
+        <form
+          className="offline-status-edit"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void unlock();
+          }}
+        >
+          <label>
+            <span>Passwort (ohne Verbindung entsperren)</span>
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={unlocking.password}
+              onChange={(event) => setUnlocking({ ...unlocking, password: event.target.value })}
+              autoFocus
+            />
+          </label>
+          {unlocking.error && <small role="alert">{unlocking.error}</small>}
+          <span className="offline-status-actions">
+            <button type="button" onClick={() => setUnlocking(null)}>
+              Abbrechen
+            </button>
+            <button type="submit" disabled={unlocking.busy || !unlocking.password}>
+              {unlocking.busy ? "Entsperren …" : "Entsperren"}
+            </button>
+          </span>
+        </form>
       )}
       {open && (
         <ul className="offline-status-list">

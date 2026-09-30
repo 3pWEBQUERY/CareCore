@@ -1,4 +1,14 @@
-import { importPrivateKey, importPublicKey, isSealed, seal, unseal, type SealedValue } from "@/lib/offline-crypto";
+import {
+  importPrivateKey,
+  importPublicKey,
+  isSealed,
+  isWrapped,
+  seal,
+  unseal,
+  unwrapSecret,
+  wrapSecret,
+  type SealedValue,
+} from "@/lib/offline-crypto";
 
 // Offline erfasste Einträge (Dokumentation, Vitalwerte, Trinkmenge, Mahlzeit, persönliche Notizen …) warten auf diesem Gerät, bis die
 // Verbindung zurück ist, und werden dann in der erfassten Reihenfolge gesendet. Jeder Eintrag trägt eine Kennung
@@ -11,6 +21,10 @@ import { importPrivateKey, importPublicKey, isSealed, seal, unseal, type SealedV
 
 export const REQUEST_ID_HEADER = "x-carecore-request-id";
 export const QUEUE_EVENT = "carecore-offline-queue";
+// Gespeicherte Daten wurden ohne Verbindung mit dem Passwort entsperrt: Ansichten laden neu.
+export const UNLOCK_EVENT = "carecore-offline-unlocked";
+// Eine Antwort des Service Workers meldete gesperrte Daten (kein Schlüssel im Arbeitsspeicher).
+export const LOCKED_EVENT = "carecore-offline-locked";
 
 export type WriteMethod = "POST" | "PATCH" | "DELETE";
 
@@ -67,16 +81,63 @@ const changed = () => window.dispatchEvent(new Event(QUEUE_EVENT));
 // ---------- Schlüssel ----------
 
 const PUBLIC_KEY_STORAGE = (userId: string) => `carecore.offline.key.${userId}`;
+// Privater Schlüssel, mit dem Passwort verschlüsselt (lib/offline-crypto.ts, wrapSecret).
+const UNLOCK_STORAGE = (userId: string) => `carecore.offline.unlock.${userId}`;
+// Zuletzt angemeldete Person (nur die Kennung), damit ohne Verbindung erfasst und entsperrt werden kann.
+const LAST_USER_STORAGE = "carecore.offline.user";
+
+function readLocal(key: string) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function writeLocal(key: string, value: string | null) {
+  try {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  } catch {
+    // ohne Gerätespeicher kein Entsperren ohne Verbindung
+  }
+}
 let keys: { userId: string; publicKey: CryptoKey | null; privateKey: CryptoKey | null } | null = null;
 let unlocking: Promise<void> | null = null;
 
 function storedPublicKey(userId: string) {
   try {
-    const raw = localStorage.getItem(PUBLIC_KEY_STORAGE(userId));
+    const raw = readLocal(PUBLIC_KEY_STORAGE(userId));
     return raw ? (JSON.parse(raw) as JsonWebKey) : null;
   } catch {
     return null;
   }
+}
+
+// Schlüssel an den Service Worker weitergeben (er verschlüsselt und entschlüsselt die gespeicherten Daten).
+// Der private Schlüssel bleibt dabei ein nicht exportierbarer Schlüssel im Arbeitsspeicher.
+function shareKeys() {
+  if (!keys || typeof navigator === "undefined") return;
+  navigator.serviceWorker?.controller?.postMessage({
+    type: "offline-keys",
+    userId: keys.userId,
+    publicKey: keys.publicKey,
+    privateKey: keys.privateKey,
+  });
+}
+
+// Der Service Worker fragt nach Schlüsseln (z. B. nach seinem Neustart).
+export async function answerKeyRequest() {
+  // Gleich nach der Anmeldung steht die Person evtl. noch nicht fest: dann sagt es der Server.
+  const userId =
+    currentUserId ??
+    readLocal(LAST_USER_STORAGE) ??
+    (await fetch("/api/me/offline-key", { cache: "no-store" })
+      .then((response) => (response.ok ? (response.json() as Promise<{ userId?: string }>) : null))
+      .then((pair) => pair?.userId ?? null)
+      .catch(() => null));
+  if (!userId) return;
+  await keysFor(userId).catch(() => null);
+  shareKeys();
 }
 
 // Mit Verbindung: Schlüsselpaar vom Server (privat nur im Arbeitsspeicher, öffentlich auf dem Gerät für später).
@@ -86,11 +147,15 @@ async function unlock(userId: string) {
   let privateKey: CryptoKey | null = null;
   try {
     const response = await fetch("/api/me/offline-key", { cache: "no-store" });
-    if (response.ok) {
-      const pair = (await response.json()) as { publicJwk: JsonWebKey; privateJwk: JsonWebKey };
+    const pair = response.ok
+      ? ((await response.json()) as { userId?: string; publicJwk: JsonWebKey; privateJwk: JsonWebKey })
+      : null;
+    // Nur der Schlüssel der Person, deren Einträge gemeint sind (nicht der einer anderen Anmeldung).
+    if (pair && (!pair.userId || pair.userId === userId)) {
       [publicKey, privateKey] = await Promise.all([importPublicKey(pair.publicJwk), importPrivateKey(pair.privateJwk)]);
       try {
         localStorage.setItem(PUBLIC_KEY_STORAGE(userId), JSON.stringify(pair.publicJwk));
+        localStorage.setItem(LAST_USER_STORAGE, userId);
       } catch {
         // ohne Gerätespeicher: nach einem Neuladen offline kein Erfassen
       }
@@ -102,8 +167,56 @@ async function unlock(userId: string) {
     const stored = storedPublicKey(userId);
     if (stored) publicKey = await importPublicKey(stored).catch(() => null);
   }
+  // Ohne Verbindung ggf. mit dem Passwort bereits entsperrt: den privaten Schlüssel behalten.
+  if (!privateKey && keys?.userId === userId && keys.privateKey) privateKey = keys.privateKey;
   keys = { userId, publicKey, privateKey };
+  shareKeys();
   if (privateKey) await sealLegacy(userId);
+}
+
+// Nach der Anmeldung mit Passwort: privaten Schlüssel mit dem Passwort verschlüsselt auf dem Gerät ablegen, damit sich
+// die gespeicherten Daten nach einem Neuladen ohne Verbindung mit dem Passwort entsperren lassen.
+export async function rememberOfflineUnlock(password: string) {
+  const response = await fetch("/api/me/offline-key", { cache: "no-store" });
+  if (!response.ok) return;
+  const pair = (await response.json()) as { userId: string; publicJwk: JsonWebKey; privateJwk: JsonWebKey };
+  writeLocal(UNLOCK_STORAGE(pair.userId), JSON.stringify(await wrapSecret(pair.privateJwk, password)));
+  writeLocal(PUBLIC_KEY_STORAGE(pair.userId), JSON.stringify(pair.publicJwk));
+  writeLocal(LAST_USER_STORAGE, pair.userId);
+}
+
+const offlineUnlockUser = () => currentUserId ?? readLocal(LAST_USER_STORAGE);
+
+export function canUnlockOffline() {
+  const userId = offlineUnlockUser();
+  return Boolean(userId && readLocal(UNLOCK_STORAGE(userId)));
+}
+
+// Ohne Verbindung mit dem Passwort entsperren; false bei falschem Passwort.
+export async function unlockOffline(password: string) {
+  const userId = offlineUnlockUser();
+  const raw = userId ? readLocal(UNLOCK_STORAGE(userId)) : null;
+  if (!userId || !raw) return false;
+  let wrapped: unknown;
+  try {
+    wrapped = JSON.parse(raw);
+  } catch {
+    return false;
+  }
+  if (!isWrapped(wrapped)) return false;
+  const privateJwk = await unwrapSecret<JsonWebKey>(wrapped, password);
+  if (!privateJwk) return false;
+  const stored = storedPublicKey(userId);
+  const [privateKey, publicKey] = await Promise.all([
+    importPrivateKey(privateJwk),
+    stored ? importPublicKey(stored) : Promise.resolve(null),
+  ]);
+  keys = { userId, publicKey, privateKey };
+  if (!currentUserId) currentUserId = userId;
+  shareKeys();
+  changed();
+  window.dispatchEvent(new Event(UNLOCK_EVENT));
+  return true;
 }
 
 async function keysFor(userId: string) {
@@ -200,8 +313,11 @@ let currentUserId: string | null = null;
 export const setOfflineUser = (userId: string | null) => {
   if (currentUserId === userId) return;
   currentUserId = userId;
+  if (userId) writeLocal(LAST_USER_STORAGE, userId);
   changed();
 };
+// Ohne Verbindung nach einem Neuladen: die zuletzt angemeldete Person dieses Geräts.
+export const lastOfflineUser = () => readLocal(LAST_USER_STORAGE);
 export const offlineUser = () => currentUserId;
 
 async function post(url: string, body: unknown, requestId: string, method: WriteMethod = "POST") {
@@ -296,4 +412,10 @@ async function sendQueued() {
 export function clearOfflineData() {
   keys = null;
   navigator.serviceWorker?.controller?.postMessage({ type: "clear-data" });
+  try {
+    for (const key of Object.keys(localStorage))
+      if (key.startsWith("carecore.offline.unlock.") || key === LAST_USER_STORAGE) localStorage.removeItem(key);
+  } catch {
+    // ohne Gerätespeicher nichts zu löschen
+  }
 }

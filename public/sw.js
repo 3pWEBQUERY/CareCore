@@ -3,10 +3,17 @@
 // - Seiten: aus dem Netz, ohne Verbindung die zuletzt geladene Fassung.
 // - Daten (GET /api/…): aus dem Netz, ohne Verbindung die zuletzt geladenen Daten; die Seite erfährt davon
 //   per Nachricht („Stand der Daten“). Beim Abmelden und Anmelden werden Seiten und Daten gelöscht.
+//   Gespeichert werden Daten nur verschlüsselt (public/sw-crypto.js) mit dem öffentlichen Schlüssel der Person;
+//   lesen lassen sie sich nur mit dem privaten Schlüssel, den die geöffnete App im Arbeitsspeicher hält und dem
+//   Service Worker auf Anfrage gibt. Ohne ihn (nach einem Neuladen ohne Verbindung) bleiben die Daten gesperrt, bis
+//   die Verbindung zurück ist oder die Person sie mit ihrem Passwort entsperrt. Seiten enthalten keine Personendaten
+//   (die Inhalte kommen über /api) und bleiben als App-Hülle unverschlüsselt.
 // Schreibende Anfragen gehen immer ans Netz; offline erfasste Einträge verwaltet die App selbst
 // (app/components/offline-queue.ts).
 // Push: zeigt den Titel einer Benachrichtigung (lib/push.ts); ein Tipp öffnet die zugehörige Seite.
-const VERSION = "v1";
+importScripts("/sw-crypto.js");
+
+const VERSION = "v2";
 const STATIC = `carecore-static-${VERSION}`;
 const PAGES = `carecore-pages-${VERSION}`;
 const DATA = `carecore-data-${VERSION}`;
@@ -25,10 +32,37 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Schlüssel der angemeldeten Person, nur im Arbeitsspeicher; geht mit dem Beenden des Service Workers verloren.
+let keys = null;
+let keyWaiters = [];
+
+function receiveKeys(message) {
+  // Ein neu geöffnetes Fenster ohne Verbindung kennt nur den öffentlichen Schlüssel: den privaten dann behalten.
+  const privateKey = message.privateKey ?? (keys?.userId === message.userId ? keys.privateKey : null);
+  keys = { userId: message.userId, publicKey: message.publicKey ?? keys?.publicKey ?? null, privateKey };
+  const waiters = keyWaiters;
+  keyWaiters = [];
+  waiters.forEach((resolve) => resolve());
+}
+
+// Fehlen Schlüssel, fragt der Service Worker die geöffneten Fenster (höchstens zwei Sekunden).
+async function currentKeys(needPrivate) {
+  if (keys && (keys.privateKey || !needPrivate)) return keys;
+  const windows = await self.clients.matchAll({ type: "window" });
+  if (!windows.length) return keys;
+  const arrived = new Promise((resolve) => keyWaiters.push(resolve));
+  windows.forEach((client) => client.postMessage({ type: "need-offline-keys" }));
+  await Promise.race([arrived, new Promise((resolve) => setTimeout(resolve, 2000))]);
+  return keys;
+}
+
 self.addEventListener("message", (event) => {
   const message = event.data ?? {};
-  if (message.type === "clear-data")
+  if (message.type === "offline-keys") receiveKeys(message);
+  if (message.type === "clear-data") {
+    keys = null;
     event.waitUntil(Promise.all([caches.delete(PAGES), caches.delete(DATA)]));
+  }
   if (message.type === "warm" && Array.isArray(message.urls)) event.waitUntil(warm(message.urls));
 });
 
@@ -93,7 +127,7 @@ self.addEventListener("fetch", (event) => {
     return event.respondWith(cacheFirst(request));
   if (request.mode === "navigate") return event.respondWith(page(request));
   if (url.pathname.startsWith("/api/") && !NO_CACHE.test(url.pathname))
-    return event.respondWith(data(request, event.clientId));
+    return event.respondWith(data(event));
 });
 
 async function cacheFirst(request) {
@@ -123,24 +157,71 @@ async function page(request) {
   }
 }
 
-async function data(request, clientId) {
+async function data(event) {
+  const request = event.request;
   const cache = await caches.open(DATA);
   try {
     const response = await fetch(request);
-    if (response.ok) {
-      const copy = new Response(await response.clone().blob(), { status: response.status, headers: response.headers });
-      copy.headers.set("x-carecore-cached-at", new Date().toISOString());
-      await cache.put(request, copy);
-    }
+    if (response.ok) event.waitUntil(storeSealed(cache, request, response.clone()));
     return response;
   } catch {
     const cached = await cache.match(request);
-    const client = clientId ? await self.clients.get(clientId) : null;
-    client?.postMessage({ type: "offline-data", cachedAt: cached?.headers.get("x-carecore-cached-at") ?? null });
-    if (cached) return cached;
+    const client = event.clientId ? await self.clients.get(event.clientId) : null;
+    const cachedAt = cached?.headers.get("x-carecore-cached-at") ?? null;
+    const opened = cached ? await openSealed(cached) : null;
+    client?.postMessage({ type: "offline-data", cachedAt, locked: Boolean(cached && !opened) });
+    if (opened) return opened;
     return new Response(
-      JSON.stringify({ error: "Keine Verbindung. Diese Daten wurden auf diesem Gerät noch nicht geladen." }),
+      JSON.stringify(
+        cached
+          ? {
+              error: "Die offline gespeicherten Daten sind gesperrt. Mit Verbindung oder mit dem Passwort entsperren.",
+              locked: true,
+            }
+          : { error: "Keine Verbindung. Diese Daten wurden auf diesem Gerät noch nicht geladen." },
+      ),
       { status: 503, headers: { "content-type": "application/json" } },
     );
+  }
+}
+
+// Antwort verschlüsselt ablegen; ohne Schlüssel wird nichts gespeichert (nie Klartext).
+async function storeSealed(cache, request, response) {
+  const current = await currentKeys(false);
+  if (!current?.publicKey) return cache.delete(request);
+  const body = await response.text();
+  const sealed = await self.carecoreCrypto.seal(current.publicKey, {
+    status: response.status,
+    type: response.headers.get("content-type"),
+    body,
+  });
+  await cache.put(
+    request,
+    new Response(JSON.stringify(sealed), {
+      headers: {
+        "content-type": "application/json",
+        "x-carecore-sealed-for": current.userId,
+        "x-carecore-cached-at": new Date().toISOString(),
+      },
+    }),
+  );
+}
+
+async function openSealed(cached) {
+  const owner = cached.headers.get("x-carecore-sealed-for");
+  if (!owner) return null;
+  const current = await currentKeys(true);
+  if (!current?.privateKey || current.userId !== owner) return null;
+  try {
+    const value = await self.carecoreCrypto.unseal(current.privateKey, await cached.clone().json());
+    return new Response(value.body, {
+      status: value.status,
+      headers: {
+        "content-type": value.type || "application/json",
+        "x-carecore-cached-at": cached.headers.get("x-carecore-cached-at") ?? "",
+      },
+    });
+  } catch {
+    return null;
   }
 }

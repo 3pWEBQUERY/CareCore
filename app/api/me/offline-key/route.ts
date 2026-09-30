@@ -14,5 +14,5 @@ export async function GET() {
       { error: "Offline-Speicherung ist auf diesem Server nicht eingerichtet (CARECORE_MFA_KEY fehlt)." },
       { status: 503 },
     );
-  return NextResponse.json(pair, { headers: { "Cache-Control": "no-store, private" } });
+  return NextResponse.json({ userId: actor.id, ...pair }, { headers: { "Cache-Control": "no-store, private" } });
 }

@@ -16,6 +16,14 @@ const nextConfig: NextConfig = {
           { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
         ],
       },
+      {
+        // Vom Service Worker per importScripts geladen; wird bei jeder Aktualisierung mitgeprüft.
+        source: "/sw-crypto.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
+      },
     ];
   },
   async rewrites() {
