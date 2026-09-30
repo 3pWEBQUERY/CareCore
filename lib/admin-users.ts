@@ -96,7 +96,7 @@ export async function listManagedUsers(actorId: string): Promise<{
       name: string;
       floor: string;
     }>;
-  const roles = await listManagedRoles();
+  const roles = await listManagedRoles(actorId);
   const [qualifications, held] = (await Promise.all([
     sql`SELECT q.id, q.code, q.name, q.grants_medication FROM carecore_qualifications q
       WHERE q.organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}) ORDER BY q.code`,
@@ -155,20 +155,28 @@ export async function listManagedUsers(actorId: string): Promise<{
   };
 }
 
-export async function listManagedRoles(): Promise<ManagedRole[]> {
+// Systemrollen und die eigenen Rollen der Einrichtung; gezählt werden nur Personen der Einrichtung.
+export async function listManagedRoles(actorId: string): Promise<ManagedRole[]> {
   const sql = database();
-  const rows =
-    (await sql`SELECT r.id, r.key, r.name, r.description, r.permissions, r.medication_requires_qualification, r.system_role, r.created_at, COUNT(u.id)::int AS user_count FROM carecore_roles r LEFT JOIN carecore_users u ON u.role = r.key GROUP BY r.id ORDER BY r.system_role DESC, r.name`) as unknown as Array<{
-      id: string;
-      key: string;
-      name: string;
-      description: string;
-      permissions: string[];
-      medication_requires_qualification: boolean;
-      system_role: boolean;
-      created_at: string;
-      user_count: number;
-    }>;
+  const rows = (await sql`
+    WITH org AS (SELECT organization_id AS id FROM carecore_user_profiles WHERE user_id = ${actorId})
+    SELECT r.id, r.key, r.name, r.description, r.permissions, r.medication_requires_qualification, r.system_role, r.created_at,
+      COUNT(u.id)::int AS user_count
+    FROM carecore_roles r CROSS JOIN org
+    LEFT JOIN carecore_user_profiles p ON p.organization_id = org.id
+    LEFT JOIN carecore_users u ON u.id = p.user_id AND u.role = r.key
+    WHERE r.system_role OR r.organization_id = org.id
+    GROUP BY r.id ORDER BY r.system_role DESC, r.name`) as unknown as Array<{
+    id: string;
+    key: string;
+    name: string;
+    description: string;
+    permissions: string[];
+    medication_requires_qualification: boolean;
+    system_role: boolean;
+    created_at: string;
+    user_count: number;
+  }>;
   return rows.map((role) => ({
     id: role.id,
     key: role.key,
@@ -198,8 +206,12 @@ async function assertCareUnit(sql: ReturnType<typeof database>, actorId: string,
   if (!unit[0]) throw new Error("CARE_UNIT_NOT_FOUND");
 }
 
-async function assertRole(sql: ReturnType<typeof database>, role: string) {
-  const found = (await sql`SELECT key FROM carecore_roles WHERE key = ${role} LIMIT 1`) as unknown as Array<{
+// Vergeben werden dürfen Systemrollen und die eigenen Rollen der Einrichtung.
+async function assertRole(sql: ReturnType<typeof database>, actorId: string, role: string) {
+  const found = (await sql`
+    SELECT key FROM carecore_roles
+    WHERE key = ${role} AND (system_role OR organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}))
+    LIMIT 1`) as unknown as Array<{
     key: string;
   }>;
   if (!found[0]) throw new Error("ROLE_NOT_FOUND");
@@ -241,7 +253,7 @@ export async function updateManagedUser(
     const username = input.username?.trim().slice(0, 80);
     const role = input.role?.trim().slice(0, 40);
     if (!name || !username || !role) throw new Error("INVALID_USER_INPUT");
-    await assertRole(sql, role);
+    await assertRole(sql, actorId, role);
     if (input.primaryCareUnitId) await assertCareUnit(sql, actorId, input.primaryCareUnitId);
     const qualifications = input.qualificationIds
       ? await qualificationChanges(sql, actorId, userId, input.qualificationIds)
@@ -322,7 +334,7 @@ export async function createManagedUser(
   const role = input.role.trim().slice(0, 40);
   if (!displayName || !username || !role || input.password.length < 10) throw new Error("INVALID_EMPLOYEE_INPUT");
   const sql = database();
-  await assertRole(sql, role);
+  await assertRole(sql, actorId, role);
   if (input.primaryCareUnitId) await assertCareUnit(sql, actorId, input.primaryCareUnitId);
   const id = randomUUID();
   const passwordHash = await hashPassword(input.password);
@@ -384,10 +396,10 @@ export async function createManagedRole(
   const permissions = normalizePermissions(input.permissions);
   const medicationRequiresQualification = input.medicationRequiresQualification === true;
   await sql.transaction([
-    sql`INSERT INTO carecore_roles (id, key, name, description, permissions, medication_requires_qualification, created_by) VALUES (${id}, ${key}, ${name}, ${input.description?.trim().slice(0, 500) ?? ""}, ${JSON.stringify(permissions)}::jsonb, ${medicationRequiresQualification}, ${actorId})`,
+    sql`INSERT INTO carecore_roles (id, key, name, description, permissions, medication_requires_qualification, created_by, organization_id) VALUES (${id}, ${key}, ${name}, ${input.description?.trim().slice(0, 500) ?? ""}, ${JSON.stringify(permissions)}::jsonb, ${medicationRequiresQualification}, ${actorId}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}))`,
     auditStatement(sql, who, "role", id, "created", { key, name, permissions, medicationRequiresQualification }),
   ]);
-  return listManagedRoles();
+  return listManagedRoles(actorId);
 }
 
 export async function updateManagedRole(
@@ -406,16 +418,16 @@ export async function updateManagedRole(
     typeof input.medicationRequiresQualification === "boolean" ? input.medicationRequiresQualification : null;
   // The admin role always keeps every permission so administrators cannot lock themselves out.
   const [updated] = (await sql.transaction([
-    sql`UPDATE carecore_roles SET name = ${name}, description = ${input.description?.trim().slice(0, 500) ?? ""}, permissions = CASE WHEN key = 'admin' THEN ${JSON.stringify(roleKeys)}::jsonb ELSE ${JSON.stringify(permissions)}::jsonb END, medication_requires_qualification = CASE WHEN key = 'admin' THEN FALSE ELSE COALESCE(${medicationRequiresQualification}::boolean, medication_requires_qualification) END, updated_at = NOW() WHERE id = ${roleId} RETURNING id`,
+    sql`UPDATE carecore_roles SET name = ${name}, description = ${input.description?.trim().slice(0, 500) ?? ""}, permissions = CASE WHEN key = 'admin' THEN ${JSON.stringify(roleKeys)}::jsonb ELSE ${JSON.stringify(permissions)}::jsonb END, medication_requires_qualification = CASE WHEN key = 'admin' THEN FALSE ELSE COALESCE(${medicationRequiresQualification}::boolean, medication_requires_qualification) END, updated_at = NOW() WHERE id = ${roleId} AND (system_role OR organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId})) RETURNING id`,
     // Nur protokolliert, wenn die Rolle existiert.
     sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data)
       SELECT ${randomUUID()}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}), ${actorId},
         ${who.sessionId}, ${who.userAgent}, 'role', id,
         'updated', ${JSON.stringify({ name, permissions, medicationRequiresQualification })}::jsonb
-      FROM carecore_roles WHERE id = ${roleId}`,
+      FROM carecore_roles WHERE id = ${roleId} AND (system_role OR organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}))`,
   ])) as unknown as Array<Array<{ id: string }>>;
   if (!updated[0]) throw new Error("ROLE_NOT_FOUND");
-  return listManagedRoles();
+  return listManagedRoles(actorId);
 }
 
 export async function deleteManagedRole(actorInput: string | AuditActor, roleId: string) {
@@ -423,7 +435,7 @@ export async function deleteManagedRole(actorInput: string | AuditActor, roleId:
   const who = { id: actorId, ...auditOrigin(actorInput) };
   const sql = database();
   const role =
-    (await sql`SELECT key, system_role FROM carecore_roles WHERE id = ${roleId} LIMIT 1`) as unknown as Array<{
+    (await sql`SELECT key, system_role FROM carecore_roles WHERE id = ${roleId} AND (system_role OR organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId})) LIMIT 1`) as unknown as Array<{
       key: string;
       system_role: boolean;
     }>;
@@ -438,7 +450,7 @@ export async function deleteManagedRole(actorInput: string | AuditActor, roleId:
     sql`DELETE FROM carecore_roles WHERE id = ${roleId}`,
     auditStatement(sql, who, "role", roleId, "deleted", { key: role[0].key }),
   ]);
-  return listManagedRoles();
+  return listManagedRoles(actorId);
 }
 
 // Protokolleintrag mit der Organisation der handelnden Person, für `sql.transaction([...])`.
