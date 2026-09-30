@@ -8,7 +8,7 @@ import { countOf } from "@/lib/terminology";
 import { requestJson, useApiData } from "@/app/components/workspace-ui";
 import { AI_TASKS, type AiDraft, type AiOverview, type AiTask } from "@/lib/ai-shared";
 
-const SUGGESTIONS: AiTask[] = ["handover", "risks", "documentation"];
+const SUGGESTIONS: AiTask[] = ["handover", "risks", "documentation", "carePlan"];
 
 // CareCore KI assistant: on the page "Assistenz" and in the header panel.
 type Exchange = { id: string; task: AiTask; prompt: string; draft?: AiDraft; error?: string };
@@ -58,7 +58,9 @@ export function AssistantView() {
       setBusy(false);
     }
   };
-  const canSend = !busy && configured && (task !== "question" || prompt.trim().length >= 3);
+  // Pflegeplanung nur für eine Person (die aus der Kopfzeile).
+  const canSend =
+    !busy && configured && (task !== "question" || prompt.trim().length >= 3) && (task !== "carePlan" || useResident);
 
   return (
     <div className="intelligence-layout">
@@ -163,7 +165,11 @@ export function AssistantView() {
                 ? "Frage oder Auftrag eingeben…"
                 : task === "documentation"
                   ? "Stichworte zum Dienst (optional)…"
-                  : "Zusätzliche Hinweise (optional)…"
+                  : task === "carePlan"
+                    ? useResident
+                      ? "Schwerpunkt (optional), z. B. Mobilität oder Ernährung…"
+                      : `Für die Pflegeplanung zuerst ${t.oneOblique} in der Kopfzeile wählen`
+                    : "Zusätzliche Hinweise (optional)…"
             }
             aria-label="Auftrag an CareCore KI"
             maxLength={2000}

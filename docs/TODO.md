@@ -26,7 +26,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Docs                         | ✅    | Versionen, Freigabe, Lesebestätigung (`carecore_document_reads`); neue Version verlangt die Bestätigung erneut.                          |
 | Learn                        | ✅    | Schulungen, Pflicht, Gültigkeit, Nachweise, Link, Quiz mit Bestehensgrenze, Übersicht je Team. Videos nur als Link.                      |
 | Quality                      | ✅    | Ereignisse mit Massnahmen und Status.                                                                                                    |
-| KI-Assistenten               | 🟡    | Übergabe, Risiken, Dokumentation, freie Frage, Dienstplan-KI; Entwürfe mit Prüfung. Keine Planungs- oder Such-Assistenz.                 |
+| KI-Assistenten               | 🟡    | Übergabe, Risiken, Dokumentation, Pflegeplanung, freie Frage, Dienstplan-KI; Entwürfe mit Prüfung. Keine Such-Assistenz.                 |
 | Globale Suche ⌘K             | ✅    | `global-search-dialog.tsx`, Tastenkürzel.                                                                                                |
 | Benachrichtigungen           | ✅    | Klassen Kritisch / Handlung / Info / Sozial, Bündelung, Push mit Ruhezeiten.                                                             |
 | Mobile                       | 🟡    | Untere Navigation, Hauptmenü, Schnellaktions-Knopf (FAB).                                                                                |
@@ -142,7 +142,10 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       In der Suche z. B. „vital“ (Person aus der Kopfzeile) oder „vital Muster“ (gleich für diese Person); Vitalwerte
       und Trinkmenge öffnen die Erfassung direkt, die Übergabe wählt die Person vor und setzt den Cursor ins Textfeld.
       Die Startseite nutzt dieselbe Suche wie alle anderen Seiten.
-- [ ] **KI-Planungsassistenz:** Vorschläge für die Pflegeplanung aus der Akte, als Entwurf mit Prüfung.
+- [x] **KI-Planungsassistenz:** Auftrag „Pflegeplanung vorschlagen“ in CareCore KI, nur für eine Person: Probleme,
+      Ressourcen, Ziele und Massnahmen mit Datengrundlage aus Einschätzungen, bestehender Planung, zwei Wochen Berichten,
+      Vitalwerten und Wunden (pseudonymisiert). Bestehende Ziele werden nicht doppelt vorgeschlagen, keine erfundenen
+      Werte; der Vorschlag bleibt ein Entwurf, den die Pflegefachperson prüft und selbst in die Planung überträgt.
 
 ## Braucht eine Entscheidung oder externe Quelle
 

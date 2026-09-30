@@ -42,6 +42,8 @@ const INSTRUCTIONS: Record<AiTask, string> = {
     "Prüfe die Daten auf Risiken, die bei der nächsten Arztvisite oder Pflegevisite angesprochen werden sollten (z. B. auffällige Vitalwerte, Sturz, Schmerz, Wunden, Medikation, fehlende Dokumentation). Nenne pro Risiko die Datengrundlage und einen Vorschlag für das weitere Vorgehen.",
   documentation:
     "Formuliere einen Entwurf für einen Pflegebericht zum aktuellen Dienst auf Basis der Daten und der Stichworte der Pflegefachperson. Schreibe in der dritten Person, im Präsens oder Perfekt, ohne Wertungen. Nur der Berichtstext, ohne Einleitung.",
+  carePlan:
+    "Schlage Ergänzungen für die Pflegeplanung dieser einen Bewohner:in vor. Gliedere nach Pflegeproblemen; nenne je Problem die Ressourcen, ein überprüfbares Ziel und konkrete Massnahmen (mit Häufigkeit, wo die Daten sie nahelegen) sowie die Datengrundlage (z. B. Einschätzung, Bericht, Vitalwert). Bestehende Ziele und Massnahmen nicht erneut vorschlagen; weise stattdessen auf solche hin, die nach den Daten überprüft werden sollten. Keine Grenzwerte, Fristen oder Skalenwerte erfinden, die nicht in den Daten stehen. Keine Diagnosen, keine Medikation; wo ärztliche Abklärung angezeigt ist, empfiehl sie.",
   question: "Beantworte die Frage der Pflegefachperson auf Basis der Daten.",
 };
 
@@ -67,10 +69,13 @@ const when = (value: unknown) =>
     minute: "2-digit",
   });
 
-// Care data of the last days for the given residents, as compact text for the prompt.
-async function residentContext(ctx: ApiContext, residentIds: string[], t: Terms) {
+// Care data of the last days for the given residents, as compact text for the prompt. For care planning
+// (`planning`) additionally the latest assessments, the problems, resources and measures of the active goals and
+// two weeks of reports.
+export async function residentContext(ctx: ApiContext, residentIds: string[], t: Terms, planning = false) {
   if (!residentIds.length) return "";
-  const [residents, docs, vitals, meds, wounds, tasks, goals] = (await Promise.all([
+  const reportHours = planning ? 14 * 24 : 48;
+  const [residents, docs, vitals, meds, wounds, tasks, goals, measures, assessments] = (await Promise.all([
     ctx.sql`
       SELECT r.id, r.first_name, r.last_name, r.date_of_birth, r.risk_flags, COALESCE(ro.name, '') AS room
       FROM carecore_residents r
@@ -80,8 +85,8 @@ async function residentContext(ctx: ApiContext, residentIds: string[], t: Terms)
       WHERE r.id = ANY(${residentIds}) ORDER BY ro.name NULLS LAST, r.last_name`,
     ctx.sql`
       SELECT resident_id, category, body, occurred_at, importance FROM carecore_documentation_entries
-      WHERE resident_id = ANY(${residentIds}) AND occurred_at > NOW() - INTERVAL '48 hours'
-      ORDER BY occurred_at DESC LIMIT 60`,
+      WHERE resident_id = ANY(${residentIds}) AND occurred_at > NOW() - make_interval(hours => ${reportHours})
+      ORDER BY occurred_at DESC LIMIT ${planning ? 120 : 60}`,
     ctx.sql`
       SELECT resident_id, metric, value, secondary_value, unit, status, measured_at FROM carecore_vital_measurements
       WHERE resident_id = ANY(${residentIds}) AND measured_at > NOW() - INTERVAL '7 days'
@@ -97,9 +102,24 @@ async function residentContext(ctx: ApiContext, residentIds: string[], t: Terms)
       SELECT resident_id, title, priority, due_at FROM carecore_tasks
       WHERE resident_id = ANY(${residentIds}) AND status IN ('open', 'in_progress', 'escalated') ORDER BY due_at NULLS LAST LIMIT 40`,
     ctx.sql`
-      SELECT p.resident_id, g.category, g.statement, g.target_date FROM carecore_care_goals g
+      SELECT p.resident_id, g.category, g.statement, g.target_date, g.problem, g.resources FROM carecore_care_goals g
       JOIN carecore_care_plans p ON p.id = g.care_plan_id
       WHERE p.resident_id = ANY(${residentIds}) AND p.status IN ('active', 'review') AND g.status = 'active'`,
+    planning
+      ? ctx.sql`
+      SELECT p.resident_id, g.category, i.title, i.frequency FROM carecore_interventions i
+      JOIN carecore_care_goals g ON g.id = i.care_goal_id JOIN carecore_care_plans p ON p.id = g.care_plan_id
+      WHERE p.resident_id = ANY(${residentIds}) AND p.status IN ('active', 'review') AND g.status = 'active'
+        AND i.status = 'active'`
+      : Promise.resolve([]),
+    planning
+      ? ctx.sql`
+      SELECT DISTINCT ON (ar.resident_id, ar.assessment_id) ar.resident_id, a.name, ar.score, ar.risk_level, ar.summary,
+        ar.completed_at
+      FROM carecore_assessment_records ar JOIN carecore_assessments a ON a.id = ar.assessment_id
+      WHERE ar.resident_id = ANY(${residentIds}) AND ar.status = 'completed'
+      ORDER BY ar.resident_id, ar.assessment_id, ar.completed_at DESC`
+      : Promise.resolve([]),
   ])) as Row[][];
   const of = (rows: Row[], id: unknown) => rows.filter((row) => row.resident_id === id);
   return residents
@@ -110,7 +130,21 @@ async function residentContext(ctx: ApiContext, residentIds: string[], t: Terms)
       const lines = [
         `${t.one}:in ${kuerzel(resident)} (${age(resident.date_of_birth) ?? "?"} J., ${resident.room || "ohne Zimmer"})`,
         flags.length ? `Hinweise: ${flags.join(", ")}` : "",
-        ...of(goals, resident.id).map((row) => `Pflegeziel (${row.category}): ${row.statement}`),
+        ...of(goals, resident.id).map(
+          (row) =>
+            `Pflegeziel (${row.category}): ${row.statement}${planning && row.problem ? ` – Problem: ${row.problem}` : ""}${
+              planning && row.resources ? ` – Ressourcen: ${row.resources}` : ""
+            }`,
+        ),
+        ...of(measures, resident.id).map(
+          (row) => `Massnahme (${row.category}): ${row.title}${row.frequency ? `, ${row.frequency}` : ""}`,
+        ),
+        ...of(assessments, resident.id).map(
+          (row) =>
+            `Einschätzung ${when(row.completed_at)}: ${row.name}${row.score !== null ? `, Punkte ${Number(row.score)}` : ""}${
+              row.risk_level ? `, ${row.risk_level}` : ""
+            }${row.summary ? ` – ${String(row.summary).slice(0, 400)}` : ""}`,
+        ),
         ...of(meds, resident.id).map(
           (row) =>
             `Medikation: ${row.name}${row.is_prn ? " (Reserve)" : ""}${row.indication ? ` – ${row.indication}` : ""}`,
@@ -240,10 +274,13 @@ export async function generateDraft(ctx: ApiContext, body: Record<string, unknow
   const prompt = text(body.prompt, 2000);
   if (task === "question" && prompt.length < 3) throw new ApiError("Bitte eine Frage oder einen Auftrag eingeben.");
   const residentId = body.residentId ? await assertResident(ctx, body.residentId) : null;
-  const careUnitId = await assertUnit(ctx, body.careUnitId);
-  const residentIds = residentId ? [residentId] : await unitResidentIds(ctx, careUnitId);
   const t = await readTerms(ctx);
-  const data = await residentContext(ctx, residentIds, t);
+  // Pflegeplanung ist persönlich: nur für eine Person, nicht für den ganzen Wohnbereich.
+  if (task === "carePlan" && !residentId)
+    throw new ApiError(`Für Vorschläge zur Pflegeplanung bitte eine ${t.one}:in wählen.`);
+  const careUnitId = residentId ? null : await assertUnit(ctx, body.careUnitId);
+  const residentIds = residentId ? [residentId] : await unitResidentIds(ctx, careUnitId);
+  const data = await residentContext(ctx, residentIds, t, task === "carePlan");
 
   let content = "";
   try {
