@@ -5,11 +5,13 @@ import catalog from "@/locales/catalog.json" with { type: "json" };
 import { releasedLanguages } from "@/lib/languages";
 import {
   dictionaryFor,
+  draftTranslations,
   languageStates,
   listTranslations,
   reviewTranslations,
   saveTranslation,
   setLanguageReleased,
+  setTranslationCall,
 } from "@/lib/translations";
 import { savePreferences } from "@/lib/user-settings";
 import { apiContextFor, fixture, q } from "../support/db";
@@ -80,4 +82,59 @@ test("Übersetzungen: nur Katalogtexte, Platzhalter bleiben, Entwürfe nur zum P
     audit.map((row) => row.action),
     ["saved", "reviewed", "reviewed_page", "released", "withdrawn"],
   );
+});
+
+test("KI-Entwürfe mit Gemini: nur als Entwurf, Platzhalter geprüft, ohne Schlüssel deaktiviert", async () => {
+  const ctx = await admin();
+  await q(`DELETE FROM carecore_translations WHERE locale = 'sq'`);
+  const previous = process.env.GEMINI_API_KEY;
+  const previousModel = process.env.GEMINI_MODEL;
+  delete process.env.GEMINI_MODEL;
+  try {
+    delete process.env.GEMINI_API_KEY;
+    assert.match(await rejected(draftTranslations(ctx, "sq", 5)), /GEMINI_API_KEY fehlt/);
+
+    process.env.GEMINI_API_KEY = "test-double";
+    const requests: Array<{ user: string; schema: { required?: string[] } }> = [];
+    setTranslationCall(async (request) => {
+      requests.push(request as (typeof requests)[number]);
+      const texts = JSON.parse(request.user.slice(request.user.indexOf("{"))) as Record<string, string>;
+      // Der erste Text verliert absichtlich seine Platzhalter, falls er welche hat; alle anderen werden markiert.
+      return JSON.stringify(
+        Object.fromEntries(Object.entries(texts).map(([key, text]) => [key, key === "0" ? "ohne" : `sq:${text}`])),
+      );
+    });
+    const first = await draftTranslations(ctx, "sq", 5);
+    assert.equal(requests.length, 1);
+    assert.match(requests[0].user, /Zielsprache: Albanian/);
+    assert.deepEqual(requests[0].schema.required, ["0", "1", "2", "3", "4"]);
+    const firstSource = Object.values(
+      JSON.parse(requests[0].user.slice(requests[0].user.indexOf("{"))) as Record<string, string>,
+    )[0];
+    const expected = /\{\d+\}/.test(firstSource) ? 4 : 5;
+    assert.equal(first.drafted, expected);
+
+    const stored = await q<{ status: string; origin: string; target: string }>(
+      `SELECT status, origin, target FROM carecore_translations WHERE locale = 'sq'`,
+    );
+    assert.equal(stored.length, expected);
+    assert.ok(stored.every((row) => row.status === "draft" && row.origin === "ai"));
+    // Mitarbeitende sehen KI-Entwürfe nicht, bevor die Administration sie prüft.
+    const visible = await dictionaryFor(ctx.sql, "sq", false);
+    assert.equal(Object.keys(visible.strings).length + Object.keys(visible.patterns).length, 0);
+
+    const [audit] = await q<{ after_data: { model: string; count: number } }>(
+      `SELECT after_data FROM carecore_audit_log WHERE entity_type = 'language' AND action = 'ai_drafted'
+       ORDER BY created_at DESC LIMIT 1`,
+    );
+    assert.deepEqual([audit.after_data.model, audit.after_data.count], ["gemini-3.5-flash-lite", expected]);
+
+    setTranslationCall(async () => "{ kaputt }");
+    assert.match(await rejected(draftTranslations(ctx, "sq", 3)), /keine lesbare Antwort/);
+  } finally {
+    if (previous === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = previous;
+    if (previousModel !== undefined) process.env.GEMINI_MODEL = previousModel;
+    await q(`DELETE FROM carecore_translations WHERE locale = 'sq'`);
+  }
 });

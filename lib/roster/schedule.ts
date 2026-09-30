@@ -1,6 +1,7 @@
 import "server-only";
 import type { Row } from "@/lib/api-context";
 import { iso } from "@/lib/api-context";
+import { geminiConfigured } from "@/lib/gemini";
 import type { RosterContext } from "./context";
 import { unitsFor } from "./context";
 import { ensurePeriod, findPeriod, loadSnapshot, monthRange, unitMemberIds } from "./data";
@@ -11,8 +12,6 @@ import { deviation, isWeekend, localDate, monthDays, weekday } from "./time";
 import type { RosterShift, ScheduleSnapshot, Violation } from "./types";
 import type { GridEmployee, GridShift, SchedulePayload, StaffingCell, UnitOption } from "./view-types";
 import { summarizeMonth, type TimeEntryInfo } from "./worktime";
-
-export const mistralConfigured = () => Boolean(process.env.MISTRAL_API_KEY);
 
 // Wohnbereich aus der Anfrage oder der erste, den die Person sehen darf.
 export function resolveUnit(ctx: RosterContext, requested: string | null, prefer: "lead" | "member" = "lead") {
@@ -329,7 +328,7 @@ export async function getSchedule(
       allowShiftTakeover: snapshot.ruleSet.allowShiftTakeover,
       deviationThresholdMinutes: snapshot.ruleSet.deviationThresholdMinutes,
     },
-    aiAvailable: lead && mistralConfigured(),
+    aiAvailable: lead && geminiConfigured(),
     candidates: lead && !period?.lockedAt ? await planningCandidates(ctx, unitId, rowIds) : [],
     changeToken: token,
   };
