@@ -22,6 +22,7 @@ import {
   type VitalResident,
 } from "@/lib/vitals-shared";
 import MeasurementDialog from "./measurement-dialog";
+import { useActionRequest } from "@/app/components/actions";
 import TrendChart from "./trend-chart";
 import { History, FILTERS, WEEK, ClinicalNote, MeasurementList } from "./overview-parts";
 import { useCareResident, useTerms, useVitalMetrics } from "@/app/components/care-context";
@@ -60,6 +61,8 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
   const metric = metrics.some((m) => m.key === chosenMetric) ? chosenMetric : metrics[0].key;
   const [days, setDays] = useState(7);
   const [dialog, setDialog] = useState<{ residentId: string | null } | null>(null);
+  // Aktion „Vitalwerte erfassen“ (Schnellaktion oder Suche): Erfassung für die Person aus der Kopfzeile.
+  useActionRequest("vitals", () => setDialog({ residentId: null }), !!overview.data?.canRecord);
   const residents = overview.data?.residents ?? [];
   // eslint-disable-next-line react-hooks/purity -- "Ohne Messung seit 7 Tagen" is relative to the moment of rendering.
   const weekAgo = new Date(Date.now() - WEEK).toISOString();

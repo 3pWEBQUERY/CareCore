@@ -24,6 +24,7 @@ import {
   type ResidentNutrition,
 } from "@/lib/nutrition-shared";
 import { FluidDialog, MealDialog } from "./nutrition-dialogs";
+import { useActionRequest } from "@/app/components/actions";
 import { sendOrQueue } from "@/app/components/offline-queue";
 
 const QUICK_AMOUNTS = [100, 150, 200, 250];
@@ -45,6 +46,7 @@ export default function DayPanel({
 }) {
   const t = useTerms();
   const [dialog, setDialog] = useState<{ kind: "fluid" } | { kind: "meal"; meal?: string } | null>(null);
+  useActionRequest("fluid", () => setDialog({ kind: "fluid" }), canWrite);
   const [hiding, setHiding] = useState<
     { kind: "fluid"; entry: FluidEntry } | { kind: "meal"; entry: MealEntry } | null
   >(null);

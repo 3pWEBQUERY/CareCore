@@ -45,7 +45,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Admin-Konfiguration          | ✅    | Einstellungen, Terminologie, eigene Ereignisarten, Vitalparameter, Logo, Löschfristen, Schnittstellen.                                   |
 | Insights / Resident 360      | ✅    | Kennzahlen, Bewohnerübersicht (Resident 360) und persönliches Dashboard „Meine Kennzahlen“.                                              |
 | Smart Workflows              | ✅    | Ablaufketten je Ereignisart mit Folgeaufgaben; Schritte legt das Qualitätsmanagement fest.                                               |
-| Universal Action System      | ❌    | Aktionen sind je Modul gebaut.                                                                                                           |
+| Universal Action System      | ✅    | Ein Aktionsregister für Schnellaktionen und Suche ⌘K, Erfassung direkt aus der Suche.                                                    |
 | Sprachen / Terminologie      | 🟡    | Bezeichnung Bewohner / Patient / Klient wählbar. Oberfläche nur Deutsch (FR / IT / EN offen).                                            |
 | Phase 6 Portale              | ❌    | Angehörigen-, Arzt- und Apothekenportal sind späterer Umfang.                                                                            |
 
@@ -138,7 +138,10 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - [x] **Mandanten: eigene Rollen je Einrichtung.** Nur die Einrichtung, die eine Rolle anlegt, sieht, vergibt, ändert
       und löscht sie; bestehende eigene Rollen wurden ihrer Einrichtung zugeordnet (Migration 0048). Eingebaute Rollen
       bleiben gemeinsam.
-- [ ] **Universal Action System:** Aktionen einheitlich statt je Modul (z. B. in der Suche ⌘K ausführen).
+- [x] **Universal Action System:** ein Aktionsregister (`app/components/actions.ts`) für Schnellaktionen und Suche ⌘K.
+      In der Suche z. B. „vital“ (Person aus der Kopfzeile) oder „vital Muster“ (gleich für diese Person); Vitalwerte
+      und Trinkmenge öffnen die Erfassung direkt, die Übergabe wählt die Person vor und setzt den Cursor ins Textfeld.
+      Die Startseite nutzt dieselbe Suche wie alle anderen Seiten.
 - [ ] **KI-Planungsassistenz:** Vorschläge für die Pflegeplanung aus der Akte, als Entwurf mit Prüfung.
 
 ## Braucht eine Entscheidung oder externe Quelle

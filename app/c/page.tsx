@@ -17,7 +17,7 @@ import { HomeHero } from "./components/home-hero";
 import { HomeNews } from "./components/home-news";
 import { DashboardCustomizer } from "./components/dashboard-customizer";
 import { MobileNavigation } from "@/app/components/mobile-navigation";
-import { SearchDialog } from "./components/search-dialog";
+import { GlobalSearchDialog } from "@/app/components/global-search-dialog";
 import { NoteViewDialog, NoteEditorDialog } from "./components/note-dialogs";
 
 export default function Home() {
@@ -34,6 +34,7 @@ export default function Home() {
     hiddenWidgets,
     setDraggedWidget,
     openSearch,
+    closeSearch,
     moveWidget,
     openNote,
     criticalChange,
@@ -101,7 +102,7 @@ export default function Home() {
       </button>
       <MobileNavigation activeModule="home" />
 
-      {searchOpen && <SearchDialog r={r} />}
+      {searchOpen && <GlobalSearchDialog onClose={closeSearch} />}
 
       {viewingNote && <NoteViewDialog r={r} />}
       {noteEditor && <NoteEditorDialog r={r} />}

@@ -1,8 +1,9 @@
 "use client";
 
-import { useTerms } from "@/app/components/care-context";
+import { useCareResident, useTerms } from "@/app/components/care-context";
+import { useActionRequest } from "@/app/components/actions";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { CareSelect } from "@/app/components/care-form-controls";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { type ModuleIconName } from "@/app/components/module-icon";
@@ -72,6 +73,17 @@ function HandoverContent({ lastShift, showToast }: { lastShift: boolean; showToa
   }>("/api/residents");
   const [draft, setDraft] = useState({ residentId: "", content: "", priority: "normal" as HandoverNote["priority"] });
   const [saving, setSaving] = useState(false);
+  const [contextResident] = useCareResident();
+  const contentField = useRef<HTMLTextAreaElement>(null);
+  // Aktion „Übergabepunkt erfassen“: Person aus der Kopfzeile vorwählen und ins Textfeld springen.
+  useActionRequest(
+    "handover",
+    () => {
+      if (contextResident) setDraft((current) => ({ ...current, residentId: contextResident }));
+      window.requestAnimationFrame(() => contentField.current?.focus());
+    },
+    !!data.data?.canWrite && !lastShift,
+  );
   const events = data.data?.events ?? [];
   const notes = data.data?.notes ?? [];
   const unread = notes.filter((n) => !n.readByMe);
@@ -275,6 +287,7 @@ function HandoverContent({ lastShift, showToast }: { lastShift: boolean; showToa
                 ))}
               </div>
               <textarea
+                ref={contentField}
                 value={draft.content}
                 maxLength={2000}
                 onChange={(e) => setDraft({ ...draft, content: e.target.value })}
