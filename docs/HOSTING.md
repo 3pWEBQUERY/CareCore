@@ -2,10 +2,11 @@
 
 CareCore läuft auf Railway (Projekt „feisty-achievement“, Region Europa).
 
-- **App** (Dienst `carecore`): Next.js aus diesem Repository, Branch `main`. Einstellungen in `railway.json`:
+- **App** (Dienst `carecore`): Next.js aus diesem Repository, Branch `main`. Einstellungen am Dienst in Railway
+  (Settings; `railway.json` liest Railway für neue Dienste nicht mehr):
   - Build `npm run build`, Start `npm run start`.
-  - Vor jedem Deploy laufen die Migrationen (`node database/migrate.mjs`).
-  - Statusprüfung über `/api/health`.
+  - Pre-Deploy `node database/migrate.mjs` (Zeitlimit 600 s): vor jedem Deploy laufen die Migrationen.
+  - Statusprüfung über `/api/health` (120 s), Neustart bei Fehler bis zu 5-mal.
 - **Datenbank** (Dienst `Postgres`): Railway Postgres. Die App verbindet sich über das private Netz
   (`DATABASE_URL=${{Postgres.DATABASE_URL}}`). Der Neon-Treiber im Code bleibt; seine Anfragen beantwortet ein
   Verbindungspool (`database/pg-fetch.mjs`, Paket `pg`). Neon-Datenbanken (`*.neon.tech`) laufen weiter über HTTP.
@@ -14,8 +15,9 @@ CareCore läuft auf Railway (Projekt „feisty-achievement“, Region Europa).
   - Der Bucket ist privat; ausgeliefert wird nur über CareCore mit den jeweiligen Rechten.
   - Ohne Bucket (lokal, Tests) bleiben die Inhalte in der Datenbank.
   - Beim Löschen (Foto, Datei, Logo, Akte nach Ablauf der Frist) wird der Inhalt auch im Bucket entfernt.
-- **Erinnerungen und Push** (Dienst `push-dispatch`): Railway Function, ruft alle 5 Minuten `/api/push/dispatch`
-  mit `CRON_SECRET` auf.
+- **Erinnerungen und Push** (Dienst `push-dispatch`): Railway Function mit Zeitplan `*/5 * * * *`, ruft
+  `/api/push/dispatch` mit `CRON_SECRET` (Verweis `${{carecore.CRON_SECRET}}`) auf und schreibt den Stand von
+  `/api/health` ins Log.
 
 ## Variablen des Dienstes `carecore`
 
