@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { neon } from "@neondatabase/serverless";
+import "@/database/pg-fetch.mjs";
 
 export const SESSION_COOKIE = "carecore_session";
 const SESSION_DAYS = 7;

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
+import "./pg-fetch.mjs";
 
 const connectionString = process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
 if (!connectionString) throw new Error("DATABASE_URL or POSTGRES_URL is required.");

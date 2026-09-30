@@ -38,7 +38,7 @@ export async function GET(request: Request, { params }: Context) {
     const safeName = rows[0].name.replace(/["\r\n]/g, "_");
     const mimeType = (rows[0].mime_type || "").split(";")[0].trim().toLowerCase();
     const preview = new URL(request.url).searchParams.get("preview") === "1" && inlinePreviewTypes.has(mimeType);
-    return new Response(Buffer.from(rows[0].content_base64, "base64"), {
+    return new Response(new Uint8Array(rows[0].content), {
       headers: {
         "Content-Type": preview
           ? mimeType === "text/plain"

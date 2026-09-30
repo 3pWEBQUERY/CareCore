@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless";
+import "@/database/pg-fetch.mjs";
 import { resolveSettings, type AppSettings } from "@/lib/settings-shared";
 import { resolveTerminology, termsFor, type TerminologyKey } from "@/lib/terminology";
 import { resolvePreferences, type UserPreferences } from "@/lib/user-settings-shared";

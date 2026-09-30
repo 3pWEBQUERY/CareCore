@@ -6,6 +6,7 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { neon } from "@neondatabase/serverless";
+import "./pg-fetch.mjs";
 
 const MIGRATIONS_DIR = new URL("./migrations/", import.meta.url);
 const LOCK_KEY = 7_302_411; // arbitrary constant shared by all migration runs

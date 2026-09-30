@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { auditOrigin, type AuditActor } from "@/lib/audit-origin";
 import { neon } from "@neondatabase/serverless";
+import "@/database/pg-fetch.mjs";
 import { hashPassword } from "@/lib/auth";
 
 export type ManagedUser = {

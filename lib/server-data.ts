@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
+import "@/database/pg-fetch.mjs";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
 
 // Keep in sync with roleKeys in lib/admin-users.ts and the seeded roles in database/migrations/0001_baseline.sql.
