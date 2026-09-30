@@ -1,7 +1,13 @@
+import { importPrivateKey, importPublicKey, isSealed, seal, unseal, type SealedValue } from "@/lib/offline-crypto";
+
 // Offline erfasste Einträge (Dokumentation, Vitalwerte, Trinkmenge, Mahlzeit, persönliche Notizen …) warten auf diesem Gerät, bis die
 // Verbindung zurück ist, und werden dann in der erfassten Reihenfolge gesendet. Jeder Eintrag trägt eine Kennung
 // (x-carecore-request-id); der Server speichert dieselbe Anfrage nie doppelt. Gesendet wird nur mit der Sitzung
 // der Person, die den Eintrag erfasst hat.
+//
+// Auf dem Gerät liegen die Einträge nur verschlüsselt (lib/offline-crypto.ts). Den privaten Schlüssel zum Lesen gibt
+// der Server nur der angemeldeten Person; er bleibt im Arbeitsspeicher. Nach einem Neuladen ohne Verbindung lassen
+// sich Einträge weiter erfassen (öffentlicher Schlüssel), die vorgemerkten aber erst mit Verbindung lesen und senden.
 
 export const REQUEST_ID_HEADER = "x-carecore-request-id";
 export const QUEUE_EVENT = "carecore-offline-queue";
@@ -23,7 +29,13 @@ export type QueuedWrite = {
   error?: string;
   // Abgelehnt, weil der Eintrag inzwischen anderswo geändert wurde (HTTP 409).
   conflict?: boolean;
+  // Verschlüsselt und ohne Schlüssel im Arbeitsspeicher: wird mit Verbindung entschlüsselt und gesendet.
+  locked?: boolean;
 };
+
+// So liegt ein Eintrag im Gerätespeicher: nur Kennung, Person und Zeitpunkt offen, der Rest verschlüsselt.
+type StoredWrite = { id: string; userId: string; createdAt: string; sealed: SealedValue };
+type Content = Omit<QueuedWrite, "id" | "userId" | "createdAt" | "locked">;
 
 const DB = "carecore-offline";
 const STORE = "outbox";
@@ -52,9 +64,99 @@ async function withStore<T>(mode: IDBTransactionMode, run: (store: IDBObjectStor
 
 const changed = () => window.dispatchEvent(new Event(QUEUE_EVENT));
 
+// ---------- Schlüssel ----------
+
+const PUBLIC_KEY_STORAGE = (userId: string) => `carecore.offline.key.${userId}`;
+let keys: { userId: string; publicKey: CryptoKey | null; privateKey: CryptoKey | null } | null = null;
+let unlocking: Promise<void> | null = null;
+
+function storedPublicKey(userId: string) {
+  try {
+    const raw = localStorage.getItem(PUBLIC_KEY_STORAGE(userId));
+    return raw ? (JSON.parse(raw) as JsonWebKey) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Mit Verbindung: Schlüsselpaar vom Server (privat nur im Arbeitsspeicher, öffentlich auf dem Gerät für später).
+// Ohne Verbindung: nur der öffentliche Schlüssel vom Gerät – Erfassen geht, Lesen erst mit Verbindung.
+async function unlock(userId: string) {
+  let publicKey: CryptoKey | null = null;
+  let privateKey: CryptoKey | null = null;
+  try {
+    const response = await fetch("/api/me/offline-key", { cache: "no-store" });
+    if (response.ok) {
+      const pair = (await response.json()) as { publicJwk: JsonWebKey; privateJwk: JsonWebKey };
+      [publicKey, privateKey] = await Promise.all([importPublicKey(pair.publicJwk), importPrivateKey(pair.privateJwk)]);
+      try {
+        localStorage.setItem(PUBLIC_KEY_STORAGE(userId), JSON.stringify(pair.publicJwk));
+      } catch {
+        // ohne Gerätespeicher: nach einem Neuladen offline kein Erfassen
+      }
+    }
+  } catch {
+    // keine Verbindung
+  }
+  if (!publicKey) {
+    const stored = storedPublicKey(userId);
+    if (stored) publicKey = await importPublicKey(stored).catch(() => null);
+  }
+  keys = { userId, publicKey, privateKey };
+  if (privateKey) await sealLegacy(userId);
+}
+
+async function keysFor(userId: string) {
+  if (unlocking) await unlocking;
+  if (keys?.userId === userId && keys.privateKey) return keys;
+  // Nach dem Wiederverbinden erneut versuchen, den privaten Schlüssel zu holen.
+  unlocking = unlock(userId).finally(() => {
+    unlocking = null;
+  });
+  await unlocking;
+  return keys?.userId === userId ? keys : null;
+}
+
+// Einträge aus der Zeit vor der Verschlüsselung einmalig verschlüsseln.
+async function sealLegacy(userId: string) {
+  const all = await withStore<Array<StoredWrite | QueuedWrite>>("readonly", (store) => store.getAll());
+  for (const item of all)
+    if (item.userId === userId && !("sealed" in item && isSealed(item.sealed))) await putSealed(item as QueuedWrite);
+}
+
+async function putSealed(item: QueuedWrite) {
+  const publicKey = keys?.userId === item.userId ? keys.publicKey : null;
+  if (!publicKey) throw new Error("Keine Verbindung. Der Eintrag konnte nicht sicher vorgemerkt werden.");
+  const { id, userId, createdAt, locked, ...content } = item;
+  if (locked) return;
+  const stored: StoredWrite = { id, userId, createdAt, sealed: await seal(publicKey, content satisfies Content) };
+  await withStore("readwrite", (store) => store.put(stored));
+}
+
 export async function queuedWrites(userId: string | null) {
-  const all = await withStore<QueuedWrite[]>("readonly", (store) => store.getAll());
-  return all.filter((item) => item.userId === userId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  if (!userId) return [];
+  const current = await keysFor(userId);
+  const all = await withStore<Array<StoredWrite | QueuedWrite>>("readonly", (store) => store.getAll());
+  const mine = all.filter((item) => item.userId === userId);
+  const items = await Promise.all(
+    mine.map(async (item): Promise<QueuedWrite> => {
+      if (!("sealed" in item) || !isSealed(item.sealed)) return item as QueuedWrite;
+      const base = { id: item.id, userId: item.userId, createdAt: item.createdAt };
+      if (!current?.privateKey) return { ...base, url: "", body: null, label: "Verschlüsselter Eintrag", locked: true };
+      try {
+        return { ...base, ...(await unseal<Content>(current.privateKey, item.sealed)) };
+      } catch {
+        return {
+          ...base,
+          url: "",
+          body: null,
+          label: "Verschlüsselter Eintrag",
+          error: "Lässt sich nicht mehr entschlüsseln (Schlüssel des Servers geändert).",
+        };
+      }
+    }),
+  );
+  return items.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
 export async function discardWrite(id: string) {
@@ -63,7 +165,8 @@ export async function discardWrite(id: string) {
 }
 
 async function saveWrite(item: QueuedWrite) {
-  await withStore("readwrite", (store) => store.put(item));
+  await keysFor(item.userId);
+  await putSealed(item);
   changed();
 }
 
@@ -161,7 +264,7 @@ async function sendQueued() {
   const result = { sent: 0, rejected: 0, signedOut: false };
   if (!currentUserId) return result;
   for (const item of await queuedWrites(currentUserId)) {
-    if (item.error) continue;
+    if (item.error || item.locked) continue;
     let outcome: Awaited<ReturnType<typeof post>>;
     try {
       outcome = await post(item.url, item.body, item.id, item.method ?? "POST");
@@ -191,5 +294,6 @@ async function sendQueued() {
 
 // Service Worker: Seiten und Daten des Geräts löschen (Abmelden, Personenwechsel).
 export function clearOfflineData() {
+  keys = null;
   navigator.serviceWorker?.controller?.postMessage({ type: "clear-data" });
 }

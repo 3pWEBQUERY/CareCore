@@ -61,3 +61,21 @@
   border-radius: 6px;
   list-style: none;
 }
+
+/* Spracheingabe (nur mit Erkennung auf dem Gerät; ohne sie erscheint nichts). */
+.dictation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+.dictation-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dictation small {
+  color: var(--muted);
+  font-size: 12px;
+}

@@ -103,6 +103,7 @@ export async function savePreferences(actor: CarecoreActor, body: Record<string,
   choose("theme", "Erscheinungsbild", ["light", "dark"]);
   choose("shortcuts", "Tastaturkürzel", [true, false]);
   choose("sound", "Hinweiston", [true, false]);
+  choose("dictation", "Spracheingabe", [true, false]);
   choose("startPage", "Startseite", Object.keys(START_PAGES));
   choose("autoLogout", "Automatische Abmeldung", AUTO_LOGOUT_MINUTES);
   if (body.quietHours !== undefined) {

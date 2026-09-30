@@ -2,6 +2,7 @@
 
 import { useCareResident, useTerms } from "@/app/components/care-context";
 import { useActionRequest } from "@/app/components/actions";
+import { DictationButton, appendDictation } from "@/app/components/dictation-button";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { CareSelect } from "@/app/components/care-form-controls";
@@ -293,6 +294,11 @@ function HandoverContent({ lastShift, showToast }: { lastShift: boolean; showToa
                 onChange={(e) => setDraft({ ...draft, content: e.target.value })}
                 placeholder="Was muss der nächste Dienst wissen oder tun?"
                 aria-label="Übergabepunkt"
+              />
+              <DictationButton
+                onText={(text) =>
+                  setDraft((current) => ({ ...current, content: appendDictation(current.content, text) }))
+                }
               />
               <div className="handover-editor-footer">
                 <span>{draft.content.length}/2000 Zeichen</span>

@@ -77,6 +77,8 @@ export type UserPreferences = {
   theme: "light" | "dark";
   shortcuts: boolean;
   sound: boolean;
+  // Spracheingabe (nur Erkennung auf dem Gerät); aus, bis die Person sie einschaltet.
+  dictation: boolean;
   startPage: StartPage;
   autoLogout: AutoLogout;
   quietHours: QuietHours;
@@ -102,6 +104,7 @@ export function resolvePreferences(stored: unknown): UserPreferences {
     theme: raw.theme === "dark" ? "dark" : "light",
     shortcuts: raw.shortcuts !== false,
     sound: raw.sound === true,
+    dictation: raw.dictation === true,
     startPage:
       typeof raw.startPage === "string" && raw.startPage in START_PAGES ? (raw.startPage as StartPage) : "home",
     autoLogout: (AUTO_LOGOUT_MINUTES as readonly unknown[]).includes(raw.autoLogout)

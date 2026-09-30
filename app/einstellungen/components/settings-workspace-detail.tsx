@@ -1198,5 +1198,19 @@ function itemsFor(
         save: (value) => save({ shortcuts: value }, `Tastaturkürzel ${value ? "eingeschaltet" : "ausgeschaltet"}`),
       },
     },
+    {
+      id: "app-dictation",
+      title: "Spracheingabe",
+      description: "Diktieren mit Erkennung auf diesem Gerät",
+      value: onOff(preferences.dictation),
+      icon: "note",
+      detail: {
+        kind: "toggle",
+        text: "Bei Dokumentation und Übergabe erscheint „Diktieren“, wenn der Browser die Sprache auf dem Gerät erkennt. Die Aufnahme verlässt das Gerät nicht; ohne Erkennung auf dem Gerät gibt es keine Spracheingabe.",
+        label: "Spracheingabe verwenden",
+        checked: preferences.dictation,
+        save: (value) => save({ dictation: value }, `Spracheingabe ${value ? "eingeschaltet" : "ausgeschaltet"}`),
+      },
+    },
   ];
 }
