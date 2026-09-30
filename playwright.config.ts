@@ -7,6 +7,8 @@ const port = Number(process.env.E2E_PORT ?? 3200);
 export const E2E_ADMIN_PASSWORD = "E2E-Admin-Passwort-2026";
 // Schlüssel für die Zwei-Faktor-Anmeldung, nur für die Klicktests (32 Bytes, Base64).
 export const E2E_MFA_KEY = Buffer.alloc(32, 42).toString("base64");
+// Port des Test-Anbieters für SSO.
+export const E2E_OIDC_PORT = Number(process.env.E2E_OIDC_PORT ?? 3299);
 
 export default defineConfig({
   testDir: "e2e",
@@ -25,16 +27,27 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 950 } } }],
-  webServer: {
-    command: `npx next start -p ${port}`,
-    url: `http://localhost:${port}/`,
-    reuseExistingServer: false,
-    timeout: 120_000,
-    env: {
-      NODE_OPTIONS: "--import ./tests/support/neon-pg.mjs",
-      TEST_DATABASE_URL: process.env.TEST_DATABASE_URL ?? "",
-      CARECORE_ADMIN_PASSWORD: E2E_ADMIN_PASSWORD,
-      CARECORE_MFA_KEY: E2E_MFA_KEY,
+  webServer: [
+    {
+      command: `npx next start -p ${port}`,
+      url: `http://localhost:${port}/`,
+      reuseExistingServer: false,
+      timeout: 120_000,
+      env: {
+        NODE_OPTIONS: "--import ./tests/support/neon-pg.mjs",
+        TEST_DATABASE_URL: process.env.TEST_DATABASE_URL ?? "",
+        CARECORE_ADMIN_PASSWORD: E2E_ADMIN_PASSWORD,
+        CARECORE_MFA_KEY: E2E_MFA_KEY,
+        // SSO gegen den lokalen Test-Anbieter (http nur für localhost).
+        CARECORE_SSO_ALLOW_HTTP: "1",
+      },
     },
-  },
+    {
+      // Test-Anbieter für SSO (OpenID Connect), siehe tests/support/mock-oidc.mjs.
+      command: `node tests/support/mock-oidc.mjs ${E2E_OIDC_PORT}`,
+      url: `http://localhost:${E2E_OIDC_PORT}/.well-known/openid-configuration`,
+      reuseExistingServer: false,
+      timeout: 30_000,
+    },
+  ],
 });

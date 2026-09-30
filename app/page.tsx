@@ -27,9 +27,34 @@ export default function LoginPage() {
     () => new URLSearchParams(window.location.search).get("abgemeldet") === "inaktiv",
     () => false,
   );
+  // Rückmeldung einer abgebrochenen oder abgelehnten SSO-Anmeldung.
+  const ssoError = useSyncExternalStore(
+    () => () => undefined,
+    () => new URLSearchParams(window.location.search).get("sso") ?? "",
+    () => "",
+  );
   const message =
     error ||
+    ssoError ||
     (idleSignOut ? "Du wurdest nach längerer Inaktivität automatisch abgemeldet. Bitte melde dich erneut an." : "");
+  // Eingeschaltete SSO-Anbieter (OpenID Connect); ohne Anbieter bleibt die Seite unverändert.
+  const [providers, setProviders] = useState<Array<{ id: string; label: string }>>([]);
+  useEffect(() => {
+    let live = true;
+    fetch("/api/auth/sso/providers", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : { providers: [] }))
+      .then((data: { providers?: Array<{ id: string; label: string }> }) => live && setProviders(data.providers ?? []))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
+  const ssoHref = (id: string) => {
+    const next = new URLSearchParams(window.location.search).get("next");
+    const params = new URLSearchParams({ provider: id });
+    if (next?.startsWith("/c")) params.set("next", next);
+    return `/api/auth/sso/start?${params}`;
+  };
   const passkeys = useSyncExternalStore(
     () => () => undefined,
     () => browserSupportsWebAuthn(),
@@ -278,6 +303,16 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+          {providers.length > 0 && !challenge && (
+            <p className="login-mfa-hint">
+              {providers.map((provider, index) => (
+                <span key={provider.id}>
+                  {index > 0 && " · "}
+                  <a href={ssoHref(provider.id)}>Mit {provider.label} anmelden</a>
+                </span>
+              ))}
+            </p>
+          )}
           {passkeys && !challenge && (
             <p className="login-mfa-hint">
               Passkey auf diesem Gerät?{" "}

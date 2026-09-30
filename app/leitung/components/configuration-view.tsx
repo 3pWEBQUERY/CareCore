@@ -14,6 +14,7 @@ import { notifyAdminChanged } from "./admin-board";
 import { RetentionCard } from "./retention-card";
 import { ApiKeysCard } from "./api-keys-card";
 import { WebhooksCard } from "./webhooks-card";
+import { SsoCard } from "./sso-card";
 
 export type ConfigurationData = {
   data?: {
@@ -322,6 +323,7 @@ export function ConfigurationView({
         <RetentionCard showToast={showToast} />
         <ApiKeysCard showToast={showToast} />
         <WebhooksCard showToast={showToast} />
+        <SsoCard showToast={showToast} />
       </div>
       {editorOpen && data && (
         <SettingEditor
