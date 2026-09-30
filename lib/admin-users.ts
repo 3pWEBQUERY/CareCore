@@ -383,11 +383,22 @@ export async function createManagedRole(
     description?: string;
     permissions?: unknown;
     medicationRequiresQualification?: boolean;
+    // Kopie einer bestehenden Rolle (Systemrolle oder eigene Rolle der Einrichtung); wird mitprotokolliert.
+    copyOf?: string;
   },
 ) {
   const actorId = typeof actorInput === "string" ? actorInput : actorInput.id;
   const who = { id: actorId, ...auditOrigin(actorInput) };
   const sql = database();
+  let copyOf: { id: string; key: string } | null = null;
+  if (input.copyOf) {
+    const source = (await sql`
+      SELECT id, key FROM carecore_roles
+      WHERE id::text = ${input.copyOf} AND (system_role OR organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}))
+      LIMIT 1`) as unknown as Array<{ id: string; key: string }>;
+    if (!source[0]) throw new Error("ROLE_NOT_FOUND");
+    copyOf = source[0];
+  }
   const key = input.key.trim().toLowerCase().slice(0, 40);
   const name = input.name.trim().slice(0, 100);
   if (!name || !/^[a-z0-9:_-]+$/.test(key) || ["admin", "leitung", "pflege", "arzt", "mitarbeitende:r"].includes(key))
@@ -397,7 +408,13 @@ export async function createManagedRole(
   const medicationRequiresQualification = input.medicationRequiresQualification === true;
   await sql.transaction([
     sql`INSERT INTO carecore_roles (id, key, name, description, permissions, medication_requires_qualification, created_by, organization_id) VALUES (${id}, ${key}, ${name}, ${input.description?.trim().slice(0, 500) ?? ""}, ${JSON.stringify(permissions)}::jsonb, ${medicationRequiresQualification}, ${actorId}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}))`,
-    auditStatement(sql, who, "role", id, "created", { key, name, permissions, medicationRequiresQualification }),
+    auditStatement(sql, who, "role", id, copyOf ? "copied" : "created", {
+      key,
+      name,
+      permissions,
+      medicationRequiresQualification,
+      ...(copyOf ? { copyOf: copyOf.key } : {}),
+    }),
   ]);
   return listManagedRoles(actorId);
 }

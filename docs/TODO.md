@@ -157,6 +157,9 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - [x] **Mandanten: eigene Rollen je Einrichtung.** Nur die Einrichtung, die eine Rolle anlegt, sieht, vergibt, ändert
       und löscht sie; bestehende eigene Rollen wurden ihrer Einrichtung zugeordnet (Migration 0048). Eingebaute Rollen
       bleiben gemeinsam.
+  - [x] **Rollen kopieren:** In der Rollenverwaltung „Rolle kopieren“ bei jeder Rolle (auch Systemrollen): die Kopie
+        übernimmt Berechtigungen und Medikationseinstellung als neue eigene Rolle der Einrichtung, Name und Schlüssel
+        frei wählbar, protokolliert als „kopiert“ mit der Vorlage. Rollen anderer Einrichtungen sind keine Vorlage.
 - [x] **Universal Action System:** ein Aktionsregister (`app/components/actions.ts`) für Schnellaktionen und Suche ⌘K.
       In der Suche z. B. „vital“ (Person aus der Kopfzeile) oder „vital Muster“ (gleich für diese Person); Vitalwerte
       und Trinkmenge öffnen die Erfassung direkt, die Übergabe wählt die Person vor und setzt den Cursor ins Textfeld.
@@ -184,7 +187,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 
 ## Bekannte Grenzen
 
-- Eigene Rollen (`carecore_roles`) gelten für alle Organisationen der Datenbank, nicht je Organisation.
+- Rollen-Schlüssel sind installationsweit eindeutig: zwei Einrichtungen können nicht denselben Schlüssel verwenden.
 - Das Löschen von Mitarbeitenden entfernt das Konto endgültig; für ausgeschiedene Personen besser „Sperren & archivieren“.
 - Grauer Hilfstext (`--muted`) erreicht 4,4:1 und liegt knapp unter AA für kleine Schrift. Er bleibt unverändert,
   weil sich die Optik nicht verändern soll.
