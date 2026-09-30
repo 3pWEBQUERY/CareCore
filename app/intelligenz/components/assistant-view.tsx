@@ -111,7 +111,7 @@ export function AssistantView() {
             <p>
               {configured
                 ? `Hallo${firstName ? ` ${firstName}` : ""}! Ich kann Übergaben strukturieren, Risiken hervorheben und Dokumentationsentwürfe vorbereiten – auf Basis der Daten in CareCore. Die finale Freigabe bleibt immer bei dir.`
-                : "CareCore KI ist noch nicht eingerichtet. Die Administration muss dafür einen API-Schlüssel (ANTHROPIC_API_KEY) hinterlegen."}
+                : "CareCore KI ist noch nicht eingerichtet. Die Administration muss dafür einen API-Schlüssel (GEMINI_API_KEY) hinterlegen."}
             </p>
           </div>
           {exchanges.map((item) => (

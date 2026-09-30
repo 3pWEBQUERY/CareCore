@@ -26,7 +26,6 @@
     "test:e2e:setup": "node --import ./tests/support/neon-pg.mjs database/migrate.mjs && node --import ./scripts/node-ts/register.mjs --import ./tests/support/neon-pg.mjs database/seed-roster.ts && node --import ./tests/support/neon-pg.mjs database/seed-demo.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.128.0",
     "@aws-sdk/client-s3": "^3.1143.0",
     "@dnd-kit/core": "^6.3.1",
     "@google/genai": "^2.24.0",

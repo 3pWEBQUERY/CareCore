@@ -902,7 +902,7 @@
     "CareCore ist gerade nicht erreichbar",
     "CareCore KI",
     "CareCore KI · Entwurf prüfen",
-    "CareCore KI ist noch nicht eingerichtet. Die Administration muss dafür einen API-Schlüssel (ANTHROPIC_API_KEY) hinterlegen.",
+    "CareCore KI ist noch nicht eingerichtet. Die Administration muss dafür einen API-Schlüssel (GEMINI_API_KEY) hinterlegen.",
     "CareCore KI konnte nicht geladen werden.",
     "CareCore KI öffnen",
     "CareCore lässt eine Reservegabe nur mit gültiger Verordnung, eingehaltenem Mindestabstand, nicht erreichter Maximaldosis und vorhandenem Bestand zu.",

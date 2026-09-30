@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { ApiError } from "@/lib/api-context";
-import { generateDraft, residentContext } from "@/lib/ai";
+import { generateDraft, residentContext, setDraftCall } from "@/lib/ai";
 import { termsFor } from "@/lib/terminology";
 import { apiContextFor, createResident, fixture, q } from "../support/db";
 
@@ -60,8 +60,8 @@ test("Pflegeplanung: Einschätzungen, Probleme, Massnahmen und zwei Wochen Beric
 test("Pflegeplanung: ohne gewählte Person abgelehnt, bevor etwas an die KI geht", async () => {
   const f = await fixture();
   const ctx = await apiContextFor(f, "anna");
-  const previous = process.env.ANTHROPIC_API_KEY;
-  process.env.ANTHROPIC_API_KEY = "test-ohne-aufruf";
+  const previous = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = "test-ohne-aufruf";
   try {
     const error = await generateDraft(ctx, { task: "carePlan", careUnitId: f.units.a }).catch((cause) => cause);
     assert.ok(error instanceof ApiError);
@@ -69,7 +69,50 @@ test("Pflegeplanung: ohne gewählte Person abgelehnt, bevor etwas an die KI geht
     const drafts = await q(`SELECT 1 FROM carecore_ai_drafts WHERE organization_id = $1`, [f.org]);
     assert.equal(drafts.length, 0);
   } finally {
-    if (previous === undefined) delete process.env.ANTHROPIC_API_KEY;
-    else process.env.ANTHROPIC_API_KEY = previous;
+    if (previous === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = previous;
+  }
+});
+
+test("CareCore KI mit Gemini: Entwurf pseudonymisiert, gekürzte Antwort markiert, Fehler verständlich", async () => {
+  const f = await fixture();
+  const ctx = await apiContextFor(f, "anna");
+  const resident = await createResident(f, "Erna Muster");
+  const previous = process.env.GEMINI_API_KEY;
+  const previousModel = process.env.GEMINI_MODEL;
+  delete process.env.GEMINI_MODEL;
+  try {
+    delete process.env.GEMINI_API_KEY;
+    const missing = await generateDraft(ctx, { task: "question", prompt: "Wie geht es?", residentId: resident }).catch(
+      (cause) => cause,
+    );
+    assert.ok(missing instanceof ApiError);
+    assert.equal(missing.status, 503);
+    assert.match(missing.message, /GEMINI_API_KEY fehlt/);
+
+    process.env.GEMINI_API_KEY = "test-double";
+    const sent: string[] = [];
+    setDraftCall(async ({ user }) => {
+      sent.push(user);
+      return { text: "Entwurf der KI", truncated: true };
+    });
+    const draft = await generateDraft(ctx, { task: "question", prompt: "Wie geht es?", residentId: resident });
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].includes("Erna Muster"), false, "keine Namen an die KI");
+    assert.match(sent[0], /Hinweise der Pflegefachperson: Wie geht es\?/);
+    assert.equal(draft.content, "Entwurf der KI\n\n[Antwort gekürzt]");
+    const [row] = await q<{ model: string }>(`SELECT model FROM carecore_ai_drafts WHERE id = $1`, [draft.id]);
+    assert.equal(row.model, "gemini-3.5-flash-lite");
+
+    setDraftCall(async () => ({ text: "", truncated: false }));
+    const empty = await generateDraft(ctx, { task: "question", prompt: "Noch einmal?", residentId: resident }).catch(
+      (cause) => cause,
+    );
+    assert.ok(empty instanceof ApiError);
+    assert.equal(empty.status, 502);
+  } finally {
+    if (previous === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = previous;
+    if (previousModel !== undefined) process.env.GEMINI_MODEL = previousModel;
   }
 });

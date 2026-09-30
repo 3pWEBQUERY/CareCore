@@ -1,7 +1,7 @@
 import "server-only";
-import { ApiError as GeminiApiError, GoogleGenAI } from "@google/genai";
+import { FinishReason, ApiError as GeminiApiError, GoogleGenAI } from "@google/genai";
 
-// Google Gemini für Übersetzungsentwürfe und KI-Dienstplanung. Der Schlüssel bleibt serverseitig; Prompt-Inhalte
+// Google Gemini für CareCore KI, Übersetzungsentwürfe und KI-Dienstplanung. Der Schlüssel bleibt serverseitig; Prompt-Inhalte
 // werden nicht geloggt.
 
 export const GEMINI_DEFAULT_MODEL = "gemini-3.5-flash-lite";
@@ -48,11 +48,46 @@ export async function geminiJson(request: { system: string; user: string; schema
     if (!text) throw new GeminiError("Die KI hat keine Antwort geliefert.", 502);
     return text;
   } catch (error) {
-    if (error instanceof GeminiError) throw error;
-    if (error instanceof GeminiApiError) {
-      console.error("Gemini API error", error.status, error.message);
-      throw new GeminiError("Die KI ist im Moment nicht erreichbar.", 502);
-    }
-    throw error;
+    throw apiFailure(error);
   }
+}
+
+// Freier Text (CareCore KI). `truncated`, wenn die Antwort an der Längengrenze abgeschnitten wurde.
+export async function geminiText(request: { system: string; user: string; maxOutputTokens?: number }) {
+  if (!geminiConfigured()) throw new GeminiError("GEMINI_API_KEY fehlt.", 503);
+  try {
+    const response = await gemini().models.generateContent({
+      model: geminiModel(),
+      contents: request.user,
+      config: {
+        systemInstruction: request.system,
+        temperature: 0.3,
+        maxOutputTokens: request.maxOutputTokens ?? 8192,
+      },
+    });
+    const reason = response.candidates?.[0]?.finishReason;
+    if (
+      response.promptFeedback?.blockReason ||
+      reason === FinishReason.SAFETY ||
+      reason === FinishReason.PROHIBITED_CONTENT
+    )
+      throw new GeminiError("Die KI hat diese Anfrage abgelehnt. Bitte den Auftrag anders formulieren.", 422);
+    return { text: (response.text ?? "").trim(), truncated: reason === FinishReason.MAX_TOKENS };
+  } catch (error) {
+    throw apiFailure(error);
+  }
+}
+
+function apiFailure(error: unknown) {
+  if (error instanceof GeminiError) return error;
+  if (error instanceof GeminiApiError) {
+    console.error("Gemini API error", error.status);
+    if (error.status === 400 && /api key/i.test(error.message))
+      return new GeminiError("Der GEMINI_API_KEY ist ungültig.", 503);
+    if (error.status === 401 || error.status === 403) return new GeminiError("Der GEMINI_API_KEY ist ungültig.", 503);
+    if (error.status === 429)
+      return new GeminiError("Die KI ist gerade ausgelastet. Bitte in einer Minute erneut versuchen.", 429);
+    return new GeminiError("Die KI ist im Moment nicht erreichbar.", 502);
+  }
+  return error;
 }
