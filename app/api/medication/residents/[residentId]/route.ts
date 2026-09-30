@@ -3,6 +3,7 @@ import { apiContext, apiErrorResponse } from "@/lib/api-context";
 import { listOrders, updateMedicationAllergies } from "@/lib/medication-orders";
 import { listResidentMovements } from "@/lib/medication-stock";
 import { listEffectChecks } from "@/lib/medication-effect";
+import { residentInteractions } from "@/lib/medication-interactions";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ residentId: string }> };
@@ -12,12 +13,13 @@ export async function GET(_request: Request, { params }: Context) {
     const ctx = await apiContext("residents.read");
     if (ctx instanceof NextResponse) return ctx;
     const { residentId } = await params;
-    const [orders, movements, effectChecks] = await Promise.all([
+    const [orders, movements, effectChecks, interactions] = await Promise.all([
       listOrders(ctx, residentId),
       listResidentMovements(ctx, residentId),
       listEffectChecks(ctx, residentId),
+      residentInteractions(ctx, residentId),
     ]);
-    return NextResponse.json({ orders, movements, effectChecks });
+    return NextResponse.json({ orders, movements, effectChecks, interactions });
   } catch (error) {
     return apiErrorResponse(error, "Medikation konnte nicht geladen werden.");
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { InteractionNotice } from "./interaction-notice";
 import { useWorkContext, useTerms } from "@/app/components/care-context";
 import type { Terms } from "@/lib/terminology";
 import { ModuleIcon } from "@/app/components/module-icon";
@@ -121,6 +122,7 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
                 <AllergyBadge allergies={resident.allergies} />
               </section>
               {detail.error && <LoadError message={detail.error} onRetry={detail.reload} />}
+              <InteractionNotice findings={detail.data?.interactions} />
               {effectChecks.length > 0 && (
                 <section className="card med-reserve-card med-effect-card" aria-labelledby="med-effect-title">
                   <div className="card-header">

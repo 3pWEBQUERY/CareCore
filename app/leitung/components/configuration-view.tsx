@@ -15,6 +15,7 @@ import { RetentionCard } from "./retention-card";
 import { ApiKeysCard } from "./api-keys-card";
 import { WebhooksCard } from "./webhooks-card";
 import { SsoCard } from "./sso-card";
+import { InteractionsCard } from "./interactions-card";
 
 export type ConfigurationData = {
   data?: {
@@ -324,6 +325,7 @@ export function ConfigurationView({
         <ApiKeysCard showToast={showToast} />
         <WebhooksCard showToast={showToast} />
         <SsoCard showToast={showToast} />
+        <InteractionsCard showToast={showToast} />
       </div>
       {editorOpen && data && (
         <SettingEditor

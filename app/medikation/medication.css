@@ -311,3 +311,38 @@
 .med-round-readonly {
   margin: 0 0 18px;
 }
+
+/* Wechselwirkungen: nur sichtbar, wenn ein Hinweis der Einrichtung zutrifft. */
+.med-interaction-card {
+  border-color: #f1c1bb;
+}
+
+.med-interaction-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.med-interaction-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--surface-soft);
+}
+
+.med-interaction-list p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.med-interaction-list small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
