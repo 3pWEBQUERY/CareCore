@@ -171,6 +171,8 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
         nur mit Verweis auf die FHIR-Ressource. Vorgemerkt per Trigger, Zustellung mit Wiederholungen, Ziele im
         internen Netz gesperrt (auch nach der Namensauflösung), Geheimnis verschlüsselt, Probemeldung aus der
         Konfiguration.
+- [x] **Google Gemini** (`gemini-3.5-flash-lite`, Entscheidung vom 30.09.2026) für KI-Dienstplanung und
+      Übersetzungsentwürfe, Schlüssel `GEMINI_API_KEY`; Mistral entfernt.
 - [x] **Portale (Phase 6).**
   - [x] Portal für Angehörige und Ärztinnen/Ärzte (Entscheidung vom 30.09.2026): eigene Zugänge mit Einmal-Passwort,
         Freigaben individuell je Person oder Wohnbereich, einzeln gewählte Bereiche (Notfalldaten, Medikation,

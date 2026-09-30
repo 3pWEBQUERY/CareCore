@@ -1,7 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
 import catalog from "@/locales/catalog.json" with { type: "json" };
 import { ApiError, auditStatement, iso, type ApiContext, type Row, type Sql } from "@/lib/api-context";
-import { aiConfigured } from "@/lib/ai";
+import { GeminiError, geminiConfigured, geminiJson, geminiModel } from "@/lib/gemini";
 import { hasPermission } from "@/lib/server-data";
 import { releasedLanguages } from "@/lib/languages";
 import {
@@ -18,7 +17,6 @@ import {
 // Übersetzungen liegen in der Datenbank mit Prüfstatus. Mitarbeitende erhalten nur geprüfte Übersetzungen einer
 // freigegebenen Sprache; Entwürfe (von der KI oder ungeprüft) sieht nur die Administration beim Prüfen.
 
-const MODEL = "claude-opus-5";
 const PATTERNS = new Set(catalog.patterns);
 const SOURCES = [...catalog.strings, ...catalog.patterns];
 const KNOWN = new Set(SOURCES);
@@ -154,46 +152,40 @@ Behalte Platzhalter wie {0}, {1} unverändert bei, ebenso Zeichen wie ·, „ �
 Pflegefachbegriffe wählst du so, wie sie in Pflegeeinrichtungen der Zielsprache gebräuchlich sind.
 Antworte nur mit einem JSON-Objekt: Schlüssel ist die Nummer des Textes, Wert die Übersetzung.`;
 
-let client: Anthropic | null = null;
+export type TranslationCall = (request: { system: string; user: string; schema: object }) => Promise<string>;
+
+// Standard: Google Gemini mit JSON-Schema-Ausgabe. Tests setzen ein Test-Double.
+let translationCall: TranslationCall = geminiJson;
+export const setTranslationCall = (call: TranslationCall) => {
+  translationCall = call;
+};
 
 // KI-Entwürfe für noch fehlende Texte (höchstens `limit`); sie bleiben ungeprüft, bis die Administration sie prüft.
 export async function draftTranslations(ctx: ApiContext, localeInput: unknown, limit = 120) {
   requireAdmin(ctx);
   const locale = targetLanguage(localeInput);
-  if (!aiConfigured()) throw new ApiError("CareCore KI ist nicht eingerichtet (ANTHROPIC_API_KEY fehlt).", 503);
+  if (!geminiConfigured())
+    throw new ApiError("Die KI für Übersetzungen ist nicht eingerichtet (GEMINI_API_KEY fehlt).", 503);
   const rows = (await ctx.sql`SELECT source FROM carecore_translations WHERE locale = ${locale}`) as Row[];
   const done = new Set(rows.map((row) => String(row.source)));
   const batch = SOURCES.filter((source) => !done.has(source)).slice(0, Math.min(Math.max(limit, 1), 200));
   if (!batch.length) return { drafted: 0, remaining: 0 };
+  const keys = batch.map((_, index) => String(index));
   let content = "";
   try {
-    const response = await (client ??= new Anthropic()).beta.messages.create({
-      model: MODEL,
-      max_tokens: 32000,
-      thinking: { type: "adaptive" },
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
+    content = await translationCall({
       system: SYSTEM,
-      messages: [
-        {
-          role: "user",
-          content: `Zielsprache: ${LANGUAGES[locale].english} (${LANGUAGES[locale].label}).\nTexte (JSON, Nummer → Deutsch):\n${JSON.stringify(
-            Object.fromEntries(batch.map((source, index) => [index, source])),
-          )}`,
-        },
-      ],
+      user: `Zielsprache: ${LANGUAGES[locale].english} (${LANGUAGES[locale].label}).\nTexte (JSON, Nummer → Deutsch):\n${JSON.stringify(
+        Object.fromEntries(batch.map((source, index) => [index, source])),
+      )}`,
+      schema: {
+        type: "object",
+        properties: Object.fromEntries(keys.map((key) => [key, { type: "string" }])),
+        required: keys,
+      },
     });
-    if (response.stop_reason === "refusal") throw new ApiError("Die KI hat die Übersetzung abgelehnt.", 422);
-    content = response.content
-      .filter((block) => block.type === "text")
-      .map((block) => block.text)
-      .join("");
   } catch (error) {
-    if (error instanceof ApiError) throw error;
-    if (error instanceof Anthropic.APIError) {
-      console.error("Claude API error (translations)", error.status, error.message);
-      throw new ApiError("CareCore KI ist im Moment nicht erreichbar.", 502);
-    }
+    if (error instanceof GeminiError) throw new ApiError(error.message, error.status);
     throw error;
   }
   const json = /\{[\s\S]*\}/.exec(content)?.[0];
@@ -217,7 +209,7 @@ export async function draftTranslations(ctx: ApiContext, localeInput: unknown, l
       auditStatement(ctx, "language", ctx.actor.organizationId, "ai_drafted", null, {
         locale,
         count: accepted.length,
-        model: MODEL,
+        model: geminiModel(),
       }),
     ]);
   return { drafted: accepted.length, remaining: SOURCES.length - done.size - accepted.length };

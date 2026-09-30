@@ -16,8 +16,8 @@ CareCore ist in Deutsch geschrieben. Diese Sprachen lassen sich einrichten:
    `locales/catalog.json`: Beschriftungen, Knöpfe und Meldungen des Servers, dazu Vorlagen mit wechselndem Inhalt als
    Muster mit `{0}`, `{1}`. Die CI prüft, dass der Katalog aktuell ist.
 2. **Entwürfe:** In **Leitung › Administration › Sprachen** erstellt „KI-Entwürfe für fehlende Texte“ Übersetzungen
-   für je bis zu 200 fehlende Texte. Dafür werden nur Texte der Oberfläche an CareCore KI übermittelt, keine
-   Personendaten. Entwürfe lassen sich auch von Hand erfassen.
+   für je bis zu 200 fehlende Texte. Dafür werden nur Texte der Oberfläche an Google Gemini (`gemini-3.5-flash-lite`,
+   Schlüssel `GEMINI_API_KEY`) übermittelt, keine Personendaten. Entwürfe lassen sich auch von Hand erfassen.
 3. **Prüfen:** Die Administration prüft jeden Text. „Speichern und als geprüft markieren“ gilt für einen Text;
    „Angezeigte Entwürfe als geprüft markieren“ gilt für die angezeigte Seite (höchstens 50 Texte). Platzhalter wie
    `{0}` müssen erhalten bleiben. „App in dieser Sprache ansehen“ zeigt die App mit Entwürfen, um sie im

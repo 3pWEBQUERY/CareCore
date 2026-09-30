@@ -21,6 +21,7 @@ import {
   type PlanningRange,
   type SuggestedAction,
 } from "./ai-core";
+import { GeminiError, geminiConfigured, geminiJson, geminiModel } from "@/lib/gemini";
 import { auditQuery } from "./audit";
 import type { RosterContext } from "./context";
 import { requirePermission } from "./context";
@@ -32,7 +33,7 @@ import { commitChanges } from "./shift-service";
 import { addDays, weekStart } from "./time";
 import type { ScheduleSnapshot, ShiftChange, Violation } from "./types";
 
-// KI-Planung und -Analyse mit Mistral (Spec 9). Der Key bleibt serverseitig; ohne Key ist die
+// KI-Planung und -Analyse mit Google Gemini (Spec 9). Der Key bleibt serverseitig; ohne Key ist die
 // Funktion mit klarer Meldung deaktiviert. Prompt-Inhalte werden nicht geloggt.
 
 export type ModelCall = (request: {
@@ -42,30 +43,17 @@ export type ModelCall = (request: {
   schema: object;
 }) => Promise<string>;
 
-const MODEL = () => process.env.MISTRAL_MODEL || "mistral-large-latest";
-export const aiConfigured = () => Boolean(process.env.MISTRAL_API_KEY);
+const MODEL = geminiModel;
+export const aiConfigured = geminiConfigured;
 
-// Standard: offizielles Mistral-SDK mit JSON-Schema-Ausgabe. Tests setzen ein Test-Double.
-let modelCall: ModelCall = async ({ system, user, schemaName, schema }) => {
-  const { Mistral } = await import("@mistralai/mistralai");
-  const client = new Mistral({ apiKey: process.env.MISTRAL_API_KEY ?? "", timeoutMs: 90_000 });
-  const result = await client.chat.complete({
-    model: MODEL(),
-    temperature: 0.2,
-    messages: [
-      { role: "system", content: system },
-      { role: "user", content: user },
-    ],
-    responseFormat: {
-      type: "json_schema",
-      jsonSchema: { name: schemaName, schemaDefinition: schema as Record<string, unknown>, strict: true },
-    },
-  });
-  const content = result.choices?.[0]?.message?.content;
-  if (typeof content === "string") return content;
-  if (Array.isArray(content))
-    return content.map((chunk) => ("text" in chunk && typeof chunk.text === "string" ? chunk.text : "")).join("");
-  throw new AiOutputError("Die KI hat keine Antwort geliefert.");
+// Standard: offizielles Gemini-SDK mit JSON-Schema-Ausgabe. Tests setzen ein Test-Double.
+let modelCall: ModelCall = async ({ system, user, schema }) => {
+  try {
+    return await geminiJson({ system, user, schema });
+  } catch (error) {
+    if (error instanceof GeminiError) throw new AiOutputError(error.message);
+    throw error;
+  }
 };
 export const setModelCall = (call: ModelCall) => {
   modelCall = call;
@@ -146,7 +134,7 @@ export async function startRun(ctx: RosterContext, body: Body) {
   if (!aiConfigured())
     throw new RosterError(
       "AI_UNAVAILABLE",
-      "Die KI-Planung ist nicht eingerichtet (MISTRAL_API_KEY fehlt). Alle anderen Funktionen stehen zur Verfügung.",
+      "Die KI-Planung ist nicht eingerichtet (GEMINI_API_KEY fehlt). Alle anderen Funktionen stehen zur Verfügung.",
       503,
     );
   const unitId = uuid(body.unitId, "Wohnbereich");
