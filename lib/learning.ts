@@ -114,7 +114,8 @@ export async function learningData(ctx: ApiContext, params: URLSearchParams): Pr
       FROM carecore_trainings t
       WHERE t.organization_id = ${actor.organizationId} AND t.active
       ORDER BY t.mandatory DESC, t.title` as Promise<Row[]>,
-    sql`SELECT key, name FROM carecore_roles ORDER BY name` as Promise<Row[]>,
+    sql`SELECT key, name FROM carecore_roles
+      WHERE system_role OR organization_id = ${actor.organizationId} ORDER BY name` as Promise<Row[]>,
   ]);
   const targets =
     manager && requested === "all"

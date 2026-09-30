@@ -35,9 +35,9 @@ function fail(error: unknown) {
 
 export async function GET() {
   try {
-    if (!(await adminUser()))
-      return NextResponse.json({ error: "Keine Administrationsberechtigung." }, { status: 403 });
-    return NextResponse.json({ roles: await listManagedRoles() });
+    const actor = await adminUser();
+    if (!actor) return NextResponse.json({ error: "Keine Administrationsberechtigung." }, { status: 403 });
+    return NextResponse.json({ roles: await listManagedRoles(actor.id) });
   } catch (error) {
     return fail(error);
   }

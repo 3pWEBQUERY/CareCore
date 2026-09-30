@@ -38,7 +38,10 @@ export function parseTraining(body: Record<string, unknown>, roleKeys: string[])
 }
 
 export async function roleKeys(ctx: ApiContext) {
-  return ((await ctx.sql`SELECT key FROM carecore_roles`) as Row[]).map((row) => String(row.key));
+  return (
+    (await ctx.sql`
+      SELECT key FROM carecore_roles WHERE system_role OR organization_id = ${ctx.actor.organizationId}`) as Row[]
+  ).map((row) => String(row.key));
 }
 
 export async function createTraining(ctx: ApiContext, body: Record<string, unknown>) {
