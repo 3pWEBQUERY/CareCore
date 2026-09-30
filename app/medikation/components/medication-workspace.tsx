@@ -6,8 +6,9 @@ import PlanView from "./plan-view";
 import ReservesView from "./reserves-view";
 import RoundView from "./round-view";
 import StockView from "./stock-view";
+import OrdersView from "./orders-view";
 
-type MedicationView = "plan" | "round" | "stocks" | "reserves" | "btm";
+type MedicationView = "plan" | "round" | "stocks" | "reserves" | "btm" | "orders";
 
 const navigationLabel: Record<MedicationView, string> = {
   plan: "Medikamentenplan",
@@ -15,6 +16,7 @@ const navigationLabel: Record<MedicationView, string> = {
   stocks: "Bestände",
   reserves: "Reserven",
   btm: "BtM-Kontrolle",
+  orders: "Bestellungen",
 };
 
 export default function MedicationWorkspace({ view }: { view: MedicationView }) {
@@ -32,6 +34,7 @@ export default function MedicationWorkspace({ view }: { view: MedicationView }) 
           {view === "stocks" && <StockView showToast={showToast} />}
           {view === "reserves" && <ReservesView showToast={showToast} />}
           {view === "btm" && <BtmView showToast={showToast} />}
+          {view === "orders" && <OrdersView showToast={showToast} />}
         </main>
       )}
     </ModulePageShell>

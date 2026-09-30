@@ -92,7 +92,8 @@ export const navigation: NavGroup[] = [
         id: "med",
         label: "Medikation",
         icon: "med",
-        children: ["Medikamentenrunde", "Medikamentenplan", "Reserven", "Bestände", "BtM-Kontrolle"],
+        children: ["Medikamentenrunde", "Medikamentenplan", "Reserven", "Bestände", "BtM-Kontrolle", "Bestellungen"],
+        childPermissions: { Bestellungen: "medication.manage" },
       },
       {
         id: "vitals",
@@ -136,7 +137,7 @@ export const navigation: NavGroup[] = [
     label: "CareCore One",
     modules: [
       { id: "one-calendar", label: "Kalender", icon: "calendar", children: ["Kalender"] },
-      { id: "messenger", label: "Messenger", icon: "team", children: ["Nachrichten"] },
+      { id: "messenger", label: "Messenger", icon: "team", children: ["Nachrichten", "Portal-Nachrichten"] },
       { id: "cloud", label: "Cloud", icon: "docs", children: ["Gemeinsame Ablage", "Meine Dateien"] },
     ],
   },
@@ -242,6 +243,7 @@ const routes: Record<string, Record<string, string>> = {
     Reserven: "/medikation/reserven",
     Bestände: "/medikation/bestaende",
     "BtM-Kontrolle": "/medikation/btm",
+    Bestellungen: "/medikation/bestellungen",
   },
   vitals: {
     Vitalwerte: "/vitalwerte",
@@ -271,7 +273,7 @@ const routes: Record<string, Record<string, string>> = {
     Dokumente: "/personal/dokumente",
   },
   "one-calendar": { Kalender: "/carecore-one/kalender" },
-  messenger: { Nachrichten: "/carecore-one/messenger" },
+  messenger: { Nachrichten: "/carecore-one/messenger", "Portal-Nachrichten": "/carecore-one/portal-nachrichten" },
   cloud: { "Gemeinsame Ablage": "/carecore-one/ablage", "Meine Dateien": "/carecore-one/cloud" },
   quality: {
     Ereignisse: "/leitung/qualitaet",
