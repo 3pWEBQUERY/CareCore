@@ -1,4 +1,5 @@
 // Personal settings of "Einstellungen", stored in carecore_user_profiles.preferences.
+import { isLanguage, type Language } from "@/lib/i18n-shared";
 
 export const NOTIFY_CATEGORIES = {
   tasks: { label: "Aufgaben & Fälligkeiten", detail: "Zugewiesene und fällige Aufgaben", prefix: "task_" },
@@ -79,6 +80,8 @@ export type UserPreferences = {
   sound: boolean;
   // Spracheingabe (nur Erkennung auf dem Gerät); aus, bis die Person sie einschaltet.
   dictation: boolean;
+  // Sprache der Oberfläche (freigegebene Sprachen; Deutsch als Ausgangssprache).
+  language: Language;
   startPage: StartPage;
   autoLogout: AutoLogout;
   quietHours: QuietHours;
@@ -105,6 +108,7 @@ export function resolvePreferences(stored: unknown): UserPreferences {
     shortcuts: raw.shortcuts !== false,
     sound: raw.sound === true,
     dictation: raw.dictation === true,
+    language: isLanguage(raw.language) ? raw.language : "de",
     startPage:
       typeof raw.startPage === "string" && raw.startPage in START_PAGES ? (raw.startPage as StartPage) : "home",
     autoLogout: (AUTO_LOGOUT_MINUTES as readonly unknown[]).includes(raw.autoLogout)

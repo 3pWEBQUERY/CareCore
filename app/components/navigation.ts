@@ -189,7 +189,7 @@ export const navigation: NavGroup[] = [
         label: "Administration",
         icon: "settings",
         permission: "administration.manage",
-        children: ["Organisation", "Pflegebedarf", "Konfiguration", "Portal"],
+        children: ["Organisation", "Pflegebedarf", "Konfiguration", "Portal", "Sprachen"],
       },
     ],
   },
@@ -292,6 +292,7 @@ const routes: Record<string, Record<string, string>> = {
     Pflegebedarf: "/leitung/administration/pflegebedarf",
     Konfiguration: "/leitung/administration/konfiguration",
     Portal: "/leitung/administration/portal",
+    Sprachen: "/leitung/administration/sprachen",
   },
   ai: { Assistenz: "/intelligenz", "KI-Entwürfe": "/intelligenz/entwuerfe" },
 };

@@ -1,7 +1,9 @@
 import { cookies } from "next/headers";
 import { hashPassword, hashSessionToken, SESSION_COOKIE, verifyPassword } from "@/lib/auth";
 import { ApiError, iso, type Row } from "@/lib/api-context";
-import { carecoreDb, type CarecoreActor } from "@/lib/server-data";
+import { carecoreDb, hasPermission, type CarecoreActor } from "@/lib/server-data";
+import { LANGUAGE_KEYS } from "@/lib/i18n-shared";
+import { releasedLanguages } from "@/lib/languages";
 import {
   AUTO_LOGOUT_MINUTES,
   DEFAULT_PREFERENCES,
@@ -104,6 +106,13 @@ export async function savePreferences(actor: CarecoreActor, body: Record<string,
   choose("shortcuts", "Tastaturkürzel", [true, false]);
   choose("sound", "Hinweiston", [true, false]);
   choose("dictation", "Spracheingabe", [true, false]);
+  // Sprache: freigegebene Sprachen; die Administration darf zum Prüfen auch noch nicht freigegebene wählen.
+  if (body.language !== undefined)
+    choose(
+      "language",
+      "Sprache",
+      hasPermission(actor, "administration.manage") ? LANGUAGE_KEYS : await releasedLanguages(carecoreDb()),
+    );
   choose("startPage", "Startseite", Object.keys(START_PAGES));
   choose("autoLogout", "Automatische Abmeldung", AUTO_LOGOUT_MINUTES);
   if (body.quietHours !== undefined) {

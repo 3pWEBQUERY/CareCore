@@ -1,6 +1,7 @@
 "use client";
 
 import { termsFor, type Terms } from "@/lib/terminology";
+import { LANGUAGES, type Language } from "@/lib/i18n-shared";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ModulePageShell from "@/app/components/module-page-shell";
@@ -145,6 +146,7 @@ export default function SettingsWorkspaceDetail({ view }: { view: SettingsView }
   const router = useRouter();
   const context = useWorkContext();
   const settings = useApiData<UserSettings>("/api/me/settings");
+  const languages = useApiData<{ languages: Language[] }>("/api/i18n");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -235,6 +237,7 @@ export default function SettingsWorkspaceDetail({ view }: { view: SettingsView }
               saveOrganization,
               actions,
               terms: termsFor(context?.terminology),
+              languages: languages.data?.languages ?? ["de"],
             })
           : [];
         const selected = items.find((item) => item.id === selectedId) ?? items[0] ?? null;
@@ -680,6 +683,8 @@ type Extras = {
   saveOrganization: (key: SettingKey, change: { enabled?: boolean; value?: number }) => Promise<boolean>;
   actions: Actions;
   terms: Terms;
+  // Wählbare Sprachen (freigegebene; für die Administration zum Prüfen alle).
+  languages: Language[];
 };
 
 function itemsFor(
@@ -1145,6 +1150,35 @@ function itemsFor(
         save: (label) => save({ theme: pick(THEMES, label, "light") }, `Erscheinungsbild: ${label}`),
       },
     },
+    // Nur sichtbar, wenn neben Deutsch eine Sprache freigegeben ist (oder für die Administration zum Prüfen).
+    ...(extras.languages.length > 1 || preferences.language !== "de"
+      ? [
+          {
+            id: "app-language",
+            title: "Sprache",
+            description: "Sprache der Oberfläche",
+            value: LANGUAGES[preferences.language].label,
+            icon: "settings" as ModuleIconName,
+            detail: {
+              kind: "select" as const,
+              text: "Texte der Oberfläche erscheinen in dieser Sprache, soweit sie übersetzt und geprüft sind; Einträge und Namen bleiben, wie sie erfasst wurden.",
+              label: "Sprache",
+              value: LANGUAGES[preferences.language].label,
+              options: [...new Set<Language>([...extras.languages, preferences.language])].map(
+                (key) => LANGUAGES[key].label,
+              ),
+              save: (label: string) =>
+                save(
+                  {
+                    language:
+                      (Object.keys(LANGUAGES) as Language[]).find((key) => LANGUAGES[key].label === label) ?? "de",
+                  },
+                  `Sprache: ${label}`,
+                ),
+            },
+          },
+        ]
+      : []),
     {
       id: "app-motion",
       title: "Animationen",

@@ -13,6 +13,7 @@
     "db:migrate": "node --env-file=.env.local database/migrate.mjs",
     "db:seed": "node --env-file=.env.local database/seed-demo.mjs",
     "styles:mobile-type": "node scripts/build-mobile-type.mjs",
+    "i18n:extract": "node scripts/i18n-extract.mjs",
     "test": "node --import ./scripts/node-ts/register.mjs --experimental-transform-types --no-warnings=ExperimentalWarning --test tests/*.test.ts",
     "test:db": "node --import ./scripts/node-ts/register.mjs --import ./tests/support/neon-pg.mjs --experimental-transform-types --no-warnings=ExperimentalWarning --test --test-concurrency=1 tests/db/*.test.ts",
     "test:db:setup": "node --import ./tests/support/neon-pg.mjs database/migrate.mjs",

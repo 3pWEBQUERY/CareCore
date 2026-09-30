@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
+import { activeLanguage, rememberLanguage } from "@/app/components/translator";
+import { LANGUAGES, type Language } from "@/lib/i18n-shared";
 import { PORTAL_KINDS, type PortalKind, type PortalResident, type PortalResidentDetail } from "@/lib/portal-shared";
 
 type Me = {
@@ -56,11 +58,14 @@ export default function PortalPage() {
             <p className="eyebrow">CareCore Portal</p>
             <h1>{me ? me.account.displayName : "Anmeldung"}</h1>
           </div>
-          {me && (
-            <button className="secondary-button" type="button" onClick={() => void logout()}>
-              Abmelden
-            </button>
-          )}
+          <div className="portal-top-actions">
+            <PortalLanguage />
+            {me && (
+              <button className="secondary-button" type="button" onClick={() => void logout()}>
+                Abmelden
+              </button>
+            )}
+          </div>
         </header>
         {!checked ? null : !me ? (
           <PortalLogin onDone={load} />
@@ -338,5 +343,37 @@ function PortalDetail({ detail }: { detail: PortalResidentDetail }) {
         </section>
       )}
     </div>
+  );
+}
+
+// Sprache des Portals: erscheint nur, wenn neben Deutsch eine Sprache freigegeben ist.
+function PortalLanguage() {
+  const [languages, setLanguages] = useState<Language[]>([]);
+  const current = useSyncExternalStore(
+    () => () => undefined,
+    activeLanguage,
+    () => "de",
+  );
+  useEffect(() => {
+    let live = true;
+    void send<{ languages: Language[] }>("/api/i18n", "GET").then(
+      (result) => live && result.ok && setLanguages(result.payload?.languages ?? []),
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
+  if (languages.length < 2) return null;
+  return (
+    <label className="portal-language">
+      <span className="sr-only">Sprache</span>
+      <select value={current} onChange={(event) => rememberLanguage(event.target.value as Language)} translate="no">
+        {languages.map((locale) => (
+          <option key={locale} value={locale}>
+            {LANGUAGES[locale].label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
