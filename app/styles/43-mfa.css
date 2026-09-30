@@ -79,3 +79,8 @@
   color: var(--muted);
   font-size: 12px;
 }
+.login-mfa-hint a {
+  color: var(--brand);
+  font-weight: 700;
+  text-decoration: none;
+}

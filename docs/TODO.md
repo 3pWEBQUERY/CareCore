@@ -32,7 +32,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Mobile                       | 🟡    | Untere Navigation, Hauptmenü, Schnellaktions-Knopf (FAB).                                                                                                             |
 | Dark Mode                    | ✅    | Persönliche Wahl „Erscheinungsbild: Dunkel“; Standard bleibt hell.                                                                                                    |
 | Barrierefreiheit WCAG 2.2 AA | 🟡    | Tastatur, Fokusfalle, Schriftgrösse, Kontrast-Einstellung. `--muted` erreicht nur 4,4:1.                                                                              |
-| IAM                          | 🟡    | Passwort, Login-Drossel, Sitzungen mit Gerät, automatische Abmeldung, MFA (TOTP), Passkeys. **SSO fehlt.**                                                            |
+| IAM                          | ✅    | Passwort, Login-Drossel, Sitzungen mit Gerät, automatische Abmeldung, MFA (TOTP), Passkeys, SSO (OpenID Connect).                                                     |
 | Rechte                       | 🟡    | Rechte plus Qualifikationen; Medikation getrennt in verabreichen / verwalten.                                                                                         |
 | Audit                        | ✅    | Atomar, pro Bewohner, mit Sitzung und Gerät.                                                                                                                          |
 | Datenschutz                  | ✅    | Eigener Datenexport, Quittungen nach 30 Tagen gelöscht, Lösch- und Aufbewahrungskonzept (`docs/DATENSCHUTZ.md`).                                                      |
@@ -106,7 +106,11 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - [x] **Passkeys** (WebAuthn): in Einstellungen › Sicherheit hinzufügen und entfernen (protokolliert); Anmeldung
       über den Vorschlag im Feld „Benutzername“ oder „Mit Passkey anmelden“. Bestätigung am Gerät ist Pflicht, deshalb
       ersetzt ein Passkey Passwort und Code. Gespeichert wird nur der öffentliche Schlüssel.
-- [ ] **SSO** selbst gebaut mit Open-Source-Bausteinen (Entscheidung vom 30.09.2026).
+- [x] **SSO** selbst gebaut mit Open-Source-Bausteinen (Entscheidung vom 30.09.2026): OpenID Connect mit
+      `openid-client` (MIT), Authorization Code mit PKCE, state und nonce, geprüftes ID-Token. Je Einrichtung in
+      Leitung › Konfiguration (Issuer, Client-ID, Secret verschlüsselt, Claim für den Benutzernamen, Bezeichnung).
+      Nur bestehende, aktive Konten der Einrichtung; Knopf auf der Anmeldeseite nur, wenn eingeschaltet. Beschreibung in
+      `docs/SSO.md`.
 - [x] **Smart Workflow Sturz** als erste Ablaufkette mit Folgeaufgaben. Umgesetzt für alle Ereignisarten; die
       Schritte (Titel, Fälligkeit nach dem Ereignis, Priorität) legt das Qualitätsmanagement fest, ohne Vorgaben.
 - [x] **Home in Kritisch / Wichtig / Routine** gliedern, ohne das bestehende Aussehen zu verändern. Die Tagesliste

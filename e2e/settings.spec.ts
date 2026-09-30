@@ -339,3 +339,60 @@ test("Passkeys: einrichten, ohne Passwort anmelden, entfernen", async ({ page })
   await expect(page.locator(".settings-list button", { hasText: "Passkeys" })).toContainText("Keine");
   expect(errors).toEqual([]);
 });
+
+// SSO über OpenID Connect gegen den lokalen Test-Anbieter (tests/support/mock-oidc.mjs).
+test("SSO: einrichten, Verbindung prüfen, über den Identity-Provider anmelden", async ({ page }) => {
+  const idp = `http://localhost:${Number(process.env.E2E_OIDC_PORT ?? 3299)}`;
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  await page.goto("/c/leitung/administration/konfiguration");
+  const card = page.locator(".admin-sso-card");
+  try {
+    await card.getByRole("button", { name: /SSO (einrichten|bearbeiten)/ }).click();
+    const dialog = page.locator("#sso-editor-title").locator("xpath=ancestor::section[1]");
+    await dialog.getByLabel("Adresse des Identity-Providers (Issuer)").fill(idp);
+    await dialog.getByLabel("Client-ID").fill("carecore-test");
+    await dialog.getByLabel("Client-Secret").fill("carecore-test-secret");
+    await dialog.getByLabel("Bezeichnung auf der Anmeldeseite").fill("Test-IdP");
+    await dialog.getByLabel("Anmeldung über SSO anbieten").check();
+    await dialog.getByRole("button", { name: "Speichern" }).click();
+    await expect(page.locator(".toast")).toContainText("SSO gespeichert und eingeschaltet");
+    await expect(card).toContainText("Eingeschaltet");
+    await card.getByRole("button", { name: "Verbindung prüfen" }).click();
+    await expect(page.locator(".toast")).toContainText("Verbindung in Ordnung");
+
+    // Der Identity-Provider meldet Lena Bucher an; CareCore kennt sie über den Benutzernamen.
+    expect((await page.request.get(`${idp}/__user?username=${FAGE.username}`)).ok()).toBe(true);
+    // Erst die Seite verlassen, damit keine Hintergrundabfrage ohne Sitzung (401) mehr läuft.
+    await page.goto("about:blank");
+    await page.context().clearCookies();
+    await page.goto("/");
+    await page.getByRole("link", { name: "Mit Test-IdP anmelden" }).click();
+    await page.waitForURL(/\/c(\/|$)/);
+    const me = (await (await page.request.get("/api/work-context")).json()) as { profile: { displayName: string } };
+    expect(me.profile.displayName).toBe("Lena Bucher");
+
+    // Unbekanntes Konto: zurück zur Anmeldung mit Hinweis.
+    await page.request.get(`${idp}/__user?username=unbekannt`);
+    // Erst die Seite verlassen, damit keine Hintergrundabfrage ohne Sitzung (401) mehr läuft.
+    await page.goto("about:blank");
+    await page.context().clearCookies();
+    await page.goto("/");
+    await page.getByRole("link", { name: "Mit Test-IdP anmelden" }).click();
+    await expect(page.locator(".login-error")).toContainText("keinen aktiven Zugang");
+  } finally {
+    await page.goto("about:blank");
+    await page.context().clearCookies();
+    await login(page, ADMIN);
+    await page.request.put("/api/admin/sso", {
+      data: {
+        enabled: false,
+        issuer: idp,
+        clientId: "carecore-test",
+        usernameClaim: "preferred_username",
+        buttonLabel: "Test-IdP",
+      },
+    });
+  }
+  expect(errors).toEqual([]);
+});
