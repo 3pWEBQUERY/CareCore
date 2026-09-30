@@ -21,6 +21,8 @@ import { useOrderDialogs } from "./order-dialogs";
 import { AllergyBadge } from "@/app/components/resident-list";
 import { useHeaderResident, useTerms } from "@/app/components/care-context";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
+import type { InteractionFinding } from "@/lib/medication-interactions-shared";
+import { InteractionNotice } from "./interaction-notice";
 
 export type ResidentsPayload = {
   residents: MedResident[];
@@ -29,7 +31,12 @@ export type ResidentsPayload = {
   canAdminister: boolean;
   canEditAllergies: boolean;
 };
-export type ResidentDetail = { orders: MedOrder[]; movements: StockMovement[]; effectChecks: EffectCheck[] };
+export type ResidentDetail = {
+  orders: MedOrder[];
+  movements: StockMovement[];
+  effectChecks: EffectCheck[];
+  interactions: InteractionFinding[];
+};
 
 export function scheduleLabel(order: MedOrder) {
   const days = order.weekdays.length ? order.weekdays.map((d) => WEEKDAYS[d - 1]).join(", ") : "täglich";
@@ -119,6 +126,7 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
                 </div>
               </section>
               {detail.error && <LoadError message={detail.error} onRetry={detail.reload} />}
+              <InteractionNotice findings={detail.data?.interactions} />
               <section className="card med-plan-card">
                 <div className="card-header">
                   <div>

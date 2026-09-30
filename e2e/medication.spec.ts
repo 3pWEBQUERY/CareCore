@@ -135,3 +135,68 @@ test("Wirkungskontrolle: nach Reservegabe fällig, Ergebnis wird dokumentiert", 
   ).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test("Wechselwirkungen: Hinweis der Einrichtung erscheint im Medikamentenplan, bis er entfernt wird", async ({
+  page,
+}) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  const { residents } = (await (await page.request.get("/api/medication/residents")).json()) as {
+    residents: Array<{ id: string; name: string; regularCount: number }>;
+  };
+  const target = residents.find((resident) => resident.regularCount >= 2) ?? residents[0];
+  const created: string[] = [];
+  for (const name of ["Testpräparat Alpha", "Testpräparat Beta"]) {
+    const response = await page.request.post("/api/medication/orders", {
+      data: {
+        residentId: target.id,
+        name,
+        amount: "1 Tablette",
+        prescribedBy: "Dr. Klicktest",
+        startOn: "2026-01-01",
+        times: ["08:00"],
+      },
+    });
+    expect(response.status()).toBe(201);
+    created.push(((await response.json()) as { id: string }).id);
+  }
+
+  await page.goto("/c/leitung/administration/konfiguration");
+  const card = page.locator(".admin-interactions-card");
+  await expect(card).toContainText("Lizenzierte Arzneimitteldatenbank: nicht angebunden");
+  await card.getByRole("button", { name: "Hinweis erfassen" }).click();
+  await field(page, "Wirkstoff / Präparat A").fill("Alpha");
+  await field(page, "Wirkstoff / Präparat B").fill("Beta");
+  await field(page, "Quelle").fill("Apotheke Klicktest");
+  await field(page, "Wechselwirkung").fill("Wirkung verstärkt");
+  await page.locator(".editor-dialog").getByRole("button", { name: "Speichern" }).click();
+  await expect(card.locator(".admin-retention-row", { hasText: "Alpha + Beta" })).toBeVisible();
+
+  await page.addInitScript((id) => window.sessionStorage.setItem("carecore.residentId", id), target.id);
+  await page.goto("/c/medikation");
+  const notice = page.locator(".med-interaction-card");
+  await expect(notice).toContainText("Testpräparat Alpha + Testpräparat Beta");
+  await expect(notice).toContainText("Quelle: Apotheke Klicktest");
+  await expect(notice).toContainText("keine Unbedenklichkeit");
+
+  await page.goto("/c/leitung/administration/konfiguration");
+  await card
+    .locator(".admin-retention-row", { hasText: "Alpha + Beta" })
+    .getByRole("button", { name: "Entfernen" })
+    .click();
+  await page.locator(".editor-dialog").getByRole("button", { name: "Entfernen" }).click();
+  await expect(card.locator(".admin-retention-row", { hasText: "Alpha + Beta" })).toHaveCount(0);
+  await page.goto("/c/medikation");
+  await expect(page.locator(".med-plan-list")).toContainText("Testpräparat Alpha");
+  await expect(page.locator(".med-interaction-card")).toHaveCount(0);
+  // Aufräumen: Testverordnungen absetzen, damit die übrigen Tests die Demodaten unverändert vorfinden.
+  for (const id of created)
+    expect(
+      (
+        await page.request.patch(`/api/medication/orders/${id}`, {
+          data: { status: "stopped", reason: "Klicktest" },
+        })
+      ).status(),
+    ).toBe(200);
+  expect(errors).toEqual([]);
+});

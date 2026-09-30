@@ -16,7 +16,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Chart / Schnelldoku          | ✅    | Doku, Nachträge, Schnelldokumentation, Abschluss aus Aufgaben mit ✓ △ ✕, Diktieren mit Erkennung auf dem Gerät.                                                       |
 | Handover                     | ✅    | Übergabe, „Seit meinem letzten Dienst“, Lesebestätigung (`carecore_handover_reads`).                                                                                  |
 | Tasks                        | ✅    | Offen, in Bearbeitung, eskaliert, erledigt, teilweise, nicht erledigt, abgebrochen; überfällig berechnet.                                                             |
-| Med                          | 🟡    | Runde, Reserve (PRN) mit Wirkungskontrolle, BtM mit Zweitunterschrift, Bestand. Interaktionen fehlen (braucht eine externe Datenquelle).                              |
+| Med                          | 🟡    | Runde, Reserve (PRN), BtM, Bestand, Wechselwirkungen aus Hinweisen der Einrichtung. Lizenzierte Arzneimitteldatenbank nicht angebunden.                               |
 | Vitals                       | ✅    | Individuelle Grenzwerte je Bewohner (`carecore_vital_thresholds`).                                                                                                    |
 | Wounds                       | ✅    | Verlauf, Fotos, Körperkarte, Erinnerungen, Verbandsmaterial je Versorgung aus dem Materialkatalog.                                                                    |
 | Nutrition                    | ✅    | Plan, Trinken, Mahlzeiten, Screenings; Trendhinweise Gewicht und Trinkmenge nach Grenzen der Einrichtung.                                                             |
@@ -98,6 +98,11 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Lagerbuchung – das wäre eine eigene Entscheidung zur Bestandsführung).
 - [x] **Dienstplan:** Börse für offene Dienste (fehlende Mindestbesetzung im veröffentlichten Plan; Interesse
       melden, Leitung teilt über die Regelprüfung zu oder lehnt ab).
+- [x] **Wechselwirkungsprüfung** eingerichtet, noch ohne lizenzierte Datenbank (Entscheidung vom 30.09.2026). Die
+      Einrichtung erfasst Hinweise (Wirkstoff/Präparat A und B, Schweregrad, Beschreibung, Empfehlung, Pflichtangabe
+      Quelle) in Leitung › Konfiguration; wer Verordnungen verwaltet, darf sie pflegen, protokolliert. Trifft ein Hinweis
+      auf zwei laufende Verordnungen derselben Person zu, erscheint er im Medikamentenplan und bei den Reserven, mit dem
+      Vermerk, dass fehlende Hinweise keine Unbedenklichkeit bedeuten. CareCore enthält keine eigenen Regeln.
 - [x] **Dark Mode** als Wahl in den persönlichen Einstellungen. Das Standard-Aussehen bleibt unverändert.
 
 ## Niedrig / später
@@ -182,7 +187,9 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
   Browser-Cache. Mit einem Schlüssel nur im Arbeitsspeicher wären sie nach dem Beenden des Service Workers (geschieht
   nach kurzer Zeit ohne Nutzung) offline nicht mehr lesbar – das Lesen ohne Verbindung fiele damit weitgehend weg.
   Zu entscheiden: so lassen (nur die Warteschlange verschlüsselt) oder verschlüsseln und das Offline-Lesen aufgeben.
-- **Interaktionsprüfung:** Braucht eine lizenzierte Arzneimitteldatenbank. Es werden keine Regeln erfunden.
+- **Lizenzierte Arzneimitteldatenbank** für die Wechselwirkungsprüfung (Anbieter noch offen, Entscheidung vom
+  30.09.2026). Die Prüfung ist eingerichtet und nutzt bis dahin nur die Hinweise der Einrichtung; der Anbieter käme in
+  `lib/medication-interactions.ts` als zweite Quelle dazu.
 - **Backups / Disaster Recovery:** Laufen beim Datenbank-Anbieter; Ziele für RPO und RTO legt der Betreiber fest.
 
 ## Bekannte Grenzen
