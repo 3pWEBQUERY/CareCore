@@ -3,35 +3,14 @@
 import { useCallback, useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 import { activeLanguage, rememberLanguage } from "@/app/components/translator";
 import { LANGUAGES, type Language } from "@/lib/i18n-shared";
-import { PORTAL_KINDS, type PortalKind, type PortalResident, type PortalResidentDetail } from "@/lib/portal-shared";
-
-type Me = {
-  account: { displayName: string; kind: PortalKind; mustChangePassword: boolean };
-  residents: PortalResident[];
-};
-
-const dateTime = (value: string) =>
-  new Intl.DateTimeFormat("de-CH", { timeZone: "Europe/Zurich", dateStyle: "medium", timeStyle: "short" }).format(
-    new Date(value),
-  );
-const date = (value: string | null) =>
-  value ? new Intl.DateTimeFormat("de-CH", { dateStyle: "medium" }).format(new Date(`${value}T12:00:00`)) : "–";
-
-async function send<T>(url: string, method: string, body?: unknown) {
-  const response = await fetch(url, {
-    method,
-    cache: "no-store",
-    headers: body === undefined ? undefined : { "content-type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const payload = await response.json().catch(() => null);
-  return { ok: response.ok, status: response.status, payload: payload as (T & { error?: string }) | null };
-}
+import { PORTAL_KINDS, type PortalResidentDetail } from "@/lib/portal-shared";
+import { PortalHelp, PortalMessages, PortalOrders, date, dateTime, send, type PortalMe as Me } from "./portal-sections";
 
 // Portal für Angehörige und Ärztinnen/Ärzte: eigene Anmeldung, nur lesend, nur freigegebene Bereiche.
 export default function PortalPage() {
   const [me, setMe] = useState<Me | null>(null);
   const [checked, setChecked] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const apply = useCallback((result: Awaited<ReturnType<typeof send<Me>>>) => {
     setMe(result.ok ? (result.payload as Me) : null);
     setChecked(true);
@@ -68,11 +47,25 @@ export default function PortalPage() {
           </div>
         </header>
         {!checked ? null : !me ? (
-          <PortalLogin onDone={load} />
+          helpOpen ? (
+            <>
+              <button className="secondary-button" type="button" onClick={() => setHelpOpen(false)}>
+                Zurück zur Anmeldung
+              </button>
+              <PortalHelp />
+            </>
+          ) : (
+            <>
+              <PortalLogin onDone={load} />
+              <button className="quiet-button" type="button" onClick={() => setHelpOpen(true)}>
+                So funktioniert das Portal (Hilfe)
+              </button>
+            </>
+          )
         ) : me.account.mustChangePassword ? (
           <PortalPasswordChange onDone={load} />
         ) : (
-          <PortalResidents me={me} />
+          <PortalWorkspace me={me} />
         )}
       </div>
     </main>
@@ -96,7 +89,7 @@ function PortalLogin({ onDone }: { onDone: () => Promise<void> }) {
   };
   return (
     <section className="portal-card">
-      <h2>Portal für Angehörige und Ärztinnen/Ärzte</h2>
+      <h2>Portal für Angehörige, Ärztinnen/Ärzte und Apotheken</h2>
       <form className="portal-form" onSubmit={(event) => void submit(event)}>
         <label>
           Benutzername
@@ -180,6 +173,35 @@ function PortalPasswordChange({ onDone }: { onDone: () => Promise<void> }) {
         </button>
       </form>
     </section>
+  );
+}
+
+type Tab = "residents" | "messages" | "orders" | "help";
+
+// Nach der Anmeldung: Reiter für freigegebene Personen, Nachrichten, Bestellungen (nur Apotheke) und Hilfe.
+function PortalWorkspace({ me }: { me: Me }) {
+  const pharmacy = me.account.kind === "pharmacy";
+  const [tab, setTab] = useState<Tab>(pharmacy ? "orders" : "residents");
+  const tabs: Array<[Tab, string]> = [
+    ...(pharmacy ? ([["orders", "Bestellungen"]] as Array<[Tab, string]>) : []),
+    ["residents", pharmacy ? "Medikationspläne" : "Personen"],
+    ["messages", "Nachrichten"],
+    ["help", "Hilfe"],
+  ];
+  return (
+    <>
+      <nav className="portal-tabs" aria-label="Bereiche des Portals">
+        {tabs.map(([key, label]) => (
+          <button key={key} type="button" aria-pressed={tab === key} onClick={() => setTab(key)}>
+            {label}
+          </button>
+        ))}
+      </nav>
+      {tab === "residents" && <PortalResidents me={me} />}
+      {tab === "messages" && <PortalMessages me={me} />}
+      {tab === "orders" && pharmacy && <PortalOrders />}
+      {tab === "help" && <PortalHelp />}
+    </>
   );
 }
 

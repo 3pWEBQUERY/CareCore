@@ -47,7 +47,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Smart Workflows              | ✅    | Ablaufketten je Ereignisart mit Folgeaufgaben; Schritte legt das Qualitätsmanagement fest.                                                                                 |
 | Universal Action System      | ✅    | Ein Aktionsregister für Schnellaktionen und Suche ⌘K, Erfassung direkt aus der Suche.                                                                                      |
 | Sprachen / Terminologie      | ✅    | Bewohner / Patient / Klient wählbar. Oberfläche in FR, IT, EN, SQ, HR, SR, HU einrichtbar: KI-Entwurf, Prüfung und Freigabe durch die Administration (`docs/SPRACHEN.md`). |
-| Phase 6 Portale              | 🟡    | Portal für Angehörige und Ärztinnen/Ärzte (`/portal`, nur lesend) mit Freigaben je Person/Wohnbereich und Bereich. Apothekenportal offen.                                  |
+| Phase 6 Portale              | ✅    | Portal für Angehörige und Ärztinnen/Ärzte (`/portal`), Freigaben je Person/Wohnbereich und Bereich, Nachrichten, Apothekenportal.                                          |
 
 ## Hoch (klinische Sicherheit und Kernabläufe)
 
@@ -171,12 +171,13 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
         nur mit Verweis auf die FHIR-Ressource. Vorgemerkt per Trigger, Zustellung mit Wiederholungen, Ziele im
         internen Netz gesperrt (auch nach der Namensauflösung), Geheimnis verschlüsselt, Probemeldung aus der
         Konfiguration.
-- [ ] **Portale (Phase 6).**
+- [x] **Portale (Phase 6).**
   - [x] Portal für Angehörige und Ärztinnen/Ärzte (Entscheidung vom 30.09.2026): eigene Zugänge mit Einmal-Passwort,
         Freigaben individuell je Person oder Wohnbereich, einzeln gewählte Bereiche (Notfalldaten, Medikation,
         Vitalwerte, Pflegeberichte, Termine, Wunden), Zeitraum und Grundlage mit Vermerk; Widerruf sofort, jeder Abruf
         protokolliert. Beschreibung in `docs/PORTAL.md`.
-  - [ ] Nachrichten zwischen Portal und Pflege, Apothekenportal (Umfang offen).
+  - [x] Nachrichten zwischen Portal und Pflege (CareCore One › Portal-Nachrichten), Apothekenportal mit Bestellungen
+        aus Medikation › Bestellungen, Hilfe mit Bildschirmfotos im Portal. Lizenzierte Arzneimitteldatenbank offen.
 - [x] **Mandanten: eigene Rollen je Einrichtung.** Nur die Einrichtung, die eine Rolle anlegt, sieht, vergibt, ändert
       und löscht sie; bestehende eigene Rollen wurden ihrer Einrichtung zugeordnet (Migration 0048). Eingebaute Rollen
       bleiben gemeinsam.

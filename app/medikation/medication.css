@@ -346,3 +346,19 @@
   margin-top: 4px;
   color: var(--muted);
 }
+
+/* Bestellungen bei der Apotheke. */
+.med-orders-list {
+  padding: 0 18px 18px;
+}
+.med-orders-list p {
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+.area-editor-grid fieldset.med-order-item {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
