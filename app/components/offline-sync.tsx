@@ -173,7 +173,9 @@ export default function OfflineSync() {
                   erfasst {time(item.createdAt)}
                   {item.error
                     ? ` · ${item.conflict ? "Konflikt" : "abgelehnt"}: ${item.error}`
-                    : " · wartet auf Verbindung"}
+                    : item.locked
+                      ? " · verschlüsselt, lesbar und gesendet mit Verbindung"
+                      : " · wartet auf Verbindung"}
                 </small>
               </span>
               <span className="offline-status-actions">

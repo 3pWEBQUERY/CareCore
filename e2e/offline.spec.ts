@@ -34,10 +34,32 @@ test("Offline: Dokumentation wird vorgemerkt und nach der Rückkehr der Verbindu
   await page.locator(".offline-status-edit").getByRole("button", { name: "Speichern" }).click();
   await expect(page.locator(".offline-status-edit")).toHaveCount(0);
 
-  // Neu laden ohne Verbindung: die Seite kommt aus dem Gerätespeicher.
+  // Im Gerätespeicher liegt der Eintrag nur verschlüsselt.
+  const stored = await page.evaluate(
+    () =>
+      new Promise<string>((resolve, reject) => {
+        const request = indexedDB.open("carecore-offline");
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const all = request.result.transaction("outbox").objectStore("outbox").getAll();
+          all.onsuccess = () => resolve(JSON.stringify(all.result));
+          all.onerror = () => reject(all.error);
+        };
+      }),
+  );
+  expect(stored).toContain('"sealed"');
+  expect(stored).not.toContain("Offline-Eintrag");
+
+  // Neu laden ohne Verbindung: die Seite kommt aus dem Gerätespeicher. Der Schlüssel lag nur im Arbeitsspeicher –
+  // der Eintrag ist jetzt gesperrt (nicht lesbar), bis die Verbindung zurück ist.
   await page.reload();
   await expect(page.locator("h1").first()).toContainText("Schnelldokumentation");
   await expect(page.locator(".offline-status")).toContainText("Offline");
+  await expect(page.locator(".offline-status")).toContainText("1 Eintrag wartet");
+  await page.locator(".offline-status").getByRole("button", { name: "Anzeigen" }).click();
+  await expect(page.locator(".offline-status-list")).toContainText("Verschlüsselter Eintrag");
+  await expect(page.locator(".offline-status-list")).not.toContainText("Offline-Eintrag");
+  await expect(page.locator(".offline-status").getByRole("button", { name: "Bearbeiten" })).toHaveCount(0);
 
   await context.setOffline(false);
   await page.evaluate(() => window.dispatchEvent(new Event("online")));
@@ -92,10 +114,11 @@ test("Meine Notizen: archivieren und wiederherstellen, auch ohne Verbindung", as
   await expect(card.getByRole("button", { name: new RegExp(offlineTitle) })).toContainText("Nicht gesendet");
   await expect(page.locator(".offline-status")).toContainText("2 Einträge warten");
 
-  // Neu laden ohne Verbindung: beide Änderungen bleiben sichtbar.
+  // Neu laden ohne Verbindung: die Änderungen bleiben vorgemerkt, aber verschlüsselt und bis zur Verbindung
+  // gesperrt (Schlüssel nur im Arbeitsspeicher) – sie erscheinen erst danach wieder in der Liste.
   await page.reload();
-  await expect(card.getByRole("button", { name: new RegExp(offlineTitle) })).toBeVisible();
-  await expect(card.getByRole("button", { name: new RegExp(archivedTitle) })).toBeVisible();
+  await expect(page.locator(".offline-status")).toContainText("2 Einträge warten");
+  await expect(card.getByRole("button", { name: new RegExp(offlineTitle) })).toHaveCount(0);
 
   await context.setOffline(false);
   await page.evaluate(() => window.dispatchEvent(new Event("online")));

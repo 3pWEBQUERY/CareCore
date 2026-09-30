@@ -7,6 +7,7 @@ import { zurichTimeToIso } from "@/lib/resident-appointments";
 import { DOC_CATEGORIES, IMPORTANCE, TEMPLATES, type DocEntry, type Importance } from "@/lib/documentation-shared";
 import { useCareResident, useTerms } from "@/app/components/care-context";
 import { sendOrQueue } from "@/app/components/offline-queue";
+import { DictationButton, appendDictation } from "@/app/components/dictation-button";
 
 export type ResidentOption = { id: string; name: string; room: string };
 
@@ -142,6 +143,7 @@ export function EntryFields({
           placeholder="Was wurde beobachtet oder durchgeführt? Wirkung, Reaktion, nächste Schritte."
         />
       </label>
+      <DictationButton onText={(text) => set("body", appendDictation(draft.body, text))} />
     </>
   );
 }

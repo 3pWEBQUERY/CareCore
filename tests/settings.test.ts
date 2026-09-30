@@ -58,6 +58,9 @@ test("new personal preferences: defaults, invalid values and quiet hours across 
   assert.equal(defaults.motion, "standard");
   assert.equal(defaults.shortcuts, true);
   assert.equal(defaults.sound, false);
+  assert.equal(defaults.dictation, false, "Spracheingabe aus, bis die Person sie einschaltet");
+  assert.equal(resolvePreferences({ dictation: true }).dictation, true);
+  assert.equal(resolvePreferences({ dictation: "ja" }).dictation, false);
   assert.equal(defaults.autoLogout, 0);
   assert.deepEqual(defaults.quietHours, { enabled: false, from: "22:00", to: "06:00", critical: true });
   const custom = resolvePreferences({
