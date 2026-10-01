@@ -18,6 +18,11 @@ export async function login(page: Page, user: { username: string; password: stri
 export function watchErrors(page: Page, expected: RegExp[] = []) {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(`Skriptfehler: ${error.message}`));
+  // Von der Content-Security-Policy blockierte Inhalte (Skripte, Bilder, Verbindungen) gelten als Fehler.
+  page.on("console", (message) => {
+    if (message.type() === "error" && /Content Security Policy/i.test(message.text()))
+      errors.push(`CSP: ${message.text()}`);
+  });
   page.on("response", (response) => {
     const path = new URL(response.url()).pathname;
     const entry = `${response.status()} ${response.request().method()} ${path}`;

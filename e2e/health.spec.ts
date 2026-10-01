@@ -18,6 +18,20 @@ test("Health: /api/health meldet „ok“ ohne Anmeldung und ohne Geheimnisse", 
   expect(JSON.stringify(body)).not.toMatch(/postgres(ql)?:\/\/|password/i);
 });
 
+// Sicherheits-Header auf Seiten und Schnittstellen: nur eigene Inhalte, Einbetten nur in CareCore, HTTPS erzwungen.
+test("Sicherheits-Header: CSP, HSTS, Einbettschutz auf Seiten und API", async ({ request }) => {
+  for (const path of ["/", "/api/health", "/portal"]) {
+    const headers = (await request.get(path)).headers();
+    expect(headers["content-security-policy"], path).toContain("default-src 'self'");
+    expect(headers["content-security-policy"], path).toContain("frame-ancestors 'self'");
+    expect(headers["content-security-policy"], path).toContain("object-src 'none'");
+    expect(headers["strict-transport-security"], path).toContain("max-age=31536000");
+    expect(headers["x-frame-options"], path).toBe("SAMEORIGIN");
+    expect(headers["x-content-type-options"], path).toBe("nosniff");
+    expect(headers["referrer-policy"], path).toBe("strict-origin-when-cross-origin");
+  }
+});
+
 // Leitung › Konfiguration: Blutzucker ausschalten – das Feld verschwindet aus der Messung.
 test("Vitalparameter ausschalten: Blutzucker erscheint nicht mehr in der Messung", async ({ page }) => {
   await login(page, ADMIN);
