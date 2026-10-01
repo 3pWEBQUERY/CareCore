@@ -58,16 +58,16 @@ export async function setupChecklist(ctx: ApiContext): Promise<SetupChecklist> {
     {
       id: "staff",
       label: "Mitarbeitende erfassen",
-      detail: "Mit Rolle, Wohnbereich und am besten mit E-Mail-Adresse.",
+      detail: "Mit Rolle, Wohnbereich und am besten mit E-Mail-Adresse; auch per Datenübernahme.",
       done: Number(row?.staff) > 1,
       href: "/c/leitung/administration/benutzer",
     },
     {
       id: "residents",
       label: "Bewohnerinnen und Bewohner aufnehmen",
-      detail: "Einzeln aufnehmen oder aus einer Datei übernehmen.",
+      detail: "Aus einer Datei übernehmen (Datenübernahme) oder einzeln aufnehmen.",
       done: Number(row?.residents) > 0,
-      href: "/c/bewohner",
+      href: "/c/leitung/administration/import",
     },
     {
       id: "mail",

@@ -215,6 +215,8 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - [x] **Verkaufsbereit 4 – Überwachung und Backups:** Serverfehler im Systemstatus, Alarm per E-Mail
       (`ALERT_EMAIL`), Anleitung `docs/BETRIEB.md` (Railway-Backups und PITR, Bucket, Benachrichtigungen,
       Verfügbarkeitstest, Wiederherstellung üben, Ernstfall). Die Backups selbst schaltet der Betreiber in Railway ein.
+- [x] **Verkaufsbereit 5 – Datenübernahme:** Bewohner und Mitarbeitende aus CSV mit Vorlage, Prüfung je Zeile,
+      Übernahme nur vollständig gültiger Dateien; Mitarbeitende per Einladung oder mit einmaligem Startpasswort.
 
 ## Entschieden (30.09.2026)
 
