@@ -3,6 +3,12 @@
 import type { ReactNode } from "react";
 import { DASHBOARD_SIZES, DashboardWidgetId, dashboardWidgets, widgetSpan, widgetText } from "./dashboard-shared";
 import type { DashboardState } from "./use-dashboard";
+import { CareOptionSelect } from "@/app/components/care-form-controls";
+
+const sizeOptions = [
+  { value: "", label: "Standard" },
+  ...DASHBOARD_SIZES.map((size) => ({ value: size.id, label: size.label })),
+];
 
 // Ein Bereich des Arbeitsplatzes (Kopf- oder Hauptbereich) mit seinen sichtbaren Bausteinen.
 export function DashboardArea({
@@ -109,20 +115,13 @@ function DashboardFrame({
             >
               →
             </button>
-            <select
-              aria-label={`Breite von ${label}`}
+            <CareOptionSelect
+              className="widget-size-select"
+              label={`Breite von ${label}`}
               value={widgetSizes[id] ?? ""}
-              onChange={(event) =>
-                setWidgetSize(id, (event.target.value || null) as Parameters<typeof setWidgetSize>[1])
-              }
-            >
-              <option value="">Standard</option>
-              {DASHBOARD_SIZES.map((size) => (
-                <option key={size.id} value={size.id}>
-                  {size.label}
-                </option>
-              ))}
-            </select>
+              options={sizeOptions}
+              onChange={(value) => setWidgetSize(id, (value || null) as Parameters<typeof setWidgetSize>[1])}
+            />
             <button
               type="button"
               onClick={() => toggleWidgetArea(id)}

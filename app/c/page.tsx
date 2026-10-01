@@ -13,7 +13,7 @@ import {
   DashboardResidentsCard,
 } from "./components/dashboard-widgets";
 import { DashboardWorklistCard } from "./components/dashboard-worklist";
-import { HomeHero, HomeNotesCard, HomeShortcutsCard, HomeTodayCard } from "./components/home-hero";
+import { HomeGreetingCard, HomeHero, HomeNotesCard, HomeShortcutsCard, HomeTodayCard } from "./components/home-hero";
 import { HomeNews } from "./components/home-news";
 import { DashboardCustomizer } from "./components/dashboard-customizer";
 import { DashboardArea } from "./components/dashboard-frame";
@@ -36,6 +36,7 @@ export default function Home() {
     criticalChange,
   } = r;
   const dashboardContent: Record<DashboardWidgetId, ReactNode> = {
+    greeting: <HomeGreetingCard r={r} />,
     shortcuts: <HomeShortcutsCard r={r} />,
     notes: <HomeNotesCard r={r} />,
     today: <HomeTodayCard r={r} />,
