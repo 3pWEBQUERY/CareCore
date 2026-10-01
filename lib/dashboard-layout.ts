@@ -1,7 +1,15 @@
 import { neon } from "@neondatabase/serverless";
 import "@/database/pg-fetch.mjs";
 
-export type DashboardLayout = { order: string[]; hidden: string[] };
+export type DashboardLayout = {
+  order: string[];
+  hidden: string[];
+  // Bausteine im Kopfbereich und gewählte Breiten; ältere Layouts haben beides nicht.
+  top?: string[];
+  sizes?: Record<string, string>;
+};
+
+const SIZES = new Set(["third", "half", "twoThirds", "full"]);
 
 function database() {
   const connectionString = process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
@@ -11,12 +19,26 @@ function database() {
 
 export function normalizeDashboardLayout(input: unknown): DashboardLayout | null {
   if (!input || typeof input !== "object") return null;
-  const value = input as { order?: unknown; hidden?: unknown };
+  const value = input as { order?: unknown; hidden?: unknown; top?: unknown; sizes?: unknown };
   if (!Array.isArray(value.order) || !Array.isArray(value.hidden)) return null;
-  const isValidList = (items: unknown[]) =>
-    items.every((item) => typeof item === "string" && item.length > 0 && item.length <= 80);
+  const isValidId = (item: unknown): item is string => typeof item === "string" && item.length > 0 && item.length <= 80;
+  const isValidList = (items: unknown[]) => items.length <= 50 && items.every(isValidId);
   if (!isValidList(value.order) || !isValidList(value.hidden)) return null;
-  return { order: [...new Set(value.order as string[])], hidden: [...new Set(value.hidden as string[])] };
+  const layout: DashboardLayout = {
+    order: [...new Set(value.order as string[])],
+    hidden: [...new Set(value.hidden as string[])],
+  };
+  if (value.top !== undefined) {
+    if (!Array.isArray(value.top) || !isValidList(value.top)) return null;
+    layout.top = [...new Set(value.top as string[])];
+  }
+  if (value.sizes !== undefined) {
+    if (!value.sizes || typeof value.sizes !== "object" || Array.isArray(value.sizes)) return null;
+    const entries = Object.entries(value.sizes as Record<string, unknown>);
+    if (entries.length > 50 || !entries.every(([id, size]) => isValidId(id) && SIZES.has(String(size)))) return null;
+    layout.sizes = Object.fromEntries(entries) as Record<string, string>;
+  }
+  return layout;
 }
 
 export async function getDashboardLayout(userId: string): Promise<DashboardLayout | null> {

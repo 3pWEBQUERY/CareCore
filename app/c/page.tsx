@@ -3,7 +3,7 @@
 import { type ReactNode } from "react";
 import AppHeader from "../components/app-header";
 import AppSidebar from "../components/app-sidebar";
-import { Icon, DashboardWidgetId, dashboardWidgets, widgetText } from "./components/dashboard-shared";
+import { Icon, DashboardWidgetId } from "./components/dashboard-shared";
 import { useDashboard } from "./components/use-dashboard";
 import {
   DashboardSummaryStrip,
@@ -13,9 +13,10 @@ import {
   DashboardResidentsCard,
 } from "./components/dashboard-widgets";
 import { DashboardWorklistCard } from "./components/dashboard-worklist";
-import { HomeHero } from "./components/home-hero";
+import { HomeHero, HomeNotesCard, HomeShortcutsCard, HomeTodayCard } from "./components/home-hero";
 import { HomeNews } from "./components/home-news";
 import { DashboardCustomizer } from "./components/dashboard-customizer";
+import { DashboardArea } from "./components/dashboard-frame";
 import { MobileNavigation } from "@/app/components/mobile-navigation";
 import { GlobalSearchDialog } from "@/app/components/global-search-dialog";
 import { NoteViewDialog, NoteEditorDialog } from "./components/note-dialogs";
@@ -23,23 +24,22 @@ import { NoteViewDialog, NoteEditorDialog } from "./components/note-dialogs";
 export default function Home() {
   const r = useDashboard();
   const {
-    changes,
     noteEditor,
     viewingNote,
     searchOpen,
     toast,
     setToast,
     dashboardEditing,
-    widgetOrder,
-    hiddenWidgets,
-    setDraggedWidget,
     openSearch,
     closeSearch,
-    moveWidget,
     openNote,
     criticalChange,
   } = r;
   const dashboardContent: Record<DashboardWidgetId, ReactNode> = {
+    shortcuts: <HomeShortcutsCard r={r} />,
+    notes: <HomeNotesCard r={r} />,
+    today: <HomeTodayCard r={r} />,
+    news: <HomeNews r={r} />,
     summary: <DashboardSummaryStrip r={r} />,
     worklist: <DashboardWorklistCard />,
     critical: criticalChange ? <DashboardCriticalAlert r={r} /> : null,
@@ -56,44 +56,13 @@ export default function Home() {
         <AppHeader searchOpen={searchOpen} onSearch={openSearch} onToast={setToast} />
 
         <main className="workspace home-workspace">
-          <HomeHero r={r} />
-
-          <HomeNews r={r} />
+          <HomeHero r={r}>
+            <DashboardArea r={r} top className="home-desk-grid" content={dashboardContent} />
+          </HomeHero>
 
           {dashboardEditing && <DashboardCustomizer r={r} />}
 
-          <div className={`dashboard-custom-grid ${dashboardEditing ? "is-editing" : ""}`}>
-            {widgetOrder
-              .filter(
-                (id) =>
-                  !hiddenWidgets.includes(id) &&
-                  (id !== "critical" || changes.some((item) => item.type === "critical")),
-              )
-              .map((id) => {
-                const widget = dashboardWidgets.find((item) => item.id === id)!;
-                return (
-                  <div
-                    className={`dashboard-widget ${widget.wide ? "wide" : ""}`}
-                    key={id}
-                    draggable={dashboardEditing}
-                    onDragStart={() => setDraggedWidget(id)}
-                    onDragEnd={() => setDraggedWidget(null)}
-                    onDragOver={(event) => dashboardEditing && event.preventDefault()}
-                    onDrop={() => moveWidget(id)}
-                  >
-                    {dashboardEditing && (
-                      <div
-                        className="dashboard-widget-handle"
-                        aria-label={`${widgetText(widget, r.terms).label} verschieben`}
-                      >
-                        ⠿ <span>{widgetText(widget, r.terms).label}</span>
-                      </div>
-                    )}
-                    {dashboardContent[id]}
-                  </div>
-                );
-              })}
-          </div>
+          <DashboardArea r={r} top={false} className="dashboard-custom-grid" content={dashboardContent} />
         </main>
       </div>
 

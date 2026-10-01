@@ -22,20 +22,7 @@ export function useDashboard() {
     newsError,
     setNewsError,
   } = useDashboardNews();
-  const {
-    dashboardEditing,
-    setDashboardEditing,
-    widgetOrder,
-    setWidgetOrder,
-    hiddenWidgets,
-    setHiddenWidgets,
-    draggedWidget,
-    setDraggedWidget,
-    persistDashboardLayout,
-    toggleWidget,
-    resetDashboardLayout,
-    moveWidget,
-  } = useDashboardLayout();
+  const layout = useDashboardLayout();
   const router = useRouter();
   const [now, setNow] = useState<Date | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -220,24 +207,12 @@ export function useDashboard() {
     setEmployeeName,
     primaryCareUnitName,
     setPrimaryCareUnitName,
-    dashboardEditing,
-    setDashboardEditing,
-    widgetOrder,
-    setWidgetOrder,
-    hiddenWidgets,
-    setHiddenWidgets,
-    draggedWidget,
-    setDraggedWidget,
     openSearch,
     closeSearch,
     loadNotes,
     completed,
     progress,
     toggleTask,
-    persistDashboardLayout,
-    toggleWidget,
-    resetDashboardLayout,
-    moveWidget,
     openNote,
     saveNote,
     deleteNote,
@@ -250,6 +225,7 @@ export function useDashboard() {
     nextTasks,
     currentScope,
     criticalChange,
+    ...layout,
   };
 }
 

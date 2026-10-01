@@ -170,24 +170,67 @@ export type ResidentNews = {
   flag_severity: string | null;
 };
 
-export type DashboardWidgetId = "summary" | "worklist" | "critical" | "shift" | "tasks" | "residents";
+export type DashboardWidgetId =
+  "shortcuts" | "notes" | "today" | "news" | "summary" | "worklist" | "critical" | "shift" | "tasks" | "residents";
 
-export const dashboardWidgets: Array<{ id: DashboardWidgetId; label: string; description: string; wide?: boolean }> = [
-  { id: "summary", label: "Schichtübersicht", description: "Kennzahlen für den aktuellen Dienst", wide: true },
-  { id: "worklist", label: "Tagesliste", description: "Was heute je Bewohner fällig ist", wide: true },
-  { id: "critical", label: "Wichtiger Hinweis", description: "Kritische Informationen", wide: true },
-  { id: "tasks", label: "Als Nächstes", description: "Offene Aufgaben" },
-  { id: "shift", label: "Zeitplan", description: "Deine nächsten terminierten Aufgaben" },
-  { id: "residents", label: "Meine Bewohner", description: "Zugewiesene Bewohner", wide: true },
+// Breite im 12er-Raster: Standard (je Baustein), ein Drittel, die Hälfte, zwei Drittel oder volle Breite.
+export type DashboardWidgetSize = "third" | "half" | "twoThirds" | "full";
+export const DASHBOARD_SIZES: Array<{ id: DashboardWidgetSize; label: string; span: number }> = [
+  { id: "third", label: "⅓", span: 4 },
+  { id: "half", label: "½", span: 6 },
+  { id: "twoThirds", label: "⅔", span: 8 },
+  { id: "full", label: "Voll", span: 12 },
+];
+
+// `top`: steht standardmässig im Kopfbereich (in der Begrüssung). `span`: Standardbreite im 12er-Raster.
+export const dashboardWidgets: Array<{
+  id: DashboardWidgetId;
+  label: string;
+  description: string;
+  span: number;
+  top?: boolean;
+}> = [
+  { id: "shortcuts", label: "Schnellzugriff", description: "Direkt zu häufigen Bereichen", span: 4, top: true },
+  { id: "notes", label: "Meine Notizen", description: "Nur für dich sichtbar", span: 4, top: true },
+  { id: "today", label: "Heute wichtig", description: "Offene Aufgaben auf einen Blick", span: 4, top: true },
+  { id: "news", label: "Neuigkeiten", description: "Letzte Dokumentation je Bewohner", span: 12 },
+  { id: "summary", label: "Schichtübersicht", description: "Kennzahlen für den aktuellen Dienst", span: 12 },
+  { id: "worklist", label: "Tagesliste", description: "Was heute je Bewohner fällig ist", span: 12 },
+  { id: "critical", label: "Wichtiger Hinweis", description: "Kritische Informationen", span: 12 },
+  { id: "tasks", label: "Als Nächstes", description: "Offene Aufgaben", span: 7 },
+  { id: "shift", label: "Zeitplan", description: "Deine nächsten terminierten Aufgaben", span: 5 },
+  { id: "residents", label: "Meine Bewohner", description: "Zugewiesene Bewohner", span: 12 },
 ];
 
 export const defaultDashboardOrder = dashboardWidgets.map((widget) => widget.id);
+export const defaultDashboardTop = dashboardWidgets.filter((widget) => widget.top).map((widget) => widget.id);
+
+export type DashboardLayoutState = {
+  order: DashboardWidgetId[];
+  hidden: DashboardWidgetId[];
+  top: DashboardWidgetId[];
+  sizes: Partial<Record<DashboardWidgetId, DashboardWidgetSize>>;
+};
+
+export const defaultDashboardLayout = (): DashboardLayoutState => ({
+  order: defaultDashboardOrder,
+  hidden: [],
+  top: defaultDashboardTop,
+  sizes: {},
+});
 
 // Beschriftung der Bereiche mit der Bezeichnung der Einrichtung (Bewohner / Patient / Klient).
 export function widgetText(widget: (typeof dashboardWidgets)[number], terms: Terms) {
   if (widget.id === "worklist") return { label: widget.label, description: `Was heute je ${terms.one} fällig ist` };
   if (widget.id === "residents") return { label: `Meine ${terms.many}`, description: `Zugewiesene ${terms.many}` };
+  if (widget.id === "news")
+    return { label: `${terms.prefix}-Neuigkeiten`, description: `Letzte Dokumentation je ${terms.one}` };
   return { label: widget.label, description: widget.description };
+}
+
+export function widgetSpan(id: DashboardWidgetId, sizes: DashboardLayoutState["sizes"]) {
+  const size = sizes[id];
+  return DASHBOARD_SIZES.find((entry) => entry.id === size)?.span ?? dashboardWidgets.find((w) => w.id === id)!.span;
 }
 
 // Widgets missing in a saved layout (added later) are inserted at their default position.
@@ -199,22 +242,47 @@ export function completeDashboardOrder(order: DashboardWidgetId[]) {
   return result;
 }
 
+// Gespeichertes Layout prüfen: unbekannte Bausteine und Breiten fallen weg; neue Bausteine kommen an ihren
+// Standardplatz (auch in den Kopfbereich, wenn das Layout noch keine Angabe dazu hat).
+export function sanitizeDashboardLayout(input: unknown): DashboardLayoutState {
+  if (!input || typeof input !== "object") return defaultDashboardLayout();
+  const stored = input as { order?: unknown; hidden?: unknown; top?: unknown; sizes?: unknown };
+  const allowed = new Set<string>(defaultDashboardOrder);
+  const ids = (value: unknown) =>
+    Array.isArray(value)
+      ? value.filter((id): id is DashboardWidgetId => typeof id === "string" && allowed.has(id))
+      : [];
+  const storedOrder = ids(stored.order);
+  const sizes: DashboardLayoutState["sizes"] = {};
+  if (stored.sizes && typeof stored.sizes === "object")
+    for (const [id, size] of Object.entries(stored.sizes as Record<string, unknown>))
+      if (allowed.has(id) && DASHBOARD_SIZES.some((entry) => entry.id === size))
+        sizes[id as DashboardWidgetId] = size as DashboardWidgetSize;
+  const top = Array.isArray(stored.top)
+    ? ids(stored.top)
+    : // Ältere Layouts kennen keinen Kopfbereich: die bisher festen Bausteine stehen weiter dort.
+      defaultDashboardTop;
+  const known = new Set(storedOrder);
+  return {
+    order: completeDashboardOrder(storedOrder),
+    hidden: ids(stored.hidden),
+    top: [
+      ...top,
+      ...(Array.isArray(stored.top) ? defaultDashboardTop.filter((id) => !known.has(id) && !top.includes(id)) : []),
+    ],
+    sizes,
+  };
+}
+
 export const dashboardLayoutStorageKey = "carecore.dashboard-layout.v1";
 
-export function readStoredDashboardLayout() {
-  if (typeof window === "undefined") return { order: defaultDashboardOrder, hidden: [] as DashboardWidgetId[] };
+export function readStoredDashboardLayout(): DashboardLayoutState {
+  if (typeof window === "undefined") return defaultDashboardLayout();
   try {
     const saved = window.localStorage.getItem(dashboardLayoutStorageKey);
-    if (!saved) return { order: defaultDashboardOrder, hidden: [] as DashboardWidgetId[] };
-    const layout = JSON.parse(saved) as { order?: DashboardWidgetId[]; hidden?: DashboardWidgetId[] };
-    const allowed = new Set(defaultDashboardOrder);
-    const order = (layout.order ?? []).filter((id): id is DashboardWidgetId => allowed.has(id));
-    return {
-      order: completeDashboardOrder(order),
-      hidden: (layout.hidden ?? []).filter((id): id is DashboardWidgetId => allowed.has(id)),
-    };
+    return saved ? sanitizeDashboardLayout(JSON.parse(saved)) : defaultDashboardLayout();
   } catch {
-    return { order: defaultDashboardOrder, hidden: [] as DashboardWidgetId[] };
+    return defaultDashboardLayout();
   }
 }
 
