@@ -1,5 +1,7 @@
 # Hosting auf Railway
 
+Neue Kundeninstallation (eigenes Projekt je Einrichtung): siehe `docs/INSTALLATION.md`.
+
 CareCore läuft auf Railway (Projekt „feisty-achievement“, Region Europa).
 
 - **App** (Dienst `carecore`): Next.js aus diesem Repository, Branch `main`. Einstellungen am Dienst in Railway

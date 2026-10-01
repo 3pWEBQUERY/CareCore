@@ -210,6 +210,8 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Einbettschutz, Permissions-Policy); Klicktests melden jeden CSP-Verstoss.
 - [x] **Verkaufsbereit 2 – E-Mail-Versand:** SMTP (`docs/EMAIL.md`), E-Mail-Adresse bei Mitarbeitenden, „Passwort
       vergessen?“, Einladung statt Startpasswort, Link zum Passwort setzen; Links einmalig, gehasht, protokolliert.
+- [x] **Verkaufsbereit 3 – Installation je Einrichtung:** Anleitung `docs/INSTALLATION.md`, Skript für die Geheimnisse,
+      Name der Einrichtung in der Konfiguration änderbar (Kopfzeile ohne Neuladen), Checkliste „CareCore einrichten“.
 
 ## Entschieden (30.09.2026)
 

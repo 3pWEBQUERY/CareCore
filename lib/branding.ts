@@ -79,3 +79,24 @@ export async function removeLogo(ctx: ApiContext) {
   ]);
   await removeMedia([previous?.logo_storage_key]);
 }
+
+// Name der Einrichtung (Kopfzeile, E-Mails, Ausdrucke); legt die Administration fest.
+export async function organizationName(ctx: ApiContext) {
+  const rows = (await ctx.sql`SELECT name FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}`) as Row[];
+  return String(rows[0]?.name ?? "");
+}
+
+export async function saveOrganizationName(ctx: ApiContext, value: unknown) {
+  if (!hasPermission(ctx.actor, "administration.manage"))
+    throw new ApiError("Den Namen der Einrichtung legt die Administration fest.", 403);
+  const name = typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
+  if (!name) throw new ApiError("Bitte einen Namen eingeben.");
+  if (name.length > 180) throw new ApiError("Der Name ist zu lang (höchstens 180 Zeichen).");
+  const before = await organizationName(ctx);
+  if (before === name) return name;
+  await ctx.sql.transaction([
+    ctx.sql`UPDATE carecore_organizations SET name = ${name}, updated_at = NOW() WHERE id = ${ctx.actor.organizationId}`,
+    auditStatement(ctx, "branding", ctx.actor.organizationId, "name_updated", { name: before }, { name }),
+  ]);
+  return name;
+}

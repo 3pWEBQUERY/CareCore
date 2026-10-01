@@ -1725,6 +1725,9 @@
   .resident-insights-cell em {
     font-size: 12px;
   }
+  .admin-organization-name label {
+    font-size: 12px;
+  }
   :root .operations-quick a {
     font-size: 11.5px;
   }
