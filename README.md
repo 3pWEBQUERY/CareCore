@@ -74,6 +74,15 @@ Anmelden führt die Checkliste „CareCore einrichten“ (Leitung › Administra
 Einrichtung (Leitung › Konfiguration), Standort mit Adresse, Wohnbereiche, Mitarbeitende, Bewohner, E-Mail-Versand und
 Zwei-Faktor für das Administrationskonto. Sie verschwindet, sobald alles erledigt oder ausgeblendet ist.
 
+## Datenübernahme (CSV)
+
+Leitung › Administration › Datenübernahme (`administration.manage`): Bewohnerinnen/Bewohner und Mitarbeitende aus
+einer CSV-Datei (Vorlage zum Herunterladen, Semikolon oder Komma, Datum TT.MM.JJJJ). CareCore prüft erst jede Zeile
+(Pflichtfelder, Datum, Wohnbereich, Rolle, Dubletten in der Datei und in CareCore) und übernimmt nur, wenn alle
+Zeilen stimmen; Bewohner in einer Transaktion, protokolliert als „imported“. Mitarbeitende mit E-Mail-Adresse werden
+eingeladen (mit eingerichtetem E-Mail-Versand), die übrigen erhalten ein zufälliges Startpasswort, das nur einmal als
+Liste zum Herunterladen erscheint (`lib/data-import.ts`, `lib/csv-import.ts`).
+
 ## E-Mail-Versand
 
 Optional über SMTP (jeder Anbieter, z. B. Brevo, Infomaniak oder der Mailserver der Einrichtung), eingerichtet mit
