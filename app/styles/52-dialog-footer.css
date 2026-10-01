@@ -66,6 +66,38 @@
   background: white;
 }
 
+/* Rollen: der Bereich scrollt selbst, die Karte reicht bis unten, der Footer bleibt sichtbar. */
+.user-editor-panel > .role-editor {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin: 0 auto;
+  padding: 32px 28px 0;
+}
+.role-editor > .user-editor-content:has(> .user-editor-footer) {
+  flex: 1 0 auto;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  overflow: clip;
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+}
+.role-editor > .user-editor-content > .user-editor-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin-top: auto;
+  background: white;
+}
+
+/* Nachrichten: der Inhalt füllt die Höhe, der Footer steht unten. */
+.messages-editor .messages-editor-body {
+  min-height: 0;
+  flex: 1;
+}
+
 /* Passwort ändern und Kontakt: Panel als Spalte, Formular füllt die Höhe, Footer unten. */
 .settings-password-dialog:has(> .settings-password-form),
 .contact-editor-panel:has(> form) {
