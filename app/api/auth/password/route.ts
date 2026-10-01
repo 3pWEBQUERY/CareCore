@@ -9,7 +9,8 @@ export const runtime = "nodejs";
 
 // Höchstens so viele Anfragen „Passwort vergessen“ je IP-Adresse und Minute.
 const REQUESTS_PER_MINUTE = 5;
-const SENT = "Wenn ein Konto mit hinterlegter E-Mail-Adresse existiert, ist ein Link unterwegs. Bitte das Postfach prüfen.";
+const SENT =
+  "Wenn ein Konto mit hinterlegter E-Mail-Adresse existiert, ist ein Link unterwegs. Bitte das Postfach prüfen.";
 
 // Ist „Passwort vergessen“ verfügbar? Nur mit eingerichtetem E-Mail-Versand.
 export async function GET() {
@@ -21,7 +22,11 @@ export async function POST(request: Request) {
   try {
     if (!mailConfigured())
       return NextResponse.json({ error: "Der E-Mail-Versand ist nicht eingerichtet." }, { status: 409 });
-    const limit = await consumeWrite(carecoreDb(), `pw:${rateLimitKey(undefined, clientIp(request))}`, REQUESTS_PER_MINUTE);
+    const limit = await consumeWrite(
+      carecoreDb(),
+      `pw:${rateLimitKey(undefined, clientIp(request))}`,
+      REQUESTS_PER_MINUTE,
+    );
     if (!limit.allowed)
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte einen Moment warten und erneut versuchen." },

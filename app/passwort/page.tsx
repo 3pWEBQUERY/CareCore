@@ -80,7 +80,15 @@ export default function SetPasswordPage() {
           </div>
           <div className="login-heading">
             <p className="eyebrow">{invite ? "Zugang einrichten" : "Passwort neu setzen"}</p>
-            <h2>{done ? "Passwort gespeichert" : invite ? "Willkommen bei CareCore" : "Neues Passwort festlegen"}</h2>
+            <h2>
+              {done
+                ? "Passwort gespeichert"
+                : state.status === "invalid"
+                  ? "Link nicht mehr gültig"
+                  : invite
+                    ? "Willkommen bei CareCore"
+                    : "Neues Passwort festlegen"}
+            </h2>
             <p>
               {done
                 ? "Du kannst dich jetzt mit dem neuen Passwort anmelden."

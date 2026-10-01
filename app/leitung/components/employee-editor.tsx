@@ -216,6 +216,9 @@ export function EmployeeCreator({
     [error, setError] = useState(""),
     [saving, setSaving] = useState(false);
   const inviting = mailEnabled && Boolean(email) && invite;
+  // Öffnet sich der Dialog, bevor Rollen und Wohnbereiche geladen sind, gelten danach die Vorgaben.
+  const chosenRole = role || roles.find((r) => r.key === "pflege")?.key || roles[0]?.key || "",
+    chosenUnit = unit || careUnits[0]?.id || "";
   async function submit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -226,11 +229,11 @@ export function EmployeeCreator({
         body: JSON.stringify({
           displayName: name,
           username,
-          role,
+          role: chosenRole,
           jobTitle: job,
           phone,
           email,
-          primaryCareUnitId: unit || null,
+          primaryCareUnitId: chosenUnit || null,
           ...(inviting ? { invite: true } : { password }),
         }),
       });
@@ -266,7 +269,7 @@ export function EmployeeCreator({
                 setName,
                 username,
                 setUsername,
-                role,
+                role: chosenRole,
                 setRole,
                 job,
                 setJob,
@@ -274,7 +277,7 @@ export function EmployeeCreator({
                 setPhone,
                 email,
                 setEmail,
-                unit,
+                unit: chosenUnit,
                 setUnit,
                 roles,
                 careUnits,

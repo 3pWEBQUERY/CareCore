@@ -26,7 +26,12 @@ function database() {
 
 export const hashLinkToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
-async function createLink(sql: ReturnType<typeof database>, userId: string, purpose: Purpose, createdBy: string | null) {
+async function createLink(
+  sql: ReturnType<typeof database>,
+  userId: string,
+  purpose: Purpose,
+  createdBy: string | null,
+) {
   const token = randomBytes(32).toString("base64url");
   await sql.transaction([
     sql`UPDATE carecore_password_links SET used_at = NOW() WHERE user_id = ${userId} AND used_at IS NULL`,
@@ -121,7 +126,8 @@ export async function completePasswordLink(token: string, password: string) {
   if (password.length > 200) throw new ApiError("Das Passwort ist zu lang.");
   const sql = database();
   const link = await findLink(sql, token);
-  if (!link) throw new ApiError("Der Link ist abgelaufen oder wurde bereits verwendet. Bitte einen neuen anfordern.", 410);
+  if (!link)
+    throw new ApiError("Der Link ist abgelaufen oder wurde bereits verwendet. Bitte einen neuen anfordern.", 410);
   const passwordHash = await hashPassword(password);
   // Einlösen, Passwort setzen, Sitzungen beenden und protokollieren in einer Anweisung: nur wer den Link als
   // Erste:r einlöst, setzt das Passwort (zweimal gleichzeitig geht nicht).
