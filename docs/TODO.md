@@ -202,6 +202,10 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Passwort, Gruppen) stehen Speichern, Abbrechen und weitere Aktionen fest unten im Footer; langer Inhalt scrollt
       darunter durch. Sidebar-Tooltips zeigen das Tastenkürzel als Taste, „Zeitplan“ steht auf Höhe von „Als Nächstes“.
 
+- [x] **Arbeitsplatz: alle Bereiche einrichtbar.** Auch die Begrüssung (Datum, Begrüssung, Uhrzeit) ist ein Baustein:
+      verschieben, Breite wählen, zwischen Kopf- und Hauptbereich wechseln, ausblenden. Die Breitenwahl auf dem
+      Arbeitsplatz und den Kennzahlen-Seiten nutzt das CareCore-Dropdown statt der Browser-Auswahl.
+
 ## Entschieden (30.09.2026)
 
 - **Sprachen:** ganze App in FR, IT, EN, SQ, HR, SR, HU; Prüfung durch die Administration und den Auftraggeber.

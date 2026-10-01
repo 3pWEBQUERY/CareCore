@@ -16,23 +16,28 @@ test("Arbeitsplatz: alle Bausteine verschieben, Breite und Bereich wählen, ausb
       .locator(":scope > .dashboard-widget")
       .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-widget")));
 
-  // Standard: die drei Karten im Kopfbereich, Neuigkeiten zuerst im Hauptbereich.
-  await expect.poll(() => ids(top)).toEqual(["shortcuts", "notes", "today"]);
+  // Standard: Begrüssung und die drei Karten im Kopfbereich, Neuigkeiten zuerst im Hauptbereich.
+  await expect.poll(() => ids(top)).toEqual(["greeting", "shortcuts", "notes", "today"]);
   expect((await ids(main))[0]).toBe("news");
 
   await page.getByRole("button", { name: "Arbeitsplatz bearbeiten" }).click();
   // Notizen nach hinten, dann in den Hauptbereich und auf halbe Breite.
   await page.getByRole("button", { name: "Meine Notizen nach hinten" }).click();
-  await expect.poll(() => ids(top)).toEqual(["shortcuts", "today", "notes"]);
+  await expect.poll(() => ids(top)).toEqual(["greeting", "shortcuts", "today", "notes"]);
   await page.getByRole("button", { name: "Meine Notizen in Hauptbereich" }).click();
-  await expect.poll(() => ids(top)).toEqual(["shortcuts", "today"]);
+  await expect.poll(() => ids(top)).toEqual(["greeting", "shortcuts", "today"]);
   expect(await ids(main)).toContain("notes");
-  await page.getByLabel("Breite von Meine Notizen").selectOption("half");
+  // Breite über das eigene Dropdown (kein Browser-Select).
+  await page.getByRole("combobox", { name: "Breite von Meine Notizen" }).click();
+  await page.getByRole("option", { name: "½" }).click();
   await expect(main.locator('[data-widget="notes"]')).toHaveClass(/span-6/);
-  // Neuigkeiten in den Kopfbereich, Schnellzugriff ausblenden.
+  // Neuigkeiten in den Kopfbereich, Schnellzugriff ausblenden, Begrüssung in den Hauptbereich.
   await page.getByRole("button", { name: /Neuigkeiten in Kopfbereich/ }).click();
   await page.getByRole("button", { name: "Schnellzugriff ausblenden" }).click();
+  await page.getByRole("button", { name: "Begrüssung in Hauptbereich" }).click();
   await expect.poll(() => ids(top)).toEqual(["today", "news"]);
+  expect(await ids(main)).toContain("greeting");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Guten (Morgen|Tag|Abend), /);
   await page.getByRole("button", { name: "Fertig" }).click();
 
   // Nach dem Neuladen (Layout aus der Datenbank) bleibt alles so.
@@ -40,11 +45,12 @@ test("Arbeitsplatz: alle Bausteine verschieben, Breite und Bereich wählen, ausb
   await page.reload();
   await expect.poll(() => ids(top)).toEqual(["today", "news"]);
   await expect(main.locator('[data-widget="notes"]')).toHaveClass(/span-6/);
+  await expect(main.locator('[data-widget="greeting"]')).toBeVisible();
   await expect(page.locator(".home-shortcuts")).toHaveCount(0);
 
   // Standard wiederherstellen.
   await page.getByRole("button", { name: "Arbeitsplatz bearbeiten" }).click();
   await page.getByRole("button", { name: "Standard wiederherstellen" }).click();
-  await expect.poll(() => ids(top)).toEqual(["shortcuts", "notes", "today"]);
+  await expect.poll(() => ids(top)).toEqual(["greeting", "shortcuts", "notes", "today"]);
   expect(errors).toEqual([]);
 });

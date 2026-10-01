@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { CareOptionSelect } from "./care-form-controls";
 
 // Einrichtbare Seite: Bausteine in Zeilen, je Person verschiebbar, in der Breite wählbar, untereinander stapelbar und
 // ausblendbar. Ohne eigene Anordnung entsteht genau das Standardbild der Seite (gleiche Spaltenverhältnisse wie zuvor).
@@ -11,6 +12,11 @@ export const BOARD_SIZES: Array<{ id: BoardSize; label: string; fraction: number
   { id: "half", label: "½", fraction: 1 / 2 },
   { id: "twoThirds", label: "⅔", fraction: 2 / 3 },
   { id: "full", label: "Voll", fraction: 1 },
+];
+
+const sizeOptions = [
+  { value: "", label: "Standard" },
+  ...BOARD_SIZES.map((size) => ({ value: size.id, label: size.label })),
 ];
 
 export type BoardWidget = {
@@ -221,18 +227,13 @@ export function PageBoard({ board, widgets }: { board: PageBoardState; widgets: 
                             >
                               →
                             </button>
-                            <select
-                              aria-label={`Breite von ${widget.label}`}
+                            <CareOptionSelect
+                              className="widget-size-select"
+                              label={`Breite von ${widget.label}`}
                               value={layout.sizes[id] ?? ""}
-                              onChange={(event) => setSize(id, event.target.value as BoardSize | "")}
-                            >
-                              <option value="">Standard</option>
-                              {BOARD_SIZES.map((size) => (
-                                <option key={size.id} value={size.id}>
-                                  {size.label}
-                                </option>
-                              ))}
-                            </select>
+                              options={sizeOptions}
+                              onChange={(value) => setSize(id, value as BoardSize | "")}
+                            />
                             <button
                               type="button"
                               disabled={position === 0}

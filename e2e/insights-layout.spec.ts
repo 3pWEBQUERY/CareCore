@@ -29,7 +29,8 @@ test("Kennzahlen Personal: Ansicht anpassen, stapeln, Breite, ausblenden, gespei
   await page.getByRole("button", { name: "Pflichtschulungen unter den vorherigen stellen" }).click();
   await expect.poll(rows).toEqual([[["kpis"]], [["staffing"], ["absences"]], [["trainings"]]]);
   // Besetzung auf volle Breite, Abwesenheiten nach vorne, Kennzahlen ausblenden.
-  await page.getByLabel("Breite von Besetzung nach Wohnbereich").selectOption("full");
+  await page.getByRole("combobox", { name: "Breite von Besetzung nach Wohnbereich" }).click();
+  await page.getByRole("option", { name: "Voll" }).click();
   await page.getByRole("button", { name: "Abwesenheiten nach vorne" }).click();
   await page.getByRole("button", { name: "Kennzahlen ausblenden" }).click();
   await expect.poll(rows).toEqual([[["absences"]], [["staffing"]], [["trainings"]]]);

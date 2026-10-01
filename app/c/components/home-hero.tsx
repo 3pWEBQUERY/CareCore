@@ -5,20 +5,13 @@ import { Icon } from "./dashboard-shared";
 import type { DashboardState } from "./use-dashboard";
 
 export function HomeHero({ r, children }: { r: DashboardState; children: ReactNode }) {
-  const {
-    primaryCareUnitName,
-    dashboardEditing,
-    setDashboardEditing,
-    formattedDate,
-    formattedTime,
-    greeting,
-    firstName,
-    currentScope,
-  } = r;
+  const { primaryCareUnitName, dashboardEditing, setDashboardEditing, hiddenWidgets } = r;
   return (
-    <section className="home-hero" aria-labelledby="page-title">
+    <section className="home-hero" aria-labelledby="home-hero-title">
+      {/* Ohne Begrüssung behält die Seite eine Hauptüberschrift für Screenreader. */}
+      {hiddenWidgets.includes("greeting") && <h1 className="home-hero-hidden-title">Mein Arbeitsplatz</h1>}
       <div className="home-hero-top">
-        <span className="home-kicker">
+        <span className="home-kicker" id="home-hero-title">
           <Icon name="pulse" /> Mein Arbeitsplatz
         </span>
         <div className="home-hero-tools">
@@ -37,24 +30,31 @@ export function HomeHero({ r, children }: { r: DashboardState; children: ReactNo
           </button>
         </div>
       </div>
-      <div className="home-hero-intro">
-        <div>
-          <p className="home-date">{formattedDate}</p>
-          <h1 id="page-title">
-            {greeting}, {firstName}.
-          </h1>
-          <p>
-            Das ist dein Überblick für {currentScope}. Notizen, Aufgaben und {r.terms.prefix}-Neuigkeiten sind hier an
-            einem Ort.
-          </p>
-        </div>
-        <div className="home-clock" aria-label={`Aktuelle Uhrzeit ${formattedTime}`}>
-          <strong>{formattedTime}</strong>
-          <span>Uhr · Zürich</span>
-        </div>
-      </div>
       {children}
     </section>
+  );
+}
+
+// Begrüssung mit Datum und Uhrzeit: ein Baustein wie alle anderen (verschieben, Breite, Bereich, ausblenden).
+export function HomeGreetingCard({ r }: { r: DashboardState }) {
+  const { formattedDate, formattedTime, greeting, firstName, currentScope } = r;
+  return (
+    <div className="home-hero-intro home-greeting">
+      <div>
+        <p className="home-date">{formattedDate}</p>
+        <h1 id="page-title">
+          {greeting}, {firstName}.
+        </h1>
+        <p>
+          Das ist dein Überblick für {currentScope}. Notizen, Aufgaben und {r.terms.prefix}-Neuigkeiten sind hier an
+          einem Ort.
+        </p>
+      </div>
+      <div className="home-clock" aria-label={`Aktuelle Uhrzeit ${formattedTime}`}>
+        <strong>{formattedTime}</strong>
+        <span>Uhr · Zürich</span>
+      </div>
+    </div>
   );
 }
 

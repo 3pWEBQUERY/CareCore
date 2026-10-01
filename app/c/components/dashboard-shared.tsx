@@ -171,7 +171,17 @@ export type ResidentNews = {
 };
 
 export type DashboardWidgetId =
-  "shortcuts" | "notes" | "today" | "news" | "summary" | "worklist" | "critical" | "shift" | "tasks" | "residents";
+  | "greeting"
+  | "shortcuts"
+  | "notes"
+  | "today"
+  | "news"
+  | "summary"
+  | "worklist"
+  | "critical"
+  | "shift"
+  | "tasks"
+  | "residents";
 
 // Breite im 12er-Raster: Standard (je Baustein), ein Drittel, die Hälfte, zwei Drittel oder volle Breite.
 export type DashboardWidgetSize = "third" | "half" | "twoThirds" | "full";
@@ -190,6 +200,7 @@ export const dashboardWidgets: Array<{
   span: number;
   top?: boolean;
 }> = [
+  { id: "greeting", label: "Begrüssung", description: "Datum, Begrüssung und Uhrzeit", span: 12, top: true },
   { id: "shortcuts", label: "Schnellzugriff", description: "Direkt zu häufigen Bereichen", span: 4, top: true },
   { id: "notes", label: "Meine Notizen", description: "Nur für dich sichtbar", span: 4, top: true },
   { id: "today", label: "Heute wichtig", description: "Offene Aufgaben auf einen Blick", span: 4, top: true },
