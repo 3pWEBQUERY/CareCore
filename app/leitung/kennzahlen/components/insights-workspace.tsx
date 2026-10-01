@@ -7,6 +7,7 @@ import type { Terms } from "@/lib/terminology";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { LoadError, useApiData } from "@/app/components/workspace-ui";
+import { PageBoard, PageBoardCustomizer, usePageBoard, type BoardWidget } from "@/app/components/page-board";
 import {
   formatPercent,
   percent,
@@ -78,47 +79,59 @@ function IndicatorLink({ item }: { item: Indicator }) {
   );
 }
 
-function CareView({ data }: { data: CareInsights }) {
-  const t = useTerms();
-  return (
-    <div className="insights-care-layout">
-      <section className="card care-indicator-card">
-        <div className="card-header">
-          <div>
-            <p className="eyebrow">Pflegequalität</p>
-            <h2 className="card-title">Indikatoren</h2>
-            <p className="card-subtitle">Aktueller Stand aller aktiven {t.many}</p>
+// Bausteine je Ansicht; die Standardanteile entsprechen den bisherigen Spaltenverhältnissen.
+function careWidgets(data: CareInsights, t: Terms): BoardWidget[] {
+  return [
+    {
+      id: "indicators",
+      label: "Indikatoren",
+      fraction: 1.15 / 2,
+      content: (
+        <section className="card care-indicator-card">
+          <div className="card-header">
+            <div>
+              <p className="eyebrow">Pflegequalität</p>
+              <h2 className="card-title">Indikatoren</h2>
+              <p className="card-subtitle">Aktueller Stand aller aktiven {t.many}</p>
+            </div>
           </div>
-        </div>
-        <div className="care-indicator-list">
-          {data.indicators.map((item) => (
-            <IndicatorLink item={item} key={item.id} />
-          ))}
-        </div>
-      </section>
-      <aside className="card care-target-card">
-        <div className="card-header">
-          <div>
-            <p className="eyebrow">Zielerreichung</p>
-            <h2 className="card-title">Dokumentation</h2>
+          <div className="care-indicator-list">
+            {data.indicators.map((item) => (
+              <IndicatorLink item={item} key={item.id} />
+            ))}
           </div>
-          <ModuleIcon name="chart" className="care-target-icon" />
-        </div>
-        <div className="care-target-ring gauge" style={{ ["--value" as string]: data.documentation ?? 0 }}>
-          <strong>{formatPercent(data.documentation)}</strong>
-          <span>letzte 24 h</span>
-        </div>
-        <p>
-          {data.belowTarget
-            ? `${data.belowTarget} Indikator${data.belowTarget === 1 ? " liegt" : "en liegen"} unter dem Zielwert oder benötigen Aufmerksamkeit.`
-            : "Alle Indikatoren liegen im Zielbereich."}
-        </p>
-        <Link className="primary-button" href="/pflegedokumentation">
-          Zur Pflegedokumentation
-        </Link>
-      </aside>
-    </div>
-  );
+        </section>
+      ),
+    },
+    {
+      id: "documentation",
+      label: "Dokumentation (Zielerreichung)",
+      fraction: 0.85 / 2,
+      content: (
+        <aside className="card care-target-card">
+          <div className="card-header">
+            <div>
+              <p className="eyebrow">Zielerreichung</p>
+              <h2 className="card-title">Dokumentation</h2>
+            </div>
+            <ModuleIcon name="chart" className="care-target-icon" />
+          </div>
+          <div className="care-target-ring gauge" style={{ ["--value" as string]: data.documentation ?? 0 }}>
+            <strong>{formatPercent(data.documentation)}</strong>
+            <span>letzte 24 h</span>
+          </div>
+          <p>
+            {data.belowTarget
+              ? `${data.belowTarget} Indikator${data.belowTarget === 1 ? " liegt" : "en liegen"} unter dem Zielwert oder benötigen Aufmerksamkeit.`
+              : "Alle Indikatoren liegen im Zielbereich."}
+          </p>
+          <Link className="primary-button" href="/pflegedokumentation">
+            Zur Pflegedokumentation
+          </Link>
+        </aside>
+      ),
+    },
+  ];
 }
 
 const RESIDENT_FILTERS = [
@@ -233,123 +246,145 @@ function ResidentsView({ data }: { data: ResidentInsights }) {
   );
 }
 
-function LeadershipView({ data }: { data: LeadershipInsights }) {
-  return (
-    <div className="insights-executive-layout">
-      <section className="card executive-scorecard">
-        <div className="card-header">
-          <div>
-            <p className="eyebrow">Geschäftsführung</p>
-            <h2 className="card-title">Haus-Cockpit</h2>
-            <p className="card-subtitle">Aktueller Stand im gesamten Haus</p>
-          </div>
-        </div>
-        <div className="executive-score-grid">
-          {data.scores.map((score) => (
-            <div key={score.label}>
-              <span>{score.label}</span>
-              <strong>{score.value}</strong>
-              <small>{score.note}</small>
+function leadershipWidgets(data: LeadershipInsights): BoardWidget[] {
+  return [
+    {
+      id: "cockpit",
+      label: "Haus-Cockpit",
+      fraction: 1.3 / 2,
+      content: (
+        <section className="card executive-scorecard">
+          <div className="card-header">
+            <div>
+              <p className="eyebrow">Geschäftsführung</p>
+              <h2 className="card-title">Haus-Cockpit</h2>
+              <p className="card-subtitle">Aktueller Stand im gesamten Haus</p>
             </div>
-          ))}
-        </div>
-        <div className="executive-trend">
-          <span style={{ width: `${data.progress.value ?? 0}%` }} />
-          <b>{data.progress.label}</b>
-        </div>
-        <div className="executive-units">
-          {data.units.map((unit) => {
-            const share = percent(unit.residents, unit.beds);
-            return (
-              <div key={unit.name}>
-                <strong>{unit.name}</strong>
-                <span className="executive-unit-bar">
-                  <span style={{ width: `${Math.min(share ?? 0, 100)}%` }} />
-                </span>
-                <small>
-                  {unit.residents} / {unit.beds || "–"} · {formatPercent(share)}
-                </small>
+          </div>
+          <div className="executive-score-grid">
+            {data.scores.map((score) => (
+              <div key={score.label}>
+                <span>{score.label}</span>
+                <strong>{score.value}</strong>
+                <small>{score.note}</small>
               </div>
-            );
-          })}
-        </div>
-      </section>
-      <aside className="card executive-decisions">
-        <div className="card-header">
-          <div>
-            <p className="eyebrow">Führungskreis</p>
-            <h2 className="card-title">Entscheidungen</h2>
-          </div>
-          <span className={`status-badge ${data.decisions.length ? "attention" : "stable"}`}>
-            {data.decisions.length ? `${data.decisions.length} offen` : "Alles im Plan"}
-          </span>
-        </div>
-        {data.decisions.map((item) => (
-          <Link href={item.href} key={item.id}>
-            <span className={`governance-icon ${item.tone}`}>
-              <ModuleIcon name={item.icon} />
-            </span>
-            <span>
-              <strong>{item.title}</strong>
-              <small>{item.detail}</small>
-            </span>
-            <span>
-              <strong>{item.metric}</strong>
-              <small>{item.status}</small>
-            </span>
-            <ModuleIcon name="chevron" className="chevron" />
-          </Link>
-        ))}
-        {!data.decisions.length && <p className="list-hint">Keine offenen Themen für die Leitung.</p>}
-      </aside>
-    </div>
-  );
-}
-
-function WorkforceView({ data }: { data: WorkforceInsights }) {
-  const c = data.compliance;
-  return (
-    <div className="insights-workforce-layout">
-      <section className="card workforce-matrix">
-        <div className="card-header">
-          <div>
-            <p className="eyebrow">Dienstbesetzung</p>
-            <h2 className="card-title">Besetzung nach Wohnbereich</h2>
-            <p className="card-subtitle">Nächste 7 Tage · {formatPercent(data.coverage)} besetzt</p>
-          </div>
-          <Link className="secondary-button" href="/dienstplan">
-            Dienstplan <ModuleIcon name="chevron" />
-          </Link>
-        </div>
-        <div className="workforce-table week">
-          <div className="workforce-table-head">
-            <span>Bereich</span>
-            {data.days.map((day) => (
-              <span key={day.day}>{day.label}</span>
             ))}
           </div>
-          {data.matrix.map((row) => (
-            <div className="workforce-table-row" key={row.unit}>
-              <strong>{row.unit}</strong>
-              {row.cells.map((cell, index) => (
-                <span
-                  className={!cell.required ? "empty" : cell.assigned < cell.required ? "warning" : "ok"}
-                  key={data.days[index].day}
-                  title={`${cell.assigned} von ${cell.required} Personen eingeplant`}
-                >
-                  {!cell.required
-                    ? "–"
-                    : cell.assigned < cell.required
-                      ? `${cell.required - cell.assigned} offen`
-                      : `${cell.assigned}/${cell.required}`}
-                </span>
+          <div className="executive-trend">
+            <span style={{ width: `${data.progress.value ?? 0}%` }} />
+            <b>{data.progress.label}</b>
+          </div>
+          <div className="executive-units">
+            {data.units.map((unit) => {
+              const share = percent(unit.residents, unit.beds);
+              return (
+                <div key={unit.name}>
+                  <strong>{unit.name}</strong>
+                  <span className="executive-unit-bar">
+                    <span style={{ width: `${Math.min(share ?? 0, 100)}%` }} />
+                  </span>
+                  <small>
+                    {unit.residents} / {unit.beds || "–"} · {formatPercent(share)}
+                  </small>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ),
+    },
+    {
+      id: "decisions",
+      label: "Entscheidungen",
+      fraction: 0.7 / 2,
+      content: (
+        <aside className="card executive-decisions">
+          <div className="card-header">
+            <div>
+              <p className="eyebrow">Führungskreis</p>
+              <h2 className="card-title">Entscheidungen</h2>
+            </div>
+            <span className={`status-badge ${data.decisions.length ? "attention" : "stable"}`}>
+              {data.decisions.length ? `${data.decisions.length} offen` : "Alles im Plan"}
+            </span>
+          </div>
+          {data.decisions.map((item) => (
+            <Link href={item.href} key={item.id}>
+              <span className={`governance-icon ${item.tone}`}>
+                <ModuleIcon name={item.icon} />
+              </span>
+              <span>
+                <strong>{item.title}</strong>
+                <small>{item.detail}</small>
+              </span>
+              <span>
+                <strong>{item.metric}</strong>
+                <small>{item.status}</small>
+              </span>
+              <ModuleIcon name="chevron" className="chevron" />
+            </Link>
+          ))}
+          {!data.decisions.length && <p className="list-hint">Keine offenen Themen für die Leitung.</p>}
+        </aside>
+      ),
+    },
+  ];
+}
+
+function workforceWidgets(data: WorkforceInsights): BoardWidget[] {
+  const c = data.compliance;
+  return [
+    {
+      id: "staffing",
+      label: "Besetzung nach Wohnbereich",
+      fraction: 1.3 / 2,
+      content: (
+        <section className="card workforce-matrix">
+          <div className="card-header">
+            <div>
+              <p className="eyebrow">Dienstbesetzung</p>
+              <h2 className="card-title">Besetzung nach Wohnbereich</h2>
+              <p className="card-subtitle">Nächste 7 Tage · {formatPercent(data.coverage)} besetzt</p>
+            </div>
+            <Link className="secondary-button" href="/dienstplan">
+              Dienstplan <ModuleIcon name="chevron" />
+            </Link>
+          </div>
+          <div className="workforce-table week">
+            <div className="workforce-table-head">
+              <span>Bereich</span>
+              {data.days.map((day) => (
+                <span key={day.day}>{day.label}</span>
               ))}
             </div>
-          ))}
-          {!data.matrix.length && <p className="list-hint">Noch keine Wohnbereiche eingerichtet.</p>}
-        </div>
-      </section>
-      <aside className="house-history-sidebar">
+            {data.matrix.map((row) => (
+              <div className="workforce-table-row" key={row.unit}>
+                <strong>{row.unit}</strong>
+                {row.cells.map((cell, index) => (
+                  <span
+                    className={!cell.required ? "empty" : cell.assigned < cell.required ? "warning" : "ok"}
+                    key={data.days[index].day}
+                    title={`${cell.assigned} von ${cell.required} Personen eingeplant`}
+                  >
+                    {!cell.required
+                      ? "–"
+                      : cell.assigned < cell.required
+                        ? `${cell.required - cell.assigned} offen`
+                        : `${cell.assigned}/${cell.required}`}
+                  </span>
+                ))}
+              </div>
+            ))}
+            {!data.matrix.length && <p className="list-hint">Noch keine Wohnbereiche eingerichtet.</p>}
+          </div>
+        </section>
+      ),
+    },
+    {
+      id: "absences",
+      label: "Abwesenheiten",
+      fraction: 0.7 / 2,
+      content: (
         <section className="card workforce-availability">
           <div className="card-header">
             <div>
@@ -378,47 +413,53 @@ function WorkforceView({ data }: { data: WorkforceInsights }) {
             Vertretung planen
           </Link>
         </section>
-        {c && (
-          <section className="card quality-risk-card">
-            <div className="card-header">
-              <div>
-                <p className="eyebrow">Kompetenz</p>
-                <h2 className="card-title">Pflichtschulungen</h2>
-              </div>
+      ),
+    },
+    {
+      id: "trainings",
+      label: "Pflichtschulungen",
+      fraction: 0.7 / 2,
+      stacked: true,
+      content: c && (
+        <section className="card quality-risk-card">
+          <div className="card-header">
+            <div>
+              <p className="eyebrow">Kompetenz</p>
+              <h2 className="card-title">Pflichtschulungen</h2>
             </div>
-            <div className="quality-risk-meter">
-              <span
-                style={{
-                  width: `${percent(c.valid + c.dueSoon, c.valid + c.dueSoon + c.expired + c.missing + c.pending) ?? 0}%`,
-                }}
-              />
-            </div>
-            <p>
-              {c.dueSoon} Nachweis{c.dueSoon === 1 ? " läuft" : "e laufen"} bald ab, {c.pending} warte
-              {c.pending === 1 ? "t" : "n"} auf Prüfung.
-            </p>
-            <div className="quality-risk-stats">
-              <span>
-                <strong>{c.valid + c.dueSoon}</strong>
-                <small>Gültig</small>
-              </span>
-              <span>
-                <strong>{c.expired}</strong>
-                <small>Abgelaufen</small>
-              </span>
-              <span>
-                <strong>{c.missing}</strong>
-                <small>Fehlend</small>
-              </span>
-            </div>
-            <Link className="secondary-button" href="/personal/schulungen/pflichtnachweise">
-              Pflichtnachweise <ModuleIcon name="chevron" />
-            </Link>
-          </section>
-        )}
-      </aside>
-    </div>
-  );
+          </div>
+          <div className="quality-risk-meter">
+            <span
+              style={{
+                width: `${percent(c.valid + c.dueSoon, c.valid + c.dueSoon + c.expired + c.missing + c.pending) ?? 0}%`,
+              }}
+            />
+          </div>
+          <p>
+            {c.dueSoon} Nachweis{c.dueSoon === 1 ? " läuft" : "e laufen"} bald ab, {c.pending} warte
+            {c.pending === 1 ? "t" : "n"} auf Prüfung.
+          </p>
+          <div className="quality-risk-stats">
+            <span>
+              <strong>{c.valid + c.dueSoon}</strong>
+              <small>Gültig</small>
+            </span>
+            <span>
+              <strong>{c.expired}</strong>
+              <small>Abgelaufen</small>
+            </span>
+            <span>
+              <strong>{c.missing}</strong>
+              <small>Fehlend</small>
+            </span>
+          </div>
+          <Link className="secondary-button" href="/personal/schulungen/pflichtnachweise">
+            Pflichtnachweise <ModuleIcon name="chevron" />
+          </Link>
+        </section>
+      ),
+    },
+  ];
 }
 
 export default function InsightsWorkspace({ view }: { view: InsightsView }) {
@@ -427,6 +468,32 @@ export default function InsightsWorkspace({ view }: { view: InsightsView }) {
   const data = useApiData<CareInsights | ResidentInsights | LeadershipInsights | WorkforceInsights>(
     `/api/insights?view=${view}`,
   );
+  const board = usePageBoard(`insights-${view}`);
+  const content = data.data;
+  const widgets: BoardWidget[] = [
+    {
+      id: "kpis",
+      label: "Kennzahlen",
+      fraction: 1,
+      content: <LeadershipKpis kpis={content?.kpis ?? LOADING} />,
+    },
+    ...(!content
+      ? []
+      : view === "care"
+        ? careWidgets(content as CareInsights, t)
+        : view === "residents"
+          ? [
+              {
+                id: "residents",
+                label: `Alle ${t.many}`,
+                fraction: 1,
+                content: <ResidentsView data={content as ResidentInsights} />,
+              },
+            ]
+          : view === "leadership"
+            ? leadershipWidgets(content as LeadershipInsights)
+            : workforceWidgets(content as WorkforceInsights)),
+  ];
   return (
     <ModulePageShell
       activeModule="insights"
@@ -448,13 +515,11 @@ export default function InsightsWorkspace({ view }: { view: InsightsView }) {
                 showToast("Kennzahlen werden neu berechnet");
               },
             }}
+            customize={{ editing: board.editing, onToggle: () => board.setEditing((value) => !value) }}
           />
-          <LeadershipKpis kpis={data.data?.kpis ?? LOADING} />
+          {board.editing && <PageBoardCustomizer board={board} widgets={widgets} />}
+          <PageBoard board={board} widgets={widgets} />
           {data.error && <LoadError message={data.error} onRetry={data.reload} />}
-          {data.data && view === "care" && <CareView data={data.data as CareInsights} />}
-          {data.data && view === "residents" && <ResidentsView data={data.data as ResidentInsights} />}
-          {data.data && view === "leadership" && <LeadershipView data={data.data as LeadershipInsights} />}
-          {data.data && view === "workforce" && <WorkforceView data={data.data as WorkforceInsights} />}
         </main>
       )}
     </ModulePageShell>
