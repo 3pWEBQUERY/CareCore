@@ -16,6 +16,7 @@ import {
   type UserSettings,
 } from "@/lib/user-settings-shared";
 import { LeadershipHeading, LeadershipKpis } from "../../components/leadership-page-parts";
+import { PageBoard, PageBoardCustomizer, usePageBoard, type BoardWidget } from "@/app/components/page-board";
 
 const VIEWS = Object.keys(INSIGHT_VIEWS) as InsightViewId[];
 const VIEW_PATHS: Record<InsightViewId, string> = {
@@ -125,6 +126,27 @@ export default function MyInsights() {
     reload: views[view].reload,
   })).filter((group) => group.pinned);
 
+  const board = usePageBoard("insights-mine");
+  const widgets: BoardWidget[] = groups.map((group) => ({
+    id: group.view,
+    label: navigationLabel(INSIGHT_VIEWS[group.view], t),
+    fraction: 1,
+    content: (
+      <section className="my-insights-section" aria-label={navigationLabel(INSIGHT_VIEWS[group.view], t)}>
+        <div className="my-insights-section-head">
+          <p className="eyebrow">{navigationLabel(INSIGHT_VIEWS[group.view], t)}</p>
+          <Link href={VIEW_PATHS[group.view]}>Alle anzeigen</Link>
+        </div>
+        {group.error && <LoadError message={group.error} onRetry={group.reload} />}
+        {!group.error && !kpis[group.view] && <p className="list-hint">Wird geladen …</p>}
+        {kpis[group.view] && group.items.length > 0 && <LeadershipKpis kpis={group.items} />}
+        {kpis[group.view] && !group.items.length && (
+          <p className="list-hint">Die gewählten Kennzahlen gibt es in dieser Auswertung nicht mehr.</p>
+        )}
+      </section>
+    ),
+  }));
+
   return (
     <ModulePageShell
       activeModule="insights"
@@ -139,6 +161,11 @@ export default function MyInsights() {
             title="Meine Kennzahlen"
             description={`Dein persönliches Dashboard: die Kennzahlen aus Pflege, ${t.manyDative}, Leitung und Personal, die du im Blick behalten willst.`}
             action={{ label: "Kennzahlen auswählen", icon: "plus", onClick: () => setPicking(true) }}
+            customize={
+              groups.length > 0
+                ? { editing: board.editing, onToggle: () => board.setEditing((value) => !value) }
+                : undefined
+            }
           />
           {settings.error && <LoadError message={settings.error} onRetry={settings.reload} />}
           {settings.data && !groups.length && (
@@ -150,24 +177,8 @@ export default function MyInsights() {
               </button>
             </section>
           )}
-          {groups.map((group) => (
-            <section
-              className="my-insights-section"
-              key={group.view}
-              aria-label={navigationLabel(INSIGHT_VIEWS[group.view], t)}
-            >
-              <div className="my-insights-section-head">
-                <p className="eyebrow">{navigationLabel(INSIGHT_VIEWS[group.view], t)}</p>
-                <Link href={VIEW_PATHS[group.view]}>Alle anzeigen</Link>
-              </div>
-              {group.error && <LoadError message={group.error} onRetry={group.reload} />}
-              {!group.error && !kpis[group.view] && <p className="list-hint">Wird geladen …</p>}
-              {kpis[group.view] && group.items.length > 0 && <LeadershipKpis kpis={group.items} />}
-              {kpis[group.view] && !group.items.length && (
-                <p className="list-hint">Die gewählten Kennzahlen gibt es in dieser Auswertung nicht mehr.</p>
-              )}
-            </section>
-          ))}
+          {board.editing && groups.length > 0 && <PageBoardCustomizer board={board} widgets={widgets} />}
+          {groups.length > 0 && <PageBoard board={board} widgets={widgets} />}
           {picking && (
             <PinPicker
               kpis={kpis}

@@ -171,6 +171,9 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
         nur mit Verweis auf die FHIR-Ressource. Vorgemerkt per Trigger, Zustellung mit Wiederholungen, Ziele im
         internen Netz gesperrt (auch nach der Namensauflösung), Geheimnis verschlüsselt, Probemeldung aus der
         Konfiguration.
+- [x] **Einrichtbare Übersichtsseiten:** Startseite (alle Bausteine, Kopf- und Hauptbereich, Breite) und die
+      Kennzahlen-Seiten (Pflege, Bewohner, Leitung, Personal, Meine Kennzahlen: verschieben, Breite, stapeln,
+      ausblenden) je Person; Arbeitsseiten bleiben bewusst einheitlich (Entscheidung vom 01.10.2026).
 - [x] **Google Gemini** (`gemini-3.5-flash-lite`, Entscheidung vom 30.09.2026) für CareCore KI, KI-Dienstplanung
       und Übersetzungsentwürfe, Schlüssel `GEMINI_API_KEY`; Mistral und Anthropic entfernt.
 - [x] **Portale (Phase 6).**
