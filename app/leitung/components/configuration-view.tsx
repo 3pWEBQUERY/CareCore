@@ -212,6 +212,16 @@ export function ConfigurationView({
                   }`
                 : "Protokoll wird geladen"}
             </li>
+            {system && (
+              <li className={system.errors.last24h ? "admin-system-errors" : ""}>
+                <ModuleIcon name={system.errors.last24h ? "alert" : "check"} />{" "}
+                {system.errors.last24h
+                  ? `${system.errors.last24h} Serverfehler in 24 Stunden · zuletzt ${formatDateTime(
+                      system.errors.recent[0]?.at ?? "",
+                    )}: ${system.errors.recent[0]?.source ?? ""}`
+                  : "Keine Serverfehler in 24 Stunden"}
+              </li>
+            )}
           </ul>
           <button
             className="secondary-button"

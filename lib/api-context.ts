@@ -12,6 +12,7 @@ import {
 import { schedulePush } from "@/lib/push";
 import { scheduleWebhooks } from "@/lib/webhooks";
 import { auditOrigin } from "@/lib/audit-origin";
+import { recordServerError } from "@/lib/error-log";
 
 // Shared helpers for the module APIs (medication, vital signs, ...).
 
@@ -45,6 +46,7 @@ export async function apiContext(permission?: Permission): Promise<ApiContext | 
 export function apiErrorResponse(error: unknown, fallback: string) {
   if (error instanceof ApiError) return NextResponse.json({ error: error.message }, { status: error.status });
   console.error(fallback, error);
+  recordServerError(fallback, error);
   return NextResponse.json({ error: fallback }, { status: 500 });
 }
 

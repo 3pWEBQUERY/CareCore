@@ -38,6 +38,8 @@ test("Vitalparameter ausschalten: Blutzucker erscheint nicht mehr in der Messung
   const errors = watchErrors(page);
   try {
     await page.goto("/c/leitung/administration/konfiguration");
+    // Systemstatus nennt die Serverfehler der letzten 24 Stunden (Überwachung).
+    await expect(page.locator(".admin-system-card")).toContainText(/Serverfehler in 24 Stunden/);
     const group = page.getByRole("group", { name: "Vitalparameter wählen" });
     await expect(group.getByRole("button", { name: "Blutzucker" })).toHaveAttribute("aria-pressed", "true");
     await group.getByRole("button", { name: "Blutzucker" }).click();

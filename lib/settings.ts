@@ -2,6 +2,7 @@ import { ApiError, iso, auditStatement, type ApiContext } from "@/lib/api-contex
 import { SETTING_DEFINITIONS, resolveSettings, type AppSettings, type SettingKey } from "@/lib/settings-shared";
 import { TERMINOLOGIES, resolveTerminology, termsFor, type TerminologyKey } from "@/lib/terminology";
 import { VITAL_METRICS } from "@/lib/vitals-shared";
+import { errorSummary, type ErrorSummary } from "@/lib/error-log";
 
 // Organisation-wide settings (see settings-shared.ts).
 
@@ -99,6 +100,8 @@ export type SystemStatus = {
   lastMigrationAt: string | null;
   auditEntries30Days: number;
   lastAuditAt: string | null;
+  // Serverfehler der letzten 24 Stunden und die letzten Einträge (Überwachung).
+  errors: ErrorSummary;
 };
 
 // Live state of the installation for the "Systemstatus" card.
@@ -112,8 +115,10 @@ export async function systemStatus(ctx: ApiContext): Promise<SystemStatus> {
       SELECT COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days')::int AS recent, MAX(created_at) AS last_at
       FROM carecore_audit_log WHERE organization_id = ${ctx.actor.organizationId}`,
   ]);
+  const errors = await errorSummary(ctx.sql);
   return {
     databaseMs,
+    errors,
     schemaVersion: migrations[0]?.version ? String(migrations[0].version).slice(0, 4) : null,
     migrations: Number(migrations[0]?.count ?? 0),
     lastMigrationAt: iso(migrations[0]?.applied_at),
