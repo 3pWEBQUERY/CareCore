@@ -153,6 +153,7 @@ export default function AdminUserManagement({
           careUnits={data?.careUnits ?? []}
           roles={data?.roles ?? []}
           qualifications={data?.qualifications ?? []}
+          mailEnabled={Boolean(data?.mailEnabled)}
           onClose={() => setSelected(null)}
           onUpdated={(next, message) => {
             setData(next);
@@ -165,11 +166,12 @@ export default function AdminUserManagement({
         <EmployeeCreator
           careUnits={data?.careUnits ?? []}
           roles={data?.roles ?? []}
+          mailEnabled={Boolean(data?.mailEnabled)}
           onClose={onCloseCreate}
-          onCreated={(next) => {
+          onCreated={(next, message) => {
             setData(next);
             onCloseCreate();
-            showToast("Mitarbeiter erstellt");
+            showToast(message);
           }}
         />
       )}{" "}

@@ -9,6 +9,7 @@ export function EmployeeEditor({
   careUnits,
   roles,
   qualifications,
+  mailEnabled,
   onClose,
   onUpdated,
 }: {
@@ -16,6 +17,7 @@ export function EmployeeEditor({
   careUnits: AdminCareUnit[];
   roles: ManagedRole[];
   qualifications: AdminQualification[];
+  mailEnabled: boolean;
   onClose: () => void;
   onUpdated: (data: Data, message: string) => void;
 }) {
@@ -24,11 +26,32 @@ export function EmployeeEditor({
     [role, setRole] = useState(user.role),
     [job, setJob] = useState(user.jobTitle === "Noch nicht angegeben" ? "" : user.jobTitle),
     [phone, setPhone] = useState(user.phone),
+    [email, setEmail] = useState(user.email),
     [unit, setUnit] = useState(user.primaryCareUnitId ?? ""),
     [held, setHeld] = useState<string[]>(user.qualificationIds),
     [mode, setMode] = useState<"edit" | "lock" | "delete" | "mfa">("edit"),
     [error, setError] = useState(""),
+    [linkNotice, setLinkNotice] = useState(""),
     [saving, setSaving] = useState(false);
+  // Link zum Setzen des Passworts an die gespeicherte E-Mail-Adresse senden (Einladung oder neues Passwort).
+  async function sendLink() {
+    setSaving(true);
+    setLinkNotice("");
+    try {
+      const r = await fetch("/api/admin/users/password-link", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const result = (await r.json()) as { email?: string; error?: string };
+      if (!r.ok) throw new Error(result.error);
+      setLinkNotice(`Link an ${result.email} gesendet.`);
+    } catch (e) {
+      setLinkNotice(e instanceof Error && e.message ? e.message : "Der Link konnte nicht gesendet werden.");
+    } finally {
+      setSaving(false);
+    }
+  }
   async function send(method: "PATCH" | "DELETE", body: object, success: string) {
     setSaving(true);
     try {
@@ -80,7 +103,17 @@ export function EmployeeEditor({
             >
               Endgültig löschen
             </button>
+            {mailEnabled && user.active && user.email && (
+              <button type="button" disabled={saving} onClick={() => void sendLink()}>
+                Link zum Passwort setzen senden
+              </button>
+            )}
           </div>
+          {linkNotice && (
+            <p className="user-editor-link-notice" role="status">
+              {linkNotice}
+            </p>
+          )}
         </aside>
         <section className="user-editor-content">
           {mode === "edit" ? (
@@ -96,6 +129,7 @@ export function EmployeeEditor({
                     role,
                     jobTitle: job,
                     phone,
+                    email,
                     primaryCareUnitId: unit || null,
                     qualificationIds: held,
                   },
@@ -115,6 +149,8 @@ export function EmployeeEditor({
                   setJob,
                   phone,
                   setPhone,
+                  email,
+                  setEmail,
                   unit,
                   setUnit,
                   roles,
@@ -158,23 +194,28 @@ export function EmployeeEditor({
 export function EmployeeCreator({
   careUnits,
   roles,
+  mailEnabled,
   onClose,
   onCreated,
 }: {
   careUnits: AdminCareUnit[];
   roles: ManagedRole[];
+  mailEnabled: boolean;
   onClose: () => void;
-  onCreated: (data: Data) => void;
+  onCreated: (data: Data, message: string) => void;
 }) {
   const [name, setName] = useState(""),
     [username, setUsername] = useState(""),
     [role, setRole] = useState(roles.find((r) => r.key === "pflege")?.key ?? roles[0]?.key ?? ""),
     [job, setJob] = useState(""),
     [phone, setPhone] = useState(""),
+    [email, setEmail] = useState(""),
+    [invite, setInvite] = useState(true),
     [unit, setUnit] = useState(careUnits[0]?.id ?? ""),
     [password, setPassword] = useState(""),
     [error, setError] = useState(""),
     [saving, setSaving] = useState(false);
+  const inviting = mailEnabled && Boolean(email) && invite;
   async function submit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -188,13 +229,21 @@ export function EmployeeCreator({
           role,
           jobTitle: job,
           phone,
+          email,
           primaryCareUnitId: unit || null,
-          password,
+          ...(inviting ? { invite: true } : { password }),
         }),
       });
       const next = (await r.json()) as Data & { error?: string };
       if (!r.ok) throw new Error(next.error);
-      onCreated(next);
+      onCreated(
+        next,
+        !inviting
+          ? "Mitarbeiter erstellt"
+          : next.inviteFailed
+            ? "Mitarbeiter erstellt – die Einladung konnte nicht gesendet werden"
+            : `Mitarbeiter erstellt, Einladung an ${email} gesendet`,
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Mitarbeiter konnte nicht erstellt werden.");
     } finally {
@@ -223,26 +272,41 @@ export function EmployeeCreator({
                 setJob,
                 phone,
                 setPhone,
+                email,
+                setEmail,
                 unit,
                 setUnit,
                 roles,
                 careUnits,
               }}
             />
-            <div className="user-editor-fields">
-              <label className="user-editor-password-field">
-                Startpasswort
-                <input
-                  required
-                  type="password"
-                  minLength={10}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="new-password"
-                />
-                <small>Wird sicher als Hash gespeichert.</small>
-              </label>
-            </div>
+            {mailEnabled && email && (
+              <div className="user-editor-fields">
+                <label className="user-editor-invite">
+                  <input type="checkbox" checked={invite} onChange={(e) => setInvite(e.target.checked)} />
+                  <span>
+                    Per E-Mail einladen
+                    <small>Die Person setzt ihr Passwort selbst über einen Link (7 Tage gültig).</small>
+                  </span>
+                </label>
+              </div>
+            )}
+            {!inviting && (
+              <div className="user-editor-fields">
+                <label className="user-editor-password-field">
+                  Startpasswort
+                  <input
+                    required
+                    type="password"
+                    minLength={10}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
+                  />
+                  <small>Wird sicher als Hash gespeichert.</small>
+                </label>
+              </div>
+            )}
             {error && <p className="user-editor-error">{error}</p>}
             <footer className="user-editor-footer">
               <button className="primary-button" disabled={saving}>

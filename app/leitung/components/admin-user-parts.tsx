@@ -10,6 +10,9 @@ export type Data = {
   careUnits: AdminCareUnit[];
   roles: ManagedRole[];
   qualifications: AdminQualification[];
+  // E-Mail-Versand eingerichtet: Links zum Setzen des Passworts und Einladungen.
+  mailEnabled?: boolean;
+  inviteFailed?: boolean;
 };
 
 export const permissions = [
@@ -61,6 +64,8 @@ export function EmployeeFields(p: {
   setJob: (v: string) => void;
   phone: string;
   setPhone: (v: string) => void;
+  email: string;
+  setEmail: (v: string) => void;
   unit: string;
   setUnit: (v: string) => void;
   roles: ManagedRole[];
@@ -88,6 +93,17 @@ export function EmployeeFields(p: {
         <label>
           Telefon
           <input value={p.phone} onChange={(e) => p.setPhone(e.target.value)} />
+        </label>
+        <label>
+          E-Mail
+          <input
+            type="email"
+            autoComplete="off"
+            maxLength={200}
+            value={p.email}
+            onChange={(e) => p.setEmail(e.target.value.trim())}
+            placeholder="Für „Passwort vergessen“"
+          />
         </label>
       </div>
       <fieldset className="user-editor-role">

@@ -11,6 +11,8 @@ export type ManagedUser = {
   role: string;
   jobTitle: string;
   phone: string;
+  // Für „Passwort vergessen“ und den Link zum Setzen des Passworts.
+  email: string;
   primaryCareUnitId: string | null;
   primaryCareUnitName: string | null;
   active: boolean;
@@ -60,6 +62,20 @@ const roleKeys = [
   "ai.use",
 ];
 
+// Leer bleibt leer (null); sonst eine einfache Formprüfung, gespeichert in Kleinbuchstaben.
+export function normalizeEmail(value: string) {
+  const email = value.trim().toLowerCase();
+  if (!email) return null;
+  if (email.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("INVALID_EMAIL");
+  return email;
+}
+
+async function assertEmailFree(sql: ReturnType<typeof database>, email: string, userId: string | null) {
+  const rows = (await sql`SELECT user_id FROM carecore_user_profiles
+    WHERE lower(email) = ${email} AND user_id IS DISTINCT FROM ${userId}::uuid LIMIT 1`) as unknown as unknown[];
+  if (rows.length) throw new Error("EMAIL_TAKEN");
+}
+
 function database() {
   const connectionString = process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
   if (!connectionString) throw new Error("DATABASE_URL_NOT_CONFIGURED");
@@ -76,7 +92,7 @@ export async function listManagedUsers(actorId: string): Promise<{
 }> {
   const sql = database();
   const users =
-    (await sql`SELECT u.id, u.username, u.display_name, u.role, u.active, u.archived_at, u.created_at, p.job_title, p.phone, p.primary_care_unit_id, p.last_seen_at, cu.name AS primary_care_unit_name, EXISTS (SELECT 1 FROM carecore_user_mfa m WHERE m.user_id = u.id AND m.confirmed_at IS NOT NULL) AS mfa FROM carecore_users u LEFT JOIN carecore_user_profiles p ON p.user_id = u.id LEFT JOIN carecore_care_units cu ON cu.id = p.primary_care_unit_id WHERE p.organization_id IS NULL OR p.organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}) ORDER BY u.archived_at NULLS FIRST, u.active DESC, u.display_name ASC`) as unknown as Array<{
+    (await sql`SELECT u.id, u.username, u.display_name, u.role, u.active, u.archived_at, u.created_at, p.job_title, p.phone, p.email, p.primary_care_unit_id, p.last_seen_at, cu.name AS primary_care_unit_name, EXISTS (SELECT 1 FROM carecore_user_mfa m WHERE m.user_id = u.id AND m.confirmed_at IS NOT NULL) AS mfa FROM carecore_users u LEFT JOIN carecore_user_profiles p ON p.user_id = u.id LEFT JOIN carecore_care_units cu ON cu.id = p.primary_care_unit_id WHERE p.organization_id IS NULL OR p.organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}) ORDER BY u.archived_at NULLS FIRST, u.active DESC, u.display_name ASC`) as unknown as Array<{
       id: string;
       username: string;
       display_name: string;
@@ -86,6 +102,7 @@ export async function listManagedUsers(actorId: string): Promise<{
       created_at: string;
       job_title: string | null;
       phone: string | null;
+      email: string | null;
       primary_care_unit_id: string | null;
       last_seen_at: string | null;
       primary_care_unit_name: string | null;
@@ -127,6 +144,7 @@ export async function listManagedUsers(actorId: string): Promise<{
       role: user.role,
       jobTitle: user.job_title ?? "Noch nicht angegeben",
       phone: user.phone ?? "",
+      email: user.email ?? "",
       primaryCareUnitId: user.primary_care_unit_id,
       primaryCareUnitName: user.primary_care_unit_name,
       active: user.active,
@@ -227,6 +245,7 @@ export async function updateManagedUser(
     role?: string;
     jobTitle?: string;
     phone?: string;
+    email?: string;
     primaryCareUnitId?: string | null;
     qualificationIds?: string[];
     action?: "lock" | "restore";
@@ -254,7 +273,9 @@ export async function updateManagedUser(
     const username = input.username?.trim().slice(0, 80);
     const role = input.role?.trim().slice(0, 40);
     if (!name || !username || !role) throw new Error("INVALID_USER_INPUT");
+    const email = input.email === undefined ? undefined : normalizeEmail(input.email);
     await assertRole(sql, actorId, role);
+    if (email) await assertEmailFree(sql, email, userId);
     if (input.primaryCareUnitId) await assertCareUnit(sql, actorId, input.primaryCareUnitId);
     const qualifications = input.qualificationIds
       ? await qualificationChanges(sql, actorId, userId, input.qualificationIds)
@@ -262,6 +283,9 @@ export async function updateManagedUser(
     await sql.transaction([
       sql`UPDATE carecore_users SET display_name = ${name}, username = ${username}, role = ${role}, updated_at = NOW() WHERE id = ${userId}`,
       sql`INSERT INTO carecore_user_profiles (user_id, organization_id, job_title, phone, primary_care_unit_id) VALUES (${userId}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}), ${input.jobTitle?.trim().slice(0, 140) || null}, ${input.phone?.trim().slice(0, 60) || null}, ${input.primaryCareUnitId ?? null}) ON CONFLICT (user_id) DO UPDATE SET organization_id = COALESCE(carecore_user_profiles.organization_id, EXCLUDED.organization_id), job_title = EXCLUDED.job_title, phone = EXCLUDED.phone, primary_care_unit_id = EXCLUDED.primary_care_unit_id, updated_at = NOW()`,
+      ...(email !== undefined
+        ? [sql`UPDATE carecore_user_profiles SET email = ${email} WHERE user_id = ${userId}`]
+        : []),
       ...(input.primaryCareUnitId
         ? [
             sql`UPDATE carecore_user_unit_assignments SET is_primary = FALSE WHERE user_id = ${userId}`,
@@ -325,6 +349,7 @@ export async function createManagedUser(
     role: string;
     jobTitle?: string;
     phone?: string;
+    email?: string;
     primaryCareUnitId?: string | null;
   },
 ) {
@@ -334,15 +359,17 @@ export async function createManagedUser(
   const username = input.username.trim().slice(0, 80);
   const role = input.role.trim().slice(0, 40);
   if (!displayName || !username || !role || input.password.length < 10) throw new Error("INVALID_EMPLOYEE_INPUT");
+  const email = normalizeEmail(input.email ?? "");
   const sql = database();
   await assertRole(sql, actorId, role);
   if (input.primaryCareUnitId) await assertCareUnit(sql, actorId, input.primaryCareUnitId);
+  if (email) await assertEmailFree(sql, email, null);
   const id = randomUUID();
   const passwordHash = await hashPassword(input.password);
   await sql.transaction([
     sql`INSERT INTO carecore_users (id, username, display_name, role, password_hash) VALUES (${id}, ${username}, ${displayName}, ${role}, ${passwordHash})`,
     // New employees belong to the organization of the administrator who creates them.
-    sql`INSERT INTO carecore_user_profiles (user_id, organization_id, job_title, phone, primary_care_unit_id) VALUES (${id}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}), ${input.jobTitle?.trim().slice(0, 140) || null}, ${input.phone?.trim().slice(0, 60) || null}, ${input.primaryCareUnitId ?? null})`,
+    sql`INSERT INTO carecore_user_profiles (user_id, organization_id, job_title, phone, email, primary_care_unit_id) VALUES (${id}, (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${actorId}), ${input.jobTitle?.trim().slice(0, 140) || null}, ${input.phone?.trim().slice(0, 60) || null}, ${email}, ${input.primaryCareUnitId ?? null})`,
     ...(input.primaryCareUnitId
       ? [
           sql`INSERT INTO carecore_user_unit_assignments (user_id, care_unit_id, assignment_role, is_primary) VALUES (${id}, ${input.primaryCareUnitId}, 'Mitarbeitende:r', TRUE)`,

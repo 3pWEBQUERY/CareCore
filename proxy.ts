@@ -26,6 +26,8 @@ export async function proxy(request: NextRequest) {
   if (pathname === "/") return NextResponse.next();
   // Portal für Angehörige und Ärztinnen/Ärzte: eigene Anmeldung (Cookie carecore_portal), prüft die Seite selbst.
   if (pathname === "/portal" || pathname.startsWith("/portal/")) return NextResponse.next();
+  // Passwort mit dem Link aus der E-Mail setzen: ohne Anmeldung, prüft den Link selbst.
+  if (pathname === "/passwort") return NextResponse.next();
 
   if (!pathname.startsWith("/c")) {
     const target = request.nextUrl.clone();
