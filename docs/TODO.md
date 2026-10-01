@@ -198,6 +198,10 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Vitalwerten und Wunden (pseudonymisiert). Bestehende Ziele werden nicht doppelt vorgeschlagen, keine erfundenen
       Werte; der Vorschlag bleibt ein Entwurf, den die Pflegefachperson prüft und selbst in die Planung überträgt.
 
+- [x] **Dialoge: Aktionen fest unten.** In allen Seitenpanels (Formulare, Notizen, Mitarbeitende, Rollen, Kontakte,
+      Passwort, Gruppen) stehen Speichern, Abbrechen und weitere Aktionen fest unten im Footer; langer Inhalt scrollt
+      darunter durch. Sidebar-Tooltips zeigen das Tastenkürzel als Taste, „Zeitplan“ steht auf Höhe von „Als Nächstes“.
+
 ## Entschieden (30.09.2026)
 
 - **Sprachen:** ganze App in FR, IT, EN, SQ, HR, SR, HU; Prüfung durch die Administration und den Auftraggeber.

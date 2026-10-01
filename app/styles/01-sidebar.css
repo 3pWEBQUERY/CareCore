@@ -559,6 +559,26 @@ input:focus-visible {
 .sidebar-tooltip-anchor {
   display: none;
 }
+.sidebar-tooltip-portal:has(.sidebar-tooltip-key) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Tastaturkürzel im Tooltip als Taste (wie in der Übersicht „Tastaturkürzel“), hell auf dem dunklen Tooltip. */
+.sidebar-tooltip-key {
+  min-width: 20px;
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  color: white;
+  background: rgba(255, 255, 255, 0.12);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.5;
+  text-align: center;
+}
 .sidebar-tooltip-portal {
   position: fixed;
   z-index: 1000;

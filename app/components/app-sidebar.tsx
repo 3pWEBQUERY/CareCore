@@ -109,7 +109,16 @@ type AppSidebarProps = {
   onToast?: (message: string) => void;
 };
 
-export function SidebarTooltip({ label, placement = "right" }: { label: string; placement?: "right" | "top" }) {
+export function SidebarTooltip({
+  label,
+  shortcut,
+  placement = "right",
+}: {
+  label: string;
+  // Tastaturkürzel, als Taste dargestellt (wie unter „Tastaturkürzel“ in der Kopfzeile).
+  shortcut?: string;
+  placement?: "right" | "top";
+}) {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
@@ -159,6 +168,11 @@ export function SidebarTooltip({ label, placement = "right" }: { label: string; 
             style={{ top: position.top, left: position.left }}
           >
             {label}
+            {shortcut && (
+              <kbd className="sidebar-tooltip-key" aria-label={`Taste ${shortcut}`}>
+                {shortcut}
+              </kbd>
+            )}
           </span>,
           document.body,
         )}
@@ -253,7 +267,7 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
             }}
           >
             <RailIcon name="home" />
-            <SidebarTooltip label="Startseite · Taste H" />
+            <SidebarTooltip label="Startseite" shortcut="H" />
           </button>
           {visibleQuickLinks.map((link) => {
             const count = badgeCount(link.badge);
@@ -267,7 +281,7 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
               >
                 <RailIcon name={link.icon} />
                 {count > 0 && <span className="sidebar-rail-badge">{count > 99 ? "99+" : count}</span>}
-                <SidebarTooltip label={`${link.label}${count ? ` · ${count}` : ""} · Taste ${link.shortcut}`} />
+                <SidebarTooltip label={`${link.label}${count ? ` · ${count}` : ""}`} shortcut={link.shortcut} />
               </button>
             );
           })}
