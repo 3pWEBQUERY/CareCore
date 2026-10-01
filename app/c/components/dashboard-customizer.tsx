@@ -8,9 +8,12 @@ export function DashboardCustomizer({ r }: { r: DashboardState }) {
   return (
     <section className="dashboard-customizer" aria-label="Arbeitsplatz bearbeiten">
       <div>
-        <p className="eyebrow">Weitere Bausteine</p>
+        <p className="eyebrow">Bausteine</p>
         <h2>Arbeitsplatz anpassen</h2>
-        <p>Ordne die Zusatzbereiche unterhalb der {r.terms.prefix}-Neuigkeiten an oder blende sie aus.</p>
+        <p>
+          Bausteine ziehen oder mit ← → verschieben, die Breite wählen, mit ▲ ▼ zwischen Kopf- und Hauptbereich wechseln
+          und hier ein- oder ausblenden.
+        </p>
       </div>
       <div className="dashboard-customizer-list">
         {dashboardWidgets.map((widget) => (

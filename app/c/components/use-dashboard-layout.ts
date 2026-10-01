@@ -2,36 +2,28 @@
 
 import { useEffect, useState } from "react";
 import {
+  DashboardLayoutState,
   DashboardWidgetId,
-  defaultDashboardOrder,
-  completeDashboardOrder,
+  DashboardWidgetSize,
   dashboardLayoutStorageKey,
+  defaultDashboardLayout,
   readStoredDashboardLayout,
+  sanitizeDashboardLayout,
 } from "./dashboard-shared";
 
+// Arbeitsplatz: Reihenfolge, Kopf- oder Hauptbereich, Breite und ausgeblendete Bausteine je Person.
+// Gespeichert im Browser (sofort) und in der Datenbank (geräteübergreifend).
 export function useDashboardLayout() {
   const [dashboardEditing, setDashboardEditing] = useState(false);
-  const [widgetOrder, setWidgetOrder] = useState<DashboardWidgetId[]>(() => readStoredDashboardLayout().order);
-  const [hiddenWidgets, setHiddenWidgets] = useState<DashboardWidgetId[]>(() => readStoredDashboardLayout().hidden);
+  const [layout, setLayout] = useState<DashboardLayoutState>(readStoredDashboardLayout);
   const [draggedWidget, setDraggedWidget] = useState<DashboardWidgetId | null>(null);
 
   useEffect(() => {
     let active = true;
     void fetch("/api/dashboard/layout", { credentials: "same-origin" })
-      .then((response) =>
-        response.ok
-          ? (response.json() as Promise<{
-              layout: { order?: DashboardWidgetId[]; hidden?: DashboardWidgetId[] } | null;
-            }>)
-          : null,
-      )
+      .then((response) => (response.ok ? (response.json() as Promise<{ layout: unknown }>) : null))
       .then((payload) => {
-        if (!active || !payload?.layout) return;
-        const stored = payload.layout;
-        const allowed = new Set(defaultDashboardOrder);
-        const order = (stored.order ?? []).filter((id): id is DashboardWidgetId => allowed.has(id));
-        setWidgetOrder(completeDashboardOrder(order));
-        setHiddenWidgets((stored.hidden ?? []).filter((id): id is DashboardWidgetId => allowed.has(id)));
+        if (active && payload?.layout) setLayout(sanitizeDashboardLayout(payload.layout));
       })
       .catch(() => undefined);
     return () => {
@@ -39,53 +31,96 @@ export function useDashboardLayout() {
     };
   }, []);
 
-  function persistDashboardLayout(nextOrder: DashboardWidgetId[], nextHidden: DashboardWidgetId[]) {
-    window.localStorage.setItem(dashboardLayoutStorageKey, JSON.stringify({ order: nextOrder, hidden: nextHidden }));
+  function persist(next: DashboardLayoutState) {
+    setLayout(next);
+    try {
+      window.localStorage.setItem(dashboardLayoutStorageKey, JSON.stringify(next));
+    } catch {
+      // Ohne Browser-Speicher bleibt das Layout in der Datenbank.
+    }
     void fetch("/api/dashboard/layout", {
       method: "PUT",
       credentials: "same-origin",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ order: nextOrder, hidden: nextHidden }),
+      body: JSON.stringify(next),
     }).catch(() => undefined);
   }
 
+  const inTop = (id: DashboardWidgetId) => layout.top.includes(id);
+
   function toggleWidget(widgetId: DashboardWidgetId) {
-    const nextHidden = hiddenWidgets.includes(widgetId)
-      ? hiddenWidgets.filter((id) => id !== widgetId)
-      : [...hiddenWidgets, widgetId];
-    setHiddenWidgets(nextHidden);
-    persistDashboardLayout(widgetOrder, nextHidden);
+    const hidden = layout.hidden.includes(widgetId)
+      ? layout.hidden.filter((id) => id !== widgetId)
+      : [...layout.hidden, widgetId];
+    persist({ ...layout, hidden });
+  }
+
+  // Ziehen und Ablegen: der gezogene Baustein kommt vor das Ziel und in dessen Bereich.
+  function moveWidget(targetId: DashboardWidgetId) {
+    if (!draggedWidget || draggedWidget === targetId) return;
+    const order = layout.order.filter((id) => id !== draggedWidget);
+    order.splice(order.indexOf(targetId), 0, draggedWidget);
+    const top = layout.top.filter((id) => id !== draggedWidget);
+    persist({ ...layout, order, top: inTop(targetId) ? [...top, draggedWidget] : top });
+  }
+
+  // Ablegen auf freier Fläche eines Bereichs: ans Ende dieses Bereichs.
+  function moveWidgetToArea(top: boolean) {
+    if (!draggedWidget) return;
+    const order = [...layout.order.filter((id) => id !== draggedWidget), draggedWidget];
+    const rest = layout.top.filter((id) => id !== draggedWidget);
+    persist({ ...layout, order, top: top ? [...rest, draggedWidget] : rest });
+  }
+
+  // Pfeil-Knöpfe (Tastatur und Touch): mit dem nächsten sichtbaren Baustein im selben Bereich tauschen.
+  function moveWidgetBy(widgetId: DashboardWidgetId, step: -1 | 1) {
+    const sameArea = layout.order.filter((id) => !layout.hidden.includes(id) && inTop(id) === inTop(widgetId));
+    const neighbour = sameArea[sameArea.indexOf(widgetId) + step];
+    if (!neighbour) return;
+    const order = [...layout.order];
+    const a = order.indexOf(widgetId);
+    const b = order.indexOf(neighbour);
+    [order[a], order[b]] = [order[b], order[a]];
+    persist({ ...layout, order });
+  }
+
+  function setWidgetSize(widgetId: DashboardWidgetId, size: DashboardWidgetSize | null) {
+    const sizes = { ...layout.sizes };
+    if (size) sizes[widgetId] = size;
+    else delete sizes[widgetId];
+    persist({ ...layout, sizes });
+  }
+
+  function toggleWidgetArea(widgetId: DashboardWidgetId) {
+    const top = inTop(widgetId) ? layout.top.filter((id) => id !== widgetId) : [...layout.top, widgetId];
+    persist({ ...layout, top });
   }
 
   function resetDashboardLayout() {
-    setWidgetOrder(defaultDashboardOrder);
-    setHiddenWidgets([]);
-    window.localStorage.removeItem(dashboardLayoutStorageKey);
+    setLayout(defaultDashboardLayout());
+    try {
+      window.localStorage.removeItem(dashboardLayoutStorageKey);
+    } catch {
+      // Ohne Browser-Speicher genügt das Löschen in der Datenbank.
+    }
     void fetch("/api/dashboard/layout", { method: "DELETE", credentials: "same-origin" }).catch(() => undefined);
   }
 
-  function moveWidget(targetId: DashboardWidgetId) {
-    if (!draggedWidget || draggedWidget === targetId) return;
-    const nextOrder = [...widgetOrder];
-    const from = nextOrder.indexOf(draggedWidget);
-    const to = nextOrder.indexOf(targetId);
-    nextOrder.splice(from, 1);
-    nextOrder.splice(to, 0, draggedWidget);
-    setWidgetOrder(nextOrder);
-    persistDashboardLayout(nextOrder, hiddenWidgets);
-  }
   return {
     dashboardEditing,
     setDashboardEditing,
-    widgetOrder,
-    setWidgetOrder,
-    hiddenWidgets,
-    setHiddenWidgets,
+    widgetOrder: layout.order,
+    hiddenWidgets: layout.hidden,
+    topWidgets: layout.top,
+    widgetSizes: layout.sizes,
     draggedWidget,
     setDraggedWidget,
-    persistDashboardLayout,
     toggleWidget,
     resetDashboardLayout,
     moveWidget,
+    moveWidgetBy,
+    moveWidgetToArea,
+    setWidgetSize,
+    toggleWidgetArea,
   };
 }
