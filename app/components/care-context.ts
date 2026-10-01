@@ -67,12 +67,26 @@ export const setCareUnit = (id: string | null) => write(UNIT_KEY, id);
 let pending: Promise<WorkContext | null> | null = null;
 let loadedAt = 0;
 
+const WORK_CONTEXT_EVENT = "carecore:work-context";
+
+// Neu geladener Arbeitskontext (nach loadWorkContext(true)); gibt die Abmeldung zurück.
+export function onWorkContextRefresh(listener: (context: WorkContext) => void) {
+  const handle = (event: Event) => listener((event as CustomEvent<WorkContext>).detail);
+  window.addEventListener(WORK_CONTEXT_EVENT, handle);
+  return () => window.removeEventListener(WORK_CONTEXT_EVENT, handle);
+}
+
 export function loadWorkContext(refresh = false) {
   if (!pending || refresh || Date.now() - loadedAt > 60_000) {
     loadedAt = Date.now();
     pending = fetch("/api/work-context", { cache: "no-store" })
       .then((response) => (response.ok ? (response.json() as Promise<WorkContext>) : null))
       .catch(() => null);
+    // Nach einer Änderung (z. B. Name der Einrichtung) übernehmen alle Anzeigen den neuen Stand ohne Neuladen.
+    if (refresh)
+      void pending.then(
+        (data) => data && window.dispatchEvent(new CustomEvent<WorkContext>(WORK_CONTEXT_EVENT, { detail: data })),
+      );
   }
   return pending;
 }
@@ -82,8 +96,10 @@ export function useWorkContext() {
   useEffect(() => {
     let live = true;
     void loadWorkContext().then((data) => live && setContext(data));
+    const stop = onWorkContextRefresh(setContext);
     return () => {
       live = false;
+      stop();
     };
   }, []);
   return context;

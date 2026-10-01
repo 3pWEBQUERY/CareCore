@@ -6,7 +6,13 @@ import { usePersonalPreferences } from "./appearance";
 import { clearOfflineData } from "./offline-queue";
 import { playNotificationSound } from "./notification-sound";
 import type { CareUnit, ContextResident, WorkContext } from "@/lib/work-context";
-import { loadWorkContext, useCareResident, useCareUnit, useResidentPickerRequests } from "./care-context";
+import {
+  loadWorkContext,
+  onWorkContextRefresh,
+  useCareResident,
+  useCareUnit,
+  useResidentPickerRequests,
+} from "./care-context";
 import { HeaderNotification } from "./header-parts";
 import { useLiveEvent } from "./live-events";
 
@@ -47,8 +53,10 @@ export function useAppHeader({
     void loadWorkContext().then((data) => {
       if (live && data) setContext(data);
     });
+    const stop = onWorkContextRefresh(setContext);
     return () => {
       live = false;
+      stop();
     };
   }, []);
   // The working context (care unit and resident) is shared with all modules of the tab;

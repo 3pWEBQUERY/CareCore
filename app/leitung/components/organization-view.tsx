@@ -15,6 +15,7 @@ import type { Tone } from "./leadership-data";
 import { notifyAdminChanged } from "./admin-board";
 import { LocationEditor } from "./location-editor";
 import { UnitEditor } from "./unit-editor";
+import { SetupChecklistCard } from "./setup-checklist-card";
 
 export type OrganizationData = {
   data?: OrganizationStructure;
@@ -138,6 +139,7 @@ export function OrganizationView({
 
   return (
     <>
+      <SetupChecklistCard showToast={showToast} />
       <div className="admin-organization-layout">
         <section className="card organization-map">
           <div className="card-header">

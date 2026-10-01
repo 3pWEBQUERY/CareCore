@@ -24,6 +24,7 @@ export type ConfigurationData = {
     terminology: TerminologyKey;
     hiddenVitals: string[];
     logoUpdatedAt: string | null;
+    organizationName: string;
   };
   error?: string;
   loading: boolean;
@@ -275,13 +276,26 @@ export function ConfigurationView({
             <div>
               <p className="eyebrow">Branding</p>
               <h2 className="card-title" id="admin-branding-title">
-                Logo der Einrichtung
+                Name und Logo der Einrichtung
               </h2>
               <p className="card-subtitle">
-                Erscheint in der Kopfzeile neben dem Namen · JPEG, PNG oder WebP, höchstens 300 KB
+                Erscheinen in der Kopfzeile · Logo als JPEG, PNG oder WebP, höchstens 300 KB
               </p>
             </div>
           </div>
+          {data && (
+            <OrganizationNameForm
+              key={data.organizationName}
+              current={data.organizationName}
+              onSaved={(name) => {
+                reload();
+                notifyAdminChanged();
+                void loadWorkContext(true);
+                showToast(`Name gespeichert: ${name}`);
+              }}
+              onError={showToast}
+            />
+          )}
           <div className="admin-branding-body">
             <span className="admin-branding-preview">
               {data?.logoUpdatedAt ? (
@@ -394,5 +408,41 @@ function SettingEditor({
         </label>
       )}
     </EditorDialog>
+  );
+}
+
+// Name der Einrichtung (Kopfzeile); beim Installieren gesetzt, hier jederzeit änderbar.
+function OrganizationNameForm({
+  current,
+  onSaved,
+  onError,
+}: {
+  current: string;
+  onSaved: (name: string) => void;
+  onError: (message: string) => void;
+}) {
+  const [name, setName] = useState(current);
+  const [saving, setSaving] = useState(false);
+  const changed = name.trim() !== current && name.trim().length > 0;
+  return (
+    <form
+      className="admin-organization-name"
+      onSubmit={(event) => {
+        event.preventDefault();
+        setSaving(true);
+        requestJson<{ name: string }>("/api/branding/name", { method: "PUT", body: { name } })
+          .then((result) => onSaved(result.name))
+          .catch((reason: Error) => onError(reason.message))
+          .finally(() => setSaving(false));
+      }}
+    >
+      <label>
+        <span>Name der Einrichtung</span>
+        <input value={name} maxLength={180} onChange={(event) => setName(event.target.value)} required />
+      </label>
+      <button className="secondary-button" type="submit" disabled={!changed || saving}>
+        Speichern
+      </button>
+    </form>
   );
 }

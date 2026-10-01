@@ -66,6 +66,14 @@ Alle drei laufen in der CI bei jedem Pull Request.
 
 `GET /api/health` braucht keine Anmeldung und eignet sich für Überwachung und Load-Balancer (`lib/health.ts`). Die Antwort nennt `status` (`ok`, `degraded` bei ausstehenden Migrationen, `down` ohne Datenbank), die Erreichbarkeit und Antwortzeit der Datenbank sowie die zuletzt angewendete und die noch ausstehenden Migrationen. HTTP 200 bei `ok` und `degraded`, 503 bei `down`. Sie enthält keine Geheimnisse, keine Personendaten und keine Fehlermeldungen der Datenbank und wird weder vom Browser noch vom Service Worker zwischengespeichert.
 
+## Installation je Einrichtung
+
+Jede Einrichtung hat ihre eigene Installation (eigenes Railway-Projekt, eigene Datenbank und eigener Speicher).
+Anleitung: `docs/INSTALLATION.md`; die Geheimnisse erzeugt `node scripts/new-installation.mjs`. Nach dem ersten
+Anmelden führt die Checkliste „CareCore einrichten“ (Leitung › Administration) durch die Ersteinrichtung: Name der
+Einrichtung (Leitung › Konfiguration), Standort mit Adresse, Wohnbereiche, Mitarbeitende, Bewohner, E-Mail-Versand und
+Zwei-Faktor für das Administrationskonto. Sie verschwindet, sobald alles erledigt oder ausgeblendet ist.
+
 ## E-Mail-Versand
 
 Optional über SMTP (jeder Anbieter, z. B. Brevo, Infomaniak oder der Mailserver der Einrichtung), eingerichtet mit
