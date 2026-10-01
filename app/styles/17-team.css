@@ -489,7 +489,7 @@
   grid-column: 1;
   display: flex;
   align-items: stretch;
-  padding-bottom: 10px;
+  padding: 10px 0;
 }
 .documents-standards-layout .documents-folders .card-header {
   flex: 0 0 auto;

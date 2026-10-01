@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { ApiError } from "@/lib/api-context";
 import { carecoreDb } from "@/lib/server-data";
 import { createNote, deleteNote, listNotes, updateNote } from "@/lib/staff-notes";
-import { fixture } from "../support/db";
+import { fixture, q } from "../support/db";
 
 const status = async (promise: Promise<unknown>) =>
   promise.then(
@@ -106,5 +106,29 @@ test("Persönliche Notizen: Bearbeitung auf veraltetem Stand meldet einen Konfli
   assert.equal(
     await status(updateNote(anna, { id: randomUUID(), archived: true, baseUpdatedAt: created.updated_at })),
     404,
+  );
+});
+
+test("Persönliche Notizen: zwei Änderungen in derselben Millisekunde – die zweite auf altem Stand ist ein Konflikt", async () => {
+  const f = await fixture();
+  const anna = { sql: carecoreDb(), userId: f.people.anna, organizationId: f.org };
+  const id = randomUUID();
+  await createNote(anna, { id, title: "Dienst", body: "Früh", pinned: false });
+  // Stand liegt (wie bei schnell aufeinanderfolgenden Änderungen oder Uhrabweichung) nicht vor der Serverzeit.
+  await q(`UPDATE carecore_staff_notes SET updated_at = NOW() + INTERVAL '1 hour' WHERE id = $1`, [id]);
+  const loaded = (await listNotes(anna)).find((note) => note.id === id)!;
+  const first = await updateNote(anna, {
+    id,
+    title: "Dienst",
+    body: "Spät",
+    pinned: false,
+    baseUpdatedAt: loaded.updated_at,
+  });
+  assert.ok(Date.parse(first.updated_at) > Date.parse(loaded.updated_at), "jede Änderung rückt den Stand weiter");
+  assert.equal(
+    await status(
+      updateNote(anna, { id, title: "Dienst", body: "Nacht", pinned: false, baseUpdatedAt: loaded.updated_at }),
+    ),
+    409,
   );
 });
