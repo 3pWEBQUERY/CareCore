@@ -206,6 +206,11 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       verschieben, Breite wählen, zwischen Kopf- und Hauptbereich wechseln, ausblenden. Die Breitenwahl auf dem
       Arbeitsplatz und den Kennzahlen-Seiten nutzt das CareCore-Dropdown statt der Browser-Auswahl.
 
+- [x] **Verkaufsbereit 1 – Sicherheit:** Next.js 16.3.8 (kritische Lücke geschlossen), Sicherheits-Header (CSP, HSTS,
+      Einbettschutz, Permissions-Policy); Klicktests melden jeden CSP-Verstoss.
+- [x] **Verkaufsbereit 2 – E-Mail-Versand:** SMTP (`docs/EMAIL.md`), E-Mail-Adresse bei Mitarbeitenden, „Passwort
+      vergessen?“, Einladung statt Startpasswort, Link zum Passwort setzen; Links einmalig, gehasht, protokolliert.
+
 ## Entschieden (30.09.2026)
 
 - **Sprachen:** ganze App in FR, IT, EN, SQ, HR, SR, HU; Prüfung durch die Administration und den Auftraggeber.

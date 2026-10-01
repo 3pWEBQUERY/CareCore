@@ -8,8 +8,10 @@ import {
   startAuthentication,
   type PublicKeyCredentialRequestOptionsJSON,
 } from "@simplewebauthn/browser";
-import { CheckCircle, Eye, EyeSlash, LockKey, Pulse, ShieldCheck, User } from "@phosphor-icons/react";
+import { Eye, EyeSlash, LockKey, Pulse, ShieldCheck, User } from "@phosphor-icons/react";
 import { clearOfflineData, rememberOfflineUnlock } from "./components/offline-queue";
+import { LoginBrandPanel } from "./components/login-brand-panel";
+import { ForgotPasswordForm } from "./components/forgot-password-form";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,6 +41,19 @@ export default function LoginPage() {
     (idleSignOut ? "Du wurdest nach längerer Inaktivität automatisch abgemeldet. Bitte melde dich erneut an." : "");
   // Eingeschaltete SSO-Anbieter (OpenID Connect); ohne Anbieter bleibt die Seite unverändert.
   const [providers, setProviders] = useState<Array<{ id: string; label: string }>>([]);
+  // „Passwort vergessen?“ nur mit eingerichtetem E-Mail-Versand.
+  const [resetEnabled, setResetEnabled] = useState(false);
+  const [forgot, setForgot] = useState(false);
+  useEffect(() => {
+    let live = true;
+    fetch("/api/auth/password", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : { enabled: false }))
+      .then((data: { enabled?: boolean }) => live && setResetEnabled(Boolean(data.enabled)))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
   useEffect(() => {
     let live = true;
     fetch("/api/auth/sso/providers", { cache: "no-store" })
@@ -162,42 +177,7 @@ export default function LoginPage() {
 
   return (
     <main className="login-page">
-      <section className="login-brand-panel" aria-label="CareCore Produktinformation">
-        <div className="login-brand">
-          <span>
-            <Pulse weight="regular" />
-          </span>
-          <div>
-            <strong>CareCore</strong>
-            <small>Mehr Zeit für Pflege.</small>
-          </div>
-        </div>
-        <div className="login-brand-copy">
-          <p className="eyebrow">Sicherer Pflegearbeitsplatz</p>
-          <h1>Alles Wichtige für deinen Dienst. An einem Ort.</h1>
-          <p>
-            Bewohnerinformationen, Aufgaben, Dokumentation und Übergaben – strukturiert, sicher und für dein Team
-            verfügbar.
-          </p>
-        </div>
-        <div className="login-trust-list">
-          <span>
-            <ShieldCheck />
-            <span>
-              <strong>Datenschutz im Mittelpunkt</strong>
-              <small>Geschützte Sitzungen und rollenbasierter Zugriff.</small>
-            </span>
-          </span>
-          <span>
-            <CheckCircle />
-            <span>
-              <strong>Für den Pflegealltag gebaut</strong>
-              <small>Klare Abläufe ohne unnötige Umwege.</small>
-            </span>
-          </span>
-        </div>
-        <footer>CareCore · Pflegedokumentation für Alters- und Pflegeheime</footer>
-      </section>
+      <LoginBrandPanel />
 
       <section className="login-form-panel">
         <div className="login-form-wrap">
@@ -207,133 +187,145 @@ export default function LoginPage() {
             </span>
             <strong>CareCore</strong>
           </div>
-          <div className="login-heading">
-            <p className="eyebrow">Willkommen zurück</p>
-            <h2>Bei CareCore anmelden</h2>
-            <p>Melde dich mit deinem persönlichen Benutzerkonto an.</p>
-          </div>
-          <form className="login-form" method="post" onSubmit={submit}>
-            {challenge ? (
-              <>
-                <label htmlFor="mfa-code">Bestätigungscode</label>
-                <div className="login-input">
-                  <ShieldCheck />
-                  <input
-                    id="mfa-code"
-                    name="code"
-                    inputMode="text"
-                    autoComplete="one-time-code"
-                    autoFocus
-                    maxLength={12}
-                    value={code}
-                    onChange={(event) => setCode(event.target.value)}
-                    placeholder="6-stelliger Code"
-                    required
-                  />
-                </div>
+          {forgot ? (
+            <ForgotPasswordForm initial={username} onBack={() => setForgot(false)} />
+          ) : (
+            <>
+              <div className="login-heading">
+                <p className="eyebrow">Willkommen zurück</p>
+                <h2>Bei CareCore anmelden</h2>
+                <p>Melde dich mit deinem persönlichen Benutzerkonto an.</p>
+              </div>
+              <form className="login-form" method="post" onSubmit={submit}>
+                {challenge ? (
+                  <>
+                    <label htmlFor="mfa-code">Bestätigungscode</label>
+                    <div className="login-input">
+                      <ShieldCheck />
+                      <input
+                        id="mfa-code"
+                        name="code"
+                        inputMode="text"
+                        autoComplete="one-time-code"
+                        autoFocus
+                        maxLength={12}
+                        value={code}
+                        onChange={(event) => setCode(event.target.value)}
+                        placeholder="6-stelliger Code"
+                        required
+                      />
+                    </div>
+                    <p className="login-mfa-hint">
+                      Code aus deiner Authenticator-App eingeben – oder einen Wiederherstellungscode.{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setChallenge(null);
+                          setCode("");
+                          setError("");
+                        }}
+                      >
+                        Zurück
+                      </button>
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <label htmlFor="username">Benutzername</label>
+                    <div className="login-input">
+                      <User />
+                      <input
+                        id="username"
+                        name="username"
+                        autoComplete="username webauthn"
+                        value={username}
+                        onChange={(event) => setUsername(event.target.value)}
+                        placeholder="Benutzername eingeben"
+                        required
+                      />
+                    </div>
+                    <div className="login-password-label">
+                      <label htmlFor="password">Passwort</label>
+                      {resetEnabled ? (
+                        <button className="login-forgot-link" type="button" onClick={() => setForgot(true)}>
+                          Passwort vergessen?
+                        </button>
+                      ) : (
+                        <span>Geschützter Zugang</span>
+                      )}
+                    </div>
+                    <div className="login-input">
+                      <LockKey />
+                      <input
+                        id="password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        placeholder="Passwort eingeben"
+                        required
+                      />
+                      <button
+                        type="button"
+                        aria-label={showPassword ? "Passwort ausblenden" : "Passwort anzeigen"}
+                        aria-pressed={showPassword}
+                        onClick={() => setShowPassword((value) => !value)}
+                      >
+                        {showPassword ? <EyeSlash /> : <Eye />}
+                      </button>
+                    </div>
+                  </>
+                )}
+                {message && (
+                  <div className="login-error" role="alert">
+                    {message}
+                  </div>
+                )}
+                <button className="login-submit" type="submit" disabled={pending}>
+                  {pending ? (
+                    <>
+                      <span className="login-spinner" />
+                      Anmeldung wird geprüft …
+                    </>
+                  ) : (
+                    <>
+                      Sicher anmelden <span aria-hidden="true">→</span>
+                    </>
+                  )}
+                </button>
+              </form>
+              {providers.length > 0 && !challenge && (
                 <p className="login-mfa-hint">
-                  Code aus deiner Authenticator-App eingeben – oder einen Wiederherstellungscode.{" "}
+                  {providers.map((provider, index) => (
+                    <span key={provider.id}>
+                      {index > 0 && " · "}
+                      <a href={ssoHref(provider.id)}>Mit {provider.label} anmelden</a>
+                    </span>
+                  ))}
+                </p>
+              )}
+              {passkeys && !challenge && (
+                <p className="login-mfa-hint">
+                  Passkey auf diesem Gerät?{" "}
                   <button
                     type="button"
-                    onClick={() => {
-                      setChallenge(null);
-                      setCode("");
-                      setError("");
-                    }}
+                    disabled={pending}
+                    onClick={() =>
+                      void passkeyLogin(false).catch((cause: Error) =>
+                        setError(
+                          cause.name === "NotAllowedError"
+                            ? "Anmeldung mit Passkey abgebrochen."
+                            : cause.message || "Anmeldung mit Passkey fehlgeschlagen.",
+                        ),
+                      )
+                    }
                   >
-                    Zurück
+                    Mit Passkey anmelden
                   </button>
                 </p>
-              </>
-            ) : (
-              <>
-                <label htmlFor="username">Benutzername</label>
-                <div className="login-input">
-                  <User />
-                  <input
-                    id="username"
-                    name="username"
-                    autoComplete="username webauthn"
-                    value={username}
-                    onChange={(event) => setUsername(event.target.value)}
-                    placeholder="Benutzername eingeben"
-                    required
-                  />
-                </div>
-                <div className="login-password-label">
-                  <label htmlFor="password">Passwort</label>
-                  <span>Geschützter Zugang</span>
-                </div>
-                <div className="login-input">
-                  <LockKey />
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder="Passwort eingeben"
-                    required
-                  />
-                  <button
-                    type="button"
-                    aria-label={showPassword ? "Passwort ausblenden" : "Passwort anzeigen"}
-                    aria-pressed={showPassword}
-                    onClick={() => setShowPassword((value) => !value)}
-                  >
-                    {showPassword ? <EyeSlash /> : <Eye />}
-                  </button>
-                </div>
-              </>
-            )}
-            {message && (
-              <div className="login-error" role="alert">
-                {message}
-              </div>
-            )}
-            <button className="login-submit" type="submit" disabled={pending}>
-              {pending ? (
-                <>
-                  <span className="login-spinner" />
-                  Anmeldung wird geprüft …
-                </>
-              ) : (
-                <>
-                  Sicher anmelden <span aria-hidden="true">→</span>
-                </>
               )}
-            </button>
-          </form>
-          {providers.length > 0 && !challenge && (
-            <p className="login-mfa-hint">
-              {providers.map((provider, index) => (
-                <span key={provider.id}>
-                  {index > 0 && " · "}
-                  <a href={ssoHref(provider.id)}>Mit {provider.label} anmelden</a>
-                </span>
-              ))}
-            </p>
-          )}
-          {passkeys && !challenge && (
-            <p className="login-mfa-hint">
-              Passkey auf diesem Gerät?{" "}
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() =>
-                  void passkeyLogin(false).catch((cause: Error) =>
-                    setError(
-                      cause.name === "NotAllowedError"
-                        ? "Anmeldung mit Passkey abgebrochen."
-                        : cause.message || "Anmeldung mit Passkey fehlgeschlagen.",
-                    ),
-                  )
-                }
-              >
-                Mit Passkey anmelden
-              </button>
-            </p>
+            </>
           )}
           <div className="login-support">
             <ShieldCheck />

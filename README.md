@@ -66,6 +66,14 @@ Alle drei laufen in der CI bei jedem Pull Request.
 
 `GET /api/health` braucht keine Anmeldung und eignet sich für Überwachung und Load-Balancer (`lib/health.ts`). Die Antwort nennt `status` (`ok`, `degraded` bei ausstehenden Migrationen, `down` ohne Datenbank), die Erreichbarkeit und Antwortzeit der Datenbank sowie die zuletzt angewendete und die noch ausstehenden Migrationen. HTTP 200 bei `ok` und `degraded`, 503 bei `down`. Sie enthält keine Geheimnisse, keine Personendaten und keine Fehlermeldungen der Datenbank und wird weder vom Browser noch vom Service Worker zwischengespeichert.
 
+## E-Mail-Versand
+
+Optional über SMTP (jeder Anbieter, z. B. Brevo, Infomaniak oder der Mailserver der Einrichtung), eingerichtet mit
+`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` und `APP_URL` (`lib/mail.ts`, Migration
+`0057_user_email_links.sql`). Damit gibt es „Passwort vergessen?“ auf der Anmeldeseite, Einladungen per
+E-Mail statt Startpasswort und den Link zum Passwort setzen in der Mitarbeiterverwaltung. Links gelten einmal, nur der
+Hash wird gespeichert, danach enden alle Sitzungen der Person. Einzelheiten: `docs/EMAIL.md`.
+
 ## Zwei-Faktor-Anmeldung (TOTP)
 
 Jede Person kann unter Einstellungen → Sicherheit eine Authenticator-App verbinden (`lib/mfa.ts`, Migration `0042_mfa.sql`). Nach dem Passwort fragt die Anmeldung dann nach dem 6-stelligen Code oder einem der zehn einmaligen Wiederherstellungscodes. Fehlversuche zählen zur Anmeldedrossel.

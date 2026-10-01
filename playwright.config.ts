@@ -9,6 +9,8 @@ export const E2E_ADMIN_PASSWORD = "E2E-Admin-Passwort-2026";
 export const E2E_MFA_KEY = Buffer.alloc(32, 42).toString("base64");
 // Port des Test-Anbieters für SSO.
 export const E2E_OIDC_PORT = Number(process.env.E2E_OIDC_PORT ?? 3299);
+// Test-Mailserver: SMTP auf diesem Port, empfangene Nachrichten per HTTP auf Port + 1.
+export const E2E_SMTP_PORT = Number(process.env.E2E_SMTP_PORT ?? 3297);
 
 export default defineConfig({
   testDir: "e2e",
@@ -40,12 +42,24 @@ export default defineConfig({
         CARECORE_MFA_KEY: E2E_MFA_KEY,
         // SSO gegen den lokalen Test-Anbieter (http nur für localhost).
         CARECORE_SSO_ALLOW_HTTP: "1",
+        // E-Mail-Versand an den Test-Mailserver; Links zeigen auf die Test-App.
+        SMTP_HOST: "127.0.0.1",
+        SMTP_PORT: String(E2E_SMTP_PORT),
+        MAIL_FROM: "CareCore <noreply@carecore.test>",
+        APP_URL: `http://localhost:${port}`,
       },
     },
     {
       // Test-Anbieter für SSO (OpenID Connect), siehe tests/support/mock-oidc.mjs.
       command: `node tests/support/mock-oidc.mjs ${E2E_OIDC_PORT}`,
       url: `http://localhost:${E2E_OIDC_PORT}/.well-known/openid-configuration`,
+      reuseExistingServer: false,
+      timeout: 30_000,
+    },
+    {
+      // Test-Mailserver, siehe tests/support/mock-smtp.mjs.
+      command: `node tests/support/mock-smtp.mjs ${E2E_SMTP_PORT}`,
+      url: `http://127.0.0.1:${E2E_SMTP_PORT + 1}/messages`,
       reuseExistingServer: false,
       timeout: 30_000,
     },
