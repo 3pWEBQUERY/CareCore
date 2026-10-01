@@ -93,7 +93,11 @@ export async function updateNote({ sql, userId, organizationId }: Owner, input: 
         WHEN ${archived ?? null}::boolean IS TRUE THEN COALESCE(archived_at, NOW())
         WHEN ${archived ?? null}::boolean IS FALSE THEN NULL
         ELSE archived_at END,
-      updated_at = CASE WHEN ${content !== null} THEN NOW() ELSE updated_at END
+      -- Jede Änderung rückt den Stand um mindestens 1 ms weiter (Vergleich auf Millisekunden), auch wenn zwei
+      -- Änderungen in derselben Millisekunde eintreffen.
+      updated_at = CASE WHEN ${content !== null}
+        THEN GREATEST(NOW(), date_trunc('milliseconds', updated_at) + INTERVAL '1 millisecond')
+        ELSE updated_at END
     WHERE id = ${id} AND organization_id = ${organizationId} AND user_id = ${userId}
       AND (${base}::timestamptz IS NULL OR date_trunc('milliseconds', updated_at) <= ${base}::timestamptz)
     RETURNING id, title, body, pinned, archived_at, created_at, updated_at`) as Row[];
