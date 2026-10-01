@@ -1,23 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { ApiContext } from "@/lib/api-context";
 
-// Benachrichtigung an eine andere Person (sich selbst benachrichtigt niemand).
-export async function notify(
-  ctx: ApiContext,
-  userId: string,
-  title: string,
-  body: string,
-  type: string,
-  link: string,
-  priority = "normal",
-) {
-  if (userId === ctx.actor.id) return;
-  await ctx.sql`
-    INSERT INTO carecore_notifications (id, user_id, title, body, type, priority, link_url)
-    VALUES (${randomUUID()}, ${userId}, ${title}, ${body}, ${type}, ${priority}, ${link})`;
-}
-
-// Wie notify, aber als nicht ausgeführte Abfrage für `ctx.sql.transaction([...])` (leer für die eigene Person).
+// Benachrichtigung an eine andere Person als nicht ausgeführte Abfrage für `ctx.sql.transaction([...])` (leer für die eigene Person).
 export function notifyStatements(
   ctx: ApiContext,
   userIds: Array<string | null | undefined>,

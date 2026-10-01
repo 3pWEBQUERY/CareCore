@@ -24,7 +24,7 @@ const emptyDraft = (): Draft => ({
 });
 
 // Wechselwirkungen: Hinweise der Einrichtung (z. B. von der Apotheke) mit Quelle. Eine lizenzierte
-// Arzneimitteldatenbank ist noch nicht angebunden; CareCore enthält keine eigenen Regeln.
+// Arzneimitteldatenbank wird nicht angebunden (kein Medizinprodukt); CareCore enthält keine eigenen Regeln.
 export function InteractionsCard({ showToast }: { showToast: (message: string) => void }) {
   const data = useApiData<{ rules: InteractionRule[]; status: InteractionStatus }>("/api/medication/interactions");
   const [draft, setDraft] = useState<Draft | null>(null);

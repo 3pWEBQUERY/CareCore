@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
 import { consumeWrite, isThrottledWrite, rateLimitKey } from "@/lib/rate-limit";
 import { carecoreDb } from "@/lib/server-data";
+import { pagePermissions } from "@/app/components/navigation";
 
 // Schreibende API-Anfragen drosseln; bei einem Fehler der Zählung wird die Anfrage nicht blockiert.
 async function throttleApi(request: NextRequest) {
@@ -18,6 +19,23 @@ async function throttleApi(request: NextRequest) {
     console.error("Rate limit check failed", error);
   }
   return NextResponse.next();
+}
+
+// Seiten, die die Navigation einer Rolle nicht zeigt, auch beim direkten Aufruf nicht öffnen (die Daten
+// schützen die APIs ohnehin); stattdessen „Kein Zugriff“ unter derselben Adresse.
+async function pageAllowed(userId: string, pathname: string) {
+  const needed = pagePermissions(pathname);
+  if (!needed.length) return true;
+  const rows = await carecoreDb()`SELECT carecore_effective_permissions(${userId}) AS permissions`;
+  const granted = Array.isArray(rows[0]?.permissions) ? (rows[0].permissions as string[]) : [];
+  return needed.every((permission) => granted.includes(permission));
+}
+
+function noAccess(request: NextRequest) {
+  const target = request.nextUrl.clone();
+  target.pathname = "/kein-zugriff";
+  target.search = "";
+  return NextResponse.rewrite(target);
 }
 
 export async function proxy(request: NextRequest) {
@@ -38,7 +56,7 @@ export async function proxy(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   try {
     const user = await getSessionUser(token);
-    if (user) return NextResponse.next();
+    if (user) return (await pageAllowed(user.id, pathname)) ? NextResponse.next() : noAccess(request);
   } catch (error) {
     console.error("Session validation failed", error);
   }

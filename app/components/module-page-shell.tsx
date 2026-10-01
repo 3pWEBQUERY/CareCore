@@ -10,8 +10,6 @@ import { ModuleIcon } from "./module-icon";
 import { activePage } from "./navigation";
 import { PageTabs } from "./page-tabs";
 
-export type { ModuleIconName } from "./navigation";
-
 // Page frame of all module pages: sidebar, header, mobile navigation, global search and toast.
 export default function ModulePageShell({
   activeModule,

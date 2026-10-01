@@ -59,7 +59,6 @@ const SEVERITY: Record<RuleCode, Severity> = {
   UNEVEN_DISTRIBUTION: "INFO",
 };
 
-export const severityOf = (code: RuleCode) => SEVERITY[code];
 export const blocking = (violations: Violation[]) => violations.filter((v) => v.severity === "BLOCK");
 export const warnings = (violations: Violation[]) => violations.filter((v) => v.severity === "WARN");
 
@@ -847,27 +846,4 @@ function distributionViolations(snapshot: ScheduleSnapshot, shifts: RosterShift[
       );
   }
   return result;
-}
-
-// Einfache Schlüsselzahlen je Diensttyp und Tag (Fusszeile des Rasters).
-export function staffingOverview(snapshot: ScheduleSnapshot, dates: string[]) {
-  const overview: Array<{ date: string; shiftTypeId: string; count: number; min: number | null; max: number | null }> =
-    [];
-  for (const date of dates)
-    for (const type of Object.values(snapshot.shiftTypes)) {
-      if (type.category === "ABSENCE") continue;
-      const requirement = requirementFor(snapshot, snapshot.unitId, type.id, date);
-      const count = snapshot.shifts.filter(
-        (s) => s.unitId === snapshot.unitId && s.shiftTypeId === type.id && s.date === date,
-      ).length;
-      if (requirement || count)
-        overview.push({
-          date,
-          shiftTypeId: type.id,
-          count,
-          min: requirement?.minCount ?? null,
-          max: requirement?.maxCount ?? null,
-        });
-    }
-  return overview;
 }

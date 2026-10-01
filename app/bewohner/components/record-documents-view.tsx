@@ -9,6 +9,7 @@ import { PREVIEW_TYPES, fileSizeLabel, fileTypeLabel } from "@/lib/documents-sha
 import { RESIDENT_DOCUMENT_CATEGORIES } from "@/lib/resident-record-shared";
 import DocumentFileField from "./document-file-field";
 import type { ResidentRecordState } from "./use-resident-record";
+import { useNow } from "@/app/components/use-now";
 
 const WEEK = 7 * 86_400_000;
 
@@ -92,6 +93,7 @@ function UploadDialog({
 }
 
 export function RecordDocumentsView({ r }: { r: ResidentRecordState }) {
+  const now = useNow();
   const t = useTerms();
   const {
     resident,
@@ -108,8 +110,7 @@ export function RecordDocumentsView({ r }: { r: ResidentRecordState }) {
   } = r;
   const all = live.files.data?.documents ?? [];
   const canWrite = live.files.data?.canWrite ?? false;
-  // eslint-disable-next-line react-hooks/purity -- "neu diese Woche" is relative to the moment of rendering.
-  const weekAgo = Date.now() - WEEK;
+  const weekAgo = now - WEEK;
   const isNew = (createdAt: string) => Date.parse(createdAt) > weekAgo;
   const fileUrl = (fileId: string, preview: boolean) => `/api/cloud/files/${fileId}${preview ? "?preview=1" : ""}`;
 

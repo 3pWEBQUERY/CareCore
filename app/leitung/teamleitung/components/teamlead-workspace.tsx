@@ -9,6 +9,25 @@ import { TeamleadForm } from "./teamlead-form";
 import { TasksView } from "./teamlead-tasks-view";
 import { EmployeesView } from "./teamlead-views";
 
+type TeamleadData = { role: string | null; rows: TeamleadRow[]; employees: Employee[]; units: Unit[] };
+
+async function fetchTeamlead(view: View): Promise<TeamleadData> {
+  const [context, result] = await Promise.all([
+    fetch("/api/work-context")
+      .then((response) => (response.ok ? response.json() : null))
+      .catch(() => null),
+    fetch(endpointFor(view), { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .catch(() => null),
+  ]);
+  return {
+    role: context?.profile?.role ?? null,
+    rows: (result?.employees ?? result?.tasks ?? []) as TeamleadRow[],
+    employees: (result?.employees ?? []) as Employee[],
+    units: (result?.units ?? []) as Unit[],
+  };
+}
+
 export default function TeamleadWorkspace({ view }: { view: View }) {
   const [role, setRole] = useState<string | null>(null);
   const [rows, setRows] = useState<TeamleadRow[]>([]);
@@ -20,26 +39,24 @@ export default function TeamleadWorkspace({ view }: { view: View }) {
   const [form, setForm] = useState<Record<string, string>>({});
   const content = config[view];
 
-  const load = useCallback(async () => {
-    const [context, result] = await Promise.all([
-      fetch("/api/work-context")
-        .then((response) => (response.ok ? response.json() : null))
-        .catch(() => null),
-      fetch(endpointFor(view), { cache: "no-store" })
-        .then((response) => (response.ok ? response.json() : null))
-        .catch(() => null),
-    ]);
-    setRole(context?.profile?.role ?? null);
-    setRows((result?.employees ?? result?.tasks ?? []) as TeamleadRow[]);
-    setEmployees((result?.employees ?? []) as Employee[]);
-    setUnits((result?.units ?? []) as Unit[]);
-  }, [view]);
+  const apply = useCallback((data: TeamleadData) => {
+    setRole(data.role);
+    setRows(data.rows);
+    setEmployees(data.employees);
+    setUnits(data.units);
+  }, []);
+  const load = useCallback(async () => apply(await fetchTeamlead(view)), [apply, view]);
 
-  // This effect fetches external state when the selected workspace changes.
+  // Daten des gewählten Arbeitsbereichs laden; eine überholte Antwort (Wechsel des Bereichs) wird verworfen.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load();
-  }, [load]);
+    let current = true;
+    void fetchTeamlead(view).then((data) => {
+      if (current) apply(data);
+    });
+    return () => {
+      current = false;
+    };
+  }, [apply, view]);
 
   const canLead = role === "admin" || role === "leitung";
   const isArchived = useCallback(

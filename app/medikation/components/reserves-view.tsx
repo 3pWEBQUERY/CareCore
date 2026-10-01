@@ -21,7 +21,7 @@ import {
 } from "@/app/components/workspace-ui";
 import { useOrderDialogs } from "./order-dialogs";
 import { orderTone, useSelectedResident } from "./plan-view";
-import { AllergyBadge } from "@/app/components/resident-list";
+import { AllergyBadge } from "@/app/components/allergy-badge";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
 import { WitnessFields, emptyWitness } from "./btm-witness";
 import { ReceiptDialog } from "./stock-dialogs";

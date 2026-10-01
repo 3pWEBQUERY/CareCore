@@ -172,5 +172,3 @@ export function resolveSettings(stored: unknown): AppSettings {
     }),
   ) as AppSettings;
 }
-
-export const DEFAULT_SETTINGS = resolveSettings(null);

@@ -72,19 +72,8 @@ export async function assertResident({ sql, actor }: ApiContext, residentId: unk
   return residentId;
 }
 
-export async function writeAudit(
-  ctx: ApiContext,
-  entityType: string,
-  entityId: string,
-  action: string,
-  before: unknown,
-  after: unknown,
-) {
-  await auditStatement(ctx, entityType, entityId, action, before, after);
-}
-
-// Wie writeAudit, aber als nicht ausgeführte Abfrage für `ctx.sql.transaction([...])`, damit Änderung und
-// Protokoll gemeinsam gelingen oder scheitern.
+// Eintrag im Änderungsprotokoll als nicht ausgeführte Abfrage für `ctx.sql.transaction([...])`, damit Änderung
+// und Protokoll gemeinsam gelingen oder scheitern.
 export function auditStatement(
   ctx: ApiContext,
   entityType: string,

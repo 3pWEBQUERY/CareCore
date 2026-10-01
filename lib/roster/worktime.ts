@@ -1,16 +1,7 @@
 // Soll/Ist-Berechnung (Spec 8.9, 8.10). Reine Funktionen.
 // Tagessoll = Wochennorm × Pensum / 100 / 5; Monatssoll = Tagessoll × Werktage (Mo–Fr) ohne Feiertage
 // im Anstellungszeitraum. Abwesenheiten mit Anrechnung zählen mit dem Tagessoll.
-import {
-  dayMinutes,
-  isWeekend,
-  minutesBetween,
-  monthDays,
-  netMinutes,
-  requiredBreak,
-  weekday,
-  windowMinutes,
-} from "./time";
+import { dayMinutes, isWeekend, monthDays, netMinutes, requiredBreak, weekday, windowMinutes } from "./time";
 import type { AbsenceKind, EmployeeInfo, RosterShift, RuleSet, ShiftTypeInfo, TimeEntryStatus } from "./types";
 
 export function dailyTargetMinutes(
@@ -179,6 +170,3 @@ export function summarizeMonth(input: {
     incomplete: entries.filter((entry) => entry.status === "INCOMPLETE").length,
   };
 }
-
-export const entryGrossMinutes = (entry: Pick<TimeEntryInfo, "clockIn" | "clockOut">) =>
-  entry.clockOut ? minutesBetween(entry.clockIn, entry.clockOut) : 0;

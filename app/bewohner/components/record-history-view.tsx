@@ -17,6 +17,7 @@ import { appointmentDateLabel, appointmentLocalParts } from "@/lib/resident-appo
 import { HistoryFilter } from "./resident-record-data";
 import type { ResidentRecordState } from "./use-resident-record";
 import { RecordAuditCard } from "./record-audit-card";
+import { useNow } from "@/app/components/use-now";
 
 export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
   const t = useTerms();
@@ -34,8 +35,7 @@ export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
     nextAppointment,
   } = r;
   const router = useRouter();
-  // eslint-disable-next-line react-hooks/purity -- "diese Woche" and "heute" are relative to the moment of rendering.
-  const now = Date.now();
+  const now = useNow();
   const lastWeek = historyEntries.filter((entry) => now - Date.parse(entry.occurredAt) < 7 * 86_400_000);
   const today = new Date(now).toLocaleDateString("de-CH", { timeZone: "Europe/Zurich" });
   const todayCount = historyEntries.filter(

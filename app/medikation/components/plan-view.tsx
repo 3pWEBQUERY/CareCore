@@ -18,7 +18,7 @@ import {
   type ShowToast,
 } from "@/app/components/workspace-ui";
 import { useOrderDialogs } from "./order-dialogs";
-import { AllergyBadge } from "@/app/components/resident-list";
+import { AllergyBadge } from "@/app/components/allergy-badge";
 import { useHeaderResident, useTerms } from "@/app/components/care-context";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
 import type { InteractionFinding } from "@/lib/medication-interactions-shared";

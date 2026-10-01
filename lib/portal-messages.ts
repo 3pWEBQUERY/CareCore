@@ -194,10 +194,6 @@ export async function staffThreads(ctx: ApiContext) {
   return rows.map((row) => mapThread(row, "staff")).filter((thread) => mayAnswer(ctx, thread));
 }
 
-export async function staffUnreadCount(ctx: ApiContext) {
-  return (await staffThreads(ctx)).filter((thread) => thread.unread).length;
-}
-
 export async function staffThread(ctx: ApiContext, threadInput: unknown) {
   const threadId = assertUuid(threadInput, "Unterhaltung");
   const [row] = (await threadSelect(ctx.sql, { organizationId: ctx.actor.organizationId, threadId })) as ThreadRow[];

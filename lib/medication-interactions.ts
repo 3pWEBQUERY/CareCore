@@ -18,10 +18,10 @@ import {
   type InteractionStatus,
 } from "@/lib/medication-interactions-shared";
 
-// Wechselwirkungsprüfung. Quelle sind derzeit nur die Hinweise, die die Einrichtung selbst erfasst (mit Angabe der
-// Quelle, z. B. der betreuenden Apotheke). Eine lizenzierte Arzneimitteldatenbank ist noch nicht angebunden
-// (Entscheidung offen, docs/TODO.md); sie käme hier als zweite Quelle neben `facilityRules` hinzu. CareCore erfindet
-// keine Regeln: ohne Hinweis kein Treffer – das heisst nicht, dass eine Kombination unbedenklich ist.
+// Wechselwirkungsprüfung. Quelle sind nur die Hinweise, die die Einrichtung selbst erfasst (mit Angabe der Quelle,
+// z. B. der betreuenden Apotheke). Eine lizenzierte Arzneimitteldatenbank wird bewusst nicht angebunden: CareCore ist
+// kein Medizinprodukt (docs/TODO.md, Entscheid vom 01.10.2026). CareCore erfindet keine Regeln: ohne Hinweis kein
+// Treffer – das heisst nicht, dass eine Kombination unbedenklich ist.
 
 const mapRule = (row: Row): InteractionRule => ({
   id: String(row.id),

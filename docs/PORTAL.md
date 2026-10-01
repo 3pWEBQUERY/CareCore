@@ -61,7 +61,8 @@ protokolliert. Hat ein Zugang mehrere Freigaben für dieselbe Person, gelten die
   voraussichtlichem Liefertag), geliefert oder abgelehnt (nur mit Grund). Jede Änderung wird den Mitarbeitenden
   gemeldet, die Verordnungen verwalten.
 - Medikationspläne sieht die Apotheke über eine Freigabe mit dem Bereich Medikation, wie alle anderen Zugänge.
-- Eine lizenzierte Arzneimitteldatenbank ist noch nicht angebunden; Präparate werden als Text erfasst.
+- Präparate werden als Text erfasst; eine lizenzierte Arzneimitteldatenbank wird nicht angebunden (CareCore ist kein
+  Medizinprodukt).
 
 ## Hilfe
 

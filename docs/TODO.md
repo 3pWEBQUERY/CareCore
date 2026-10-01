@@ -16,7 +16,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 | Chart / Schnelldoku          | ✅    | Doku, Nachträge, Schnelldokumentation, Abschluss aus Aufgaben mit ✓ △ ✕, Diktieren mit Erkennung auf dem Gerät.                                                            |
 | Handover                     | ✅    | Übergabe, „Seit meinem letzten Dienst“, Lesebestätigung (`carecore_handover_reads`).                                                                                       |
 | Tasks                        | ✅    | Offen, in Bearbeitung, eskaliert, erledigt, teilweise, nicht erledigt, abgebrochen; überfällig berechnet.                                                                  |
-| Med                          | 🟡    | Runde, Reserve (PRN), BtM, Bestand, Wechselwirkungen aus Hinweisen der Einrichtung. Lizenzierte Arzneimitteldatenbank nicht angebunden.                                    |
+| Med                          | 🟡    | Runde, Reserve (PRN), BtM, Bestand, Wechselwirkungen aus Hinweisen der Einrichtung (keine lizenzierte Datenbank, kein Medizinprodukt).                                     |
 | Vitals                       | ✅    | Individuelle Grenzwerte je Bewohner (`carecore_vital_thresholds`).                                                                                                         |
 | Wounds                       | ✅    | Verlauf, Fotos, Körperkarte, Erinnerungen, Verbandsmaterial je Versorgung aus dem Materialkatalog.                                                                         |
 | Nutrition                    | ✅    | Plan, Trinken, Mahlzeiten, Screenings; Trendhinweise Gewicht und Trinkmenge nach Grenzen der Einrichtung.                                                                  |
@@ -107,7 +107,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Lagerbuchung – das wäre eine eigene Entscheidung zur Bestandsführung).
 - [x] **Dienstplan:** Börse für offene Dienste (fehlende Mindestbesetzung im veröffentlichten Plan; Interesse
       melden, Leitung teilt über die Regelprüfung zu oder lehnt ab).
-- [x] **Wechselwirkungsprüfung** eingerichtet, noch ohne lizenzierte Datenbank (Entscheidung vom 30.09.2026). Die
+- [x] **Wechselwirkungsprüfung** eingerichtet, ohne lizenzierte Datenbank (Entscheidung vom 01.10.2026). Die
       Einrichtung erfasst Hinweise (Wirkstoff/Präparat A und B, Schweregrad, Beschreibung, Empfehlung, Pflichtangabe
       Quelle) in Leitung › Konfiguration; wer Verordnungen verwaltet, darf sie pflegen, protokolliert. Trifft ein Hinweis
       auf zwei laufende Verordnungen derselben Person zu, erscheint er im Medikamentenplan und bei den Reserven, mit dem
@@ -182,7 +182,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
         Vitalwerte, Pflegeberichte, Termine, Wunden), Zeitraum und Grundlage mit Vermerk; Widerruf sofort, jeder Abruf
         protokolliert. Beschreibung in `docs/PORTAL.md`.
   - [x] Nachrichten zwischen Portal und Pflege (CareCore One › Portal-Nachrichten), Apothekenportal mit Bestellungen
-        aus Medikation › Bestellungen, Hilfe mit Bildschirmfotos im Portal. Lizenzierte Arzneimitteldatenbank offen.
+        aus Medikation › Bestellungen, Hilfe mit Bildschirmfotos im Portal.
 - [x] **Mandanten: eigene Rollen je Einrichtung.** Nur die Einrichtung, die eine Rolle anlegt, sieht, vergibt, ändert
       und löscht sie; bestehende eigene Rollen wurden ihrer Einrichtung zugeordnet (Migration 0048). Eingebaute Rollen
       bleiben gemeinsam.
@@ -217,12 +217,16 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Verfügbarkeitstest, Wiederherstellung üben, Ernstfall). Die Backups selbst schaltet der Betreiber in Railway ein.
 - [x] **Verkaufsbereit 5 – Datenübernahme:** Bewohner und Mitarbeitende aus CSV mit Vorlage, Prüfung je Zeile,
       Übernahme nur vollständig gültiger Dateien; Mitarbeitende per Einladung oder mit einmaligem Startpasswort.
+- [x] **Gesamtprüfung (01.10.2026):** Seiten ohne Recht zeigen beim direkten Aufruf „Kein Zugriff“ (Proxy prüft
+      dieselben Rechte wie die Navigation); alle `eslint-disable` durch saubere Lösungen ersetzt (gemeinsame Uhr
+      `useNow`, Ladeeffekt der Teamleitung, Fotovorschau); ungenutzter Code entfernt; die zwei grössten
+      Komponenten (Dienstplan- und persönliche Einstellungen) in Reiter-Dateien aufgeteilt, Optik unverändert.
 
 ## Entschieden (30.09.2026)
 
 - **Sprachen:** ganze App in FR, IT, EN, SQ, HR, SR, HU; Prüfung durch die Administration und den Auftraggeber.
 - **Portal:** für Ärztinnen/Ärzte und Angehörige, Berechtigungen individuell je Zugang, Person/Wohnbereich und Bereich.
-- **Interaktionsprüfung:** jetzt einrichten, lizenzierte Datenbank folgt (Anbieter offen).
+- **Interaktionsprüfung:** nur mit den Hinweisen der Einrichtung; keine lizenzierte Datenbank (siehe Medizinprodukt).
 - **Eigene Rollen:** je Einrichtung, kopierbar.
 - **Offline-Zwischenspeicher:** verschlüsseln; Lesen und Bearbeiten bleiben möglich (ohne Verbindung mit Passwort).
 - **Offline-Verschlüsselung:** Schlüssel nur im Arbeitsspeicher.
@@ -230,11 +234,23 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - **Spracheingabe:** nur mit Erkennung auf dem Gerät bzw. einem eigenen Dienst, keine Übermittlung an Hersteller.
 - **SSO:** selbst gebaut mit Open-Source-Bausteinen.
 
+## Entschieden (01.10.2026)
+
+- **Kein Medizinprodukt (MepV):** CareCore ist Software für Pflegedokumentation, Organisation und Kommunikation und
+  bleibt ausserhalb der Medizinprodukteverordnung. Daraus folgt für alle Funktionen:
+  - CareCore stellt keine Diagnosen, berechnet keine Dosierungen und gibt keine eigenen Therapie- oder
+    Behandlungsempfehlungen.
+  - Grenzwerte (Vitalwerte, Trinkziel), Hinweise zu Wechselwirkungen und Erinnerungen stammen von der Einrichtung
+    (mit Quelle); CareCore enthält dafür keine eigenen Regeln oder Vorgabewerte.
+  - Eine lizenzierte Arzneimitteldatenbank wird nicht angebunden, weil eine automatische Wechselwirkungsprüfung die
+    Software zum Medizinprodukt machen würde.
+  - Assessments (z. B. Braden, interRAI) werden erfasst und nach der veröffentlichten Methode ausgezählt; die
+    Beurteilung bleibt bei der Fachperson.
+  - CareCore KI erstellt nur Entwürfe, die eine Fachperson prüft und übernimmt; sie stellt keine Diagnosen und
+    ordnet keine Medikation an.
+
 ## Braucht eine Entscheidung oder externe Quelle
 
-- **Lizenzierte Arzneimitteldatenbank** für die Wechselwirkungsprüfung (Anbieter noch offen, Entscheidung vom
-  30.09.2026). Die Prüfung ist eingerichtet und nutzt bis dahin nur die Hinweise der Einrichtung; der Anbieter käme in
-  `lib/medication-interactions.ts` als zweite Quelle dazu.
 - **Backups / Disaster Recovery:** In Railway je Installation einschalten (`docs/BETRIEB.md`); Ziele für RPO und RTO
   legt der Betreiber mit der Einrichtung fest.
 
