@@ -70,7 +70,7 @@ Alle drei laufen in der CI bei jedem Pull Request.
 
 Optional über SMTP (jeder Anbieter, z. B. Brevo, Infomaniak oder der Mailserver der Einrichtung), eingerichtet mit
 `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` und `APP_URL` (`lib/mail.ts`, Migration
-`0057_user_email_password_links.sql`). Damit gibt es „Passwort vergessen?“ auf der Anmeldeseite, Einladungen per
+`0057_user_email_links.sql`). Damit gibt es „Passwort vergessen?“ auf der Anmeldeseite, Einladungen per
 E-Mail statt Startpasswort und den Link zum Passwort setzen in der Mitarbeiterverwaltung. Links gelten einmal, nur der
 Hash wird gespeichert, danach enden alle Sitzungen der Person. Einzelheiten: `docs/EMAIL.md`.
 
