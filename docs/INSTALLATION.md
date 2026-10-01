@@ -82,7 +82,8 @@ if (!response.ok) process.exit(1);
 3. Leitung › Administration zeigt „CareCore einrichten“: Name, Standort mit Adresse, Wohnbereiche, Mitarbeitende,
    Bewohner, E-Mail-Versand, Zwei-Faktor für das Administrationskonto. Diese Schritte erledigt die Einrichtung selbst
    oder ihr gemeinsam mit ihr.
-4. Das Administrationskonto sofort mit Zwei-Faktor-Anmeldung oder Passkey absichern
+4. Backups, Benachrichtigungen und Verfügbarkeitstest einrichten: `docs/BETRIEB.md` › „Einmal einrichten“.
+5. Das Administrationskonto sofort mit Zwei-Faktor-Anmeldung oder Passkey absichern
    (Einstellungen › Sicherheit).
 
 ## Aktualisieren

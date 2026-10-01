@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { apiErrorResponse } from "@/lib/api-context";
+import { checkErrorAlert } from "@/lib/error-log";
 import { runPushSchedule } from "@/lib/push-schedule";
 import { carecoreDb } from "@/lib/server-data";
 
@@ -16,7 +17,13 @@ export async function GET(request: Request) {
   if (given.length !== expected.length || !timingSafeEqual(given, expected))
     return NextResponse.json({ error: "Nicht berechtigt." }, { status: 401 });
   try {
-    return NextResponse.json(await runPushSchedule(carecoreDb()));
+    const sql = carecoreDb();
+    // Überwachung: Alarm bei vielen Serverfehlern; ein Fehler dabei hält den Push-Versand nicht auf.
+    const alert = await checkErrorAlert(sql).catch((error) => {
+      console.error("Error alert failed", error);
+      return { alerted: false };
+    });
+    return NextResponse.json({ ...(await runPushSchedule(sql)), alert });
   } catch (error) {
     return apiErrorResponse(error, "Push-Versand fehlgeschlagen.");
   }

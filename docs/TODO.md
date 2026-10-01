@@ -212,6 +212,9 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       vergessen?“, Einladung statt Startpasswort, Link zum Passwort setzen; Links einmalig, gehasht, protokolliert.
 - [x] **Verkaufsbereit 3 – Installation je Einrichtung:** Anleitung `docs/INSTALLATION.md`, Skript für die Geheimnisse,
       Name der Einrichtung in der Konfiguration änderbar (Kopfzeile ohne Neuladen), Checkliste „CareCore einrichten“.
+- [x] **Verkaufsbereit 4 – Überwachung und Backups:** Serverfehler im Systemstatus, Alarm per E-Mail
+      (`ALERT_EMAIL`), Anleitung `docs/BETRIEB.md` (Railway-Backups und PITR, Bucket, Benachrichtigungen,
+      Verfügbarkeitstest, Wiederherstellung üben, Ernstfall). Die Backups selbst schaltet der Betreiber in Railway ein.
 
 ## Entschieden (30.09.2026)
 
@@ -230,7 +233,8 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - **Lizenzierte Arzneimitteldatenbank** für die Wechselwirkungsprüfung (Anbieter noch offen, Entscheidung vom
   30.09.2026). Die Prüfung ist eingerichtet und nutzt bis dahin nur die Hinweise der Einrichtung; der Anbieter käme in
   `lib/medication-interactions.ts` als zweite Quelle dazu.
-- **Backups / Disaster Recovery:** Laufen beim Datenbank-Anbieter; Ziele für RPO und RTO legt der Betreiber fest.
+- **Backups / Disaster Recovery:** In Railway je Installation einschalten (`docs/BETRIEB.md`); Ziele für RPO und RTO
+  legt der Betreiber mit der Einrichtung fest.
 
 ## Bekannte Grenzen
 

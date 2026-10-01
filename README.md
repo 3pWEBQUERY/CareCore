@@ -82,6 +82,13 @@ Optional über SMTP (jeder Anbieter, z. B. Brevo, Infomaniak oder der Mailserver
 E-Mail statt Startpasswort und den Link zum Passwort setzen in der Mitarbeiterverwaltung. Links gelten einmal, nur der
 Hash wird gespeichert, danach enden alle Sitzungen der Person. Einzelheiten: `docs/EMAIL.md`.
 
+## Überwachung und Backups
+
+Serverfehler (HTTP 500) hält CareCore kurz fest (`lib/error-log.ts`, Migration `0058_error_events.sql`, ohne
+Anfragedaten, 30 Tage); die Administration sieht sie unter Leitung › Konfiguration › Systemstatus. Mit `ALERT_EMAIL`
+und eingerichtetem E-Mail-Versand kommt ein Alarm bei vielen Fehlern. Backups (Railway), Benachrichtigungen,
+Verfügbarkeitstest und Wiederherstellung: `docs/BETRIEB.md`.
+
 ## Zwei-Faktor-Anmeldung (TOTP)
 
 Jede Person kann unter Einstellungen → Sicherheit eine Authenticator-App verbinden (`lib/mfa.ts`, Migration `0042_mfa.sql`). Nach dem Passwort fragt die Anmeldung dann nach dem 6-stelligen Code oder einem der zehn einmaligen Wiederherstellungscodes. Fehlversuche zählen zur Anmeldedrossel.

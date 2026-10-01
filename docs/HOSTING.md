@@ -1,6 +1,7 @@
 # Hosting auf Railway
 
-Neue Kundeninstallation (eigenes Projekt je Einrichtung): siehe `docs/INSTALLATION.md`.
+Neue Kundeninstallation (eigenes Projekt je Einrichtung): siehe `docs/INSTALLATION.md`. Überwachung und Backups:
+`docs/BETRIEB.md`.
 
 CareCore läuft auf Railway (Projekt „feisty-achievement“, Region Europa).
 
@@ -35,6 +36,7 @@ CareCore läuft auf Railway (Projekt „feisty-achievement“, Region Europa).
 | `GEMINI_API_KEY`                                                                    | **von der Betreiberin zu setzen**: Google Gemini für CareCore KI, Übersetzungsentwürfe und KI-Dienstplanung |
 | `GEMINI_MODEL`                                                                      | `gemini-3.5-flash-lite`                                                                                     |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`, `APP_URL`      | optional: E-Mail-Versand (Passwort vergessen, Einladungen), siehe `docs/EMAIL.md`                           |
+| `ALERT_EMAIL`, `ALERT_ERROR_THRESHOLD`                                              | optional: Alarm per E-Mail bei vielen Serverfehlern, siehe `docs/BETRIEB.md`                                |
 
 Die Werte stehen nur in Railway, nie im Repository.
 
