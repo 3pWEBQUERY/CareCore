@@ -236,8 +236,9 @@ function LanguagesBody({ showToast }: { showToast: ShowToast }) {
             {busy ? "Bitte warten …" : "KI-Entwürfe für fehlende Texte"}
           </button>
           <button
-            className="quiet-button"
+            className="quiet-button languages-slide-button"
             type="button"
+            title="Angezeigte Entwürfe als geprüft markieren"
             disabled={busy || !entries.some((entry) => entry.status === "draft")}
             onClick={() =>
               void post(
@@ -250,10 +251,15 @@ function LanguagesBody({ showToast }: { showToast: ShowToast }) {
               )
             }
           >
-            Angezeigte Entwürfe als geprüft markieren
+            <SlideLabel text="Angezeigte Entwürfe als geprüft markieren" />
           </button>
-          <button className="quiet-button" type="button" onClick={preview}>
-            {previewing ? "Vorschau beenden" : "App in dieser Sprache ansehen (mit Entwürfen)"}
+          <button
+            className="quiet-button languages-slide-button"
+            type="button"
+            title={previewing ? "Vorschau beenden" : "App in dieser Sprache ansehen (mit Entwürfen)"}
+            onClick={preview}
+          >
+            <SlideLabel text={previewing ? "Vorschau beenden" : "App in dieser Sprache ansehen (mit Entwürfen)"} />
           </button>
         </div>
         <div className="admin-retention-list" translate="no">
@@ -345,5 +351,14 @@ function LanguagesBody({ showToast }: { showToast: ShowToast }) {
         </EditorDialog>
       )}
     </main>
+  );
+}
+
+// Kompakter Knopf: der Text gleitet beim Darüberfahren oder Fokussieren durch, bis das Ende sichtbar ist.
+function SlideLabel({ text }: { text: string }) {
+  return (
+    <span className="languages-slide-track">
+      <span className="languages-slide-text">{text}</span>
+    </span>
   );
 }
