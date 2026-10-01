@@ -16,7 +16,6 @@ import type {
   ScheduleSnapshot,
   ShiftChange,
   ShiftSource,
-  Violation,
 } from "./types";
 import type { CommitResult } from "./view-types";
 
@@ -490,6 +489,3 @@ export async function changeShift(ctx: RosterContext, shiftId: string, body: Bod
     ],
   });
 }
-
-export const violationsOf = (error: unknown): Violation[] =>
-  error instanceof RosterError && error.violations ? error.violations : [];

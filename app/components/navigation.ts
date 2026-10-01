@@ -318,6 +318,14 @@ export function activePage(pathname: string | null): { moduleId: string; child: 
   return best && { moduleId: best.moduleId, child: best.child };
 }
 
+// Berechtigungen, die eine Seite verlangt (Modul und Reiter, wie in der Navigation); leer, wenn alle sie sehen.
+export function pagePermissions(pathname: string): string[] {
+  const page = activePage(pathname);
+  const navModule = page && moduleById(page.moduleId);
+  if (!page || !navModule) return [];
+  return [navModule.permission, navModule.childPermissions?.[page.child]].filter((value): value is string => !!value);
+}
+
 export function moduleById(moduleId: string) {
   return navigation.flatMap((group) => group.modules).find((module) => module.id === moduleId) ?? null;
 }

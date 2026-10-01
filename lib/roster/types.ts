@@ -14,7 +14,6 @@ export type PreferenceKind =
 export type SwapStatus =
   "PENDING_TARGET" | "PENDING_APPROVAL" | "EXECUTED" | "DECLINED" | "WITHDRAWN" | "EXPIRED" | "REJECTED" | "FAILED";
 export type TimeEntryStatus = "OPEN" | "COMPLETE" | "INCOMPLETE" | "APPROVED";
-export type TimeEntrySource = "CLOCK" | "MANUAL" | "CORRECTION" | "IMPORT" | "SEED";
 export type AuditSource = "UI" | "SWAP" | "AI" | "SYSTEM" | "SEED" | "IMPORT";
 
 export const CATEGORY_LABELS: Record<ShiftCategory, string> = {

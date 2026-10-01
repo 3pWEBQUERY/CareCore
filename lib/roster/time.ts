@@ -102,11 +102,6 @@ export function monthDays(year: number, month: number) {
   return Array.from({ length: daysInMonth(year, month) }, (_, index) => addDays(monthStart(year, month), index));
 }
 
-export function parseMonth(value: string | null | undefined) {
-  const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(value ?? "");
-  return match ? { year: Number(match[1]), month: Number(match[2]) } : null;
-}
-
 export function shiftMonth(year: number, month: number, delta: number) {
   const index = year * 12 + (month - 1) + delta;
   return { year: Math.floor(index / 12), month: (index % 12) + 1 };
@@ -222,8 +217,6 @@ export function formatDate(date: string, withYear = false) {
   const [year, month, day] = date.split("-");
   return withYear ? `${day}.${month}.${year}` : `${day}.${month}.`;
 }
-
-export const formatClock = (instant: Date | string, timeZone: string) => localTime(instant, timeZone);
 
 export const MONTH_NAMES = [
   "Januar",

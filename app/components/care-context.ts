@@ -60,7 +60,6 @@ function useStored(key: string) {
 export const useCareResident = () => useStored(RESIDENT_KEY);
 export const useCareUnit = () => useStored(UNIT_KEY);
 export const setCareResident = (id: string | null) => write(RESIDENT_KEY, id);
-export const setCareUnit = (id: string | null) => write(UNIT_KEY, id);
 
 // One request per page view for the header, sidebar and mobile navigation; client-side
 // navigation reuses it for a minute so new residents appear without a reload.

@@ -5,6 +5,7 @@ import { setCareResident } from "@/app/components/care-context";
 import { formatDate, formatDateTime, todayInZurich } from "@/app/components/workspace-ui";
 import type { RecordView } from "./resident-record-data";
 import type { ResidentRecordState } from "./use-resident-record";
+import { useNow } from "@/app/components/use-now";
 
 type StageState = "done" | "current" | "attention" | "open";
 type Stage = {
@@ -26,6 +27,7 @@ const STATE_LABELS: Record<StageState, string> = {
 // The care process of the resident at a glance: admission → assessment → planning →
 // care delivery → evaluation. The first stage that is not done is the current step.
 export function RecordCareProcess({ r }: { r: ResidentRecordState }) {
+  const now = useNow();
   const { resident, live, latestAssessments, setActiveView, openDocumentation } = r;
   const router = useRouter();
   const summary = live.summary.data;
@@ -38,8 +40,7 @@ export function RecordCareProcess({ r }: { r: ResidentRecordState }) {
   const lastEvaluation = evaluations.sort((a, b) => b.evaluatedAt.localeCompare(a.evaluatedAt))[0] ?? null;
   const overdueAssessments = latestAssessments.filter((result) => result.nextDueOn && result.nextDueOn < today);
   const lastDoc = live.docEntries[0] ?? null;
-  // eslint-disable-next-line react-hooks/purity -- "in den letzten 24 Stunden" is relative to the moment of rendering.
-  const documentedRecently = lastDoc ? Date.now() - Date.parse(lastDoc.occurredAt) < 24 * 3_600_000 : false;
+  const documentedRecently = lastDoc ? now - Date.parse(lastDoc.occurredAt) < 24 * 3_600_000 : false;
   const measures = goals.reduce(
     (sum, goal) => sum + goal.interventions.filter((item) => item.status === "active").length,
     0,

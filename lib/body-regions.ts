@@ -120,13 +120,6 @@ export const BODY_VIEWS = [
   { id: "left", label: "Links", yaw: -Math.PI / 2 },
 ] as const;
 
-// Welche Seite eines gespeicherten Punktes der Kamera zugewandt ist (für die Anzeige „Rückseite“).
-export function pointSide(point: Vec3, sex: BodySex): "front" | "back" {
-  // Das weibliche Modell ist um etwa 0.13 nach hinten versetzt.
-  const center = sex === "female" ? -0.13 : 0;
-  return point.z >= center ? "front" : "back";
-}
-
 // Kürzester Weg von der aktuellen Drehung zur gewünschten (in Bogenmass, beliebig viele Umdrehungen).
 export function nearestYaw(current: number, target: number) {
   const turns = Math.round((current - target) / (Math.PI * 2));

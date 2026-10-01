@@ -112,5 +112,3 @@ export function useRecordLive(resident: ResidentRecordData) {
     },
   };
 }
-
-export type RecordLive = ReturnType<typeof useRecordLive>;

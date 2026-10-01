@@ -95,10 +95,6 @@ function logStatement(sql: Sql, actor: PortalActor, residentId: string | null, a
       ${actor.userAgent?.slice(0, 300) ?? null})`;
 }
 
-export async function logPortalAccess(sql: Sql, actor: PortalActor, residentId: string | null, action: string) {
-  await logStatement(sql, actor, residentId, action, []);
-}
-
 // Personen mit gültiger Freigabe (direkt oder über den aktuellen Wohnbereich), Bereiche zusammengeführt.
 export async function portalResidents(sql: Sql, actor: PortalActor): Promise<PortalResident[]> {
   const rows = (await sql`

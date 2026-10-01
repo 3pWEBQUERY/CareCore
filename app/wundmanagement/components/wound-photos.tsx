@@ -234,8 +234,7 @@ function PhotoUploadDialog({
       submitLabel="Foto speichern"
     >
       <div className="area-editor-wide wound-photo-preview">
-        {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
-        <img src={preview} alt="Vorschau des ausgewählten Fotos" />
+        <Image src={preview} alt="Vorschau des ausgewählten Fotos" width={1600} height={1200} unoptimized />
       </div>
       <label className="area-editor-wide">
         <span>Beschreibung (optional)</span>

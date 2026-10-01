@@ -26,6 +26,7 @@ import { useActionRequest } from "@/app/components/actions";
 import TrendChart from "./trend-chart";
 import { History, FILTERS, WEEK, ClinicalNote, MeasurementList } from "./overview-parts";
 import { useCareResident, useTerms, useVitalMetrics } from "@/app/components/care-context";
+import { useNow } from "@/app/components/use-now";
 
 export type VitalsOverview = {
   residents: VitalResident[];
@@ -50,6 +51,7 @@ export function abnormalValues(residents: VitalResident[]) {
 }
 
 export default function OverviewView({ showToast }: { showToast: ShowToast }) {
+  const now = useNow();
   const metrics = useVitalMetrics();
   const t = useTerms();
   const overview = useApiData<VitalsOverview>("/api/vitals/overview");
@@ -64,8 +66,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
   // Aktion „Vitalwerte erfassen“ (Schnellaktion oder Suche): Erfassung für die Person aus der Kopfzeile.
   useActionRequest("vitals", () => setDialog({ residentId: null }), !!overview.data?.canRecord);
   const residents = overview.data?.residents ?? [];
-  // eslint-disable-next-line react-hooks/purity -- "Ohne Messung seit 7 Tagen" is relative to the moment of rendering.
-  const weekAgo = new Date(Date.now() - WEEK).toISOString();
+  const weekAgo = new Date(now - WEEK).toISOString();
   const stale = (r: VitalResident) => !r.lastMeasuredAt || r.lastMeasuredAt < weekAgo;
   const matchesFilter = (r: VitalResident) =>
     filter === "Alle" ||

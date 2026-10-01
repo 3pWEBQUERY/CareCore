@@ -8,7 +8,6 @@ import type {
   ShiftCategory,
   ShiftSource,
   ShiftTypeInfo,
-  SwapStatus,
   TimeEntryStatus,
   TimeOffStatus,
   Violation,
@@ -121,15 +120,3 @@ export type SchedulePayload = {
 };
 
 export type CommitResult = { violations: Violation[]; shiftIds: string[] };
-
-export type SwapListItem = {
-  id: string;
-  status: SwapStatus;
-  requester: string;
-  target: string;
-  sourceShift: string;
-  targetShift: string | null;
-  message: string | null;
-  requestedAt: string;
-  failureMessage: string | null;
-};

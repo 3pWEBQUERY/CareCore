@@ -20,7 +20,6 @@ export type StoredFileRow = {
   updated_at: string;
   can_edit: boolean;
 };
-export type SharedFolder = { id: string; name: string; files: number };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_FILE_BYTES = 4 * 1024 * 1024;

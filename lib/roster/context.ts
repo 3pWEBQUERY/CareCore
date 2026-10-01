@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { ApiContext, Row } from "@/lib/api-context";
 import { carecoreActor, carecoreDb, hasPermission, type CarecoreActor } from "@/lib/server-data";
 import { RosterError, forbidden, notFound } from "./errors";
-import { managedUnitIds, rosterCan, visibleUnitIds, type RosterAccess, type RosterPermission } from "./permissions";
+import { rosterCan, visibleUnitIds, type RosterAccess, type RosterPermission } from "./permissions";
 
 // Jeder Dienstplan-Endpunkt holt sich damit Anmeldung, Organisation und Scope selbst (Spec 6.2).
 export type RosterContext = ApiContext & { access: RosterAccess; correlationId: string };
@@ -47,12 +47,6 @@ export function requirePermission(ctx: RosterContext, permission: RosterPermissi
   if (rosterCan(ctx.access, permission, unitId)) return;
   if (unitId && !visibleUnitIds(ctx.access).includes(unitId)) throw notFound("Wohnbereich");
   throw forbidden();
-}
-
-export const getManagedUnitIds = (ctx: RosterContext) => managedUnitIds(ctx.access);
-
-export function assertUnitAccess(ctx: RosterContext, unitId: string, level: "lead" | "member") {
-  requirePermission(ctx, level === "lead" ? "dienstplan:read" : "dienstplan:read_own", unitId);
 }
 
 export async function unitName(ctx: RosterContext, unitId: string) {

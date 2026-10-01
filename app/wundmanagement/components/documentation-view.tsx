@@ -18,6 +18,7 @@ import { ENTRY_TYPES, materialLabel, sizeLabel, type WoundEntry } from "@/lib/wo
 import { WoundTimeline } from "./wound-timeline";
 import { nextCareLabel } from "./overview-utils";
 import { EntryDialog, type WoundsPayload } from "./wound-dialogs";
+import { useNow } from "@/app/components/use-now";
 
 type FeedEntry = WoundEntry & {
   residentId: string;
@@ -30,6 +31,7 @@ type FeedEntry = WoundEntry & {
 const RANGES = [7, 30, 90];
 
 export default function DocumentationView({ showToast }: { showToast: ShowToast }) {
+  const now = useNow();
   const t = useTerms();
   const [days, setDays] = useState(30);
   const [type, setType] = useState<string>("Alle");
@@ -51,8 +53,7 @@ export default function DocumentationView({ showToast }: { showToast: ShowToast 
   const selectedWound = wounds.data?.wounds.find((w) => w.id === selected?.woundId) ?? null;
   const history = useApiData<{ entries: WoundEntry[] }>(selected ? `/api/wounds/${selected.woundId}/entries` : null);
   const woundForEntry = wounds.data?.wounds.find((w) => w.id === entryFor) ?? null;
-  // eslint-disable-next-line react-hooks/purity -- the weekly count is relative to the moment of rendering.
-  const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
+  const weekAgo = new Date(now - 7 * 86_400_000).toISOString();
 
   return (
     <>
