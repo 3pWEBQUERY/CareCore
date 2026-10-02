@@ -182,6 +182,21 @@ test("Branding: Logo der Einrichtung hochladen und in der Kopfzeile sehen", asyn
     const sidebarLogo = page.locator(".sidebar-rail-head .brand-mark-app img");
     await expect(sidebarLogo).toBeVisible();
     await expect(sidebarLogo).toHaveAttribute("src", /\/api\/branding\/logo\?v=/);
+
+    // Beim Neuladen blitzen weder das CareCore-Zeichen noch das Gebäude-Symbol kurz auf: ab dem ersten Bild
+    // festhalten, was Sidebar und Kopfzeile zeigen.
+    await page.addInitScript(() => {
+      const seen: string[] = [];
+      (window as unknown as { brandingSeen: string[] }).brandingSeen = seen;
+      new MutationObserver(() => {
+        if (document.querySelector('.sidebar-rail-head img[src*="carecore-sidebar-logo"]')) seen.push("carecore");
+        if (document.querySelector(".location-icon svg")) seen.push("building");
+      }).observe(document, { childList: true, subtree: true, attributes: true });
+    });
+    await page.reload();
+    await expect(sidebarLogo).toBeVisible();
+    expect(await page.evaluate(() => (window as unknown as { brandingSeen: string[] }).brandingSeen)).toEqual([]);
+
     await card.getByRole("button", { name: "Logo entfernen" }).click();
     await expect(page.locator(".toast")).toContainText("Logo entfernt");
   } finally {
