@@ -1,5 +1,6 @@
 "use client";
 
+import { CareOptionSelect } from "@/app/components/care-form-controls";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import ModulePageShell from "@/app/components/module-page-shell";
@@ -203,17 +204,12 @@ export default function ResidentHistoryPage() {
                 </label>
                 <label className="house-unit-filter">
                   <span>Wohnbereich</span>
-                  <select
+                  <CareOptionSelect
+                    label="Wohnbereich filtern"
                     value={unit}
-                    onChange={(event) => setUnit(event.target.value)}
-                    aria-label="Wohnbereich filtern"
-                  >
-                    {units.map((item) => (
-                      <option value={item} key={item}>
-                        {item}
-                      </option>
-                    ))}
-                  </select>
+                    options={units.map((item) => ({ value: item, label: item }))}
+                    onChange={setUnit}
+                  />
                 </label>
                 <div className="house-status-filters" aria-label="Aktenstatus filtern">
                   {HISTORY_STATUSES.map((item) => (

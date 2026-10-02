@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { setCareResident, useCareResident, useWorkContext } from "./care-context";
+import { setCareResident, useCareResident, useCareUnit, useWorkContext } from "./care-context";
+import { requestJson } from "./workspace-ui";
+import type { AiSearchResult } from "@/lib/ai-search";
 import { actionMatches, availableActions, runAction, type CareAction } from "./actions";
 import { ModuleIcon } from "./module-icon";
 import { navigationFor, routeFor, type ModuleIconName } from "./navigation";
@@ -16,7 +18,14 @@ type SearchResult = {
   href: string;
   residentId?: string;
   action?: CareAction;
+  // Frage an die Such-Assistenz von CareCore KI.
+  ask?: string;
 };
+
+type AiAnswer =
+  | { status: "loading"; question: string }
+  | { status: "done"; question: string; result: AiSearchResult }
+  | { status: "error"; question: string; error: string };
 
 const MAX_RESULTS = 12;
 
@@ -27,6 +36,8 @@ export function GlobalSearchDialog({ onClose }: { onClose: () => void }) {
   const context = useWorkContext();
   const [query, setQuery] = useState("");
   const [contextResidentId] = useCareResident();
+  const [careUnitId] = useCareUnit();
+  const [aiAnswer, setAiAnswer] = useState<AiAnswer | null>(null);
   const all = useMemo(() => {
     const terms = termsFor(context?.terminology);
     const L = (label: string) => navigationLabel(label, terms);
@@ -89,8 +100,27 @@ export function GlobalSearchDialog({ onClose }: { onClose: () => void }) {
         residentId: item.residentId,
       }));
   });
+  // Fragen in Alltagssprache gehen an die Such-Assistenz: mit „?“ zuerst, sonst (ab drei Wörtern) am Ende.
+  const question = query.trim();
+  const canAsk = Boolean(context?.profile.permissions.includes("ai.use")) && question.length >= 8;
+  const askItem: SearchResult[] =
+    canAsk && (question.endsWith("?") || tokens.length >= 3)
+      ? [
+          {
+            key: "ai-question",
+            title: `CareCore KI fragen: „${question}“`,
+            meta: "Antwort aus den Daten der letzten Tage, mit Links zu den Akten",
+            icon: "ai",
+            href: "",
+            ask: question,
+          },
+        ]
+      : [];
+  const found = [...actionResults, ...all.residents.filter(matches), ...all.functions.filter(matches)];
   const results = needle
-    ? [...actionResults, ...all.residents.filter(matches), ...all.functions.filter(matches)].slice(0, MAX_RESULTS)
+    ? question.endsWith("?")
+      ? [...askItem, ...found].slice(0, MAX_RESULTS)
+      : [...found.slice(0, MAX_RESULTS - askItem.length), ...askItem]
     : [
         {
           key: "notifications",
@@ -120,6 +150,46 @@ export function GlobalSearchDialog({ onClose }: { onClose: () => void }) {
             ESC
           </button>
         </div>
+        {aiAnswer && (
+          <div className="search-ai-answer" role="status" aria-live="polite">
+            <span className="search-group-label">CareCore KI · {aiAnswer.question}</span>
+            {aiAnswer.status === "loading" && <p>Die Daten werden ausgewertet …</p>}
+            {aiAnswer.status === "error" && <p className="search-ai-error">{aiAnswer.error}</p>}
+            {aiAnswer.status === "done" && (
+              <>
+                <p>{aiAnswer.result.answer}</p>
+                {aiAnswer.result.residents.map((resident) => (
+                  <button
+                    className="search-result"
+                    type="button"
+                    key={resident.id}
+                    onClick={() =>
+                      open({
+                        key: resident.id,
+                        title: resident.name,
+                        meta: "",
+                        icon: "residents",
+                        href: `/c/bewohner?resident=${resident.id}`,
+                        residentId: resident.id,
+                      })
+                    }
+                  >
+                    <span className="result-icon">
+                      <ModuleIcon name="residents" />
+                    </span>
+                    <span>
+                      <strong>{resident.name}</strong>
+                      <small>{resident.room ? `Zimmer ${resident.room} · Akte öffnen` : "Akte öffnen"}</small>
+                    </span>
+                  </button>
+                ))}
+                <small className="search-ai-note">
+                  Entwurf von CareCore KI aus den erfassten Daten – bitte in der Akte prüfen.
+                </small>
+              </>
+            )}
+          </div>
+        )}
         <div className="search-results">
           <span className="search-group-label">{query ? "Suchergebnisse" : "Schnellzugriff"}</span>
           {results.map((result) => (
@@ -139,7 +209,15 @@ export function GlobalSearchDialog({ onClose }: { onClose: () => void }) {
     </div>
   );
 
+  function ask(text: string) {
+    setAiAnswer({ status: "loading", question: text });
+    requestJson<AiSearchResult>("/api/ai/search", { method: "POST", body: { question: text, careUnitId } })
+      .then((result) => setAiAnswer({ status: "done", question: text, result }))
+      .catch((reason: Error) => setAiAnswer({ status: "error", question: text, error: reason.message }));
+  }
+
   function open(result: SearchResult) {
+    if (result.ask) return ask(result.ask);
     onClose();
     if (result.action) return runAction(result.action, (href) => router.push(href), result.residentId);
     if (result.residentId) setCareResident(result.residentId);

@@ -1,4 +1,5 @@
 import type { ModuleIconName } from "@/app/components/module-icon";
+import { MIN_PASSWORD_LENGTH } from "@/lib/password-policy";
 
 // Organisation-wide settings of "Leitung · Konfiguration" (stored in
 // carecore_organizations.settings.app). Every setting changes how the app behaves.
@@ -14,7 +15,9 @@ export type SettingKey =
   | "fluidBehindDays"
   | "navigationBadges"
   | "keyboardShortcuts"
-  | "residentRetentionYears";
+  | "residentRetentionYears"
+  | "strongLoginRequired"
+  | "passwordMinLength";
 
 export type SettingValue = { enabled: boolean; value: number | null };
 export type AppSettings = Record<SettingKey, SettingValue>;
@@ -149,6 +152,25 @@ export const SETTING_DEFINITIONS: Record<SettingKey, Definition> = {
     min: 1,
     max: 30,
     defaults: { enabled: false, value: null },
+  },
+  // Sicherheit: Zwei-Faktor-Pflicht für Leitung und Administration, Mindestlänge neuer Passwörter.
+  strongLoginRequired: {
+    title: "Zwei-Faktor-Pflicht",
+    icon: "settings",
+    area: "Sicherheit",
+    describe: () => "Leitung und Administration nutzen ihre Bereiche erst mit Zwei-Faktor-Anmeldung oder Passkey",
+    defaults: { enabled: false, value: null },
+  },
+  passwordMinLength: {
+    title: "Passwort-Richtlinie",
+    icon: "settings",
+    area: "Sicherheit",
+    describe: (value) =>
+      `Neue Passwörter mit mindestens ${value ?? MIN_PASSWORD_LENGTH} Zeichen, nicht bekannt unsicher und ohne Benutzernamen`,
+    unit: "Zeichen",
+    min: MIN_PASSWORD_LENGTH,
+    max: 64,
+    defaults: { enabled: true, value: MIN_PASSWORD_LENGTH },
   },
 };
 

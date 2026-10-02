@@ -1,5 +1,6 @@
 "use client";
 
+import { CareOptionSelect } from "@/app/components/care-form-controls";
 import { useCallback, useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 import { activeLanguage, rememberLanguage } from "@/app/components/translator";
 import { LANGUAGES, type Language } from "@/lib/i18n-shared";
@@ -389,13 +390,12 @@ function PortalLanguage() {
   return (
     <label className="portal-language">
       <span className="sr-only">Sprache</span>
-      <select value={current} onChange={(event) => rememberLanguage(event.target.value as Language)} translate="no">
-        {languages.map((locale) => (
-          <option key={locale} value={locale}>
-            {LANGUAGES[locale].label}
-          </option>
-        ))}
-      </select>
+      <CareOptionSelect
+        label="Sprache"
+        value={current}
+        options={languages.map((locale) => ({ value: locale, label: LANGUAGES[locale].label }))}
+        onChange={(value) => rememberLanguage(value as Language)}
+      />
     </label>
   );
 }

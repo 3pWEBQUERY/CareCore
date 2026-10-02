@@ -3,7 +3,8 @@
   --surface: #ffffff;
   --surface-soft: #f6f9fd;
   --ink: #102a43;
-  --muted: #64748b;
+  /* Grauer Hilfstext: 4,7:1 auf dem Seitenhintergrund (WCAG 2.2 AA). */
+  --muted: #5f6f86;
   --line: #dce5f1;
   --brand: #2563eb;
   --brand-dark: #1d4ed8;

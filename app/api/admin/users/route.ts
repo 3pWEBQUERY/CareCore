@@ -72,6 +72,7 @@ export async function POST(request: Request) {
       displayName: body.displayName,
       username: body.username,
       password: invite ? randomBytes(32).toString("base64url") : String(body.password),
+      generatedPassword: invite,
       role: body.role,
       jobTitle: typeof body.jobTitle === "string" ? body.jobTitle : undefined,
       phone: typeof body.phone === "string" ? body.phone : undefined,

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { assertPasswordPolicy } from "@/lib/password-rules";
 import { auditOrigin, type AuditActor } from "@/lib/audit-origin";
 import { neon } from "@neondatabase/serverless";
 import "@/database/pg-fetch.mjs";
@@ -351,6 +352,8 @@ export async function createManagedUser(
     phone?: string;
     email?: string;
     primaryCareUnitId?: string | null;
+    // Zufällig erzeugtes Passwort (Einladung, Datenübernahme): keine Prüfung gegen die Passwort-Richtlinie.
+    generatedPassword?: boolean;
   },
 ) {
   const actorId = typeof actorInput === "string" ? actorInput : actorInput.id;
@@ -361,6 +364,7 @@ export async function createManagedUser(
   if (!displayName || !username || !role || input.password.length < 10) throw new Error("INVALID_EMPLOYEE_INPUT");
   const email = normalizeEmail(input.email ?? "");
   const sql = database();
+  if (!input.generatedPassword) await assertPasswordPolicy(sql, actorId, input.password, { username, displayName });
   await assertRole(sql, actorId, role);
   if (input.primaryCareUnitId) await assertCareUnit(sql, actorId, input.primaryCareUnitId);
   if (email) await assertEmailFree(sql, email, null);
@@ -383,6 +387,20 @@ export async function createManagedUser(
     }),
   ]);
   return listManagedUsers(actorId);
+}
+
+// Alle Sitzungen einer Person beenden (z. B. verlorenes Gerät): sie muss sich überall neu anmelden.
+export async function endManagedUserSessions(actorInput: AuditActor, userId: string) {
+  const actorId = actorInput.id;
+  const who = { id: actorId, ...auditOrigin(actorInput) };
+  if (userId === actorId) throw new Error("CANNOT_END_OWN_SESSIONS");
+  const sql = database();
+  await assertManagedUser(sql, actorId, userId);
+  const [ended] = (await sql.transaction([
+    sql`DELETE FROM carecore_sessions WHERE user_id = ${userId} RETURNING id`,
+  ])) as Array<Array<{ id: string }>>;
+  await auditStatement(sql, who, "user", userId, "sessions_ended", { sessions: ended.length });
+  return { ended: ended.length };
 }
 
 export async function deleteManagedUser(actorInput: string | AuditActor, userId: string) {

@@ -7,47 +7,47 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 
 ## Abgleich je PRD-Bereich
 
-| PRD-Bereich                  | Stand | Befund im Code                                                                                                                                                             |
-| ---------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Home „One Shift. One Screen“ | ✅    | Startseite `/c` mit Widgets, Notizen, Schnellzugriff, Zeitleiste; Tagesliste gefiltert nach Kritisch / Wichtig / Routine.                                                  |
-| Bewohner-Kopfbereich         | ✅    | Akte mit Übersicht, Verlauf, Körperstatus, Dokumenten und Reanimationsstatus im Aktenkopf.                                                                                 |
-| Resident Timeline            | ✅    | `bewohner/verlauf`, `lib/resident-history.ts`.                                                                                                                             |
-| Plan                         | ✅    | Pflegeplanung mit Zielen, Massnahmen, Evaluation, Einschätzungen. Keine regelbasierten Vorschläge aus Einschätzungen.                                                      |
-| Chart / Schnelldoku          | ✅    | Doku, Nachträge, Schnelldokumentation, Abschluss aus Aufgaben mit ✓ △ ✕, Diktieren mit Erkennung auf dem Gerät.                                                            |
-| Handover                     | ✅    | Übergabe, „Seit meinem letzten Dienst“, Lesebestätigung (`carecore_handover_reads`).                                                                                       |
-| Tasks                        | ✅    | Offen, in Bearbeitung, eskaliert, erledigt, teilweise, nicht erledigt, abgebrochen; überfällig berechnet.                                                                  |
-| Med                          | 🟡    | Runde, Reserve (PRN), BtM, Bestand, Wechselwirkungen aus Hinweisen der Einrichtung (keine lizenzierte Datenbank, kein Medizinprodukt).                                     |
-| Vitals                       | ✅    | Individuelle Grenzwerte je Bewohner (`carecore_vital_thresholds`).                                                                                                         |
-| Wounds                       | ✅    | Verlauf, Fotos, Körperkarte, Erinnerungen, Verbandsmaterial je Versorgung aus dem Materialkatalog.                                                                         |
-| Nutrition                    | ✅    | Plan, Trinken, Mahlzeiten, Screenings; Trendhinweise Gewicht und Trinkmenge nach Grenzen der Einrichtung.                                                                  |
-| Team / Kanäle                | ✅    | Kanäle, Beiträge, Lesebestätigungen (`carecore_post_reads`).                                                                                                               |
-| Chat                         | ✅    | Unterhaltungen, Reaktionen, @Erwähnungen; Benachrichtigung und Push bei Direktnachricht und Erwähnung.                                                                     |
-| Schedule                     | ✅    | Dienstplan, Tausch, Wünsche, Zeiterfassung, KI-Planung. Börse für offene Dienste.                                                                                          |
-| Docs                         | ✅    | Versionen, Freigabe, Lesebestätigung (`carecore_document_reads`); neue Version verlangt die Bestätigung erneut.                                                            |
-| Learn                        | ✅    | Schulungen, Pflicht, Gültigkeit, Nachweise, Link, Quiz mit Bestehensgrenze, Übersicht je Team. Videos nur als Link.                                                        |
-| Quality                      | ✅    | Ereignisse mit Massnahmen und Status.                                                                                                                                      |
-| KI-Assistenten               | 🟡    | Übergabe, Risiken, Dokumentation, Pflegeplanung, freie Frage, Dienstplan-KI; Entwürfe mit Prüfung. Keine Such-Assistenz.                                                   |
-| Globale Suche ⌘K             | ✅    | `global-search-dialog.tsx`, Tastenkürzel.                                                                                                                                  |
-| Benachrichtigungen           | ✅    | Klassen Kritisch / Handlung / Info / Sozial, Bündelung, Push mit Ruhezeiten.                                                                                               |
-| Mobile                       | 🟡    | Untere Navigation, Hauptmenü, Schnellaktions-Knopf (FAB).                                                                                                                  |
-| Dark Mode                    | ✅    | Persönliche Wahl „Erscheinungsbild: Dunkel“; Standard bleibt hell.                                                                                                         |
-| Barrierefreiheit WCAG 2.2 AA | 🟡    | Tastatur, Fokusfalle, Schriftgrösse, Kontrast-Einstellung. `--muted` erreicht nur 4,4:1.                                                                                   |
-| IAM                          | ✅    | Passwort, Login-Drossel, Sitzungen mit Gerät, automatische Abmeldung, MFA (TOTP), Passkeys, SSO (OpenID Connect).                                                          |
-| Rechte                       | 🟡    | Rechte plus Qualifikationen; Medikation getrennt in verabreichen / verwalten.                                                                                              |
-| Audit                        | ✅    | Atomar, pro Bewohner, mit Sitzung und Gerät.                                                                                                                               |
-| Datenschutz                  | ✅    | Eigener Datenexport, Quittungen nach 30 Tagen gelöscht, Lösch- und Aufbewahrungskonzept (`docs/DATENSCHUTZ.md`).                                                           |
-| Sicherheit                   | 🟡    | Login-, Passwort- und KI-Drossel, allgemeine Drossel für schreibende API-Anfragen.                                                                                         |
-| Backups / Health             | 🟡    | Health-Endpunkt `/api/health`; Backups durch den Datenbank-Anbieter.                                                                                                       |
-| Offline                      | ✅    | Warteschlange und Daten-Zwischenspeicher verschlüsselt (Schlüssel nur im Arbeitsspeicher), Entsperren ohne Verbindung mit dem Passwort, Konfliktanzeige.                   |
-| API / FHIR / Webhooks        | ✅    | FHIR R4 (Patient, Observation) mit Schlüsseln, Webhooks mit Signatur (`docs/SCHNITTSTELLE.md`).                                                                            |
-| Mandanten                    | ✅    | Organisation, Standort, Wohnbereich; eigene Rollen je Einrichtung. Eingebaute Rollen gelten für die Installation.                                                          |
-| Domain Events / Echtzeit     | ✅    | Server-Sent Events (`/api/events`), Ereignis-Warteschlange per Trigger für Webhooks.                                                                                       |
-| Admin-Konfiguration          | ✅    | Einstellungen, Terminologie, eigene Ereignisarten, Vitalparameter, Logo, Löschfristen, Schnittstellen.                                                                     |
-| Insights / Resident 360      | ✅    | Kennzahlen, Bewohnerübersicht (Resident 360) und persönliches Dashboard „Meine Kennzahlen“.                                                                                |
-| Smart Workflows              | ✅    | Ablaufketten je Ereignisart mit Folgeaufgaben; Schritte legt das Qualitätsmanagement fest.                                                                                 |
-| Universal Action System      | ✅    | Ein Aktionsregister für Schnellaktionen und Suche ⌘K, Erfassung direkt aus der Suche.                                                                                      |
-| Sprachen / Terminologie      | ✅    | Bewohner / Patient / Klient wählbar. Oberfläche in FR, IT, EN, SQ, HR, SR, HU einrichtbar: KI-Entwurf, Prüfung und Freigabe durch die Administration (`docs/SPRACHEN.md`). |
-| Phase 6 Portale              | ✅    | Portal für Angehörige und Ärztinnen/Ärzte (`/portal`), Freigaben je Person/Wohnbereich und Bereich, Nachrichten, Apothekenportal.                                          |
+| PRD-Bereich                  | Stand | Befund im Code                                                                                                                                                                       |
+| ---------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Home „One Shift. One Screen“ | ✅    | Startseite `/c` mit Widgets, Notizen, Schnellzugriff, Zeitleiste; Tagesliste gefiltert nach Kritisch / Wichtig / Routine.                                                            |
+| Bewohner-Kopfbereich         | ✅    | Akte mit Übersicht, Verlauf, Körperstatus, Dokumenten und Reanimationsstatus im Aktenkopf.                                                                                           |
+| Resident Timeline            | ✅    | `bewohner/verlauf`, `lib/resident-history.ts`.                                                                                                                                       |
+| Plan                         | ✅    | Pflegeplanung mit Zielen, Massnahmen, Evaluation, Einschätzungen. Keine regelbasierten Vorschläge aus Einschätzungen.                                                                |
+| Chart / Schnelldoku          | ✅    | Doku, Nachträge, Schnelldokumentation, Abschluss aus Aufgaben mit ✓ △ ✕, Diktieren mit Erkennung auf dem Gerät.                                                                      |
+| Handover                     | ✅    | Übergabe, „Seit meinem letzten Dienst“, Lesebestätigung (`carecore_handover_reads`).                                                                                                 |
+| Tasks                        | ✅    | Offen, in Bearbeitung, eskaliert, erledigt, teilweise, nicht erledigt, abgebrochen; überfällig berechnet.                                                                            |
+| Med                          | ✅    | Runde, Reserve (PRN), BtM, Bestand, Wechselwirkungen aus Hinweisen der Einrichtung; bewusst ohne lizenzierte Datenbank (kein Medizinprodukt, Entscheid 01.10.2026).                  |
+| Vitals                       | ✅    | Individuelle Grenzwerte je Bewohner (`carecore_vital_thresholds`).                                                                                                                   |
+| Wounds                       | ✅    | Verlauf, Fotos, Körperkarte, Erinnerungen, Verbandsmaterial je Versorgung aus dem Materialkatalog.                                                                                   |
+| Nutrition                    | ✅    | Plan, Trinken, Mahlzeiten, Screenings; Trendhinweise Gewicht und Trinkmenge nach Grenzen der Einrichtung.                                                                            |
+| Team / Kanäle                | ✅    | Kanäle, Beiträge, Lesebestätigungen (`carecore_post_reads`).                                                                                                                         |
+| Chat                         | ✅    | Unterhaltungen, Reaktionen, @Erwähnungen; Benachrichtigung und Push bei Direktnachricht und Erwähnung.                                                                               |
+| Schedule                     | ✅    | Dienstplan, Tausch, Wünsche, Zeiterfassung, KI-Planung. Börse für offene Dienste.                                                                                                    |
+| Docs                         | ✅    | Versionen, Freigabe, Lesebestätigung (`carecore_document_reads`); neue Version verlangt die Bestätigung erneut.                                                                      |
+| Learn                        | ✅    | Schulungen, Pflicht, Gültigkeit, Nachweise, Link, Quiz mit Bestehensgrenze, Übersicht je Team. Videos nur als Link.                                                                  |
+| Quality                      | ✅    | Ereignisse mit Massnahmen und Status.                                                                                                                                                |
+| KI-Assistenten               | ✅    | Übergabe, Risiken, Dokumentation, Pflegeplanung, freie Frage, Dienstplan-KI, Such-Assistenz in der globalen Suche (pseudonymisiert); Entwürfe mit Prüfung.                           |
+| Globale Suche ⌘K             | ✅    | `global-search-dialog.tsx`, Tastenkürzel.                                                                                                                                            |
+| Benachrichtigungen           | ✅    | Klassen Kritisch / Handlung / Info / Sozial, Bündelung, Push mit Ruhezeiten.                                                                                                         |
+| Mobile                       | ✅    | Untere Navigation, Hauptmenü, Schnellaktions-Knopf (FAB); alle Seiten auf Handybreite ohne Querscrollen geprüft, eigene Auswahllisten, Tippflächen vergrössert.                      |
+| Dark Mode                    | ✅    | Persönliche Wahl „Erscheinungsbild: Dunkel“; Standard bleibt hell.                                                                                                                   |
+| Barrierefreiheit WCAG 2.2 AA | ✅    | Tastatur, Fokusfalle, Schriftgrösse, Kontrast-Einstellung; grauer Hilfstext (`--muted`) erreicht 4,7:1.                                                                              |
+| IAM                          | ✅    | Passwort, Login-Drossel, Sitzungen mit Gerät, automatische Abmeldung, MFA (TOTP), Passkeys, SSO (OpenID Connect).                                                                    |
+| Rechte                       | ✅    | Rechte plus Qualifikationen; Medikation getrennt in verabreichen / verwalten; alle sehen alle Bewohnenden (Entscheid); Leitungsrechte erst mit Zwei-Faktor-Anmeldung, wenn verlangt. |
+| Audit                        | ✅    | Atomar, pro Bewohner, mit Sitzung und Gerät.                                                                                                                                         |
+| Datenschutz                  | ✅    | Eigener Datenexport, Quittungen nach 30 Tagen gelöscht, Lösch- und Aufbewahrungskonzept (`docs/DATENSCHUTZ.md`).                                                                     |
+| Sicherheit                   | ✅    | Login-, Passwort- und KI-Drossel, Schreib-Drossel; Zwei-Faktor-Pflicht für Leitung/Administration, Passwort-Richtlinie (Länge, Sperrliste), Sitzungen beenden.                       |
+| Backups / Health             | ✅    | Health-Endpunkt `/api/health`; tägliche, wöchentliche und monatliche Backups der Railway-Datenbank eingeschaltet.                                                                    |
+| Offline                      | ✅    | Warteschlange und Daten-Zwischenspeicher verschlüsselt (Schlüssel nur im Arbeitsspeicher), Entsperren ohne Verbindung mit dem Passwort, Konfliktanzeige.                             |
+| API / FHIR / Webhooks        | ✅    | FHIR R4 (Patient, Observation) mit Schlüsseln, Webhooks mit Signatur (`docs/SCHNITTSTELLE.md`).                                                                                      |
+| Mandanten                    | ✅    | Organisation, Standort, Wohnbereich; eigene Rollen je Einrichtung. Eingebaute Rollen gelten für die Installation.                                                                    |
+| Domain Events / Echtzeit     | ✅    | Server-Sent Events (`/api/events`), Ereignis-Warteschlange per Trigger für Webhooks.                                                                                                 |
+| Admin-Konfiguration          | ✅    | Einstellungen, Terminologie, eigene Ereignisarten, Vitalparameter, Logo, Löschfristen, Schnittstellen.                                                                               |
+| Insights / Resident 360      | ✅    | Kennzahlen, Bewohnerübersicht (Resident 360) und persönliches Dashboard „Meine Kennzahlen“.                                                                                          |
+| Smart Workflows              | ✅    | Ablaufketten je Ereignisart mit Folgeaufgaben; Schritte legt das Qualitätsmanagement fest.                                                                                           |
+| Universal Action System      | ✅    | Ein Aktionsregister für Schnellaktionen und Suche ⌘K, Erfassung direkt aus der Suche.                                                                                                |
+| Sprachen / Terminologie      | ✅    | Bewohner / Patient / Klient wählbar. Oberfläche in FR, IT, EN, SQ, HR, SR, HU einrichtbar: KI-Entwurf, Prüfung und Freigabe durch die Administration (`docs/SPRACHEN.md`).           |
+| Phase 6 Portale              | ✅    | Portal für Angehörige und Ärztinnen/Ärzte (`/portal`), Freigaben je Person/Wohnbereich und Bereich, Nachrichten, Apothekenportal.                                                    |
 
 ## Hoch (klinische Sicherheit und Kernabläufe)
 
@@ -262,14 +262,19 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
   - CareCore KI erstellt nur Entwürfe, die eine Fachperson prüft und übernimmt; sie stellt keine Diagnosen und
     ordnet keine Medikation an.
 
+## Entschieden (02.10.2026)
+
+- **Rechte:** Alle Mitarbeitenden sehen alle Bewohnenden; keine Einschränkung nach Wohnbereich.
+- **Kontrast:** Grauer Hilfstext minimal dunkler (`#5f6f86`, 4,7:1).
+- **Sicherheit:** Zwei-Faktor-Pflicht für Leitung und Administration (einschaltbar unter Konfiguration ›
+  Sicherheit), Passwort-Richtlinie ab 10 Zeichen, Administration kann alle Sitzungen einer Person beenden.
+
 ## Braucht eine Entscheidung oder externe Quelle
 
-- **Backups / Disaster Recovery:** In Railway je Installation einschalten (`docs/BETRIEB.md`); Ziele für RPO und RTO
-  legt der Betreiber mit der Einrichtung fest.
+- **Backups / Disaster Recovery:** Für diese Installation in Railway eingeschaltet; bei weiteren Installationen je
+  Installation einschalten (`docs/BETRIEB.md`). Ziele für RPO und RTO legt der Betreiber mit der Einrichtung fest.
 
 ## Bekannte Grenzen
 
 - Rollen-Schlüssel sind installationsweit eindeutig: zwei Einrichtungen können nicht denselben Schlüssel verwenden.
 - Das Löschen von Mitarbeitenden entfernt das Konto endgültig; für ausgeschiedene Personen besser „Sperren & archivieren“.
-- Grauer Hilfstext (`--muted`) erreicht 4,4:1 und liegt knapp unter AA für kleine Schrift. Er bleibt unverändert,
-  weil sich die Optik nicht verändern soll.

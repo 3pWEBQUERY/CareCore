@@ -1,5 +1,6 @@
 "use client";
 
+import { CareOptionSelect } from "@/app/components/care-form-controls";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { PortalConversation } from "@/app/components/portal-conversation";
@@ -118,17 +119,15 @@ export function PortalMessages({ me }: { me: PortalMe }) {
             {(writable.length > 0 || pharmacy) && (
               <label>
                 Betrifft
-                <select
+                <CareOptionSelect
+                  label="Betrifft"
                   value={draft.residentId}
-                  onChange={(event) => setDraft({ ...draft, residentId: event.target.value })}
-                >
-                  {pharmacy && <option value="">Allgemein (Einrichtung)</option>}
-                  {writable.map((resident) => (
-                    <option key={resident.id} value={resident.id}>
-                      {resident.name}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    ...(pharmacy ? [{ value: "", label: "Allgemein (Einrichtung)" }] : []),
+                    ...writable.map((resident) => ({ value: resident.id, label: resident.name })),
+                  ]}
+                  onChange={(value) => setDraft({ ...draft, residentId: value })}
+                />
               </label>
             )}
             <label>

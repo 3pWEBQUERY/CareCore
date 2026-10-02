@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import type { AdminCareUnit, AdminQualification, ManagedRole, ManagedUser } from "@/lib/admin-users";
+import { useWorkContext } from "@/app/components/care-context";
 import { Data, EmployeeFields, Confirm, Overlay, QualificationFields, initials } from "./admin-user-parts";
 
 export function EmployeeEditor({
@@ -21,6 +22,7 @@ export function EmployeeEditor({
   onClose: () => void;
   onUpdated: (data: Data, message: string) => void;
 }) {
+  const self = useWorkContext()?.profile.userId === user.id;
   const [name, setName] = useState(user.displayName),
     [username, setUsername] = useState(user.username),
     [role, setRole] = useState(user.role),
@@ -48,6 +50,29 @@ export function EmployeeEditor({
       setLinkNotice(`Link an ${result.email} gesendet.`);
     } catch (e) {
       setLinkNotice(e instanceof Error && e.message ? e.message : "Der Link konnte nicht gesendet werden.");
+    } finally {
+      setSaving(false);
+    }
+  }
+  // Alle Sitzungen der Person beenden (z. B. verlorenes Gerät); sie meldet sich danach überall neu an.
+  async function endSessions() {
+    setSaving(true);
+    setLinkNotice("");
+    try {
+      const r = await fetch("/api/admin/users/sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const result = (await r.json()) as { ended?: number; error?: string };
+      if (!r.ok) throw new Error(result.error);
+      setLinkNotice(
+        result.ended
+          ? `${result.ended} ${result.ended === 1 ? "Sitzung" : "Sitzungen"} beendet.`
+          : "Es war keine Sitzung offen.",
+      );
+    } catch (e) {
+      setLinkNotice(e instanceof Error && e.message ? e.message : "Die Sitzungen konnten nicht beendet werden.");
     } finally {
       setSaving(false);
     }
@@ -106,6 +131,11 @@ export function EmployeeEditor({
             {mailEnabled && user.active && user.email && (
               <button type="button" disabled={saving} onClick={() => void sendLink()}>
                 Link zum Passwort setzen senden
+              </button>
+            )}
+            {!self && (
+              <button type="button" disabled={saving} onClick={() => void endSessions()}>
+                Alle Sitzungen beenden
               </button>
             )}
           </div>

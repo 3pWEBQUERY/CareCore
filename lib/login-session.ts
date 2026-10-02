@@ -2,13 +2,22 @@ import { NextResponse } from "next/server";
 import { createSession, SESSION_COOKIE } from "@/lib/auth";
 import { readPreferences } from "@/lib/user-settings";
 import { START_PAGES } from "@/lib/user-settings-shared";
+import { carecoreDb as database } from "@/lib/server-data";
 
 // Sitzung anlegen und als Cookie setzen – nach dem Passwort oder, mit Zwei-Faktor-Anmeldung, nach dem Code.
 type SessionUser = { id: string; username: string; display_name: string; role: string };
 
+// Startseite nach der Anmeldung: die persönliche, oder Einstellungen › Sicherheit, solange die Zwei-Faktor-Pflicht
+// der Einrichtung für dieses Konto noch nicht erfüllt ist.
+async function startPathFor(userId: string) {
+  const [row] = (await database()`
+    SELECT COALESCE(carecore_strong_login_missing(${userId}), FALSE) AS missing`) as Array<{ missing: boolean }>;
+  if (row?.missing) return "/c/einstellungen/security";
+  return START_PAGES[(await readPreferences(userId)).startPage].path;
+}
+
 export async function sessionResponse(user: SessionUser, userAgent: string | null) {
-  // The start page chosen in the personal settings.
-  const startPath = START_PAGES[(await readPreferences(user.id)).startPage].path;
+  const startPath = await startPathFor(user.id);
   const response = NextResponse.json({
     user: { username: user.username, displayName: user.display_name, role: user.role },
     startPath,
@@ -23,7 +32,7 @@ export async function sessionRedirect(
   origin: string,
   next: string | null,
 ) {
-  const startPath = next ?? START_PAGES[(await readPreferences(user.id)).startPage].path;
+  const startPath = next ?? (await startPathFor(user.id));
   return withSession(NextResponse.redirect(new URL(startPath, origin), 303), user, userAgent);
 }
 
