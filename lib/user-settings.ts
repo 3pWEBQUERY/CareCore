@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { hashPassword, hashSessionToken, SESSION_COOKIE, verifyPassword } from "@/lib/auth";
+import { assertPasswordPolicy } from "@/lib/password-rules";
 import { ApiError, iso, type Row } from "@/lib/api-context";
 import { carecoreDb, hasPermission, type CarecoreActor } from "@/lib/server-data";
 import { LANGUAGE_KEYS } from "@/lib/i18n-shared";
@@ -204,10 +205,9 @@ export async function endAllPush(actor: CarecoreActor) {
 export async function changePassword(actor: CarecoreActor, body: Record<string, unknown>) {
   const currentPassword = typeof body.currentPassword === "string" ? body.currentPassword : "";
   const newPassword = typeof body.newPassword === "string" ? body.newPassword : "";
-  if (newPassword.length < 10) throw new ApiError("Das neue Passwort muss mindestens 10 Zeichen lang sein.");
-  if (newPassword.length > 200) throw new ApiError("Das neue Passwort ist zu lang.");
   if (newPassword === currentPassword) throw new ApiError("Das neue Passwort muss sich vom bisherigen unterscheiden.");
   const sql = carecoreDb();
+  await assertPasswordPolicy(sql, actor.id, newPassword, { username: actor.username, displayName: actor.display_name });
   const rows = await sql`SELECT password_hash FROM carecore_users WHERE id = ${actor.id} AND active`;
   if (!rows[0] || !(await verifyPassword(currentPassword, String(rows[0].password_hash))))
     throw new ApiError("Das aktuelle Passwort ist nicht korrekt.", 403);

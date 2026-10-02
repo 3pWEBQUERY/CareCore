@@ -1,4 +1,4 @@
-/* Land der Einrichtung: Vorgaben des gewählten Landes in Leitung › Konfiguration. */
+/* Land der Einrichtung (Konfiguration) und Such-Assistenz der Suche ⌘K. */
 .admin-country-region {
   display: grid;
   gap: 6px;
@@ -76,5 +76,89 @@
   .admin-country-facts {
     grid-template-columns: 1fr;
     gap: 2px;
+  }
+}
+
+/* Such-Assistenz in der Suche ⌘K: Antwort von CareCore KI über den Treffern. */
+.search-ai-answer {
+  display: grid;
+  gap: 6px;
+  margin: 0 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.search-ai-answer p {
+  margin: 0;
+  padding: 0 12px;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.search-ai-answer .search-ai-error {
+  color: #b42318;
+}
+.search-ai-note {
+  padding: 0 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* Eigene Auswahllisten statt der Browser-Auswahl: Grösse wie die bisherigen Felder an diesen Stellen. */
+.area-custom-select.cloud-move {
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  width: 130px;
+}
+.cloud-move .area-select-trigger {
+  min-height: 34px;
+  height: 34px;
+  padding: 0 8px;
+  color: #4d6680;
+  font-size: 12px;
+}
+.house-unit-filter .area-custom-select {
+  min-width: 0;
+  flex: 1;
+}
+.house-unit-filter .area-select-trigger {
+  min-height: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  color: var(--ink);
+  background: transparent;
+  box-shadow: none;
+  font-size: 11px;
+  font-weight: 680;
+}
+.portal-language .area-select-trigger {
+  min-height: 36px;
+  height: 36px;
+  padding: 0 8px;
+}
+@media (max-width: 760px) {
+  .area-custom-select.cloud-move {
+    width: auto;
+    flex: 1 1 auto;
+  }
+}
+
+/* Telefon: genug grosse Tipp-Flächen (mindestens etwa 32 px) für kleine Knöpfe und Links, ohne die Optik zu ändern
+   (grössere Fläche über Innenabstand und ausgleichenden Aussenabstand). */
+@media (max-width: 760px) {
+  .handover-event-list article > button {
+    min-width: 32px;
+    min-height: 32px;
+  }
+  .handover-event-list small a {
+    display: inline-block;
+    padding: 8px 4px;
+    margin: -8px -4px;
+  }
+  .teamlead-task-card button {
+    min-height: 32px;
   }
 }

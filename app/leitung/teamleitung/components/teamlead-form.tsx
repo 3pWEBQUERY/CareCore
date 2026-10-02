@@ -1,5 +1,6 @@
 "use client";
 
+import { CareOptionSelect } from "@/app/components/care-form-controls";
 import { type FormEvent } from "react";
 import { ClipboardText, UsersThree } from "@phosphor-icons/react";
 import { CareSelect } from "@/app/components/care-form-controls";
@@ -175,26 +176,29 @@ export function TeamleadForm({
                 </label>
                 <label>
                   Priorität
-                  <select
+                  <CareOptionSelect
+                    label="Priorität"
                     value={form.priority ?? "normal"}
-                    onChange={(event) => update("priority", event.target.value)}
-                  >
-                    <option value="low">Niedrig</option>
-                    <option value="normal">Normal</option>
-                    <option value="high">Hoch</option>
-                    <option value="critical">Kritisch</option>
-                  </select>
+                    options={[
+                      { value: "low", label: "Niedrig" },
+                      { value: "normal", label: "Normal" },
+                      { value: "high", label: "Hoch" },
+                      { value: "critical", label: "Kritisch" },
+                    ]}
+                    onChange={(value) => update("priority", value)}
+                  />
                 </label>
                 <label>
                   Zuweisen
-                  <select value={form.assignedTo ?? ""} onChange={(event) => update("assignedTo", event.target.value)}>
-                    <option value="">Nicht zugewiesen</option>
-                    {employees.map((employee) => (
-                      <option key={employee.id} value={employee.id}>
-                        {employee.display_name}
-                      </option>
-                    ))}
-                  </select>
+                  <CareOptionSelect
+                    label="Zuweisen"
+                    value={form.assignedTo ?? ""}
+                    options={[
+                      { value: "", label: "Nicht zugewiesen" },
+                      ...employees.map((employee) => ({ value: employee.id, label: employee.display_name })),
+                    ]}
+                    onChange={(value) => update("assignedTo", value)}
+                  />
                 </label>
                 <label className="area-editor-wide">
                   Fällig am

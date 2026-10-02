@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { passwordPolicyError } from "@/lib/password-policy";
+import { passwordMinLength } from "@/lib/password-rules";
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "@/lib/auth";
 import { carecoreActor, carecoreDb, forbidden, hasPermission, type CarecoreActor } from "@/lib/server-data";
@@ -37,6 +39,12 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   const sql = carecoreDb();
+  const policy = passwordPolicyError(password, {
+    minLength: await passwordMinLength(sql, actor.id),
+    username,
+    displayName,
+  });
+  if (policy) return NextResponse.json({ error: policy }, { status: 400 });
   if (
     typeof body.primaryCareUnitId === "string" &&
     body.primaryCareUnitId &&

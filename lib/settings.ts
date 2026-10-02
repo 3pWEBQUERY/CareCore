@@ -82,6 +82,17 @@ export async function saveSetting(ctx: ApiContext, key: unknown, body: Record<st
   }
   if (enabled && definition.unit && value === null)
     throw new ApiError(`Bitte zuerst einen Wert in ${definition.unit} festlegen.`);
+  // Zwei-Faktor-Pflicht nur einschalten, wenn das eigene Konto sie schon erfüllt (sonst sperrt sich die
+  // Administration selbst aus der Konfiguration aus).
+  if (settingKey === "strongLoginRequired" && enabled && !before.strongLoginRequired.enabled) {
+    const [secured] = (await ctx.sql`
+      SELECT EXISTS (SELECT 1 FROM carecore_user_mfa WHERE user_id = ${ctx.actor.id} AND confirmed_at IS NOT NULL)
+        OR EXISTS (SELECT 1 FROM carecore_passkeys WHERE user_id = ${ctx.actor.id}) AS ok`) as Array<{ ok: boolean }>;
+    if (!secured?.ok)
+      throw new ApiError(
+        "Bitte zuerst für das eigene Konto Zwei-Faktor-Anmeldung oder einen Passkey einrichten (Einstellungen › Sicherheit).",
+      );
+  }
   const next = { ...before, [settingKey]: { enabled, value } };
   await ctx.sql.transaction([
     ctx.sql`

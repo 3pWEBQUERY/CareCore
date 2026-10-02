@@ -236,6 +236,7 @@ async function importStaff(ctx: ApiContext, rows: ImportRow[]): Promise<ImportRe
       displayName: v.name,
       username: v.username,
       password,
+      generatedPassword: true,
       role: v.role,
       jobTitle: v.jobTitle,
       phone: v.phone,

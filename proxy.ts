@@ -25,16 +25,23 @@ async function throttleApi(request: NextRequest) {
 // schützen die APIs ohnehin); stattdessen „Kein Zugriff“ unter derselben Adresse.
 async function pageAllowed(userId: string, pathname: string) {
   const needed = pagePermissions(pathname);
-  if (!needed.length) return true;
-  const rows = await carecoreDb()`SELECT carecore_effective_permissions(${userId}) AS permissions`;
+  if (!needed.length) return { allowed: true, strongLoginMissing: false };
+  const rows = await carecoreDb()`
+    SELECT carecore_access_permissions(${userId}) AS permissions,
+      COALESCE(carecore_strong_login_missing(${userId}), FALSE) AS strong_login_missing`;
   const granted = Array.isArray(rows[0]?.permissions) ? (rows[0].permissions as string[]) : [];
-  return needed.every((permission) => granted.includes(permission));
+  return {
+    allowed: needed.every((permission) => granted.includes(permission)),
+    strongLoginMissing: Boolean(rows[0]?.strong_login_missing),
+  };
 }
 
-function noAccess(request: NextRequest) {
+// „Kein Zugriff“ unter derselben Adresse; fehlt nur die Zwei-Faktor-Anmeldung (Pflicht der Einrichtung), sagt die
+// Seite das und führt zur Einrichtung.
+function noAccess(request: NextRequest, strongLoginMissing: boolean) {
   const target = request.nextUrl.clone();
   target.pathname = "/kein-zugriff";
-  target.search = "";
+  target.search = strongLoginMissing ? "?grund=zwei-faktor" : "";
   return NextResponse.rewrite(target);
 }
 
@@ -56,7 +63,10 @@ export async function proxy(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   try {
     const user = await getSessionUser(token);
-    if (user) return (await pageAllowed(user.id, pathname)) ? NextResponse.next() : noAccess(request);
+    if (user) {
+      const access = await pageAllowed(user.id, pathname);
+      return access.allowed ? NextResponse.next() : noAccess(request, access.strongLoginMissing);
+    }
   } catch (error) {
     console.error("Session validation failed", error);
   }

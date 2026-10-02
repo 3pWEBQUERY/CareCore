@@ -1,5 +1,6 @@
 "use client";
 
+import { CareOptionSelect } from "@/app/components/care-form-controls";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
@@ -393,20 +394,16 @@ export default function CloudWorkspace({ scope = "personal" }: { scope?: Scope }
                         <DownloadSimple aria-hidden="true" />
                       </a>
                       {shared && file.can_edit && folders.length > 0 && (
-                        <select
+                        <CareOptionSelect
                           className="cloud-move"
+                          label={`${file.name} in Ordner verschieben`}
                           value={file.folder_id ?? GENERAL}
-                          onChange={(event) => void move(file, event.target.value)}
-                          aria-label={`${file.name} in Ordner verschieben`}
-                          title="In Ordner verschieben"
-                        >
-                          <option value={GENERAL}>Allgemein</option>
-                          {folders.map((item) => (
-                            <option value={item.id} key={item.id}>
-                              {item.name}
-                            </option>
-                          ))}
-                        </select>
+                          options={[
+                            { value: GENERAL, label: "Allgemein" },
+                            ...folders.map((item) => ({ value: item.id, label: item.name })),
+                          ]}
+                          onChange={(value) => void move(file, value)}
+                        />
                       )}
                       {!shared && (
                         <button

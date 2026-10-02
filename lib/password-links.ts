@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 import "@/database/pg-fetch.mjs";
 import { ApiError } from "@/lib/api-context";
+import { assertPasswordPolicy } from "@/lib/password-rules";
 import { auditOrigin, type AuditActor } from "@/lib/audit-origin";
 import { clearFailedLogins, hashPassword } from "@/lib/auth";
 import { appBaseUrl, linkMail, mailConfigured, sendMail } from "@/lib/mail";
@@ -14,7 +15,6 @@ type Purpose = "reset" | "invite";
 const VALID_MINUTES: Record<Purpose, number> = { reset: 60, invite: 7 * 24 * 60 };
 // Höchstens so viele Links je Person und Stunde über „Passwort vergessen“.
 const MAX_RESET_LINKS_PER_HOUR = 3;
-export const MIN_PASSWORD_LENGTH = 10;
 
 type Row = Record<string, unknown>;
 
@@ -121,13 +121,14 @@ export async function describePasswordLink(token: string) {
 }
 
 export async function completePasswordLink(token: string, password: string) {
-  if (password.length < MIN_PASSWORD_LENGTH)
-    throw new ApiError(`Das Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein.`);
-  if (password.length > 200) throw new ApiError("Das Passwort ist zu lang.");
   const sql = database();
   const link = await findLink(sql, token);
   if (!link)
     throw new ApiError("Der Link ist abgelaufen oder wurde bereits verwendet. Bitte einen neuen anfordern.", 410);
+  await assertPasswordPolicy(sql, String(link.user_id), password, {
+    username: String(link.username),
+    displayName: link.display_name ? String(link.display_name) : null,
+  });
   const passwordHash = await hashPassword(password);
   // Einlösen, Passwort setzen, Sitzungen beenden und protokollieren in einer Anweisung: nur wer den Link als
   // Erste:r einlöst, setzt das Passwort (zweimal gleichzeitig geht nicht).

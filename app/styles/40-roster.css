@@ -1298,7 +1298,7 @@ tr.self .roster-name {
 }
 .roster-print-bar span {
   flex: 1 1 auto;
-  color: #64748b;
+  color: #5f6f86;
   font-size: 12px;
 }
 .roster-print-bar .button-icon {
@@ -1352,7 +1352,7 @@ tr.self .roster-name {
   display: block;
 }
 .roster-print-sheet thead th span {
-  color: #64748b;
+  color: #5f6f86;
   font-weight: 500;
 }
 .roster-print-sheet .name {
@@ -1365,7 +1365,7 @@ tr.self .roster-name {
 }
 .roster-print-sheet .name small {
   margin-left: 4px;
-  color: #64748b;
+  color: #5f6f86;
   font-weight: 400;
 }
 .roster-print-sheet .total {
@@ -1373,7 +1373,7 @@ tr.self .roster-name {
 }
 .roster-print-sheet td.total small {
   display: block;
-  color: #64748b;
+  color: #5f6f86;
 }
 .roster-print-sheet .weekend,
 .roster-print-sheet .holiday {
