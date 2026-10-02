@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { COUNTRIES, careLevelOptions, countryCode, insuranceNumberError, socialNumberError } from "../lib/country.ts";
-import { austrianHolidays, countryHolidays, germanHolidays } from "../lib/roster/time.ts";
+import { publicHolidays } from "../lib/holidays.ts";
 
 test("Einstufung je Land: CH 12 Pflegestufen, DE 5 Pflegegrade, AT 7 Pflegegeldstufen", () => {
   const ch = COUNTRIES.CH.careLevels.levels;
@@ -42,14 +42,23 @@ test("Sozialversicherungsnummer im Format des Landes", () => {
   assert.equal(insuranceNumberError("CH", "beliebig"), null);
 });
 
-test("Feiertage: Deutschland bundesweit, Österreich gesetzlich", () => {
-  const de = germanHolidays(2026);
-  assert.equal(de.length, 9);
-  assert.ok(de.some((h) => h.date === "2026-10-03" && h.name === "Tag der Deutschen Einheit"));
-  assert.ok(de.some((h) => h.date === "2026-04-03" && h.name === "Karfreitag"));
-  const at = austrianHolidays(2026);
-  assert.equal(at.length, 13);
-  assert.ok(at.some((h) => h.date === "2026-06-04" && h.name === "Fronleichnam"));
-  assert.ok(at.some((h) => h.date === "2026-10-26" && h.name === "Nationalfeiertag"));
-  assert.equal(countryHolidays("CH", 2026).find((h) => h.date === "2026-08-01")?.name, "Bundesfeier");
+test("Feiertage je Land, Kanton und Bundesland", () => {
+  const names = (country: "CH" | "DE" | "AT", region: string | null) =>
+    Object.fromEntries(publicHolidays(country, region, 2026).map((h) => [h.date, h.name]));
+  const zh = names("CH", "ZH");
+  assert.equal(zh["2026-04-03"], "Karfreitag");
+  assert.equal(zh["2026-08-01"], "Bundesfeiertag");
+  assert.equal(zh["2026-06-04"], undefined, "Fronleichnam nicht im Kanton Zürich");
+  assert.equal(names("CH", "LU")["2026-06-04"], "Fronleichnam");
+  assert.equal(names("CH", "VD")["2026-09-21"], "Bettagsmontag", "deutsche Namen auch in der Romandie");
+  const de = names("DE", null);
+  assert.equal(Object.keys(de).length, 9);
+  assert.equal(de["2026-10-03"], "Tag der Deutschen Einheit");
+  assert.equal(names("DE", "BY")["2026-11-01"], "Allerheiligen");
+  assert.equal(names("DE", "BE")["2026-03-08"], "Internationaler Frauentag");
+  assert.equal(names("DE", "SN")["2026-11-18"], "Buß- und Bettag");
+  assert.equal(names("DE", "HH")["2026-11-01"], undefined);
+  const at = names("AT", null);
+  assert.equal(Object.keys(at).length, 13);
+  assert.equal(at["2026-10-26"], "Nationalfeiertag");
 });

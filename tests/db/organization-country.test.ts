@@ -21,7 +21,7 @@ test("Land der Einrichtung: nur Administration, ergänzt Qualifikationen, protok
     actor: { ...lead.actor, permissions: [...lead.actor.permissions, "administration.manage"] },
   };
 
-  assert.deepEqual(await countrySettings(admin), { country: "CH", confirmed: false });
+  assert.deepEqual(await countrySettings(admin), { country: "CH", region: null, confirmed: false });
   assert.equal(await status(saveOrganizationCountry(lead, "DE")), 403);
   assert.equal(await status(saveOrganizationCountry(admin, "FR")), 400);
 
@@ -30,8 +30,9 @@ test("Land der Einrichtung: nur Administration, ergänzt Qualifikationen, protok
     ON CONFLICT DO NOTHING`,
     [f.org],
   );
-  assert.deepEqual(await saveOrganizationCountry(admin, "DE"), { country: "DE", confirmed: true });
-  assert.deepEqual(await countrySettings(admin), { country: "DE", confirmed: true });
+  assert.equal(await status(saveOrganizationCountry(admin, "DE", "ZH")), 400, "Kanton passt nicht zu Deutschland");
+  assert.deepEqual(await saveOrganizationCountry(admin, "DE", "BY"), { country: "DE", region: "BY", confirmed: true });
+  assert.deepEqual(await countrySettings(admin), { country: "DE", region: "BY", confirmed: true });
   const codes = (
     await q<{ code: string; grants_medication: boolean }>(
       `SELECT code, grants_medication FROM carecore_qualifications WHERE organization_id = $1 ORDER BY code`,
@@ -47,6 +48,7 @@ test("Land der Einrichtung: nur Administration, ergänzt Qualifikationen, protok
     [f.org],
   );
   assert.deepEqual([audit.before_data.country, audit.after_data.country], ["CH", "DE"]);
+  assert.equal((audit.after_data as { region?: string }).region, "BY");
 });
 
 test("Stammdaten prüfen die Sozialversicherungsnummer im Format des Landes", async () => {
@@ -72,7 +74,7 @@ test("Stammdaten prüfen die Sozialversicherungsnummer im Format des Landes", as
   assert.equal(await status(updateMasterData(ctx, residentId, { ...base, insuranceNumber: "A123456789" })), 200);
 });
 
-test("Feiertage übernehmen nach Land der Einrichtung", async () => {
+test("Feiertage übernehmen nach Land und Kanton bzw. Bundesland der Einrichtung", async () => {
   const f = await fixture();
   await q(`UPDATE carecore_organizations SET country = 'AT' WHERE id = $1`, [f.org]);
   const ctx = await f.ctx("leadA");
@@ -81,7 +83,16 @@ test("Feiertage übernehmen nach Land der Einrichtung", async () => {
     await q<{ name: string }>(`SELECT name FROM carecore_public_holidays WHERE organization_id = $1`, [f.org])
   ).map((row) => row.name);
   assert.ok(names.includes("Nationalfeiertag"));
-  assert.ok(!names.includes("Bundesfeier"));
+  assert.ok(!names.includes("Bundesfeiertag"));
+
+  // Bayern: zusätzlich Heilige Drei Könige, Fronleichnam und Allerheiligen (bundesweit 9, Bayern 12).
+  await q(`UPDATE carecore_organizations SET country = 'DE', region = 'BY' WHERE id = $1`, [f.org]);
+  assert.deepEqual(await saveHolidays(ctx, { action: "importHolidays", year: 2027 }), { saved: 12 });
+  const bavaria = await q<{ name: string }>(
+    `SELECT name FROM carecore_public_holidays WHERE organization_id = $1 AND date = '2027-11-01'`,
+    [f.org],
+  );
+  assert.equal(bavaria[0]?.name, "Allerheiligen");
 });
 
 test("Pflegeplan nimmt nur die Einstufung des Landes an", async () => {

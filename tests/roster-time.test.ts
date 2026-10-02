@@ -12,7 +12,6 @@ import {
   weekendMinutes,
   windowMinutes,
   zonedToUtc,
-  zurichHolidays,
 } from "@/lib/roster/time";
 import { breakShortfall, clockOutMissing, summarizeMonth, targetMinutesForMonth } from "@/lib/roster/worktime";
 import { employee, ruleSet, shift, shiftTypes } from "./support/roster-fixtures";
@@ -156,11 +155,7 @@ test("Monatssoll mit Pensum 80 %, Feiertag und Urlaubstag", () => {
   assert.equal(running.balanceMinutes, 403 - 403 * 7);
 });
 
-test("Kalenderwochen und Feiertage Zürich", () => {
+test("Kalenderwochen", () => {
   assert.deepEqual(isoWeek("2026-10-12"), { year: 2026, week: 42 });
   assert.deepEqual(isoWeek("2027-01-01"), { year: 2026, week: 53 });
-  const holidays = zurichHolidays(2026).map((h) => h.date);
-  assert.ok(holidays.includes("2026-04-03")); // Karfreitag
-  assert.ok(holidays.includes("2026-05-14")); // Auffahrt
-  assert.ok(holidays.includes("2026-05-25")); // Pfingstmontag
 });

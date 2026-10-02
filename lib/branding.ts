@@ -4,7 +4,7 @@ import { detectImageType } from "@/lib/file-signatures";
 import { hasPermission } from "@/lib/server-data";
 import { mediaContent, removeMedia, storeMedia } from "@/lib/storage";
 
-// Logo der Einrichtung: JPEG, PNG oder WebP (kein SVG, das Skript enthalten kann), höchstens 300 KB.
+// Logo der Einrichtung: JPEG, PNG oder WebP (kein SVG, das Skript enthalten kann), höchstens LOGO_MAX_BYTES.
 const LOGO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function requireAdmin(ctx: ApiContext) {
@@ -43,7 +43,7 @@ export async function saveLogo(ctx: ApiContext, dataUrl: unknown) {
   if (!match) throw new ApiError("Erlaubt sind JPEG-, PNG- und WebP-Bilder.");
   const bytes = Buffer.from(match[2], "base64");
   if (!bytes.length || bytes.length > LOGO_MAX_BYTES)
-    throw new ApiError(`Das Logo darf höchstens ${LOGO_MAX_BYTES / 1024} KB gross sein.`, 413);
+    throw new ApiError(`Das Logo darf höchstens ${LOGO_MAX_BYTES / 1024 / 1024} MB gross sein.`, 413);
   if (detectImageType(bytes) !== match[1]) throw new ApiError("Die Bilddatei ist ungültig.");
   const [previous] = (await ctx.sql`
     SELECT logo_storage_key FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}`) as Row[];

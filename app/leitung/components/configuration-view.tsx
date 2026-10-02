@@ -8,7 +8,8 @@ import { loadWorkContext } from "@/app/components/care-context";
 import type { SystemStatus } from "@/lib/settings";
 import { TERMINOLOGIES, type TerminologyKey } from "@/lib/terminology";
 import { VITAL_METRICS } from "@/lib/vitals-shared";
-import { LOGO_MAX_BYTES } from "@/lib/branding-shared";
+import { LOGO_UPLOAD_MAX_BYTES } from "@/lib/branding-shared";
+import { logoDataUrl } from "./logo-file";
 import { SETTING_DEFINITIONS, SETTING_KEYS, type AppSettings, type SettingKey } from "@/lib/settings-shared";
 import { notifyAdminChanged } from "./admin-board";
 import { RetentionCard } from "./retention-card";
@@ -27,7 +28,7 @@ export type ConfigurationData = {
     hiddenVitals: string[];
     logoUpdatedAt: string | null;
     organizationName: string;
-    country: { country: CountryCode; confirmed: boolean };
+    country: { country: CountryCode; region: string | null; confirmed: boolean };
   };
   error?: string;
   loading: boolean;
@@ -111,15 +112,7 @@ export function ConfigurationView({
     setSaving("logo");
     try {
       if (file) {
-        if (file.size > LOGO_MAX_BYTES)
-          throw new Error(`Das Logo darf höchstens ${LOGO_MAX_BYTES / 1024} KB gross sein.`);
-        const logoDataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result));
-          reader.onerror = () => reject(new Error("Bild konnte nicht gelesen werden."));
-          reader.readAsDataURL(file);
-        });
-        await requestJson("/api/branding/logo", { method: "PUT", body: { logoDataUrl } });
+        await requestJson("/api/branding/logo", { method: "PUT", body: { logoDataUrl: await logoDataUrl(file) } });
       } else await requestJson("/api/branding/logo", { method: "DELETE" });
       reload();
       notifyAdminChanged();
@@ -237,6 +230,7 @@ export function ConfigurationView({
         {data && (
           <CountryCard
             country={data.country.country}
+            region={data.country.region}
             confirmed={data.country.confirmed}
             onSaved={reload}
             showToast={showToast}
@@ -300,7 +294,8 @@ export function ConfigurationView({
                 Name und Logo der Einrichtung
               </h2>
               <p className="card-subtitle">
-                Erscheinen in der Kopfzeile · Logo als JPEG, PNG oder WebP, höchstens 300 KB
+                Erscheinen in der Kopfzeile · Logo als JPEG, PNG oder WebP bis {LOGO_UPLOAD_MAX_BYTES / 1024 / 1024} MB;
+                grosse Bilder werden verkleinert
               </p>
             </div>
           </div>

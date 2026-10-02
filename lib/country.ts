@@ -24,7 +24,8 @@ export type CountryProfile = {
   };
   socialNumber: { label: string; placeholder: string; format: string };
   insurance: { insurerLabel: string; numberLabel: string; numberPlaceholder: string };
-  holidays: { label: string; note: string };
+  // Kanton bzw. Bundesland: bestimmt die Feiertage, die der Dienstplan übernimmt.
+  region: { label: string; options: Array<{ code: string; name: string }> };
   qualifications: CountryQualification[];
   // Beispiele für die Hinweise zum Medikationsrecht.
   medicationExamples: string;
@@ -55,9 +56,36 @@ export const COUNTRIES: Record<CountryCode, CountryProfile> = {
     },
     socialNumber: { label: "AHV-Nummer", placeholder: "756.XXXX.XXXX.XX", format: "756.XXXX.XXXX.XX" },
     insurance: { insurerLabel: "Krankenversicherung", numberLabel: "Versichertennummer", numberPlaceholder: "" },
-    holidays: {
-      label: "Kanton Zürich",
-      note: "Gesetzliche Feiertage des Kantons Zürich; andere kantonale Feiertage einzeln ergänzen.",
+    region: {
+      label: "Kanton",
+      options: [
+        { code: "AG", name: "Aargau" },
+        { code: "AI", name: "Appenzell Innerrhoden" },
+        { code: "AR", name: "Appenzell Ausserrhoden" },
+        { code: "BE", name: "Bern" },
+        { code: "BL", name: "Basel-Landschaft" },
+        { code: "BS", name: "Basel-Stadt" },
+        { code: "FR", name: "Freiburg" },
+        { code: "GE", name: "Genf" },
+        { code: "GL", name: "Glarus" },
+        { code: "GR", name: "Graubünden" },
+        { code: "JU", name: "Jura" },
+        { code: "LU", name: "Luzern" },
+        { code: "NE", name: "Neuenburg" },
+        { code: "NW", name: "Nidwalden" },
+        { code: "OW", name: "Obwalden" },
+        { code: "SG", name: "St. Gallen" },
+        { code: "SH", name: "Schaffhausen" },
+        { code: "SO", name: "Solothurn" },
+        { code: "SZ", name: "Schwyz" },
+        { code: "TG", name: "Thurgau" },
+        { code: "TI", name: "Tessin" },
+        { code: "UR", name: "Uri" },
+        { code: "VD", name: "Waadt" },
+        { code: "VS", name: "Wallis" },
+        { code: "ZG", name: "Zug" },
+        { code: "ZH", name: "Zürich" },
+      ],
     },
     qualifications: [
       { code: "HF", name: "Pflegefachperson HF", grantsMedication: true },
@@ -96,9 +124,26 @@ export const COUNTRIES: Record<CountryCode, CountryProfile> = {
       numberLabel: "Krankenversichertennummer",
       numberPlaceholder: "A123456789",
     },
-    holidays: {
-      label: "bundesweit",
-      note: "Die neun bundesweiten Feiertage; Feiertage des Bundeslandes einzeln ergänzen.",
+    region: {
+      label: "Bundesland",
+      options: [
+        { code: "BW", name: "Baden-Württemberg" },
+        { code: "BY", name: "Bayern" },
+        { code: "BE", name: "Berlin" },
+        { code: "BB", name: "Brandenburg" },
+        { code: "HB", name: "Bremen" },
+        { code: "HH", name: "Hamburg" },
+        { code: "HE", name: "Hessen" },
+        { code: "MV", name: "Mecklenburg-Vorpommern" },
+        { code: "NI", name: "Niedersachsen" },
+        { code: "NW", name: "Nordrhein-Westfalen" },
+        { code: "RP", name: "Rheinland-Pfalz" },
+        { code: "SL", name: "Saarland" },
+        { code: "SN", name: "Sachsen" },
+        { code: "ST", name: "Sachsen-Anhalt" },
+        { code: "SH", name: "Schleswig-Holstein" },
+        { code: "TH", name: "Thüringen" },
+      ],
     },
     qualifications: [
       { code: "PFK", name: "Pflegefachfrau/Pflegefachmann", grantsMedication: true },
@@ -143,9 +188,19 @@ export const COUNTRIES: Record<CountryCode, CountryProfile> = {
     },
     socialNumber: { label: "Sozialversicherungsnummer", placeholder: "1234 010150", format: "XXXX TTMMJJ" },
     insurance: { insurerLabel: "Krankenversicherungsträger", numberLabel: "Versichertennummer", numberPlaceholder: "" },
-    holidays: {
-      label: "Österreich",
-      note: "Die 13 gesetzlichen Feiertage; regionale Feiertage (z. B. Landespatron) einzeln ergänzen.",
+    region: {
+      label: "Bundesland",
+      options: [
+        { code: "1", name: "Burgenland" },
+        { code: "2", name: "Kärnten" },
+        { code: "3", name: "Niederösterreich" },
+        { code: "4", name: "Oberösterreich" },
+        { code: "5", name: "Salzburg" },
+        { code: "6", name: "Steiermark" },
+        { code: "7", name: "Tirol" },
+        { code: "8", name: "Vorarlberg" },
+        { code: "9", name: "Wien" },
+      ],
     },
     qualifications: [
       { code: "DGKP", name: "Diplomierte Gesundheits- und Krankenpflegeperson", grantsMedication: true },
@@ -157,6 +212,17 @@ export const COUNTRIES: Record<CountryCode, CountryProfile> = {
     medicationExamples: "DGKP, PFA",
   },
 };
+
+// Name des Kantons bzw. Bundeslandes, null ohne (gültige) Auswahl.
+export const regionName = (country: CountryCode, region: string | null | undefined) =>
+  COUNTRIES[country].region.options.find((option) => option.code === region)?.name ?? null;
+
+// Bezeichnung der Feiertage für Hinweise, z. B. „Kanton Zürich“, „Bayern“ oder „Österreich (landesweit)“.
+export function holidaySource(country: CountryCode, region: string | null | undefined) {
+  const name = regionName(country, region);
+  if (!name) return `${COUNTRIES[country].name} (landesweit)`;
+  return country === "CH" ? `Kanton ${name}` : name;
+}
 
 export const NOT_ASSESSED = "Noch nicht eingestuft";
 

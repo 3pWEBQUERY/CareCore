@@ -29,11 +29,17 @@ test("Land wählen: Pflegegrade in Konfiguration und Aufnahme, zurück zur Schwe
   await expect(page.getByRole("option", { name: "Pflegestufe 12" })).toHaveCount(0);
   await page.keyboard.press("Escape");
 
-  // Feiertage im Dienstplan: bundesweit statt Kanton Zürich.
+  // Bundesland wählen: der Dienstplan übernimmt dessen Feiertage.
+  await page.goto("/c/leitung/administration/konfiguration");
+  await card.getByRole("combobox", { name: "Bundesland" }).click();
+  await page.getByRole("option", { name: "Bayern" }).click();
+  await expect(page.locator(".toast")).toContainText("Bundesland gespeichert: Bayern");
   await page.goto("/c/dienstplan/einstellungen?bereich=Feiertage");
-  await expect(page.getByRole("button", { name: /Bundesweite Feiertage \d{4} übernehmen/ }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Bayern \d{4} übernehmen$/ }).first()).toBeVisible();
 
-  expect((await page.request.put("/api/branding/country", { data: { country: "CH" } })).status()).toBe(200);
+  expect((await page.request.put("/api/branding/country", { data: { country: "CH", region: null } })).status()).toBe(
+    200,
+  );
   await page.goto("/c/leitung/administration/konfiguration");
   await expect(card.getByRole("button", { name: "Schweiz" })).toHaveAttribute("aria-pressed", "true");
   expect(errors).toEqual([]);

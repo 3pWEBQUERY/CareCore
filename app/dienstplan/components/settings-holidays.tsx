@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { countryHolidays, formatDate } from "@/lib/roster/time";
-import { COUNTRIES } from "@/lib/country";
+import { formatDate } from "@/lib/roster/time";
+import { COUNTRIES, holidaySource } from "@/lib/country";
 import { rosterRequest } from "./roster-api";
 import { act, type TabProps } from "./settings-tab-shared";
 
@@ -10,14 +10,18 @@ import { act, type TabProps } from "./settings-tab-shared";
 
 export function HolidaysTab({ data, reload, showToast }: TabProps) {
   const year = new Date().getFullYear();
-  const holidays = COUNTRIES[data.country].holidays;
+  const source = holidaySource(data.country, data.region);
   const [form, setForm] = useState({ date: "", name: "" });
   return (
     <section className="card roster-card">
       <div className="roster-section-head">
         <div>
           <h2>Feiertage</h2>
-          <p>Feiertage senken das Monatssoll und werden für Feiertagsstunden ausgewertet. {holidays.note}</p>
+          <p>
+            Feiertage senken das Monatssoll und werden für Feiertagsstunden ausgewertet. Übernommen werden die
+            gesetzlichen Feiertage ({source}); {COUNTRIES[data.country].region.label} legt die Administration in der
+            Konfiguration fest, kommunale Feiertage einzeln ergänzen.
+          </p>
         </div>
         <div className="roster-row-actions">
           {[year, year + 1].map((y) => (
@@ -32,13 +36,13 @@ export function HolidaysTab({ data, reload, showToast }: TabProps) {
                       method: "POST",
                       body: { action: "importHolidays", year: y },
                     }),
-                  `${countryHolidays(data.country, y).length} Feiertage ${y} (${holidays.label}) übernommen`,
+                  `Feiertage ${y} (${source}) übernommen`,
                   reload,
                   showToast,
                 )
               }
             >
-              {holidays.label === "bundesweit" ? "Bundesweite Feiertage" : holidays.label} {y} übernehmen
+              {source} {y} übernehmen
             </button>
           ))}
         </div>
