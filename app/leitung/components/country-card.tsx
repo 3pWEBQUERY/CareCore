@@ -3,32 +3,39 @@
 import { useState } from "react";
 import { requestJson } from "@/app/components/workspace-ui";
 import { loadWorkContext } from "@/app/components/care-context";
-import { COUNTRIES, COUNTRY_CODES, type CountryCode } from "@/lib/country";
+import { COUNTRIES, COUNTRY_CODES, holidaySource, regionName, type CountryCode } from "@/lib/country";
+import { CareOptionSelect } from "@/app/components/care-form-controls";
 import { notifyAdminChanged } from "./admin-board";
 
 // Land der Einrichtung: wählt die gesetzliche Einstufung (Pflegestufen, -grade, Pflegegeldstufen), die
 // Sozialversicherungsnummer, Feiertage und Qualifikationen; zeigt die Vorgaben des gewählten Landes.
 export function CountryCard({
   country,
+  region,
   confirmed,
   onSaved,
   showToast,
 }: {
   country: CountryCode;
+  region: string | null;
   confirmed: boolean;
   onSaved: () => void;
   showToast: (message: string) => void;
 }) {
   const [saving, setSaving] = useState(false);
   const profile = COUNTRIES[country];
-  const save = (next: CountryCode) => {
+  const save = (next: CountryCode, nextRegion: string | null) => {
     setSaving(true);
-    requestJson("/api/branding/country", { method: "PUT", body: { country: next } })
+    requestJson("/api/branding/country", { method: "PUT", body: { country: next, region: nextRegion } })
       .then(() => {
         onSaved();
         notifyAdminChanged();
         void loadWorkContext(true);
-        showToast(`Land gespeichert: ${COUNTRIES[next].name}`);
+        showToast(
+          nextRegion && next === country
+            ? `${COUNTRIES[next].region.label} gespeichert: ${regionName(next, nextRegion)}`
+            : `Land gespeichert: ${COUNTRIES[next].name}`,
+        );
       })
       .catch((reason: Error) => showToast(reason.message))
       .finally(() => setSaving(false));
@@ -54,11 +61,24 @@ export function CountryCard({
             key={code}
             aria-pressed={country === code}
             disabled={saving}
-            onClick={() => (country !== code || !confirmed) && save(code)}
+            onClick={() => (country !== code || !confirmed) && save(code, country === code ? region : null)}
           >
             {COUNTRIES[code].name}
           </button>
         ))}
+      </div>
+      <div className="admin-country-region">
+        <span>{profile.region.label}</span>
+        <CareOptionSelect
+          label={profile.region.label}
+          value={region ?? ""}
+          options={[
+            { value: "", label: `Kein ${profile.region.label} (nur landesweite Feiertage)` },
+            ...profile.region.options.map((option) => ({ value: option.code, label: option.name })),
+          ]}
+          onChange={(value) => value !== (region ?? "") && save(country, value || null)}
+          disabled={saving}
+        />
       </div>
       {!confirmed && (
         <p className="admin-country-hint">Noch nicht bestätigt: bitte das Land wählen (Standard ist die Schweiz).</p>
@@ -92,7 +112,9 @@ export function CountryCard({
             {profile.insurance.insurerLabel} · {profile.insurance.numberLabel}
           </dd>
           <dt>Feiertage im Dienstplan</dt>
-          <dd>{profile.holidays.note}</dd>
+          <dd>
+            Gesetzliche Feiertage {holidaySource(country, region)} zum Übernehmen; kommunale Feiertage einzeln ergänzen.
+          </dd>
           <dt>Qualifikationen</dt>
           <dd>
             {profile.qualifications.map((q) => q.name).join(", ")}. Beim Speichern ergänzt; bestehende bleiben. Ob eine

@@ -8,16 +8,9 @@ import { createHash, randomBytes, scrypt as scryptCallback } from "node:crypto";
 import { promisify } from "node:util";
 import { neon } from "@neondatabase/serverless";
 import "./pg-fetch.mjs";
-import {
-  addDays,
-  localDate,
-  monthDays,
-  plannedInterval,
-  shiftMonth,
-  weekday,
-  zurichHolidays,
-} from "../lib/roster/time";
+import { addDays, localDate, monthDays, plannedInterval, shiftMonth, weekday } from "../lib/roster/time";
 import { DEFAULT_QUALIFICATIONS, DEFAULT_SHIFT_TYPES } from "../lib/roster/defaults";
+import { publicHolidays } from "../lib/holidays";
 
 if (process.env.NODE_ENV === "production" && !process.argv.includes("--allow-production")) {
   console.error("Der Dienstplan-Seed ist nur für Entwicklung und Demo gedacht (NODE_ENV=production).");
@@ -217,7 +210,7 @@ async function main() {
   }
 
   for (const year of [current.year, current.year + 1])
-    for (const holiday of zurichHolidays(year))
+    for (const holiday of publicHolidays("CH", "ZH", year))
       await sql`INSERT INTO carecore_public_holidays (organization_id, date, name) VALUES (${org}, ${holiday.date}, ${holiday.name})
         ON CONFLICT (organization_id, date) DO NOTHING`;
 

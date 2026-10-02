@@ -43,7 +43,7 @@ test("Vitalparameter: Einrichtung blendet Blutzucker aus – keine neue Messung,
 
 const PNG_1X1 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
-test("Branding: Logo nur durch die Administration, nur echte Bilder bis 300 KB, entfernen", async () => {
+test("Branding: Logo nur durch die Administration, nur echte Bilder bis 2 MB, entfernen", async () => {
   const f = await fixture();
   const anna = await apiContextFor(f, "anna");
   const lead = await apiContextFor(f, "leadA");
@@ -55,8 +55,11 @@ test("Branding: Logo nur durch die Administration, nur echte Bilder bis 300 KB, 
   assert.equal(await status(saveLogo(admin, "data:image/svg+xml;base64,PHN2Zy8+")), 400, "kein SVG");
   const html = Buffer.from("<html><script>alert(1)</script></html>").toString("base64");
   assert.equal(await status(saveLogo(admin, `data:image/png;base64,${html}`)), 400, "Inhalt muss zum Typ passen");
-  const big = Buffer.concat([Buffer.from(PNG_1X1, "base64"), Buffer.alloc(301 * 1024)]).toString("base64");
+  const big = Buffer.concat([Buffer.from(PNG_1X1, "base64"), Buffer.alloc(2 * 1024 * 1024)]).toString("base64");
   assert.equal(await status(saveLogo(admin, `data:image/png;base64,${big}`)), 413);
+  const large = Buffer.concat([Buffer.from(PNG_1X1, "base64"), Buffer.alloc(1024 * 1024)]).toString("base64");
+  assert.equal(await status(saveLogo(admin, `data:image/png;base64,${large}`)), 200, "1 MB ist erlaubt");
+  await removeLogo(admin);
 
   assert.equal(await logoUpdatedAt(admin), null);
   const updatedAt = await saveLogo(admin, `data:image/png;base64,${PNG_1X1}`);

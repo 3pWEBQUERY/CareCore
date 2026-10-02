@@ -154,7 +154,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
   - [x] Vitalparameter: die Einrichtung schaltet eingebaute Messwerte aus (Messung, Übersicht, Entwicklung, Grenzwerte);
         neue Messungen ausgeschalteter Werte werden abgelehnt, sie zählen nicht für den Status. Eigene Messwerte mit
         Plausibilitäts- und Grenzwerten bräuchten fachlich festgelegte Werte und sind bewusst nicht Teil davon.
-  - [x] Branding: Logo der Einrichtung (JPEG, PNG, WebP bis 300 KB, Inhalt geprüft, kein SVG) in der Kopfzeile neben
+  - [x] Branding: Logo der Einrichtung (JPEG, PNG, WebP; Auswahl bis 20 MB, grosse Bilder verkleinert der Browser auf höchstens 2 MB; Inhalt geprüft, kein SVG) in der Kopfzeile neben
         dem Namen; ohne Logo bleibt das bisherige Symbol.
 - [x] **Datenschutz:** Lösch- und Aufbewahrungskonzept für Bewohnerdaten. Fristen legt die Einrichtung fest.
       Konzept in `docs/DATENSCHUTZ.md`; Einstellung „Aufbewahrungsfrist Akten“ (ohne Vorgabe), Karte „Löschfristen“ mit
@@ -222,8 +222,14 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Pflegestufen 1–12 nach KLV Art. 7a (CH), Pflegegrade 1–5 nach SGB XI § 15 (DE) bzw. Pflegegeldstufen 1–7 nach
       BPGG § 4 (AT) in Aufnahme, Pflegeakte und Pflegeplanung (vom Server geprüft); AHV- bzw.
       Sozialversicherungsnummer mit Formatprüfung (AT mit Prüfziffer), Krankenversichertennummer (DE);
-      Feiertage zum Übernehmen (Kanton Zürich, bundesweit, Österreich); übliche Qualifikationen des Landes werden
+      Feiertage zum Übernehmen (je Kanton bzw. Bundesland, siehe unten); übliche Qualifikationen des Landes werden
       ergänzt. Gespeicherte Werte aus einem anderen Land bleiben erhalten. CareCore stuft nicht selbst ein.
+- [x] **Feiertage je Kanton und Bundesland (02.10.2026):** In der Karte „Land der Einrichtung“ wählt die
+      Administration den Kanton (26) bzw. das Bundesland (DE 16, AT 9); der Dienstplan übernimmt die gesetzlichen
+      Feiertage dieser Region (ohne Auswahl die landesweiten). Quelle: Paket `date-holidays` (Daten CC BY 3.0), nur
+      Feiertage vom Typ „gesetzlich“; kommunale Feiertage ergänzt die Leitung einzeln.
+- [x] **Logo bis 20 MB wählbar (02.10.2026):** Bilder über 2 MB verkleinert der Browser vor dem Hochladen
+      (längste Seite 1024 Pixel, Transparenz bleibt); gespeichert werden höchstens 2 MB.
 - [x] **Gesamtprüfung (01.10.2026):** Seiten ohne Recht zeigen beim direkten Aufruf „Kein Zugriff“ (Proxy prüft
       dieselben Rechte wie die Navigation); alle `eslint-disable` durch saubere Lösungen ersetzt (gemeinsame Uhr
       `useNow`, Ladeeffekt der Teamleitung, Fotovorschau); ungenutzter Code entfernt; die zwei grössten

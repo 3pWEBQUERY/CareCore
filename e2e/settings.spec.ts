@@ -186,6 +186,39 @@ test("Branding: Logo der Einrichtung hochladen und in der Kopfzeile sehen", asyn
   expect(errors).toEqual([]);
 });
 
+// Grosses Logo (mehrere MB): der Browser verkleinert es vor dem Hochladen, gespeichert wird es trotzdem.
+test("Branding: grosses Logo wird verkleinert und gespeichert", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  try {
+    await page.goto("/c/leitung/administration/konfiguration");
+    // PNG mit Rauschen, 1600 × 1600 Pixel: weit über 2 MB.
+    const bytes = await page.evaluate(async () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1600;
+      canvas.height = 1600;
+      const context = canvas.getContext("2d")!;
+      const pixels = context.createImageData(1600, 1600);
+      for (let i = 0; i < pixels.data.length; i++) pixels.data[i] = i % 4 === 3 ? 255 : Math.floor(Math.random() * 256);
+      context.putImageData(pixels, 0, 0);
+      const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), "image/png"));
+      return Array.from(new Uint8Array(await blob.arrayBuffer()));
+    });
+    const buffer = Buffer.from(bytes);
+    expect(buffer.length).toBeGreaterThan(2 * 1024 * 1024);
+    const card = page.locator(".admin-branding-card");
+    await card.locator('input[type="file"]').setInputFiles({ name: "logo.png", mimeType: "image/png", buffer });
+    await expect(page.locator(".toast")).toContainText("Logo gespeichert");
+    await expect(card.getByRole("img", { name: "Aktuelles Logo" })).toBeVisible();
+    const logo = await page.request.get("/api/branding/logo");
+    expect(logo.status()).toBe(200);
+    expect((await logo.body()).length).toBeLessThanOrEqual(2 * 1024 * 1024);
+  } finally {
+    await page.request.delete("/api/branding/logo");
+  }
+  expect(errors).toEqual([]);
+});
+
 // Datenschutz: ohne Frist schlägt CareCore nichts vor; mit Frist zeigt die Karte den Stand.
 test("Löschfristen: Karte folgt der Aufbewahrungsfrist der Einrichtung", async ({ page }) => {
   await login(page, ADMIN);

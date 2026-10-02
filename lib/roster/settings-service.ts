@@ -27,9 +27,9 @@ import {
   type Body,
 } from "./schemas";
 import { unitOptions } from "./schedule";
-import { countryHolidays } from "./time";
+import { publicHolidays } from "@/lib/holidays";
 import type { CountryCode } from "@/lib/country";
-import { organizationCountry } from "@/lib/organization-country";
+import { organizationLocation } from "@/lib/organization-country";
 import type { RuleSet, ShiftTypeInfo } from "./types";
 
 // Einstellungen des Dienstplans (Spec 8.2): Diensttypen, Mindestbesetzung, Regelwerk, Feiertage,
@@ -52,8 +52,9 @@ export type SettingsPayload = {
     minQualified: number | null;
     qualificationId: string | null;
   }>;
-  // Land der Einrichtung (welche Feiertage „übernehmen“ anbietet).
+  // Land und Kanton bzw. Bundesland der Einrichtung (welche Feiertage „übernehmen“ anbietet).
   country: CountryCode;
+  region: string | null;
   holidays: Array<{ id: string; date: string; name: string }>;
   qualifications: Array<{ id: string; code: string; name: string; grantsMedication: boolean }>;
   employees: Array<{
@@ -105,10 +106,11 @@ export async function getSettings(ctx: RosterContext, requestedUnit: string | nu
     ? ((await ctx.sql`SELECT user_id, care_unit_id FROM carecore_unit_memberships WHERE is_lead AND user_id = ANY(${memberIds}::uuid[])`) as Row[])
     : [];
   const employees = await loadEmployees(ctx, memberIds);
-  const country = await organizationCountry(ctx);
+  const { country, region } = await organizationLocation(ctx);
   return {
     unitId,
     country,
+    region,
     units: units.filter((unit) => unit.lead),
     isAdmin: ctx.access.isAdmin,
     ruleSet,
@@ -407,12 +409,18 @@ async function loadRuleSetRow(ctx: RosterContext, unitId: string | null) {
 
 // --- Feiertage ---------------------------------------------------------------------------------
 
+// Gesetzliche Feiertage des Kantons bzw. Bundeslandes der Einrichtung (ohne Auswahl die landesweiten).
+async function importableHolidays(ctx: RosterContext, year: number) {
+  const { country, region } = await organizationLocation(ctx);
+  return publicHolidays(country, region, year);
+}
+
 export async function saveHolidays(ctx: RosterContext, body: Body) {
   if (!managedUnitIds(ctx.access).length) throw forbidden("Feiertage pflegt die Leitung.");
   const org = ctx.actor.organizationId;
   const entries =
     body.action === "importHolidays"
-      ? countryHolidays(await organizationCountry(ctx), int(body.year, "Jahr", 2000, 2100))
+      ? await importableHolidays(ctx, int(body.year, "Jahr", 2000, 2100))
       : [{ date: date(body.date, "Datum"), name: text(body.name, "Name", 120, true)! }];
   await ctx.sql.transaction([
     ...entries.map(
