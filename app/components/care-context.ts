@@ -105,6 +105,63 @@ export function useWorkContext() {
   return context;
 }
 
+// Logo und Name der Einrichtung für Sidebar und Kopfzeile. Bis der Arbeitskontext geladen ist, gilt der zuletzt
+// gesehene Stand aus dem Browser (localStorage), damit beim Neuladen kein fremdes Logo aufblitzt; null, solange
+// nichts bekannt ist (dann zeigen die Anzeigen eine leere Kachel).
+export type Branding = { logoUpdatedAt: string | null; organizationName: string };
+const BRANDING_KEY = "carecore:branding";
+const brandingListeners = new Set<() => void>();
+let brandingCache: Branding | null | undefined;
+
+function readBranding() {
+  if (brandingCache === undefined) {
+    try {
+      const raw = window.localStorage.getItem(BRANDING_KEY);
+      const parsed = raw ? (JSON.parse(raw) as Partial<Branding>) : null;
+      brandingCache =
+        parsed && typeof parsed.organizationName === "string"
+          ? {
+              logoUpdatedAt: typeof parsed.logoUpdatedAt === "string" ? parsed.logoUpdatedAt : null,
+              organizationName: parsed.organizationName,
+            }
+          : null;
+    } catch {
+      brandingCache = null;
+    }
+  }
+  return brandingCache;
+}
+
+function subscribeBranding(listener: () => void) {
+  brandingListeners.add(listener);
+  return () => {
+    brandingListeners.delete(listener);
+  };
+}
+
+function rememberBranding(next: Branding) {
+  const current = readBranding();
+  if (current?.logoUpdatedAt === next.logoUpdatedAt && current?.organizationName === next.organizationName) return;
+  brandingCache = next;
+  try {
+    window.localStorage.setItem(BRANDING_KEY, JSON.stringify(next));
+  } catch {
+    // Ohne Speicher (z. B. privates Fenster) gilt nur der geladene Arbeitskontext.
+  }
+  for (const listener of brandingListeners) listener();
+}
+
+export function useBranding(): Branding | null {
+  const context = useWorkContext();
+  const cached = useSyncExternalStore(subscribeBranding, readBranding, () => null);
+  const logoUpdatedAt = context?.profile.logoUpdatedAt ?? null;
+  const organizationName = context?.profile.organizationName;
+  useEffect(() => {
+    if (organizationName !== undefined) rememberBranding({ logoUpdatedAt, organizationName });
+  }, [logoUpdatedAt, organizationName]);
+  return organizationName !== undefined ? { logoUpdatedAt, organizationName } : cached;
+}
+
 // Bezeichnung der betreuten Personen der Einrichtung; bis der Arbeitskontext geladen ist „Bewohner“.
 export function useTerms(): Terms {
   const context = useWorkContext();

@@ -5,7 +5,7 @@ import { readLogo, removeLogo, saveLogo } from "@/lib/branding";
 export const runtime = "nodejs";
 
 // Logo der Einrichtung als Bild (für alle Angemeldeten), ändern und entfernen nur durch die Administration.
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const ctx = await apiContext();
     if (ctx instanceof NextResponse) return ctx;
@@ -15,7 +15,11 @@ export async function GET() {
       headers: {
         "Content-Type": logo.mimeType,
         "Content-Length": String(logo.bytes.byteLength),
-        "Cache-Control": "private, max-age=3600",
+        // Mit Versionsangabe (?v=Zeitpunkt der Änderung) ändert sich die Adresse bei jedem neuen Logo: der Browser darf
+        // das Bild dauerhaft behalten und zeigt es beim Neuladen sofort.
+        "Cache-Control": new URL(request.url).searchParams.has("v")
+          ? "private, max-age=31536000, immutable"
+          : "private, max-age=3600",
         "X-Content-Type-Options": "nosniff",
         "Content-Disposition": "inline",
       },

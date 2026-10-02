@@ -4,6 +4,7 @@ import Image from "next/image";
 import { type RefObject } from "react";
 import { ModuleIcon } from "./module-icon";
 import type { AppHeaderState } from "./use-app-header";
+import { useBranding } from "./care-context";
 
 export function HeaderLocationControl({
   r,
@@ -26,6 +27,7 @@ export function HeaderLocationControl({
     closeMenus,
     chooseArea,
   } = r;
+  const branding = useBranding();
   return (
     <div className={`location-menu-wrap ${compact ? "mobile-location-menu-wrap" : ""}`} ref={ref}>
       <button
@@ -40,22 +42,23 @@ export function HeaderLocationControl({
           setLocationOpen((value) => !value);
         }}
       >
-        <span className={`location-icon ${context?.profile.logoUpdatedAt ? "has-logo" : ""}`}>
-          {context?.profile.logoUpdatedAt ? (
+        <span className={`location-icon ${branding?.logoUpdatedAt ? "has-logo" : ""}`}>
+          {branding?.logoUpdatedAt ? (
             <Image
-              src={`/api/branding/logo?v=${encodeURIComponent(context.profile.logoUpdatedAt)}`}
-              alt={`Logo ${context.profile.organizationName}`}
+              src={`/api/branding/logo?v=${encodeURIComponent(branding.logoUpdatedAt)}`}
+              alt={`Logo ${branding.organizationName}`}
               width={33}
               height={33}
+              loading="eager"
               unoptimized
             />
           ) : (
-            <ModuleIcon name="building" />
+            branding && <ModuleIcon name="building" />
           )}
         </span>
         {!compact && (
           <span className="location-copy">
-            <small>{context?.profile.organizationName ?? locationPrimary}</small>
+            <small>{branding?.organizationName ?? locationPrimary}</small>
             <strong>
               {selectedArea ? `${selectedArea.name} · ${selectedArea.detail.split(" · ")[0]}` : locationSecondary}
             </strong>
