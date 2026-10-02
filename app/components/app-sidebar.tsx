@@ -36,6 +36,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { useNavigationBadges, useWorkContext, type NavigationBadges } from "./care-context";
+import { BrandIcon } from "./brand-icon";
 import { openHelp } from "./help-panel";
 import {
   groupBadges,
@@ -244,17 +245,7 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
     <>
       <aside className="sidebar sidebar-rail" aria-label="Hauptnavigation">
         <div className="sidebar-rail-head">
-          <span className="brand-mark" aria-label="CareCore">
-            <Image
-              className="sidebar-brand-logo"
-              src="/carecore-sidebar-logo.png"
-              width={32}
-              height={32}
-              alt=""
-              aria-hidden="true"
-              unoptimized
-            />
-          </span>
+          <BrandIcon size={32} />
         </div>
         <nav className="sidebar-rail-scroll">
           <button

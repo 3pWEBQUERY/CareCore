@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { BrandIcon } from "./brand-icon";
 import { type ModuleIconName } from "./module-icon";
 
 export type HeaderNotification = {
@@ -34,9 +34,7 @@ export function initials(name: string) {
 export function Brand() {
   return (
     <div className="brand" aria-label="CareCore">
-      <span className="brand-mark">
-        <Image src="/carecore-sidebar-logo.png" width={24} height={24} alt="" aria-hidden="true" unoptimized />
-      </span>
+      <BrandIcon size={24} />
       <span className="brand-copy">
         <span className="brand-name">CareCore</span>
         <small>Mehr Zeit für Pflege.</small>

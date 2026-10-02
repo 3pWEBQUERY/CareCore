@@ -97,3 +97,36 @@
   min-height: 34px;
   text-decoration: none;
 }
+
+/* Logo der Einrichtung als App-Icon: gefüllte Kachel mit unseren abgerundeten Ecken, weicher Schatten, feiner Rand
+   und leichter Glanz wie bei iOS. Fast quadratische Logos füllen die Kachel, andere stehen mit Rand auf Weiss. */
+.brand-mark.brand-mark-app {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: white;
+  box-shadow:
+    0 1px 2px rgba(2, 12, 27, 0.28),
+    0 6px 16px rgba(2, 12, 27, 0.32);
+}
+.brand-mark.brand-mark-app img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+.brand-mark.brand-mark-app.fit img {
+  padding: 4px;
+  object-fit: contain;
+}
+.brand-mark.brand-mark-app::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 48%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  content: "";
+  pointer-events: none;
+}

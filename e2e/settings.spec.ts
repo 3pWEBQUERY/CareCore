@@ -178,6 +178,10 @@ test("Branding: Logo der Einrichtung hochladen und in der Kopfzeile sehen", asyn
     await expect(card.getByRole("img", { name: "Aktuelles Logo" })).toBeVisible();
     await page.reload();
     await expect(page.locator(".location-icon.has-logo img").first()).toBeVisible();
+    // Auch in der Sidebar: als App-Icon-Kachel statt des CareCore-Zeichens.
+    const sidebarLogo = page.locator(".sidebar-rail-head .brand-mark-app img");
+    await expect(sidebarLogo).toBeVisible();
+    await expect(sidebarLogo).toHaveAttribute("src", /\/api\/branding\/logo\?v=/);
     await card.getByRole("button", { name: "Logo entfernen" }).click();
     await expect(page.locator(".toast")).toContainText("Logo entfernt");
   } finally {
@@ -192,8 +196,9 @@ test("Branding: grosses Logo wird verkleinert und gespeichert", async ({ page })
   const errors = watchErrors(page);
   try {
     await page.goto("/c/leitung/administration/konfiguration");
-    // PNG mit Rauschen, 1600 × 1600 Pixel: weit über 2 MB.
-    const bytes = await page.evaluate(async () => {
+    // PNG mit Rauschen, 1600 × 1600 Pixel (weit über 2 MB), direkt im Browser erzeugt und als Datei gewählt.
+    await page.locator('.admin-branding-card input[type="file"]').waitFor({ state: "attached" });
+    const size = await page.evaluate(async () => {
       const canvas = document.createElement("canvas");
       canvas.width = 1600;
       canvas.height = 1600;
@@ -202,12 +207,15 @@ test("Branding: grosses Logo wird verkleinert und gespeichert", async ({ page })
       for (let i = 0; i < pixels.data.length; i++) pixels.data[i] = i % 4 === 3 ? 255 : Math.floor(Math.random() * 256);
       context.putImageData(pixels, 0, 0);
       const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), "image/png"));
-      return Array.from(new Uint8Array(await blob.arrayBuffer()));
+      const input = document.querySelector<HTMLInputElement>('.admin-branding-card input[type="file"]')!;
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([blob], "logo.png", { type: "image/png" }));
+      input.files = transfer.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      return blob.size;
     });
-    const buffer = Buffer.from(bytes);
-    expect(buffer.length).toBeGreaterThan(2 * 1024 * 1024);
+    expect(size).toBeGreaterThan(2 * 1024 * 1024);
     const card = page.locator(".admin-branding-card");
-    await card.locator('input[type="file"]').setInputFiles({ name: "logo.png", mimeType: "image/png", buffer });
     await expect(page.locator(".toast")).toContainText("Logo gespeichert");
     await expect(card.getByRole("img", { name: "Aktuelles Logo" })).toBeVisible();
     const logo = await page.request.get("/api/branding/logo");
