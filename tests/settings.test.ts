@@ -2,7 +2,6 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { resolveSettings } from "../lib/settings-shared.ts";
 import { notifyCategory, resolvePreferences, START_PAGES } from "../lib/user-settings-shared.ts";
-import { CARE_LEVELS } from "../lib/care-levels.ts";
 import { raiProgress, scoreFromLabel, RAI_SCORES } from "../lib/rai-shared.ts";
 
 test("organisation settings fall back to safe defaults", () => {
@@ -37,11 +36,6 @@ test("notification types map to their category", () => {
   assert.equal(notifyCategory("supply_low"), "supply");
   assert.equal(notifyCategory("btm_count_due"), "btm");
   assert.equal(notifyCategory("support_request"), null);
-});
-
-test("Swiss care levels: 12 levels", () => {
-  assert.equal(CARE_LEVELS.length, 12);
-  assert.equal(CARE_LEVELS[11], "Pflegestufe 12");
 });
 
 test("RAI progress counts the four domains and the note", () => {

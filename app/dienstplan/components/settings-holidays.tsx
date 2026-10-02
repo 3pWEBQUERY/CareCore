@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { formatDate, zurichHolidays } from "@/lib/roster/time";
+import { countryHolidays, formatDate } from "@/lib/roster/time";
+import { COUNTRIES } from "@/lib/country";
 import { rosterRequest } from "./roster-api";
 import { act, type TabProps } from "./settings-tab-shared";
 
@@ -9,13 +10,14 @@ import { act, type TabProps } from "./settings-tab-shared";
 
 export function HolidaysTab({ data, reload, showToast }: TabProps) {
   const year = new Date().getFullYear();
+  const holidays = COUNTRIES[data.country].holidays;
   const [form, setForm] = useState({ date: "", name: "" });
   return (
     <section className="card roster-card">
       <div className="roster-section-head">
         <div>
           <h2>Feiertage</h2>
-          <p>Feiertage senken das Monatssoll und werden für Feiertagsstunden ausgewertet.</p>
+          <p>Feiertage senken das Monatssoll und werden für Feiertagsstunden ausgewertet. {holidays.note}</p>
         </div>
         <div className="roster-row-actions">
           {[year, year + 1].map((y) => (
@@ -28,15 +30,15 @@ export function HolidaysTab({ data, reload, showToast }: TabProps) {
                   () =>
                     rosterRequest("/api/dienstplan/settings/holidays", {
                       method: "POST",
-                      body: { action: "importZurich", year: y },
+                      body: { action: "importHolidays", year: y },
                     }),
-                  `${zurichHolidays(y).length} Feiertage ${y} (Kanton Zürich) übernommen`,
+                  `${countryHolidays(data.country, y).length} Feiertage ${y} (${holidays.label}) übernommen`,
                   reload,
                   showToast,
                 )
               }
             >
-              Kanton Zürich {y} übernehmen
+              {holidays.label === "bundesweit" ? "Bundesweite Feiertage" : holidays.label} {y} übernehmen
             </button>
           ))}
         </div>

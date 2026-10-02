@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { termsFor, type Terms } from "@/lib/terminology";
 import { VITAL_METRICS } from "@/lib/vitals-shared";
+import { countryProfile, type CountryProfile } from "@/lib/country";
 import type { WorkContext } from "@/lib/work-context";
 import { useLiveEvent } from "./live-events";
 
@@ -108,6 +109,11 @@ export function useWorkContext() {
 export function useTerms(): Terms {
   const context = useWorkContext();
   return termsFor(context?.terminology);
+}
+
+// Vorgaben des Landes der Einrichtung (Pflegestufen, Sozialversicherungsnummer usw.); bis zum Laden die Schweiz.
+export function useCountry(): CountryProfile {
+  return countryProfile(useWorkContext()?.country);
 }
 
 // Vitalparameter, die die Einrichtung erfasst (Leitung › Konfiguration); bis zum Laden alle.

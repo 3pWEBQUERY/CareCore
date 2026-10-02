@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomUUID, scrypt as scryptCallback, timingSa
 import { promisify } from "node:util";
 import { neon } from "@neondatabase/serverless";
 import "@/database/pg-fetch.mjs";
+import { COUNTRY_CODES, type CountryCode } from "@/lib/country";
 
 export const SESSION_COOKIE = "carecore_session";
 const SESSION_DAYS = 7;
@@ -77,10 +78,15 @@ async function bootstrapAdmin(sql: ReturnType<typeof database>) {
 // the admin can start working; an existing organization is only assigned.
 async function ensureAdminOrganization(sql: ReturnType<typeof database>) {
   const organizationName = process.env.CARECORE_ORGANIZATION_NAME?.trim().slice(0, 180) || "CareCore";
+  // Land aus der Installation (CARECORE_COUNTRY = CH, DE oder AT); ohne Angabe die Schweiz, noch nicht bestätigt.
+  const countryInput = process.env.CARECORE_COUNTRY?.trim().toUpperCase();
+  const country = COUNTRY_CODES.includes(countryInput as CountryCode) ? (countryInput as CountryCode) : null;
   const organizationId = randomUUID();
   const siteId = randomUUID();
   await sql.transaction([
-    sql`INSERT INTO carecore_organizations (id, name) SELECT ${organizationId}, ${organizationName} WHERE NOT EXISTS (SELECT 1 FROM carecore_organizations)`,
+    sql`INSERT INTO carecore_organizations (id, name, country, country_set_at)
+      SELECT ${organizationId}, ${organizationName}, ${country ?? "CH"}, ${country ? new Date().toISOString() : null}::timestamptz
+      WHERE NOT EXISTS (SELECT 1 FROM carecore_organizations)`,
     sql`INSERT INTO carecore_sites (id, organization_id, name) SELECT ${siteId}, ${organizationId}, ${organizationName} WHERE EXISTS (SELECT 1 FROM carecore_organizations WHERE id = ${organizationId})`,
     sql`INSERT INTO carecore_care_units (id, site_id, name) SELECT ${randomUUID()}, ${siteId}, 'Wohnbereich 1' WHERE EXISTS (SELECT 1 FROM carecore_sites WHERE id = ${siteId})`,
     sql`

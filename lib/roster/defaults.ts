@@ -1,12 +1,10 @@
 // Grunddaten einer Organisation (auch in Migration 0023 für bestehende Organisationen angelegt).
 // Regelwerk-Werte sind Beispielwerte nach Schweizer ArG und müssen von der Leitung bestätigt werden.
+import { COUNTRIES } from "@/lib/country";
 import type { AbsenceKind, ShiftCategory } from "./types";
 
-export const DEFAULT_QUALIFICATIONS = [
-  { code: "HF", name: "Pflegefachperson HF", grantsMedication: true },
-  { code: "FAGE", name: "Fachperson Gesundheit", grantsMedication: true },
-  { code: "SRK", name: "Pflegehelfer:in SRK", grantsMedication: false },
-] as const;
+// Qualifikationen der Schweiz (Standard); andere Länder: lib/country.ts.
+export const DEFAULT_QUALIFICATIONS = COUNTRIES.CH.qualifications;
 
 export const DEFAULT_SHIFT_TYPES: Array<{
   name: string;

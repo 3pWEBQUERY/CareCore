@@ -1,7 +1,8 @@
 import "server-only";
 import { iso, type Row } from "@/lib/api-context";
 import type { RosterContext } from "./context";
-import { DEFAULT_QUALIFICATIONS, DEFAULT_SHIFT_TYPES } from "./defaults";
+import { countryProfile } from "@/lib/country";
+import { DEFAULT_SHIFT_TYPES } from "./defaults";
 import { notFound } from "./errors";
 import { managedUnitIds } from "./permissions";
 import { addDays, monthEnd, monthStart } from "./time";
@@ -54,10 +55,11 @@ export function mapRuleSet(row: Row): RuleSet {
 // New organisations get the same basic data as the migration gave existing ones.
 export async function ensureRosterDefaults(ctx: RosterContext) {
   const org = ctx.actor.organizationId;
+  const [organization] = (await ctx.sql`SELECT country FROM carecore_organizations WHERE id = ${org}`) as Row[];
   await ctx.sql.transaction([
     ctx.sql`INSERT INTO carecore_rule_sets (organization_id, timezone)
       SELECT id, timezone FROM carecore_organizations WHERE id = ${org} ON CONFLICT DO NOTHING`,
-    ...DEFAULT_QUALIFICATIONS.map(
+    ...countryProfile(organization?.country).qualifications.map(
       (q) => ctx.sql`INSERT INTO carecore_qualifications (organization_id, code, name, grants_medication)
         VALUES (${org}, ${q.code}, ${q.name}, ${q.grantsMedication}) ON CONFLICT (organization_id, code) DO NOTHING`,
     ),

@@ -1,7 +1,7 @@
 "use client";
 
-import { useTerms } from "@/app/components/care-context";
-import { CARE_LEVELS } from "@/lib/care-levels";
+import { useCountry, useTerms } from "@/app/components/care-context";
+import { NOT_ASSESSED, careLevelOptions } from "@/lib/country";
 import { useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { CareDatePicker, CareSelect, formatCareDate } from "@/app/components/care-form-controls";
@@ -36,7 +36,8 @@ export function CareRecordEditor({
   const [residentId, setResidentId] = useState(
     candidates.find((resident) => resident.id === initialResidentId)?.id ?? candidates[0]?.id ?? "",
   );
-  const [careLevel, setCareLevel] = useState("Pflegestufe 3");
+  const country = useCountry();
+  const [careLevel, setCareLevel] = useState(NOT_ASSESSED);
   const [ownerId, setOwnerId] = useState("");
   const [startsOn, setStartsOn] = useState(todayInZurich);
   const [reviewOn, setReviewOn] = useState(() => plusDays(todayInZurich(), 90));
@@ -53,7 +54,14 @@ export function CareRecordEditor({
     try {
       await requestJson("/api/care-planning/plans", {
         method: "POST",
-        body: { residentId: resident.id, careLevel, ownerId: ownerId || null, startsOn, reviewOn, focus },
+        body: {
+          residentId: resident.id,
+          careLevel: careLevel === NOT_ASSESSED ? null : careLevel,
+          ownerId: ownerId || null,
+          startsOn,
+          reviewOn,
+          focus,
+        },
       });
       onCreated(resident.id, `Pflegeakte für ${resident.name} wurde erstellt`);
     } catch (reason) {
@@ -135,8 +143,13 @@ export function CareRecordEditor({
                   />
                 </label>
                 <label>
-                  Pflegestufe
-                  <CareSelect label="Pflegestufe" value={careLevel} options={CARE_LEVELS} onChange={setCareLevel} />
+                  {country.careLevels.label}
+                  <CareSelect
+                    label={country.careLevels.label}
+                    value={careLevel}
+                    options={[NOT_ASSESSED, ...careLevelOptions(country.code)]}
+                    onChange={setCareLevel}
+                  />
                 </label>
                 <label>
                   Pflegebeginn

@@ -217,6 +217,13 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Verfügbarkeitstest, Wiederherstellung üben, Ernstfall). Die Backups selbst schaltet der Betreiber in Railway ein.
 - [x] **Verkaufsbereit 5 – Datenübernahme:** Bewohner und Mitarbeitende aus CSV mit Vorlage, Prüfung je Zeile,
       Übernahme nur vollständig gültiger Dateien; Mitarbeitende per Einladung oder mit einmaligem Startpasswort.
+- [x] **Land der Einrichtung (02.10.2026):** Die Administration wählt unter Leitung › Konfiguration Schweiz,
+      Deutschland oder Österreich (bei neuen Installationen `--land`). Danach gelten die Vorgaben des Landes:
+      Pflegestufen 1–12 nach KLV Art. 7a (CH), Pflegegrade 1–5 nach SGB XI § 15 (DE) bzw. Pflegegeldstufen 1–7 nach
+      BPGG § 4 (AT) in Aufnahme, Pflegeakte und Pflegeplanung (vom Server geprüft); AHV- bzw.
+      Sozialversicherungsnummer mit Formatprüfung (AT mit Prüfziffer), Krankenversichertennummer (DE);
+      Feiertage zum Übernehmen (Kanton Zürich, bundesweit, Österreich); übliche Qualifikationen des Landes werden
+      ergänzt. Gespeicherte Werte aus einem anderen Land bleiben erhalten. CareCore stuft nicht selbst ein.
 - [x] **Gesamtprüfung (01.10.2026):** Seiten ohne Recht zeigen beim direkten Aufruf „Kein Zugriff“ (Proxy prüft
       dieselben Rechte wie die Navigation); alle `eslint-disable` durch saubere Lösungen ersetzt (gemeinsame Uhr
       `useNow`, Ladeeffekt der Teamleitung, Fotovorschau); ungenutzter Code entfernt; die zwei grössten

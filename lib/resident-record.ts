@@ -27,6 +27,8 @@ import {
 } from "@/lib/resident-record-shared";
 import { hasPermission } from "@/lib/server-data";
 import { auditOrigin } from "@/lib/audit-origin";
+import { insuranceNumberError, socialNumberError } from "@/lib/country";
+import { organizationCountry } from "@/lib/organization-country";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -143,8 +145,6 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
   if (maritalStatus && !MARITAL_STATUSES.includes(maritalStatus)) throw new ApiError("Ungültiger Zivilstand.");
   const language = String(body.language ?? "de-CH") in LANGUAGES ? String(body.language ?? "de-CH") : "de-CH";
   const ssn = optional(body.socialSecurityNumber, 20);
-  if (ssn && !/^756\.?\d{4}\.?\d{4}\.?\d{2}$/.test(ssn))
-    throw new ApiError("Die AHV-Nummer hat das Format 756.XXXX.XXXX.XX.");
   const resuscitationStatus = body.resuscitationStatus ? String(body.resuscitationStatus) : null;
   if (resuscitationStatus && !(resuscitationStatus in RESUSCITATION_STATUSES))
     throw new ApiError("Ungültiger Reanimationsstatus.");
@@ -190,6 +190,19 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
     SELECT *, to_char(resuscitation_decided_on, 'YYYY-MM-DD') AS resuscitation_day
     FROM carecore_residents WHERE id = ${residentId}`) as Row[];
   const b = before[0];
+  // Nummern im Format des Landes der Einrichtung; ein unveränderter Wert (z. B. aus der Zeit vor einem Wechsel des
+  // Landes) bleibt gültig.
+  const country = await organizationCountry(ctx);
+  const ssnError =
+    data.socialSecurityNumber && data.socialSecurityNumber !== b.social_security_number
+      ? socialNumberError(country, data.socialSecurityNumber)
+      : null;
+  if (ssnError) throw new ApiError(ssnError);
+  const insuranceError =
+    data.insuranceNumber && data.insuranceNumber !== b.insurance_number
+      ? insuranceNumberError(country, data.insuranceNumber)
+      : null;
+  if (insuranceError) throw new ApiError(insuranceError);
   const resuscitationBefore = {
     status: (b.resuscitation_status as string | null) ?? null,
     source: (b.resuscitation_source as string | null) ?? null,

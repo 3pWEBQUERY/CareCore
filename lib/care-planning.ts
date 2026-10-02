@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { readTerms } from "@/lib/settings";
 import { ApiError, assertResident, assertUuid, iso, text, type ApiContext, type Row } from "@/lib/api-context";
 import { residentAudit } from "@/lib/resident-audit";
+import { careLevelError, isCareLevel } from "@/lib/country";
+import { organizationCountry } from "@/lib/organization-country";
 import { initials } from "@/lib/medication-shared";
 import {
   type CareGoal,
@@ -226,6 +228,8 @@ export function assertOpen(plan: Row) {
 export async function createPlan(ctx: ApiContext, body: Record<string, unknown>) {
   const residentId = await assertResident(ctx, body.residentId);
   const plan = parsePlan(body);
+  const country = await organizationCountry(ctx);
+  if (!isCareLevel(country, plan.careLevel)) throw new ApiError(careLevelError(country));
   const ownerId = await assertStaff(ctx, body.ownerId);
   const id = randomUUID();
   try {
@@ -279,6 +283,10 @@ export async function updatePlan(ctx: ApiContext, planId: unknown, body: Record<
   }
   assertOpen(before);
   const plan = parsePlan(body);
+  // Eine gespeicherte Einstufung aus einem anderen System (z. B. vor einem Wechsel des Landes) bleibt erlaubt.
+  const country = await organizationCountry(ctx);
+  if (plan.careLevel !== before.care_level && !isCareLevel(country, plan.careLevel))
+    throw new ApiError(careLevelError(country));
   const ownerId = await assertStaff(ctx, body.ownerId);
   await ctx.sql.transaction([
     ctx.sql`
