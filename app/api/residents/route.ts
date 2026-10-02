@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 import { auditOrigin } from "@/lib/audit-origin";
+import { NOT_ASSESSED, careLevelError, countryCode, isCareLevel } from "@/lib/country";
 
 export const runtime = "nodejs";
 
@@ -88,6 +89,9 @@ export async function POST(request: Request) {
       ? await sql`SELECT cu.id FROM carecore_care_units cu JOIN carecore_sites s ON s.id = cu.site_id WHERE s.organization_id = ${actor.organizationId} AND cu.id = ${unitIdInput} AND cu.active = TRUE LIMIT 1`
       : await sql`SELECT cu.id FROM carecore_care_units cu JOIN carecore_sites s ON s.id = cu.site_id WHERE s.organization_id = ${actor.organizationId} AND cu.name = ${unitName} AND cu.active = TRUE LIMIT 1`;
     if (!units[0]) return NextResponse.json({ error: "Wohnbereich nicht gefunden." }, { status: 400 });
+    const [organization] = await sql`SELECT country FROM carecore_organizations WHERE id = ${actor.organizationId}`;
+    const country = countryCode(organization?.country);
+    if (!isCareLevel(country, careLevel)) return NextResponse.json({ error: careLevelError(country) }, { status: 400 });
     const unitId = units[0].id as string;
     // Without a chosen primary nurse the resident has none; the record then asks for one.
     let ownerId: string | null = null;
@@ -102,7 +106,7 @@ export async function POST(request: Request) {
     const residentId = randomUUID();
     await sql`INSERT INTO carecore_residents (id, organization_id, first_name, last_name, date_of_birth, gender, status, admitted_on, notes, primary_care_user_id) VALUES (${residentId}, ${actor.organizationId}, ${firstName}, ${lastName}, ${birthDate}, ${gender}, ${status}, ${admissionDate}, ${note || null}, ${ownerId})`;
     await sql`INSERT INTO carecore_resident_stays (id, resident_id, care_unit_id, room_id, started_at, created_by) VALUES (${randomUUID()}, ${residentId}, ${unitId}, ${rooms[0].id}, ${new Date(`${admissionDate}T12:00:00Z`).toISOString()}, ${actor.id})`;
-    if (careLevel && careLevel !== "Noch nicht eingestuft")
+    if (careLevel && careLevel !== NOT_ASSESSED)
       await sql`INSERT INTO carecore_care_plans (id, resident_id, owner_user_id, care_level, focus) VALUES (${randomUUID()}, ${residentId}, ${ownerId}, ${careLevel}, ${note || "Aufnahme und Pflegebedarf prüfen."})`;
     await sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data) VALUES (${randomUUID()}, ${actor.organizationId}, ${actor.id}, ${auditOrigin(actor).sessionId}, ${auditOrigin(actor).userAgent}, 'resident', ${residentId}, 'admitted', ${JSON.stringify({ name: `${firstName} ${lastName}`, careUnitId: unitId, room: roomName, primaryNurseId: ownerId })}::jsonb)`;
     return NextResponse.json({ id: residentId }, { status: 201 });

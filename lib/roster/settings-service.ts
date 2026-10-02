@@ -27,7 +27,9 @@ import {
   type Body,
 } from "./schemas";
 import { unitOptions } from "./schedule";
-import { zurichHolidays } from "./time";
+import { countryHolidays } from "./time";
+import type { CountryCode } from "@/lib/country";
+import { organizationCountry } from "@/lib/organization-country";
 import type { RuleSet, ShiftTypeInfo } from "./types";
 
 // Einstellungen des Dienstplans (Spec 8.2): Diensttypen, Mindestbesetzung, Regelwerk, Feiertage,
@@ -50,6 +52,8 @@ export type SettingsPayload = {
     minQualified: number | null;
     qualificationId: string | null;
   }>;
+  // Land der Einrichtung (welche Feiertage „übernehmen“ anbietet).
+  country: CountryCode;
   holidays: Array<{ id: string; date: string; name: string }>;
   qualifications: Array<{ id: string; code: string; name: string; grantsMedication: boolean }>;
   employees: Array<{
@@ -101,8 +105,10 @@ export async function getSettings(ctx: RosterContext, requestedUnit: string | nu
     ? ((await ctx.sql`SELECT user_id, care_unit_id FROM carecore_unit_memberships WHERE is_lead AND user_id = ANY(${memberIds}::uuid[])`) as Row[])
     : [];
   const employees = await loadEmployees(ctx, memberIds);
+  const country = await organizationCountry(ctx);
   return {
     unitId,
+    country,
     units: units.filter((unit) => unit.lead),
     isAdmin: ctx.access.isAdmin,
     ruleSet,
@@ -405,8 +411,8 @@ export async function saveHolidays(ctx: RosterContext, body: Body) {
   if (!managedUnitIds(ctx.access).length) throw forbidden("Feiertage pflegt die Leitung.");
   const org = ctx.actor.organizationId;
   const entries =
-    body.action === "importZurich"
-      ? zurichHolidays(int(body.year, "Jahr", 2000, 2100))
+    body.action === "importHolidays"
+      ? countryHolidays(await organizationCountry(ctx), int(body.year, "Jahr", 2000, 2100))
       : [{ date: date(body.date, "Datum"), name: text(body.name, "Name", 120, true)! }];
   await ctx.sql.transaction([
     ...entries.map(
@@ -415,7 +421,7 @@ export async function saveHolidays(ctx: RosterContext, body: Body) {
       ) => ctx.sql`INSERT INTO carecore_public_holidays (organization_id, date, name) VALUES (${org}, ${holiday.date}, ${holiday.name})
         ON CONFLICT (organization_id, date) DO UPDATE SET name = EXCLUDED.name`,
     ),
-    audit(ctx, body.action === "importZurich" ? "imported" : "created", "holiday", null, null, null, entries),
+    audit(ctx, body.action === "importHolidays" ? "imported" : "created", "holiday", null, null, null, entries),
   ]);
   return { saved: entries.length };
 }

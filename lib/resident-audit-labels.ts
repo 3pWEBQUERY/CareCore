@@ -110,7 +110,7 @@ const FIELD_LABELS: Record<string, string> = {
   responsibleId: "Verantwortlich",
   bodyObservationId: "Körpermarkierung",
   focus: "Pflegefokus",
-  careLevel: "Pflegestufe",
+  careLevel: "Einstufung",
   startsOn: "Beginn",
   reviewOn: "Überprüfung",
   ownerId: "Verantwortlich",

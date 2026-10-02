@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { useWorkContext, useTerms } from "@/app/components/care-context";
+import { useCountry, useWorkContext, useTerms } from "@/app/components/care-context";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import { ModuleIcon } from "@/app/components/module-icon";
 import {
@@ -66,6 +66,7 @@ const currentRound = () => roundForTime(timeInZurich());
 
 export default function RoundView({ showToast }: { showToast: ShowToast }) {
   const t = useTerms();
+  const country = useCountry();
   const nowRound = useSyncExternalStore(noSubscribe, currentRound, () => null);
   const today = useSyncExternalStore(noSubscribe, todayInZurich, () => null);
   const [roundChoice, setRound] = useState<RoundKey | null>(null);
@@ -139,8 +140,8 @@ export default function RoundView({ showToast }: { showToast: ShowToast }) {
       {error && <LoadError message={error} onRetry={reload} />}
       {permissions.data && !canManage && (
         <p className="med-reserve-note med-round-readonly">
-          <strong>Nur Ansicht.</strong> Gaben dokumentieren dürfen die Leitung, Fachpersonen Gesundheit (FaGe) und
-          diplomierte Pflegefachpersonen mit hinterlegter Qualifikation.
+          <strong>Nur Ansicht.</strong> Gaben dokumentieren dürfen die Leitung und Mitarbeitende mit einer hinterlegten
+          Qualifikation, die zur Medikation berechtigt (z. B. {country.medicationExamples}).
         </p>
       )}
       <section className="card med-round-card">

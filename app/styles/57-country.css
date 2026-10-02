@@ -1,0 +1,71 @@
+/* Land der Einrichtung: Vorgaben des gewählten Landes in Leitung › Konfiguration. */
+.admin-country-hint {
+  margin: 0;
+  padding: 10px 18px 0;
+  color: #9a5b00;
+  font-size: 12px;
+  font-weight: 600;
+}
+.admin-country-body {
+  display: grid;
+  gap: 14px;
+  padding: 14px 18px 18px;
+}
+.admin-country-section h3 {
+  margin: 0 0 4px;
+  color: var(--ink);
+  font-size: 13px;
+}
+.admin-country-section p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.admin-country-levels {
+  display: grid;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.admin-country-levels li {
+  display: grid;
+  grid-template-columns: minmax(130px, auto) 1fr;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid #edf1f5;
+  font-size: 12px;
+}
+.admin-country-levels li:last-child {
+  border-bottom: 0;
+}
+.admin-country-levels strong {
+  color: var(--ink);
+}
+.admin-country-levels span {
+  color: var(--muted);
+  line-height: 1.45;
+}
+.admin-country-facts {
+  display: grid;
+  grid-template-columns: minmax(150px, auto) 1fr;
+  gap: 8px 12px;
+  margin: 0;
+  font-size: 12px;
+}
+.admin-country-facts dt {
+  color: #536a82;
+  font-weight: 700;
+}
+.admin-country-facts dd {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.45;
+}
+@media (max-width: 640px) {
+  .admin-country-levels li,
+  .admin-country-facts {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}

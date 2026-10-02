@@ -1,6 +1,5 @@
 "use client";
 
-import type { TerminologyKey } from "@/lib/terminology";
 import { useEffect, useState } from "react";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { ModuleIcon } from "@/app/components/module-icon";
@@ -8,8 +7,8 @@ import { AdminBoard } from "./admin-board";
 import { LeadershipVariant } from "./leadership-variants";
 import type { AdminUserStats } from "@/lib/admin-users";
 import type { OrganizationStructure } from "@/lib/organization-shared";
-import type { SystemStatus } from "@/lib/settings";
-import { SETTING_DEFINITIONS, SETTING_KEYS, type AppSettings, type SettingKey } from "@/lib/settings-shared";
+import type { ConfigurationData } from "./configuration-view";
+import { SETTING_DEFINITIONS, SETTING_KEYS, type SettingKey } from "@/lib/settings-shared";
 import { useApiData } from "@/app/components/workspace-ui";
 import { meta } from "./leadership-data";
 import { LeadershipView, Tone } from "./leadership-data";
@@ -36,14 +35,9 @@ export default function LeadershipWorkspace({ view }: { view: LeadershipView }) 
   }, [view]);
   const organization = useApiData<OrganizationStructure>(view === "organization" ? "/api/organization" : null);
   const orgTotals = organization.data?.totals;
-  const configuration = useApiData<{
-    settings: AppSettings;
-    system: SystemStatus;
-    terminology: TerminologyKey;
-    hiddenVitals: string[];
-    logoUpdatedAt: string | null;
-    organizationName: string;
-  }>(view === "configuration" ? "/api/settings" : null);
+  const configuration = useApiData<NonNullable<ConfigurationData["data"]>>(
+    view === "configuration" ? "/api/settings" : null,
+  );
   const config = configuration.data;
   const enabledSettings = config ? SETTING_KEYS.filter((key) => config.settings[key].enabled) : [];
   const disabledReminders = config

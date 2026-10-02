@@ -1,5 +1,5 @@
 // Geheimnisse für eine neue Kundeninstallation erzeugen (lokal, nichts wird gespeichert oder gesendet).
-// Aufruf: node scripts/new-installation.mjs --kontakt=support@eure-firma.ch "Alterszentrum Sonnengarten"
+// Aufruf: node scripts/new-installation.mjs --kontakt=support@eure-firma.ch --land=CH "Alterszentrum Sonnengarten"
 // Ausgabe: Variablen zum Einfügen in Railway › Dienst `carecore` › Variables › Raw Editor.
 import { randomBytes } from "node:crypto";
 import webpush from "web-push";
@@ -10,14 +10,21 @@ const contact =
     .find((arg) => arg.startsWith("--kontakt="))
     ?.slice("--kontakt=".length)
     .trim() ?? "";
+// Land der Einrichtung: CH (Schweiz), DE (Deutschland) oder AT (Österreich).
+const country = (
+  args
+    .find((arg) => arg.startsWith("--land="))
+    ?.slice("--land=".length)
+    .trim() ?? ""
+).toUpperCase();
 const name = args
   .filter((arg) => !arg.startsWith("--"))
   .join(" ")
   .trim();
-if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact)) {
+if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact) || !["CH", "DE", "AT"].includes(country)) {
   console.error(
-    'Aufruf: node scripts/new-installation.mjs --kontakt=support@eure-firma.ch "Alterszentrum Sonnengarten"\n' +
-      "--kontakt ist die Support-Adresse für Web Push (VAPID_SUBJECT).",
+    'Aufruf: node scripts/new-installation.mjs --kontakt=support@eure-firma.ch --land=CH "Alterszentrum Sonnengarten"\n' +
+      "--kontakt ist die Support-Adresse für Web Push (VAPID_SUBJECT), --land CH, DE oder AT.",
   );
   process.exit(1);
 }
@@ -29,6 +36,7 @@ const vapid = webpush.generateVAPIDKeys();
 
 const lines = [
   `CARECORE_ORGANIZATION_NAME=${JSON.stringify(name)}`,
+  `CARECORE_COUNTRY=${country}`,
   `CARECORE_ADMIN_PASSWORD=${password}`,
   `CARECORE_MFA_KEY=${randomBytes(32).toString("base64")}`,
   `CRON_SECRET=${randomBytes(32).toString("hex")}`,

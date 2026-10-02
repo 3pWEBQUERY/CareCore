@@ -3,6 +3,7 @@ import "@/database/pg-fetch.mjs";
 import { resolveSettings, type AppSettings } from "@/lib/settings-shared";
 import { resolveTerminology, termsFor, type TerminologyKey } from "@/lib/terminology";
 import { resolvePreferences, type UserPreferences } from "@/lib/user-settings-shared";
+import { countryCode, type CountryCode } from "@/lib/country";
 
 export type CareUnit = { id: string; name: string; detail: string; residentCount: number; primary: boolean };
 export type ContextResident = {
@@ -34,6 +35,8 @@ export type WorkContext = {
   residents: ContextResident[];
   settings: AppSettings;
   terminology: TerminologyKey;
+  // Land der Einrichtung (Pflegestufen, Sozialversicherungsnummer usw.).
+  country: CountryCode;
   // Vitalparameter, die die Einrichtung nicht erfasst.
   hiddenVitals: string[];
   preferences: UserPreferences;
@@ -50,7 +53,7 @@ export async function getWorkContext(userId: string): Promise<WorkContext> {
   const sql = database();
   // Independent reads run in parallel to keep the header fast.
   const [profileResult, unitResult, residentResult] = await Promise.all([
-    sql`SELECT u.display_name, u.role, COALESCE(carecore_effective_permissions(u.id), '[]'::jsonb) AS permissions, COALESCE(p.job_title, 'Mitarbeitende:r') AS job_title, COALESCE(p.phone, '') AS phone, p.primary_care_unit_id, cu.name AS primary_care_unit_name, COALESCE(o.name, 'CareCore') AS organization_name, o.logo_updated_at, o.settings->'app' AS app_settings, o.settings->'terminology' AS terminology, o.settings->'hiddenVitals' AS hidden_vitals, p.preferences AS user_preferences FROM carecore_users u LEFT JOIN carecore_user_profiles p ON p.user_id = u.id LEFT JOIN carecore_care_units cu ON cu.id = p.primary_care_unit_id LEFT JOIN carecore_organizations o ON o.id = p.organization_id WHERE u.id = ${userId} LIMIT 1`,
+    sql`SELECT u.display_name, u.role, COALESCE(carecore_effective_permissions(u.id), '[]'::jsonb) AS permissions, COALESCE(p.job_title, 'Mitarbeitende:r') AS job_title, COALESCE(p.phone, '') AS phone, p.primary_care_unit_id, cu.name AS primary_care_unit_name, COALESCE(o.name, 'CareCore') AS organization_name, o.logo_updated_at, o.settings->'app' AS app_settings, o.settings->'terminology' AS terminology, o.country, o.settings->'hiddenVitals' AS hidden_vitals, p.preferences AS user_preferences FROM carecore_users u LEFT JOIN carecore_user_profiles p ON p.user_id = u.id LEFT JOIN carecore_care_units cu ON cu.id = p.primary_care_unit_id LEFT JOIN carecore_organizations o ON o.id = p.organization_id WHERE u.id = ${userId} LIMIT 1`,
     sql`SELECT cu.id, cu.name, COALESCE(cu.floor, '') AS floor, COUNT(r.id)::int AS resident_count FROM carecore_care_units cu LEFT JOIN carecore_resident_stays rs ON rs.care_unit_id = cu.id AND rs.ended_at IS NULL LEFT JOIN carecore_residents r ON r.id = rs.resident_id AND r.status = 'active' JOIN carecore_sites si ON si.id = cu.site_id WHERE cu.active = TRUE AND si.organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${userId}) GROUP BY cu.id, cu.name, cu.floor ORDER BY (cu.id = (SELECT primary_care_unit_id FROM carecore_user_profiles WHERE user_id = ${userId})) DESC NULLS LAST, cu.name`,
     sql`SELECT r.id, r.first_name, r.last_name, r.status, cu.id AS care_unit_id, cu.name AS care_unit_name, COALESCE(room.name, 'Ohne Zimmer') AS room, COALESCE(r.risk_flags->0->>'label', 'Stabil') AS flag, COALESCE(r.risk_flags->0->>'tone', 'stable') AS tone FROM carecore_residents r JOIN LATERAL (SELECT * FROM carecore_resident_stays WHERE resident_id = r.id AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1) rs ON TRUE LEFT JOIN carecore_care_units cu ON cu.id = rs.care_unit_id LEFT JOIN carecore_rooms room ON room.id = rs.room_id WHERE r.status = 'active' AND r.organization_id = (SELECT organization_id FROM carecore_user_profiles WHERE user_id = ${userId}) ORDER BY (cu.id = (SELECT primary_care_unit_id FROM carecore_user_profiles WHERE user_id = ${userId})) DESC NULLS LAST, cu.name, r.last_name, r.first_name`,
   ]);
@@ -66,6 +69,7 @@ export async function getWorkContext(userId: string): Promise<WorkContext> {
     logo_updated_at: Date | string | null;
     app_settings: unknown;
     terminology: unknown;
+    country: unknown;
     hidden_vitals: unknown;
     user_preferences: unknown;
   }>;
@@ -125,6 +129,7 @@ export async function getWorkContext(userId: string): Promise<WorkContext> {
     })),
     settings: resolveSettings(profile.app_settings),
     terminology: resolveTerminology(profile.terminology),
+    country: countryCode(profile.country),
     hiddenVitals: Array.isArray(profile.hidden_vitals)
       ? (profile.hidden_vitals as unknown[]).filter((key): key is string => typeof key === "string")
       : [],

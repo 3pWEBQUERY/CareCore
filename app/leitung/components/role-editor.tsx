@@ -1,6 +1,6 @@
 "use client";
 
-import { useTerms } from "@/app/components/care-context";
+import { useCountry, useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import type { ManagedRole } from "@/lib/admin-users";
@@ -16,6 +16,7 @@ export function RoleEditor({
   onUpdated: (roles: ManagedRole[], message: string) => void;
 }) {
   const t = useTerms();
+  const country = useCountry();
   const [name, setName] = useState(role?.name ?? ""),
     [key, setKey] = useState(role?.key ?? ""),
     [description, setDescription] = useState(role?.description ?? ""),
@@ -146,7 +147,9 @@ export function RoleEditor({
                     onClick={() => setNeedsQualification((value) => !value)}
                   >
                     <strong>Nur mit Qualifikation</strong>
-                    <small>Medikation nur für Personen mit berechtigender Qualifikation (z. B. HF, FaGe)</small>
+                    <small>
+                      Medikation nur für Personen mit berechtigender Qualifikation (z. B. {country.medicationExamples})
+                    </small>
                     {needsQualification && <ModuleIcon name="check" />}
                   </button>
                 </div>

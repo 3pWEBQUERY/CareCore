@@ -1,6 +1,6 @@
 "use client";
 
-import { useTerms } from "@/app/components/care-context";
+import { useCountry, useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { CalendarDots, Check, ClipboardText, PencilSimple, Plus, Trash, User } from "@phosphor-icons/react";
 import { formatDate, formatDateTime, requestJson } from "@/app/components/workspace-ui";
@@ -24,6 +24,7 @@ const GENDERS: Record<string, string> = {
 
 export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
   const t = useTerms();
+  const country = useCountry();
   const {
     resident,
     contentRef,
@@ -233,8 +234,11 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
                 />
               </label>
               <label>
-                <span>AHV-Nummer</span>
-                <input placeholder={editable ? "756.XXXX.XXXX.XX" : undefined} {...field("socialSecurityNumber")} />
+                <span>{country.socialNumber.label}</span>
+                <input
+                  placeholder={editable ? country.socialNumber.placeholder : undefined}
+                  {...field("socialSecurityNumber")}
+                />
               </label>
               <label>
                 <span>Konfession</span>
@@ -471,12 +475,17 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
             </div>
             <div className="master-data-form-grid single-column">
               <label>
-                <span>Krankenversicherung</span>
+                <span>{country.insurance.insurerLabel}</span>
                 <input {...field("insurer")} />
               </label>
               <label>
-                <span>Versichertennummer</span>
-                <input {...field("insuranceNumber")} />
+                <span>{country.insurance.numberLabel}</span>
+                <input
+                  placeholder={
+                    editable && country.insurance.numberPlaceholder ? country.insurance.numberPlaceholder : undefined
+                  }
+                  {...field("insuranceNumber")}
+                />
               </label>
             </div>
           </section>

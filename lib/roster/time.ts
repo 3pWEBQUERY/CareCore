@@ -251,6 +251,47 @@ export function zurichHolidays(year: number): Array<{ date: string; name: string
   ].sort((a, b) => a.date.localeCompare(b.date));
 }
 
+// Bundesweite gesetzliche Feiertage in Deutschland (Feiertage der Länder ergänzt die Leitung einzeln).
+export function germanHolidays(year: number): Array<{ date: string; name: string }> {
+  const easter = easterSunday(year);
+  return [
+    { date: `${year}-01-01`, name: "Neujahr" },
+    { date: addDays(easter, -2), name: "Karfreitag" },
+    { date: addDays(easter, 1), name: "Ostermontag" },
+    { date: `${year}-05-01`, name: "Tag der Arbeit" },
+    { date: addDays(easter, 39), name: "Christi Himmelfahrt" },
+    { date: addDays(easter, 50), name: "Pfingstmontag" },
+    { date: `${year}-10-03`, name: "Tag der Deutschen Einheit" },
+    { date: `${year}-12-25`, name: "1. Weihnachtstag" },
+    { date: `${year}-12-26`, name: "2. Weihnachtstag" },
+  ].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// Gesetzliche Feiertage in Österreich (Feiertagsruhegesetz, Arbeitsruhegesetz § 7).
+export function austrianHolidays(year: number): Array<{ date: string; name: string }> {
+  const easter = easterSunday(year);
+  return [
+    { date: `${year}-01-01`, name: "Neujahr" },
+    { date: `${year}-01-06`, name: "Heilige Drei Könige" },
+    { date: addDays(easter, 1), name: "Ostermontag" },
+    { date: `${year}-05-01`, name: "Staatsfeiertag" },
+    { date: addDays(easter, 39), name: "Christi Himmelfahrt" },
+    { date: addDays(easter, 50), name: "Pfingstmontag" },
+    { date: addDays(easter, 60), name: "Fronleichnam" },
+    { date: `${year}-08-15`, name: "Mariä Himmelfahrt" },
+    { date: `${year}-10-26`, name: "Nationalfeiertag" },
+    { date: `${year}-11-01`, name: "Allerheiligen" },
+    { date: `${year}-12-08`, name: "Mariä Empfängnis" },
+    { date: `${year}-12-25`, name: "Christtag" },
+    { date: `${year}-12-26`, name: "Stefanitag" },
+  ].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// Feiertage zum Übernehmen in den Dienstplan, je nach Land der Einrichtung.
+export function countryHolidays(country: "CH" | "DE" | "AT", year: number) {
+  return country === "DE" ? germanHolidays(year) : country === "AT" ? austrianHolidays(year) : zurichHolidays(year);
+}
+
 // Gregorian Easter Sunday (Meeus/Jones/Butcher).
 export function easterSunday(year: number) {
   const a = year % 19;

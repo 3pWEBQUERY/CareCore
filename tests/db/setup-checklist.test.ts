@@ -31,6 +31,7 @@ test("Ersteinrichtung: Schritte aus den Daten, Name der Einrichtung, ausblenden 
   // Fixture: eigener Name, zwei Wohnbereiche, mehrere Mitarbeitende; ohne Adresse, Bewohner, E-Mail, Zwei-Faktor.
   assert.deepEqual(await states(admin), {
     name: true,
+    country: false,
     site: false,
     units: true,
     staff: true,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTerms } from "@/app/components/care-context";
+import { useCountry, useTerms } from "@/app/components/care-context";
 import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Printer, X } from "@phosphor-icons/react";
@@ -22,6 +22,7 @@ const or = (value: string | null | undefined, fallback = "–") => (value && val
 // Überleitungsbogen (A4 hoch) für Spitaleinweisung oder Verlegung; PDF über den Druckdialog.
 export default function TransferSheetPage() {
   const t = useTerms();
+  const country = useCountry();
   const params = useSearchParams();
   const residentId = params.get("resident");
   const valid = /^[0-9a-f-]{36}$/i.test(residentId ?? "");
@@ -122,9 +123,9 @@ export default function TransferSheetPage() {
                 <dd>{or(data.master.maritalStatus)}</dd>
                 <dt>Konfession</dt>
                 <dd>{or(data.master.religion)}</dd>
-                <dt>AHV-Nummer</dt>
+                <dt>{country.socialNumber.label}</dt>
                 <dd>{or(data.master.socialSecurityNumber)}</dd>
-                <dt>Krankenversicherung</dt>
+                <dt>{country.insurance.insurerLabel}</dt>
                 <dd>
                   {or(data.master.insurer)}
                   {data.master.insuranceNumber ? ` · Nr. ${data.master.insuranceNumber}` : ""}

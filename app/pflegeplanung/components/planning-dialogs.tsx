@@ -3,6 +3,8 @@
 import { useState, type ReactNode } from "react";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import { EditorDialog, requestJson, todayInZurich } from "@/app/components/workspace-ui";
+import { useCountry } from "@/app/components/care-context";
+import { NOT_ASSESSED, careLevelOptions } from "@/lib/country";
 import {
   GOAL_CATEGORIES,
   OUTCOME_LABELS,
@@ -47,6 +49,7 @@ export function PlanDialog({
   onClose,
   onSaved,
 }: DialogProps & { residentId: string; plan: CarePlan | null; staff: Array<{ id: string; name: string }> }) {
+  const country = useCountry();
   const [form, setForm] = useState({
     careLevel: plan?.careLevel ?? "",
     focus: plan?.focus ?? "",
@@ -96,12 +99,12 @@ export function PlanDialog({
         />
       </label>
       <label>
-        <span>Pflegestufe</span>
-        <input
-          maxLength={80}
-          value={form.careLevel}
-          onChange={(e) => set("careLevel", e.target.value)}
-          placeholder="z. B. Pflegestufe 4"
+        <span>{country.careLevels.label}</span>
+        <CareSelect
+          label={country.careLevels.label}
+          value={form.careLevel || NOT_ASSESSED}
+          options={[NOT_ASSESSED, ...careLevelOptions(country.code, plan?.careLevel)]}
+          onChange={(value) => set("careLevel", value === NOT_ASSESSED ? "" : value)}
         />
       </label>
       <label>

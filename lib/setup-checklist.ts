@@ -20,6 +20,7 @@ export async function setupChecklist(ctx: ApiContext): Promise<SetupChecklist> {
     SELECT
       o.name,
       o.settings->'setup'->>'dismissedAt' AS dismissed_at,
+      o.country_set_at IS NOT NULL AS country_set,
       EXISTS (SELECT 1 FROM carecore_sites s WHERE s.organization_id = o.id AND s.active
         AND COALESCE(s.address_line1, '') <> '' AND COALESCE(s.city, '') <> '') AS site_address,
       (SELECT COUNT(*)::int FROM carecore_care_units cu JOIN carecore_sites s ON s.id = cu.site_id
@@ -39,6 +40,13 @@ export async function setupChecklist(ctx: ApiContext): Promise<SetupChecklist> {
       label: "Name der Einrichtung",
       detail: "Erscheint in der Kopfzeile aller Mitarbeitenden.",
       done: name !== "" && name !== "CareCore",
+      href: "/c/leitung/administration/konfiguration",
+    },
+    {
+      id: "country",
+      label: "Land der Einrichtung",
+      detail: "Schweiz, Deutschland oder Österreich: bestimmt Pflegestufen, Feiertage und Qualifikationen.",
+      done: Boolean(row?.country_set),
       href: "/c/leitung/administration/konfiguration",
     },
     {

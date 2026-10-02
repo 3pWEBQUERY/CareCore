@@ -16,6 +16,8 @@ import { ApiKeysCard } from "./api-keys-card";
 import { WebhooksCard } from "./webhooks-card";
 import { SsoCard } from "./sso-card";
 import { InteractionsCard } from "./interactions-card";
+import { CountryCard } from "./country-card";
+import type { CountryCode } from "@/lib/country";
 
 export type ConfigurationData = {
   data?: {
@@ -25,6 +27,7 @@ export type ConfigurationData = {
     hiddenVitals: string[];
     logoUpdatedAt: string | null;
     organizationName: string;
+    country: { country: CountryCode; confirmed: boolean };
   };
   error?: string;
   loading: boolean;
@@ -231,6 +234,14 @@ export function ConfigurationView({
             Protokoll ansehen <ModuleIcon name="chevron" />
           </button>
         </aside>
+        {data && (
+          <CountryCard
+            country={data.country.country}
+            confirmed={data.country.confirmed}
+            onSaved={reload}
+            showToast={showToast}
+          />
+        )}
         <section className="card admin-terminology-card" aria-labelledby="admin-terminology-title">
           <div className="card-header">
             <div>

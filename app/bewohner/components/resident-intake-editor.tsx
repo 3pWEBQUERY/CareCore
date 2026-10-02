@@ -1,10 +1,10 @@
 "use client";
 
-import { useTerms } from "@/app/components/care-context";
+import { useCountry, useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { todayInZurich, useApiData } from "@/app/components/workspace-ui";
 import { useEscapeClose } from "@/app/components/use-escape-close";
-import { CARE_LEVELS, NOT_ASSESSED } from "@/lib/care-levels";
+import { NOT_ASSESSED, careLevelOptions } from "@/lib/country";
 import { CareDatePicker, CareSelect, formatCareDate } from "../../components/care-form-controls";
 import { Icon } from "./residents-utils";
 
@@ -35,6 +35,7 @@ function IntakeForm({ onClose, onSuccess }: Props) {
   const [admissionDate, setAdmissionDate] = useState(todayInZurich);
   const [chosenUnitId, setUnitId] = useState<string | null>(null);
   const [room, setRoom] = useState("");
+  const country = useCountry();
   const [careLevel, setCareLevel] = useState(NOT_ASSESSED);
   const [nurseId, setNurseId] = useState<string | null>(null);
   const [status, setStatus] = useState("Aktiv");
@@ -161,11 +162,11 @@ function IntakeForm({ onClose, onSuccess }: Props) {
               <CareDatePicker label="Eintrittsdatum" value={admissionDate} onChange={setAdmissionDate} />
             </label>
             <label>
-              Pflegestufe
+              {country.careLevels.label}
               <CareSelect
-                label="Pflegestufe"
+                label={country.careLevels.label}
                 value={careLevel}
-                options={[NOT_ASSESSED, ...CARE_LEVELS]}
+                options={[NOT_ASSESSED, ...careLevelOptions(country.code)]}
                 onChange={setCareLevel}
               />
             </label>

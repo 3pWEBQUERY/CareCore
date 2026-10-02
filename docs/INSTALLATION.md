@@ -12,10 +12,13 @@ von der Checkliste „CareCore einrichten“ unter Leitung › Administration.
 Lokal im Repository:
 
 ```bash
-node scripts/new-installation.mjs --kontakt=support@eure-firma.ch "Alterszentrum Sonnengarten"
+node scripts/new-installation.mjs --kontakt=support@eure-firma.ch --land=CH "Alterszentrum Sonnengarten"
 ```
 
-Das Skript gibt die Variablen für Schritt 3 aus (Name der Einrichtung, Passwort des ersten Administrators,
+`--land` ist das Land der Einrichtung: `CH` (Schweiz), `DE` (Deutschland) oder `AT` (Österreich). Es bestimmt
+Pflegestufen (CH), Pflegegrade (DE) bzw. Pflegegeldstufen (AT), die Sozialversicherungsnummer, die Feiertage im
+Dienstplan und die vorgeschlagenen Qualifikationen; die Administration kann es später unter Leitung › Konfiguration
+ändern. Das Skript gibt die Variablen für Schritt 3 aus (Name und Land der Einrichtung, Passwort des ersten Administrators,
 Schlüssel für Zwei-Faktor/Webhooks/Offline, Cron-Geheimnis, Web-Push-Schlüssel). Nichts wird gespeichert oder
 gesendet. Die Ausgabe nur in Railway einfügen; das Admin-Passwort der Einrichtung auf einem sicheren Weg übergeben
 (z. B. Telefon), nie per E-Mail zusammen mit dem Benutzernamen.
@@ -79,7 +82,7 @@ if (!response.ok) process.exit(1);
 1. Deploy abwarten; `https://<Domain>/api/health` meldet `"status": "ok"` und keine offenen Migrationen.
 2. Mit `Admin` und dem Passwort aus Schritt 1 anmelden. Die Einrichtung (Name aus `CARECORE_ORGANIZATION_NAME`), ein
    Standort und „Wohnbereich 1“ sind angelegt.
-3. Leitung › Administration zeigt „CareCore einrichten“: Name, Standort mit Adresse, Wohnbereiche, Mitarbeitende,
+3. Leitung › Administration zeigt „CareCore einrichten“: Name, Land, Standort mit Adresse, Wohnbereiche, Mitarbeitende,
    Bewohner, E-Mail-Versand, Zwei-Faktor für das Administrationskonto. Diese Schritte erledigt die Einrichtung selbst
    oder ihr gemeinsam mit ihr. Bestehende Listen (Bewohner, Mitarbeitende) lassen sich unter Leitung ›
    Administration › Datenübernahme aus CSV übernehmen.
