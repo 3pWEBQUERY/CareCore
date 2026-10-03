@@ -29,6 +29,12 @@ test("QR-Etiketten: Etiketten je Zimmer, Scan öffnet die Akte", async ({ page }
   await expect(label.locator("svg")).toBeVisible();
   await expect(label).toContainText(unit.name);
 
+  // Auf dem Handy passt die Vorschau in die Breite (kein seitliches Scrollen).
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(labels.first()).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+  await page.setViewportSize({ width: 1280, height: 720 });
+
   await page.goto(`/c/bewohner/zimmer/${room.id}`);
   await page.waitForURL(`**/c/bewohner?resident=${resident.id}`);
   await expect(page.getByRole("heading", { name: resident.name }).first()).toBeVisible();
