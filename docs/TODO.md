@@ -449,8 +449,10 @@ Fachliche Lücken der Akte; was die Einrichtung festlegt, bleibt bei ihr (keine 
       Begründung entfernen, alles im Protokoll der Akte. Unter Isolation & Ausbruch der „Impfstatus“ je Wohnbereich:
       wer gegen die gewählte Impfung geimpft ist, auf Wunsch nur seit einem frei gewählten Datum (kein vorgegebener
       Zeitraum). Letzte Impfung je Art im Überleitungsbogen, alle in der Auskunft. Keine Empfehlungen durch CareCore.
-- [ ] **Hilfsmittel und persönliche Gegenstände:** Brille, Hörgerät, Zahnprothese, Rollator, Rollstuhl usw. je Person
-      mit Kennzeichnung und Standort; im Überleitungsbogen „mitgegeben“ abhaken, damit nichts verloren geht.
+- [x] **Hilfsmittel und persönliche Gegenstände:** Karte „Hilfsmittel & Gegenstände“ in den Stammdaten: Art
+      (Hilfsmittel oder persönlicher Gegenstand), Gegenstand (häufige zur Schnellauswahl), Kennzeichnung, Standort,
+      Bemerkung; „nicht mehr vorhanden“ mit Grund, bleibt im Verlauf; Schutz gegen gleichzeitige Änderungen; alles im
+      Protokoll der Akte. Im Überleitungsbogen alle vorhandenen mit Kästchen „mitgegeben“; in der Auskunft enthalten.
 
 ### Niedrig / UI/UX
 

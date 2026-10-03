@@ -434,6 +434,24 @@ export default function TransferSheetPage() {
             )}
           </section>
 
+          {data.belongings.length > 0 && (
+            <section>
+              <h2>Hilfsmittel &amp; persönliche Gegenstände</h2>
+              <ul className="transfer-belongings">
+                {data.belongings.map((item) => (
+                  <li key={`${item.kind}-${item.name}-${item.marking}`}>
+                    <span className="transfer-check" aria-hidden="true" />
+                    <span>
+                      {item.name}
+                      {item.marking ? ` (${item.marking})` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="transfer-empty">Mitgegebenes abhaken.</p>
+            </section>
+          )}
+
           <footer className="transfer-foot">
             <div>
               <span>

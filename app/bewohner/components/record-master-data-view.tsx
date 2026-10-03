@@ -17,6 +17,7 @@ import type { ResidentRecordState } from "./use-resident-record";
 import { EVACUATION_MOBILITY, EVACUATION_MOBILITY_KEYS } from "@/lib/evacuation-shared";
 import { RecordDiagnosesCard } from "./record-diagnoses-card";
 import { RecordVaccinationsCard } from "./record-vaccinations-card";
+import { RecordBelongingsCard } from "./record-belongings-card";
 import { RecordEndOfLifeCards } from "./record-end-of-life-cards";
 import { ADVANCE_ANSWERS, ADVANCE_CARE_LABELS, type AdvanceAnswer } from "@/lib/advance-care-shared";
 
@@ -309,6 +310,9 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
           )}
           {resident.id && (
             <RecordVaccinationsCard residentId={resident.id} residentName={resident.name} onAction={onAction} />
+          )}
+          {resident.id && (
+            <RecordBelongingsCard residentId={resident.id} residentName={resident.name} onAction={onAction} />
           )}
         </div>
 
