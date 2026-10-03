@@ -329,7 +329,12 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
 - [x] **Alltagsgestaltung und Aktivierung:** Neues Modul Alltag & Aktivierung: - **Angebote:** Wochenplan mit Gruppenangeboten und Einzelbetreuung je Wohnbereich oder für das ganze Haus,
       auf Wunsch wöchentlich wiederholt (bis 12 Wochen). Bearbeiten und Absagen mit Grund. - **Teilnahme:** ab Beginn je Person erfassbar (teilgenommen, abgelehnt, nicht anwesend) mit Bemerkung. - **Teilnahme je Person:** Monatsübersicht mit Kategorien und CSV-Export. - **Portal:** neuer Bereich „Alltag & Aktivitäten“ (wenn freigegeben) mit Teilnahme der letzten 30 Tage und den
       kommenden Angeboten, ohne Bemerkungen der Pflege. - Keine Vorgabe, wie viel Aktivierung eine Person braucht.
-- [ ] **Belegung und Eintritt:** Warteliste, geplante Eintritte, Zimmerplanung mit freien Plätzen je Wohnbereich.
+- [x] **Belegung und Eintritt:** Bewohner › Belegung zeigt die Plätze je Wohnbereich, belegt, reserviert und frei, mit
+      Zimmern und Betten. Zimmer anlegen und ändern kann die Administration; Betten nie unter die Belegung. - **Warteliste:** Kontakt, gewünschter Bereich und Zeitpunkt sowie der Bedarf, wie er mitgeteilt wurde. Status:
+      wartet, Platz angeboten, zurückgezogen (mit Grund). Die Reihenfolge der Vergabe entscheidet die Leitung. - **Eintritt planen:** reserviert ein freies Bett; die Person erscheint als „Eintritt geplant“. - **Eintritt:** wird am Eintrittstag bestätigt; eine Absage mit Grund gibt das Bett frei, und der
+      Wartelisten-Eintrag wartet wieder. - Alles steht im Protokoll.
+- [ ] **Warteliste: Aufbewahrung:** abgeschlossene Anfragen nach einer festgelegten Frist löschen (Frist durch die
+      Einrichtung, analog zur Aufbewahrung der Akten).
 
 ### Niedrig / UI/UX
 
