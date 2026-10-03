@@ -4,6 +4,7 @@ import { type Terms } from "@/lib/terminology";
 import { LANGUAGES, type Language } from "@/lib/i18n-shared";
 import { type ModuleIconName } from "@/app/components/module-icon";
 import { SETTING_DEFINITIONS, SETTING_KEYS, type AppSettings, type SettingKey } from "@/lib/settings-shared";
+import { PERMISSION_LABELS } from "@/lib/permission-labels";
 import {
   AUTO_LOGOUT_MINUTES,
   CONTRASTS,
@@ -108,20 +109,6 @@ export const NAV: Array<[SettingsView, string, ModuleIconName]> = [
 export const ADMIN_VIEWS: SettingsView[] = ["organization"];
 const pick = <K extends string>(labels: Record<K, string>, label: string, fallback: K) =>
   (Object.keys(labels) as K[]).find((key) => labels[key] === label) ?? fallback;
-const PERMISSION_LABELS: Record<string, string> = {
-  "residents.read": "Bewohnerakten lesen",
-  "residents.write": "Bewohnerakten bearbeiten",
-  "documentation.write": "Dokumentieren",
-  "medication.administer": "Medikation verabreichen",
-  "medication.manage": "Medikation verwalten (Verordnungen, Bestände)",
-  "schedule.manage": "Dienstplanung",
-  "team.manage": "Teamleitung",
-  "quality.manage": "Qualitätsmanagement",
-  "insights.read": "Kennzahlen",
-  "administration.manage": "Administration",
-  "rai.manage": "RAI / interRAI",
-  "ai.use": "CareCore KI",
-};
 
 function daysAgo(value: string | null) {
   if (!value) return null;

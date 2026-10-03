@@ -1,6 +1,6 @@
 import { iso, type ApiContext, type Row } from "@/lib/api-context";
 import { readTerms } from "@/lib/settings";
-import { SERVICES } from "@/lib/organization-shared";
+import { AUDIT_AREAS, UUID, auditArea, auditChanges, auditSettingTitle, auditTitle } from "@/lib/audit-labels";
 import { readSettings } from "@/lib/settings";
 import { SETTING_DEFINITIONS, type SettingKey } from "@/lib/settings-shared";
 
@@ -16,7 +16,7 @@ export type AdminLogEntry = {
   at: string;
   actor: string;
   area: string;
-  action: string;
+  title: string;
   subject: string;
   changes: Array<{ field: string; before: string; after: string }>;
   href: string | null;
@@ -27,203 +27,24 @@ export type AdminOverview = {
   log: AdminLogEntry[];
 };
 
-const ENTITY: Record<string, { area: string; href: string | null }> = {
-  site: { area: "Standort", href: "/leitung/administration" },
-  care_unit: { area: "Wohnbereich", href: "/leitung/administration" },
-  user: { area: "Mitarbeiter", href: "/leitung/administration/mitarbeiter" },
-  role: { area: "Rolle", href: "/leitung/administration/mitarbeiter" },
-  setting: { area: "Einstellung", href: "/leitung/administration/konfiguration" },
-  support_request: { area: "Problemmeldung", href: null },
-  care_supply_product: { area: "Pflegeprodukt", href: "/leitung/administration/pflegebedarf" },
-  resident: { area: "Bewohner", href: "/bewohner" },
-  resident_document: { area: "Dokument", href: "/bewohner" },
-  shared_file: { area: "Ablage", href: "/carecore-one/ablage" },
-  documentation_entry: { area: "Pflegebericht", href: "/pflegedokumentation" },
-  care_plan: { area: "Pflegeplan", href: "/pflegeplanung" },
-  care_goal: { area: "Pflegeziel", href: "/pflegeplanung" },
-  intervention: { area: "Massnahme", href: "/pflegeplanung" },
-  medication_order: { area: "Verordnung", href: "/medikation" },
-  medication_administration: { area: "Medikamentengabe", href: "/medikation/runde" },
-  vital_measurements: { area: "Vitalwerte", href: "/vitalwerte/entwicklung" },
-  vital_threshold: { area: "Vitalwert-Grenze", href: "/vitalwerte/entwicklung" },
-  wound: { area: "Wunde", href: "/wundmanagement" },
-  wound_entry: { area: "Wundverlauf", href: "/wundmanagement" },
-  wound_photo: { area: "Wundfoto", href: "/wundmanagement" },
-  quality_event: { area: "Ereignis", href: "/leitung/qualitaet" },
-  quality_action: { area: "Qualitätsmassnahme", href: "/leitung/qualitaet/massnahmen" },
-  task: { area: "Aufgabe", href: "/betrieb/aufgaben" },
-  handover: { area: "Übergabe", href: "/betrieb/uebergabe" },
-  shift: { area: "Dienst", href: "/dienstplan" },
-  shift_plan: { area: "Dienstplan", href: "/dienstplan" },
-  shift_assignment: { area: "Diensteinteilung", href: "/dienstplan" },
-  absence: { area: "Abwesenheit", href: "/dienstplan" },
-  training: { area: "Schulung", href: "/personal/schulungen" },
-  training_enrollment: { area: "Schulung", href: "/personal/schulungen" },
-  training_session: { area: "Schulungstermin", href: "/personal/schulungen" },
-  training_evidence: { area: "Schulungsnachweis", href: "/personal/schulungen" },
-  team_post: { area: "Teambeitrag", href: "/personal/team" },
-  team_channel: { area: "Teamkanal", href: "/personal/team" },
-  assessment_record: { area: "Einschätzung", href: "/einschaetzungen" },
-  fluid_entry: { area: "Trinkprotokoll", href: "/ernaehrung/trinkprotokoll" },
-  meal_entry: { area: "Mahlzeit", href: "/ernaehrung" },
-};
-
-const ACTIONS: Record<string, string> = {
-  create: "erstellt",
-  created: "erstellt",
-  update: "geändert",
-  updated: "geändert",
-  edited: "bearbeitet",
-  archived: "archiviert",
-  cancelled: "abgesagt",
-  completed: "abgeschlossen",
-  removed: "entfernt",
-  uploaded: "hochgeladen",
-  shared: "geteilt",
-  deleted: "gelöscht",
-  reported: "gemeldet",
-  recorded: "erfasst",
-  documented: "dokumentiert",
-  saved: "gespeichert",
-  assigned: "zugewiesen",
-  confirmed: "bestätigt",
-  requested: "beantragt",
-  rejected: "abgelehnt",
-  withdrawn: "zurückgezogen",
-  planned: "geplant",
-  verified: "bestätigt",
-  enrolled: "angemeldet",
-  acknowledged: "gelesen",
-  hidden: "ausgeblendet",
-  checked_in: "eingestempelt",
-  checked_out: "ausgestempelt",
-  prn_administered: "Reservegabe",
-  effect_checked: "Wirkungskontrolle",
-  quiz_passed: "Quiz bestanden",
-  quiz_failed: "Quiz nicht bestanden",
-  medication_allergies_updated: "Allergien geändert",
-  master_data_updated: "Stammdaten geändert",
-  resuscitation_updated: "Reanimationsstatus geändert",
-  admitted: "aufgenommen",
-  master_data_checked: "Stammdaten geprüft",
-  stay_discharged: "Austritt",
-  stay_returned: "Rückkehr",
-  stay_transferred: "Verlegung",
-  stay_deceased: "Todesfall",
-  stay_hospital: "Spitalaufenthalt",
-  stay_absent: "Abwesenheit",
-};
-
-const STATUS: Record<string, string> = {
-  active: "aktiv",
-  open: "offen",
-  in_progress: "in Bearbeitung",
-  done: "erledigt",
-  completed: "abgeschlossen",
-  resolved: "erledigt",
-  closed: "geschlossen",
-  paused: "pausiert",
-  stopped: "abgesetzt",
-  cancelled: "abgebrochen",
-  healed: "abgeheilt",
-  healing: "in Heilung",
-  review: "zur Überprüfung",
-  archived: "archiviert",
-  achieved: "erreicht",
-};
-
-function actionLabel(action: string) {
-  if (ACTIONS[action]) return ACTIONS[action];
-  if (action.startsWith("status_")) {
-    const status = action.slice(7);
-    return `Status: ${STATUS[status] ?? status.replaceAll("_", " ")}`;
-  }
-  if (action.startsWith("stay_")) return `Aufenthalt: ${action.slice(5).replaceAll("_", " ")}`;
-  return action.replaceAll("_", " ");
-}
-
-const FIELDS: Record<string, string> = {
-  name: "Bezeichnung",
-  code: "Kürzel",
-  floor: "Etage",
-  capacity: "Kapazität",
-  services: "Dienste",
-  notes: "Hinweis",
-  active: "Aktiv",
-  leadId: "Leitung",
-  lead_user_id: "Leitung",
-  managerId: "Leitung",
-  manager_user_id: "Leitung",
-  siteType: "Standorttyp",
-  site_type: "Standorttyp",
-  country: "Land",
-  addressLine1: "Adresse",
-  address_line1: "Adresse",
-  postalCode: "PLZ",
-  postal_code: "PLZ",
-  city: "Ort",
-  status: "Status",
-  enabled: "Eingeschaltet",
-  value: "Wert",
-  role: "Rolle",
-  category: "Kategorie",
-  unit: "Einheit",
-  stock: "Bestand",
-  minStock: "Mindestbestand",
-  title: "Titel",
-  displayName: "Name",
-  jobTitle: "Funktion",
-  permissions: "Berechtigungen",
-};
-
-const SKIP = new Set([
-  "id",
-  "site_id",
-  "siteId",
-  "organization_id",
-  "created_at",
-  "updated_at",
-  "created_by",
-  "updated_by",
-]);
-
-function show(value: unknown): string {
-  if (value === null || value === undefined || value === "") return "–";
-  if (typeof value === "string" && value in SERVICES) return SERVICES[value as keyof typeof SERVICES];
-  if (typeof value === "boolean") return value ? "ja" : "nein";
-  if (Array.isArray(value)) return value.map(show).join(", ") || "–";
-  if (typeof value === "object") return JSON.stringify(value).slice(0, 60);
-  return String(value).slice(0, 80);
-}
-
-// Normalises snake_case and camelCase keys so before (row) and after (input) can be compared.
-const norm = (key: string) => key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
-
-function changes(before: unknown, after: unknown) {
-  const b = before && typeof before === "object" ? (before as Record<string, unknown>) : null;
-  const a = after && typeof after === "object" ? (after as Record<string, unknown>) : null;
-  if (!a) return [];
-  const previous = new Map(Object.entries(b ?? {}).map(([key, value]) => [norm(key), value]));
-  return Object.entries(a)
-    .filter(([key]) => !SKIP.has(key))
-    .filter(([key, value]) => !b || show(previous.get(norm(key))) !== show(value))
-    .slice(0, 8)
-    .map(([key, value]) => ({
-      field: FIELDS[key] ?? FIELDS[norm(key)] ?? key,
-      before: b ? show(previous.get(norm(key))) : "–",
-      after: show(value),
-    }));
+function residentOf(row: Row) {
+  for (const data of [row.after_data, row.before_data])
+    if (data && typeof data === "object") {
+      const value = (data as Record<string, unknown>).residentId;
+      if (typeof value === "string" && UUID.test(value)) return value;
+    }
+  return row.entity_type === "resident" && UUID.test(String(row.entity_id ?? "")) ? String(row.entity_id) : null;
 }
 
 function subject(row: Row) {
-  if (row.entity_type === "setting") return SETTING_DEFINITIONS[row.action as SettingKey]?.title ?? String(row.action);
+  if (row.entity_type === "setting") return auditSettingTitle(String(row.action));
   for (const data of [row.after_data, row.before_data])
     if (data && typeof data === "object") {
       const record = data as Record<string, unknown>;
       const value = record.name ?? record.title ?? record.displayName ?? record.display_name ?? record.username;
       if (typeof value === "string" && value) return value;
     }
-  return "";
+  return typeof row.entity_name === "string" ? row.entity_name : "";
 }
 
 const VIEW_TYPES: Record<AdminView, string[] | null> = {
@@ -238,7 +59,17 @@ export async function adminOverview(ctx: ApiContext, view: AdminView): Promise<A
   const [weeks, logRows, todo, settings, t] = await Promise.all([
     trendRows(ctx, view),
     ctx.sql`
-      SELECT a.id, a.created_at, a.entity_type, a.action, a.before_data, a.after_data, COALESCE(u.display_name, 'System') AS actor
+      SELECT a.id, a.created_at, a.entity_type, a.entity_id, a.action, a.before_data, a.after_data, COALESCE(u.display_name, 'System') AS actor,
+        CASE
+          WHEN a.entity_type IN ('user', 'user_mfa') THEN (SELECT display_name FROM carecore_users WHERE id = a.entity_id)
+          WHEN a.entity_type = 'task' THEN (SELECT title FROM carecore_tasks WHERE id = a.entity_id)
+          WHEN a.entity_type = 'quality_event' THEN (SELECT title FROM carecore_quality_events WHERE id = a.entity_id)
+          WHEN a.entity_type = 'quality_action' THEN (SELECT title FROM carecore_quality_actions WHERE id = a.entity_id)
+          WHEN a.entity_type = 'care_plan' THEN (SELECT focus FROM carecore_care_plans WHERE id = a.entity_id)
+          WHEN a.entity_type = 'wound' THEN (SELECT title FROM carecore_wounds WHERE id = a.entity_id)
+          WHEN a.entity_type IN ('standard', 'document') THEN (SELECT title FROM carecore_documents WHERE id = a.entity_id)
+          WHEN a.entity_type = 'training' THEN (SELECT title FROM carecore_trainings WHERE id = a.entity_id)
+        END AS entity_name
       FROM carecore_audit_log a LEFT JOIN carecore_users u ON u.id = a.actor_user_id
       LEFT JOIN carecore_user_profiles p ON p.user_id = a.actor_user_id
       WHERE (a.organization_id = ${org} OR (a.organization_id IS NULL AND p.organization_id = ${org}))
@@ -324,29 +155,59 @@ export async function adminOverview(ctx: ApiContext, view: AdminView): Promise<A
     });
 
   const log = logRows.map((row) => {
-    const entity = ENTITY[String(row.entity_type)] ?? { area: String(row.entity_type), href: null };
+    const entityType = String(row.entity_type);
+    const action = String(row.action);
+    const href = AUDIT_AREAS[entityType]?.href ?? null;
     return {
       id: String(row.id),
       at: iso(row.created_at) ?? "",
       actor: String(row.actor),
-      area: entity.area === "Bewohner" ? t.many : entity.area,
-      action: row.entity_type === "setting" ? "geändert" : actionLabel(String(row.action)),
+      area: auditArea(entityType, t),
+      title: auditTitle(entityType, action, t),
       subject: subject(row),
-      changes: changes(row.before_data, row.after_data),
-      href: entity.href ? `/c${entity.href}` : null,
+      changes: auditChanges(entityType, action, row.before_data, row.after_data),
+      href: href ? `/c${href}` : null,
     };
   });
-  // Person ids (e.g. the lead of a care unit) are shown by name.
-  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const residentIds = logRows.map(residentOf);
+  // Kennungen (Leitung eines Wohnbereichs, betroffene Person, Wohnbereich) erscheinen mit Namen.
   const ids = [
-    ...new Set(log.flatMap((entry) => entry.changes.flatMap((change) => [change.before, change.after]))),
+    ...new Set([
+      ...log.flatMap((entry) => entry.changes.flatMap((change) => [change.before, change.after])),
+      ...residentIds.map((id) => id ?? ""),
+    ]),
   ].filter((value) => UUID.test(value));
   if (ids.length) {
-    const people = (await ctx.sql`SELECT id, display_name FROM carecore_users WHERE id = ANY(${ids})`) as Row[];
-    const names = new Map(people.map((person) => [String(person.id), String(person.display_name)]));
-    for (const change of log.flatMap((entry) => entry.changes)) {
-      change.before = names.get(change.before) ?? change.before;
-      change.after = names.get(change.after) ?? change.after;
+    const named = (await ctx.sql`
+      SELECT id::text, display_name AS name FROM carecore_users WHERE id = ANY(${ids}::uuid[])
+      UNION ALL SELECT id::text, first_name || ' ' || last_name FROM carecore_residents
+        WHERE id = ANY(${ids}::uuid[]) AND organization_id = ${org}
+      UNION ALL SELECT cu.id::text, cu.name FROM carecore_care_units cu JOIN carecore_sites si ON si.id = cu.site_id
+        WHERE cu.id = ANY(${ids}::uuid[]) AND si.organization_id = ${org}`) as Row[];
+    const names = new Map(named.map((item) => [String(item.id), String(item.name)]));
+    log.forEach((entry, index) => {
+      const residentId = residentIds[index];
+      if (!entry.subject && residentId) entry.subject = names.get(residentId) ?? "";
+      for (const change of entry.changes) {
+        change.before = UUID.test(change.before) ? (names.get(change.before) ?? "nicht mehr vorhanden") : change.before;
+        change.after = UUID.test(change.after) ? (names.get(change.after) ?? "nicht mehr vorhanden") : change.after;
+      }
+    });
+  }
+  // Rollen erscheinen mit ihrem Namen statt dem Schlüssel.
+  const roleKeys = [
+    ...new Set(
+      log
+        .flatMap((entry) => entry.changes.filter((change) => change.field === "Rolle"))
+        .flatMap((c) => [c.before, c.after]),
+    ),
+  ];
+  if (roleKeys.length) {
+    const roles = (await ctx.sql`SELECT key, name FROM carecore_roles WHERE key = ANY(${roleKeys})`) as Row[];
+    const roleNames = new Map(roles.map((role) => [String(role.key), String(role.name)]));
+    for (const change of log.flatMap((entry) => entry.changes.filter((item) => item.field === "Rolle"))) {
+      change.before = roleNames.get(change.before) ?? change.before;
+      change.after = roleNames.get(change.after) ?? change.after;
     }
   }
   return { trend: weeks, priorities, log };
