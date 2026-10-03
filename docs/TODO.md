@@ -307,12 +307,17 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
 - [ ] **Qualitätsindikatoren DE (§ 113 SGB XI):** braucht die halbjährliche Ergebniserfassung (Mobilität,
       Selbständigkeit, Integrationsgespräch u. a.) als eigene strukturierte Erhebung; erst danach auswertbar.
 - [x] **eMediplan einlesen (CH):** Medikation › eMediplan liest den Inhalt des QR-Codes (CHMED16A, komprimiert oder
-      nicht) als Entwurf für die Person in der Kopfzeile. - Gezeigt werden Personenabgleich (Name, Geburtsdatum), Dosierung Morgen/Mittag/Abend/Nacht, Reserve, Zeitraum,
-      Grund und Verordnende. - Jede Zeile prüft eine Fachperson und übernimmt sie einzeln als Verordnung, mit den Pflichtangaben des
-      Medikamentenplans; verschiedene Dosen werden zu getrennten Verordnungen. - GTIN und Pharmacode löst CareCore ohne Arzneimitteldatenbank nicht auf: Das Präparat wird beim ersten Mal
-      zugeordnet, und die Zuordnung wird für den nächsten Plan gemerkt. - Komplexe Schemata werden von Hand erfasst. Keine automatische Prüfung oder Änderung.
-- [ ] **eMediplan CHMED23A und Kamera:** neueres Format CHMED23A lesen; QR-Code direkt mit der Kamera scannen (heute:
-      QR-Scanner im Tastaturmodus oder Text einfügen).
+      nicht) als Entwurf für die Person in der Kopfzeile: Personenabgleich (Name, Geburtsdatum), Dosierung
+      Morgen/Mittag/Abend/Nacht, Reserve, Zeitraum, Grund und Verordnende. Jede Zeile prüft eine Fachperson und übernimmt
+      sie einzeln als Verordnung mit den Pflichtangaben des Medikamentenplans; verschiedene Dosen werden zu getrennten
+      Verordnungen. GTIN und Pharmacode löst CareCore ohne Arzneimitteldatenbank nicht auf: Das Präparat wird beim ersten
+      Mal zugeordnet, die Zuordnung gilt für den nächsten Plan. Komplexe Schemata von Hand. Keine automatische Prüfung
+      oder Änderung.
+- [x] **eMediplan CHMED23A und Kamera:** CHMED23A wird gelesen, auch auf mehrere QR-Codes verteilt (je Code eine
+      Zeile, Reihenfolge egal; fehlende Teile werden genannt). Übernommen werden eindeutig tägliche Dosierungen
+      (Morgen/Mittag/Abend/Nacht, Tagesabschnitte, feste Uhrzeiten aus dem Plan); Wochentage, Intervalle, Abfolgen,
+      Dosis von–bis und Freitext bleiben von Hand. QR-Code mit der Kamera scannen, wo der Browser QR-Erkennung hat
+      (z. B. Chrome, Edge, Android); die Bilder verlassen das Gerät nicht.
 - [x] **Visite vorbereiten:** Dokumentation › Visite sammelt die offenen Einträge „Für Visite“ je Hausärztin bzw.
       Hausarzt (aus den Stammdaten), filterbar nach Wohnbereich, mit Visitenliste zum Drucken (A4). Die Rückmeldung
       wird als Eintrag „Arztvisite“ dokumentiert, schliesst die Frage und steht im Protokoll der Akte.
@@ -331,13 +336,18 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
       Behörde. Neue Isolationen gehen an die Leitung, Ausbrüche an die Mitarbeitenden des Bereichs. Die Tagesliste
       zeigt „Isolation beachten/überprüfen“, und der Überleitungsbogen enthält laufende Isolationen. Der Verlauf
       umfasst 90 Tage, alles steht im Protokoll. Ohne Diagnose und ohne eigene Schwellen für einen Ausbruch.
-- [x] **Alltagsgestaltung und Aktivierung:** Neues Modul Alltag & Aktivierung: - **Angebote:** Wochenplan mit Gruppenangeboten und Einzelbetreuung je Wohnbereich oder für das ganze Haus,
-      auf Wunsch wöchentlich wiederholt (bis 12 Wochen). Bearbeiten und Absagen mit Grund. - **Teilnahme:** ab Beginn je Person erfassbar (teilgenommen, abgelehnt, nicht anwesend) mit Bemerkung. - **Teilnahme je Person:** Monatsübersicht mit Kategorien und CSV-Export. - **Portal:** neuer Bereich „Alltag & Aktivitäten“ (wenn freigegeben) mit Teilnahme der letzten 30 Tage und den
-      kommenden Angeboten, ohne Bemerkungen der Pflege. - Keine Vorgabe, wie viel Aktivierung eine Person braucht.
-- [x] **Belegung und Eintritt:** Bewohner › Belegung zeigt die Plätze je Wohnbereich, belegt, reserviert und frei, mit
-      Zimmern und Betten. Zimmer anlegen und ändern kann die Administration; Betten nie unter die Belegung. - **Warteliste:** Kontakt, gewünschter Bereich und Zeitpunkt sowie der Bedarf, wie er mitgeteilt wurde. Status:
-      wartet, Platz angeboten, zurückgezogen (mit Grund). Die Reihenfolge der Vergabe entscheidet die Leitung. - **Eintritt planen:** reserviert ein freies Bett; die Person erscheint als „Eintritt geplant“. - **Eintritt:** wird am Eintrittstag bestätigt; eine Absage mit Grund gibt das Bett frei, und der
-      Wartelisten-Eintrag wartet wieder. - Alles steht im Protokoll.
+- [x] **Alltagsgestaltung und Aktivierung:** Neues Modul Alltag & Aktivierung. Angebote: Wochenplan mit
+      Gruppenangeboten und Einzelbetreuung je Wohnbereich oder für das ganze Haus, auf Wunsch wöchentlich wiederholt (bis
+      12 Wochen), Bearbeiten und Absagen mit Grund. Teilnahme ab Beginn je Person (teilgenommen, abgelehnt, nicht
+      anwesend) mit Bemerkung. Teilnahme je Person als Monatsübersicht mit Kategorien und CSV-Export. Portal: neuer Bereich
+      „Alltag & Aktivitäten“ (wenn freigegeben) mit Teilnahme der letzten 30 Tage und kommenden Angeboten, ohne Bemerkungen
+      der Pflege. Keine Vorgabe, wie viel Aktivierung eine Person braucht.
+- [x] **Belegung und Eintritt:** Bewohner › Belegung zeigt die Plätze je Wohnbereich (belegt, reserviert, frei) mit
+      Zimmern und Betten; Zimmer verwaltet die Administration, Betten nie unter die Belegung. Warteliste mit Kontakt,
+      gewünschtem Bereich und Zeitpunkt und dem Bedarf, wie er mitgeteilt wurde; Status wartet, Platz angeboten,
+      zurückgezogen (mit Grund). Die Reihenfolge der Vergabe entscheidet die Leitung. Eintritt planen reserviert ein freies
+      Bett; der Eintritt wird am Eintrittstag bestätigt, eine Absage mit Grund gibt das Bett frei und der Eintrag wartet
+      wieder. Alles im Protokoll.
 - [ ] **Warteliste: Aufbewahrung:** abgeschlossene Anfragen nach einer festgelegten Frist löschen (Frist durch die
       Einrichtung, analog zur Aufbewahrung der Akten).
 
