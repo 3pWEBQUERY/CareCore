@@ -457,11 +457,13 @@ Fachliche Lücken der Akte; was die Einrichtung festlegt, bleibt bei ihr (keine 
 Automatischer Rundgang über 89 Seiten je Desktop (1440 px) und Handy (390 px): keine Skriptfehler, kein seitliches
 Scrollen, je Seite eine Hauptüberschrift, keine unbeschrifteten Felder. Gefunden:
 
-- [ ] **Tippflächen unter 24 px (WCAG 2.2, 2.5.8), auch auf dem Desktop:** Textknöpfe der leeren Startseiten-Karten
+- [x] **Tippflächen unter 24 px (WCAG 2.2, 2.5.8), auch auf dem Desktop:** Textknöpfe der leeren Startseiten-Karten
       (15 px), Übergabe › „Als Übergabepunkt übernehmen“ (15 × 16 px), Teamleitung › Aufgaben › „Archivieren“ (14 px),
-      Namenslinks in Visite und Teilnahme (15–21 px). Trefferfläche unsichtbar vergrössern, Optik unverändert.
-- [ ] **QR-Etiketten auf dem Handy:** Die A4-Vorschau scrollt seitlich (90 px); Vorschau auf die Breite einpassen,
-      Druck unverändert.
+      Namenslinks in Visite und Teilnahme (15–21 px). Erledigt: Trefferfläche über Innenabstand und gleich grossen
+      negativen Aussenabstand auf mindestens 24 px vergrössert, Optik unverändert; `e2e/touch-targets.spec.ts` misst
+      alle diese Stellen auf Handy und Computer.
+- [x] **QR-Etiketten auf dem Handy:** Die Vorschau zeigt die Etiketten auf dem Handy untereinander (kein seitliches
+      Scrollen mehr); der Druck bleibt A4 mit 3 × 7 Etiketten. Im Klicktest geprüft.
 
 ## Braucht eine Entscheidung oder externe Quelle
 

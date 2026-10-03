@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Diagnosen, Impfungen, Tippflächen der Namenslinks auf dem Handy sowie die Hauptüberschrift der Druckansichten. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Diagnosen, Impfungen, Tippflächen kleiner Links und Textknöpfe sowie die Hauptüberschrift der Druckansichten. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -870,13 +870,27 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
-/* Handy: Namenslinks (Visite, Teilnahme je Person, Auswertungen) mindestens 24 px hoch (WCAG 2.2, 2.5.8). */
-@media (max-width: 960px) {
-  .visit-resident h3 a,
-  .services-report-table td > a {
-    display: inline-flex;
-    align-items: center;
-    min-height: 24px;
+/* Tippflächen mindestens 24 px (WCAG 2.2, 2.5.8), auf allen Bildschirmen: grössere Fläche über Innenabstand und
+   gleich grossen negativen Aussenabstand, damit sich die Optik nicht ändert. */
+.visit-resident h3 a,
+.services-report-table td > a {
+  display: inline-block;
+  margin: -5px 0;
+  padding: 5px 0;
+}
+.home-notes-empty button {
+  margin: -2px 0 -5px;
+  padding: 5px 0;
+}
+.home-news-foot button,
+.teamlead-task-card button {
+  margin: -6px 0;
+  padding: 6px 0;
+}
+@media (min-width: 761px) {
+  .handover-event-list article > button {
+    margin: -5px;
+    padding: 5px;
   }
 }
 
@@ -1238,6 +1252,16 @@
 .room-label-text small {
   color: var(--muted);
   font-size: 9px;
+}
+/* Vorschau auf dem Handy: Etiketten untereinander statt drei nebeneinander (kein seitliches Scrollen); der Druck
+   bleibt A4 mit 3 × 7 Etiketten. */
+@media screen and (max-width: 760px) {
+  .room-labels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .room-labels-title {
+    flex-wrap: wrap;
+  }
 }
 .room-scan-list {
   padding: 16px 18px;
