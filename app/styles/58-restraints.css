@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Diagnosen, Tippflächen der Namenslinks auf dem Handy sowie die Hauptüberschrift der Druckansichten. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Diagnosen, Impfungen, Tippflächen der Namenslinks auf dem Handy sowie die Hauptüberschrift der Druckansichten. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -1544,4 +1544,74 @@
   margin: -4px 0 8px;
   color: var(--muted);
   font-size: 12px;
+}
+/* Impfstatus (Isolation & Ausbruch). */
+.vaccination-overview {
+  margin-top: 18px;
+  padding: 16px 18px;
+}
+.vaccination-overview > header {
+  margin-bottom: 12px;
+}
+.vaccination-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.vaccination-filters label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.vaccination-filters input {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.vaccination-unit + .vaccination-unit {
+  margin-top: 12px;
+}
+.vaccination-unit h3 {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+.vaccination-unit h3 span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.vaccination-unit ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vaccination-unit li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid #edf1f5;
+  font-size: 12.5px;
+}
+.vaccination-unit li:last-child {
+  border-bottom: 0;
+}
+.vaccination-unit li small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.vaccination-unit li.done > small {
+  color: var(--success);
+  font-weight: 700;
 }

@@ -155,6 +155,13 @@ export default function TransferSheetPage() {
             )}
           </section>
 
+          {data.vaccinations.length > 0 && (
+            <section className="transfer-allergies transfer-vaccinations">
+              <strong>Impfungen (zuletzt)</strong>
+              <span>{data.vaccinations.map((item) => `${item.target}: ${formatDate(item.givenOn)}`).join(" · ")}</span>
+            </section>
+          )}
+
           <div className="transfer-columns">
             <section>
               <h2>Person</h2>

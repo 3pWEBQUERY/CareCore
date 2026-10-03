@@ -444,9 +444,11 @@ Fachliche Lücken der Akte; was die Einrichtung festlegt, bleibt bei ihr (keine 
 
 ### Mittel
 
-- [ ] **Impfungen:** je Person Datum, Impfung bzw. Impfstoff, Charge und wer geimpft hat (im Haus oder extern);
-      Übersicht je Wohnbereich (z. B. wer in dieser Saison gegen Grippe geimpft ist) für Ausbruch und Meldungen. Keine
-      Impfempfehlungen durch CareCore.
+- [x] **Impfungen:** Karte „Impfungen“ in den Stammdaten: Datum, Impfung gegen (frei, bisher verwendete
+      Bezeichnungen zur Auswahl), Präparat, Charge, im Haus oder extern, geimpft von, Bemerkung; Fehleinträge mit
+      Begründung entfernen, alles im Protokoll der Akte. Unter Isolation & Ausbruch der „Impfstatus“ je Wohnbereich:
+      wer gegen die gewählte Impfung geimpft ist, auf Wunsch nur seit einem frei gewählten Datum (kein vorgegebener
+      Zeitraum). Letzte Impfung je Art im Überleitungsbogen, alle in der Auskunft. Keine Empfehlungen durch CareCore.
 - [ ] **Hilfsmittel und persönliche Gegenstände:** Brille, Hörgerät, Zahnprothese, Rollator, Rollstuhl usw. je Person
       mit Kennzeichnung und Standort; im Überleitungsbogen „mitgegeben“ abhaken, damit nichts verloren geht.
 

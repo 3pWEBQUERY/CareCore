@@ -44,6 +44,12 @@ export const EXPORT_SECTIONS: Array<{ key: string; title: string; tables: string
       sql`SELECT * FROM carecore_resident_diagnoses WHERE resident_id = ${id} ORDER BY status, kind, since_on NULLS LAST`,
   },
   {
+    key: "vaccinations",
+    title: "Impfungen",
+    tables: ["carecore_vaccinations"],
+    query: (sql, id) => sql`SELECT * FROM carecore_vaccinations WHERE resident_id = ${id} ORDER BY given_on`,
+  },
+  {
     key: "end_of_life",
     title: "Wünsche am Lebensende und Ablauf nach dem Todesfall",
     tables: ["carecore_end_of_life_wishes", "carecore_death_checklist_items"],
