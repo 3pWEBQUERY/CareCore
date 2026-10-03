@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan sowie die Hauptüberschrift der Druckansichten. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung sowie die Hauptüberschrift der Druckansichten. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -1259,4 +1259,53 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   clip-path: inset(50%);
+}
+
+/* Lagerung & Bewegung: Positionswechsel, Hautbefund und Lagerungsplan. */
+.repositioning-choices,
+.repositioning-range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.repositioning-range {
+  margin-bottom: 10px;
+}
+.repositioning-hint {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.repositioning-day + .repositioning-day {
+  margin-top: 14px;
+}
+.repositioning-day h3 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+.repositioning-entries li time {
+  flex: none;
+  width: 44px;
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.repositioning-skin.notable {
+  color: #a43b2d;
+  font-weight: 650;
+}
+.repositioning-plan dl {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.repositioning-plan dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+.repositioning-plan dd {
+  margin: 0;
+  font-size: 13px;
 }

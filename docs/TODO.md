@@ -379,10 +379,12 @@ Einrichtung bzw. die Pflegeplanung fest, gesetzliche Grundlagen werden beim Bau 
 
 ### Hoch
 
-- [ ] **Lagerungs- und Bewegungsprotokoll:** Positionswechsel mit Uhrzeit, Position (z. B. Rücken, 30° links/rechts,
-      Sitzen) und Hautbefund in wenigen Klicks, auch offline. Das Intervall stammt aus der Massnahme der Pflegeplanung
-      (keine Vorgabe von CareCore); die Tagesliste zeigt, wann der nächste Wechsel laut Plan fällig ist, und Verlauf als
-      Zeitleiste je Schicht. Heute gibt es dafür nur Freitext in der Dokumentation.
+- [x] **Lagerungs- und Bewegungsprotokoll:** Dokumentation › Lagerung: Positionswechsel (Position, Hautbefund nach
+      Fingertest, Uhrzeit, Bemerkung) in wenigen Klicks für die Person in der Kopfzeile, auch offline vorgemerkt. Der
+      Lagerungsplan hält das Intervall aus der Pflegeplanung fest (optional mit Bezug zur Massnahme; CareCore gibt
+      keines vor). Die Tagesliste zeigt „Lagerung fällig“ (letzter Wechsel plus Intervall) bzw. den Wechsel in der
+      nächsten Stunde. Verlauf über 24 Stunden, 3 oder 7 Tage; Stornieren mit Grund statt Löschen; Plan ändern oder mit
+      Grund beenden; alles im Protokoll der Akte. Bei verletzter Haut Hinweis auf das Wundmanagement.
 - [ ] **Auskunft und Datenexport je Person:** Auf Verlangen der Person bzw. Vertretung alle gespeicherten Daten einer
       Akte als PDF und maschinenlesbar (JSON) ausgeben, mit Protokolleintrag (Recht auf Auskunft bzw.
       Datenherausgabe; CH DSG Art. 25 und 28, DE/AT DSGVO Art. 15 und 20 – beim Bau an der Quelle prüfen). Nur
