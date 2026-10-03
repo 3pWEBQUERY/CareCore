@@ -1,96 +1,50 @@
 "use client";
 
-import { useState } from "react";
-import { EditorDialog, requestJson, useApiData } from "@/app/components/workspace-ui";
 import { DEATH_CHECKLIST_MAX_ITEMS } from "@/lib/end-of-life-shared";
+import { CONSENT_TOPICS_MAX } from "@/lib/consents-shared";
+import { OrgListCard } from "./org-list-card";
 
 // Checkliste nach einem Todesfall: Die Einrichtung legt ihre Punkte selbst fest (keine Vorgabe). Beim Erfassen eines
 // Todesfalls werden sie für die Person übernommen; spätere Änderungen gelten für künftige Todesfälle.
 export function DeathChecklistCard({ showToast }: { showToast: (message: string) => void }) {
-  const data = useApiData<{ items: string[] }>("/api/admin/death-checklist");
-  const [draft, setDraft] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const items = data.data?.items ?? [];
   return (
-    <section className="card admin-terminology-card admin-retention-card" aria-labelledby="admin-death-checklist-title">
-      <div className="card-header">
-        <div>
-          <p className="eyebrow">Lebensende</p>
-          <h2 className="card-title" id="admin-death-checklist-title">
-            Checkliste nach einem Todesfall
-          </h2>
-          <p className="card-subtitle">
-            {items.length
-              ? `${items.length} ${items.length === 1 ? "Punkt" : "Punkte"} · wird beim Erfassen eines Todesfalls übernommen`
-              : "Noch keine Punkte festgelegt – die Einrichtung bestimmt sie selbst"}
-          </p>
-        </div>
-        <button
-          className="secondary-button"
-          type="button"
-          disabled={!data.data}
-          onClick={() => {
-            setError("");
-            setDraft(items.join("\n"));
-          }}
-        >
-          {items.length ? "Bearbeiten" : "Festlegen"}
-        </button>
-      </div>
-      <div className="admin-retention-list">
-        {data.error && <p className="list-hint">{data.error}</p>}
-        {items.map((item, index) => (
-          <div className="admin-retention-row" key={item}>
-            <span>
-              <strong>
-                {index + 1}. {item}
-              </strong>
-            </span>
-          </div>
-        ))}
-      </div>
-      {draft !== null && (
-        <EditorDialog
-          id="death-checklist"
-          eyebrow="Konfiguration · Lebensende"
-          title="Checkliste nach einem Todesfall"
-          description={`Ein Punkt pro Zeile, höchstens ${DEATH_CHECKLIST_MAX_ITEMS}. Änderungen gelten für künftige Todesfälle; bereits übernommene Checklisten bleiben unverändert.`}
-          onClose={() => setDraft(null)}
-          onSubmit={async () => {
-            setSaving(true);
-            setError("");
-            try {
-              await requestJson("/api/admin/death-checklist", {
-                method: "PUT",
-                body: { items: draft.split("\n") },
-              });
-              setDraft(null);
-              data.reload();
-              showToast("Checkliste nach einem Todesfall gespeichert");
-            } catch (cause) {
-              setError((cause as Error).message);
-            } finally {
-              setSaving(false);
-            }
-          }}
-          saving={saving}
-          error={error}
-          submitLabel="Checkliste speichern"
-        >
-          <label className="area-editor-wide">
-            <span>Punkte</span>
-            <textarea
-              rows={8}
-              placeholder={
-                "z. B.\nÄrztin bzw. Arzt informiert\nAngehörige informiert\nBestattungsunternehmen beauftragt"
-              }
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-            />
-          </label>
-        </EditorDialog>
-      )}
-    </section>
+    <OrgListCard
+      id="death-checklist"
+      eyebrow="Lebensende"
+      title="Checkliste nach einem Todesfall"
+      endpoint="/api/admin/death-checklist"
+      field="items"
+      singular="Punkt"
+      plural="Punkte"
+      usage="wird beim Erfassen eines Todesfalls übernommen"
+      empty="Noch keine Punkte festgelegt – die Einrichtung bestimmt sie selbst"
+      description={`Ein Punkt pro Zeile, höchstens ${DEATH_CHECKLIST_MAX_ITEMS}. Änderungen gelten für künftige Todesfälle; bereits übernommene Checklisten bleiben unverändert.`}
+      placeholder={"z. B.\nÄrztin bzw. Arzt informiert\nAngehörige informiert\nBestattungsunternehmen beauftragt"}
+      savedMessage="Checkliste nach einem Todesfall gespeichert"
+      submitLabel="Checkliste speichern"
+      showToast={showToast}
+    />
+  );
+}
+
+// Themen der Einwilligungen und Freigaben (z. B. Fotos, Weitergabe von Daten): legt die Einrichtung selbst fest.
+export function ConsentTopicsCard({ showToast }: { showToast: (message: string) => void }) {
+  return (
+    <OrgListCard
+      id="consent-topics"
+      eyebrow="Datenschutz"
+      title="Themen der Einwilligungen"
+      endpoint="/api/admin/consent-topics"
+      field="topics"
+      singular="Thema"
+      plural="Themen"
+      usage="in der Akte unter Stammdaten › Einwilligungen & Freigaben"
+      empty="Noch keine Themen festgelegt – die Einrichtung bestimmt sie selbst"
+      description={`Ein Thema pro Zeile, höchstens ${CONSENT_TOPICS_MAX}. Bereits erfasste Entscheide bleiben erhalten.`}
+      placeholder={"z. B.\nFotos in der Einrichtung\nWeitergabe von Daten an Angehörige\nTeilnahme an Ausflügen"}
+      savedMessage="Themen der Einwilligungen gespeichert"
+      submitLabel="Themen speichern"
+      showToast={showToast}
+    />
   );
 }
