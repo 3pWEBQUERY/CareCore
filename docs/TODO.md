@@ -363,8 +363,9 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
 - [x] **QR-Code je Zimmer:** Bewohner › Belegung › „QR-Etiketten“ je Wohnbereich (A4, 3 × 7, aktive Zimmer). Der Code
       enthält nur die Adresse des Zimmers. Nach der Anmeldung öffnet er die Akte der Person im Zimmer; wohnen mehrere
       dort (oder ist jemand verlegt), erscheint eine Auswahl, ein freies Zimmer wird als frei gemeldet.
-- [ ] **Druckansichten** (`/bewohner/ueberleitung`, `/medikation/btm/buch`, `/mein-dienstplan/team/drucken`): eine
-      Hauptüberschrift für Screenreader ergänzen (heute ohne `h1`).
+- [x] **Druckansichten** (`/bewohner/ueberleitung`, `/medikation/btm/buch`, `/mein-dienstplan/team/drucken`, auch
+      Dienstplan, Visitenliste und QR-Etiketten): genau eine Hauptüberschrift auch beim Laden, bei Fehlern und ohne Daten
+      (für Screenreader, im Druck unsichtbar); mit Klicktest.
 
 ## Braucht eine Entscheidung oder externe Quelle
 

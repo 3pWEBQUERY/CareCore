@@ -69,6 +69,7 @@ export default function RosterPrint({ team }: { team?: boolean }) {
           <X className="button-icon" /> Schliessen
         </button>
       </div>
+      {!(data && printable) && <h1 className="print-hidden-heading">{title}</h1>}
       {error && !data ? (
         <p className="roster-print-message" role="alert">
           Der Plan konnte nicht geladen werden: {error.message}

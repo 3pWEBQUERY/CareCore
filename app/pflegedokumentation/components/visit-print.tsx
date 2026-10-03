@@ -39,6 +39,7 @@ export default function VisitPrint() {
           <X className="button-icon" /> Schliessen
         </button>
       </div>
+      {(error || !data) && <h1 className="print-hidden-heading">Visitenliste</h1>}
       {error ? (
         <p className="roster-print-message" role="alert">
           Die Visitenliste konnte nicht erstellt werden: {error}
