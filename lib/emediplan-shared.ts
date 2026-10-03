@@ -37,6 +37,8 @@ export type EmediplanLine = {
   reserve: boolean;
   // Dosis je Tageszeit (Morgen, Mittag, Abend, Nacht); null = keine einfache Dosierung angegeben.
   doses: Record<EmediplanSlot, number> | null;
+  // Täglich zu festen Uhrzeiten (CHMED23A „Times“): Uhrzeit HH:MM und Dosis; ersetzt die Tageszeiten.
+  timedDoses: Array<{ time: string; dose: number }> | null;
   // Komplexes Schema (Einnahmezeiten mit Abständen) oder mehrere Dosierungen: von Hand erfassen.
   complex: boolean;
   // Präparat aus dem eigenen Stamm, dem diese GTIN bzw. dieser Pharmacode schon zugeordnet ist.

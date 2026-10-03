@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useHeaderResident, useWorkContext } from "@/app/components/care-context";
 import { CareOptionSelect } from "@/app/components/care-form-controls";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { ModuleIcon } from "@/app/components/module-icon";
 import {
+  EditorDialog,
   PageHeading,
   formatDate,
   formatDateTime,
@@ -40,7 +41,8 @@ function storedTimes(): SlotTimes {
 
 const number = (value: number) => value.toLocaleString("de-CH", { maximumFractionDigits: 3 });
 
-type Group = { amount: string; slots: EmediplanSlot[] };
+// Eine Verordnung: Dosis mit Tageszeiten (Uhrzeiten der Einrichtung) oder festen Uhrzeiten aus dem Plan.
+type Group = { amount: string; slots: EmediplanSlot[]; fixed: string[] | null };
 
 function LineCard({
   line,
@@ -63,11 +65,18 @@ function LineCard({
   const [prescribedBy, setPrescribedBy] = useState(line.prescribedBy);
   const [indication, setIndication] = useState(line.reason);
   const [groups, setGroups] = useState<Group[]>(() => {
+    const amount = (dose: number) => [number(dose), line.unit].filter(Boolean).join(" ");
+    if (line.timedDoses) {
+      const byDose = new Map<number, string[]>();
+      for (const entry of line.timedDoses) byDose.set(entry.dose, [...(byDose.get(entry.dose) ?? []), entry.time]);
+      return [...byDose].map(([dose, fixed]) => ({ amount: amount(dose), slots: [], fixed }));
+    }
     const planned = (line.doses ? dosesBySlot(line.doses) : []).map((group) => ({
-      amount: [number(group.dose), line.unit].filter(Boolean).join(" "),
+      amount: amount(group.dose),
       slots: group.slots,
+      fixed: null,
     }));
-    return planned.length ? planned : [{ amount: "", slots: [] }];
+    return planned.length ? planned : [{ amount: "", slots: [], fixed: null }];
   });
   const [maxDoses, setMaxDoses] = useState("");
   const [minInterval, setMinInterval] = useState("");
@@ -115,7 +124,7 @@ function LineCard({
       } else {
         for (const [index, group] of groups.entries()) {
           if (index < adopted) continue;
-          const missing = group.slots.filter((slot) => !times[slot]);
+          const missing = group.fixed ? [] : group.slots.filter((slot) => !times[slot]);
           if (missing.length)
             throw new Error(
               `Bitte oben die Uhrzeit für ${missing.map((slot) => EMEDIPLAN_SLOT_LABELS[slot]).join(", ")} festlegen.`,
@@ -126,7 +135,7 @@ function LineCard({
               ...base,
               isPrn: false,
               amount: group.amount,
-              times: group.slots.map((slot) => times[slot]),
+              times: group.fixed ?? group.slots.map((slot) => times[slot]),
               prnInstructions: line.instructions,
             },
           });
@@ -174,11 +183,13 @@ function LineCard({
         <div>
           <dt>Dosierung laut Plan</dt>
           <dd>
-            {line.doses
-              ? EMEDIPLAN_SLOTS.map((slot) => number(line.doses?.[slot] ?? 0)).join(" – ") + " (Mo – Mi – Ab – Na)"
-              : line.reserve
-                ? "Reserve"
-                : "Keine einfache Dosierung angegeben"}
+            {line.timedDoses
+              ? line.timedDoses.map((entry) => `${number(entry.dose)} um ${entry.time}`).join(", ")
+              : line.doses
+                ? EMEDIPLAN_SLOTS.map((slot) => number(line.doses?.[slot] ?? 0)).join(" – ") + " (Mo – Mi – Ab – Na)"
+                : line.reserve
+                  ? "Reserve"
+                  : "Keine einfache Dosierung angegeben"}
           </dd>
         </div>
         {line.reason && (
@@ -278,30 +289,43 @@ function LineCard({
                       onChange={(event) => setGroup(index, { amount: event.target.value })}
                     />
                   </label>
-                  <div className="form-field">
-                    <span>Tageszeiten</span>
-                    <div className="chip-row">
-                      {EMEDIPLAN_SLOTS.map((slot) => (
-                        <button
-                          key={slot}
-                          type="button"
-                          className={`day-toggle ${group.slots.includes(slot) ? "active" : ""}`}
-                          aria-pressed={group.slots.includes(slot)}
-                          disabled={index < adopted}
-                          onClick={() =>
-                            setGroup(index, {
-                              slots: group.slots.includes(slot)
-                                ? group.slots.filter((item) => item !== slot)
-                                : [...group.slots, slot],
-                            })
-                          }
-                        >
-                          {EMEDIPLAN_SLOT_LABELS[slot]}
-                          {times[slot] ? ` ${times[slot]}` : ""}
-                        </button>
-                      ))}
+                  {group.fixed ? (
+                    <div className="form-field">
+                      <span>Uhrzeiten laut Plan</span>
+                      <div className="chip-row">
+                        {group.fixed.map((time) => (
+                          <span key={time} className="day-toggle active">
+                            {time}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="form-field">
+                      <span>Tageszeiten</span>
+                      <div className="chip-row">
+                        {EMEDIPLAN_SLOTS.map((slot) => (
+                          <button
+                            key={slot}
+                            type="button"
+                            className={`day-toggle ${group.slots.includes(slot) ? "active" : ""}`}
+                            aria-pressed={group.slots.includes(slot)}
+                            disabled={index < adopted}
+                            onClick={() =>
+                              setGroup(index, {
+                                slots: group.slots.includes(slot)
+                                  ? group.slots.filter((item) => item !== slot)
+                                  : [...group.slots, slot],
+                              })
+                            }
+                          >
+                            {EMEDIPLAN_SLOT_LABELS[slot]}
+                            {times[slot] ? ` ${times[slot]}` : ""}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -340,6 +364,76 @@ function LineCard({
   );
 }
 
+// QR-Code mit der Kamera lesen (BarcodeDetector des Browsers, z. B. Chrome, Edge, Android). Die Bilder verlassen das
+// Gerät nicht; nur der gelesene Text kommt ins Feld.
+type Detector = { detect(source: HTMLVideoElement): Promise<Array<{ rawValue: string }>> };
+type DetectorClass = new (options: { formats: string[] }) => Detector;
+const detectorClass = () =>
+  typeof window === "undefined"
+    ? null
+    : ((window as unknown as { BarcodeDetector?: DetectorClass }).BarcodeDetector ?? null);
+const noSubscription = () => () => {};
+
+function CameraScanner({ onClose, onCode }: { onClose: () => void; onCode: (value: string) => void }) {
+  const video = useRef<HTMLVideoElement>(null);
+  const [error, setError] = useState("");
+  const found = useRef(onCode);
+  useEffect(() => {
+    found.current = onCode;
+  }, [onCode]);
+  useEffect(() => {
+    const Ctor = detectorClass();
+    if (!Ctor) return;
+    const detector = new Ctor({ formats: ["qr_code"] });
+    let stream: MediaStream | null = null;
+    let stopped = false;
+    let timer = 0;
+    const scan = async () => {
+      if (stopped || !video.current) return;
+      try {
+        const codes = await detector.detect(video.current);
+        const value = codes.map((code) => code.rawValue).find((raw) => /^CHMED/i.test(raw));
+        if (value) {
+          found.current(value);
+          return;
+        }
+      } catch {
+        // Bild noch nicht bereit: beim nächsten Durchgang erneut versuchen.
+      }
+      timer = window.setTimeout(() => void scan(), 300);
+    };
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: "environment" } })
+      .then((media) => {
+        stream = media;
+        if (stopped || !video.current) return;
+        video.current.srcObject = media;
+        void video.current.play().then(() => void scan());
+      })
+      .catch(() => setError("Kein Zugriff auf die Kamera. Bitte im Browser erlauben oder den QR-Scanner verwenden."));
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+      stream?.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
+  return (
+    <EditorDialog
+      id="emediplan-camera"
+      eyebrow="eMediplan"
+      title="QR-Code scannen"
+      description="Den QR-Code des eMediplans vor die Kamera halten. Bei mehreren QR-Codes jeden einzeln scannen."
+      onClose={onClose}
+      onSubmit={onClose}
+      saving={false}
+      error={error}
+      submitLabel="Schliessen"
+    >
+      <video ref={video} className="emediplan-video area-editor-wide" muted playsInline aria-label="Kamerabild" />
+    </EditorDialog>
+  );
+}
+
 function EmediplanContent({ showToast }: { showToast: ShowToast }) {
   const context = useWorkContext();
   const { resident, missing } = useHeaderResident(context?.residents ?? [], !context);
@@ -350,6 +444,12 @@ function EmediplanContent({ showToast }: { showToast: ShowToast }) {
   const [loading, setLoading] = useState(false);
   const [times, setTimes] = useState<SlotTimes>(storedTimes);
   const current = reading && readFor === resident?.id ? reading : null;
+  const cameraSupported = useSyncExternalStore(
+    noSubscription,
+    () => detectorClass() !== null,
+    () => false,
+  );
+  const [scanning, setScanning] = useState(false);
 
   function setTime(slot: EmediplanSlot, value: string) {
     const next = { ...times, [slot]: value };
@@ -384,7 +484,7 @@ function EmediplanContent({ showToast }: { showToast: ShowToast }) {
       <PageHeading
         eyebrow="CareCore Medikation"
         title="eMediplan einlesen"
-        description="Medikationsplan (Schweizer Format CHMED16A) aus dem QR-Code als Entwurf übernehmen. Jede Zeile prüft eine Fachperson und gibt sie einzeln als Verordnung frei – CareCore prüft und ändert nichts selbst."
+        description="Medikationsplan (Schweizer Formate CHMED16A und CHMED23A) aus dem QR-Code als Entwurf übernehmen. Jede Zeile prüft eine Fachperson und gibt sie einzeln als Verordnung frei – CareCore prüft und ändert nichts selbst."
       />
       {!resident ? (
         <HeaderResidentHint loading={!context} missing={missing} />
@@ -397,7 +497,7 @@ function EmediplanContent({ showToast }: { showToast: ShowToast }) {
                 rows={4}
                 value={code}
                 onChange={(event) => setCode(event.target.value)}
-                placeholder="Mit dem QR-Scanner hierhin scannen oder den Text (beginnt mit CHMED16A) einfügen"
+                placeholder="Mit dem QR-Scanner hierhin scannen oder den Text (beginnt mit CHMED) einfügen. Besteht der Plan aus mehreren QR-Codes, jeden auf eine eigene Zeile."
                 spellCheck={false}
               />
             </label>
@@ -407,6 +507,11 @@ function EmediplanContent({ showToast }: { showToast: ShowToast }) {
               </p>
             )}
             <div className="emediplan-actions">
+              {cameraSupported && (
+                <button className="secondary-button" type="button" onClick={() => setScanning(true)}>
+                  Mit Kamera scannen
+                </button>
+              )}
               <button
                 className="primary-button"
                 type="button"
@@ -418,6 +523,19 @@ function EmediplanContent({ showToast }: { showToast: ShowToast }) {
               </button>
             </div>
           </section>
+
+          {scanning && (
+            <CameraScanner
+              onClose={() => setScanning(false)}
+              onCode={(value) => {
+                setCode((current) =>
+                  current.includes(value) ? current : [current.trim(), value].filter(Boolean).join("\n"),
+                );
+                setScanning(false);
+                showToast("QR-Code erfasst");
+              }}
+            />
+          )}
 
           {current && (
             <>
