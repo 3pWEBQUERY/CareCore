@@ -22,6 +22,10 @@ export async function transferSheet(ctx: ApiContext, residentIdInput: unknown): 
   const restraints = await activeRestraints(ctx, residentId);
   const isolations = await activeIsolations(ctx, residentId);
   const diagnoses = (await readDiagnoses(ctx, residentId)).filter((item) => item.status === "current");
+  const vaccinations = (await sql`
+    SELECT DISTINCT ON (lower(target)) target, to_char(given_on, 'YYYY-MM-DD') AS given_on
+    FROM carecore_vaccinations WHERE resident_id = ${residentId}
+    ORDER BY lower(target), given_on DESC`) as Row[];
   const [facility, resident, contacts, flags, nutrition, plan, wounds, body, vitals, notes, orders] =
     (await Promise.all([
       sql`
@@ -95,6 +99,7 @@ export async function transferSheet(ctx: ApiContext, residentIdInput: unknown): 
     careLevel: summary.careLevel,
     primaryNurse: summary.primaryNurse,
     allergies,
+    vaccinations: vaccinations.map((row) => ({ target: String(row.target), givenOn: String(row.given_on) })),
     diagnoses: diagnoses.map(({ label, icdCode, kind, sinceOn }) => ({ label, icdCode, kind, sinceOn })),
     contacts: contacts.map((row) => ({
       name: String(row.full_name),

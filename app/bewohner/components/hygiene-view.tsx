@@ -31,6 +31,7 @@ import {
   type Outbreak,
 } from "@/lib/hygiene-shared";
 import { zurichTimeToIso } from "@/lib/resident-appointments";
+import { VaccinationOverviewCard } from "./vaccination-overview-card";
 
 type Reload = () => void;
 
@@ -595,6 +596,7 @@ function HygieneContent({ showToast }: { showToast: ShowToast }) {
           </ul>
         </section>
       )}
+      <VaccinationOverviewCard unitId={unitId} />
       {creating && overview && (
         <IsolationDialog outbreaks={overview.outbreaks} onClose={() => setCreating(false)} onSaved={done} />
       )}

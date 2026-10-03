@@ -26,6 +26,8 @@ export type TransferSheet = {
   allergies: string[];
   // Aktuelle Diagnosen (Hauptdiagnosen zuerst), wie in der Akte erfasst.
   diagnoses: Array<Pick<Diagnosis, "label" | "icdCode" | "kind" | "sinceOn">>;
+  // Letzte dokumentierte Impfung je „Impfung gegen“.
+  vaccinations: Array<{ target: string; givenOn: string }>;
   contacts: Array<{
     name: string;
     relationship: string | null;
