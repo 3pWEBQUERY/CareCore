@@ -26,6 +26,7 @@ import {
   Pill,
   Plus,
   Pulse,
+  PuzzlePiece,
   ShieldCheck,
   SidebarSimple,
   SignOut,
@@ -72,6 +73,7 @@ export function ModuleIcon({ name, className = "" }: { name: ModuleIconName; cla
     filter: Funnel,
     logout: SignOut,
     close: X,
+    activity: PuzzlePiece,
   };
   const Component = icons[name];
   return <Component className={className} aria-hidden="true" weight="regular" />;

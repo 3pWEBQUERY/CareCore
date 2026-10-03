@@ -27,6 +27,7 @@ import {
   Pill,
   Plus,
   Pulse,
+  PuzzlePiece,
   ShieldCheck,
   SignOut,
   Sparkle,
@@ -85,6 +86,7 @@ const icons = {
   filter: MagnifyingGlass,
   logout: SignOut,
   close: X,
+  activity: PuzzlePiece,
 } satisfies Record<Exclude<ModuleIconName, "caretDown" | "sidebar">, typeof House>;
 
 function RailIcon({ name }: { name: ModuleIconName | "carecoreOne" }) {
