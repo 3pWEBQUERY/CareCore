@@ -1,5 +1,6 @@
 // Überleitungsbogen: Antwort der API und Grundlage der Druckansicht.
 import type { Diagnosis } from "./diagnoses-shared";
+import type { BelongingKind } from "./belongings-shared";
 import type { MasterData } from "./resident-record-shared";
 import type { Representative } from "./advance-care-shared";
 import type { CountryCode } from "./country";
@@ -28,6 +29,8 @@ export type TransferSheet = {
   diagnoses: Array<Pick<Diagnosis, "label" | "icdCode" | "kind" | "sinceOn">>;
   // Letzte dokumentierte Impfung je „Impfung gegen“.
   vaccinations: Array<{ target: string; givenOn: string }>;
+  // Vorhandene Hilfsmittel und Gegenstände, zum Abhaken „mitgegeben“ auf dem Papier.
+  belongings: Array<{ name: string; kind: BelongingKind; marking: string }>;
   contacts: Array<{
     name: string;
     relationship: string | null;

@@ -7,6 +7,7 @@ import { auditOrigin } from "@/lib/audit-origin";
 import { organizationCountry } from "@/lib/organization-country";
 import { activeIsolations } from "@/lib/hygiene";
 import { readDiagnoses } from "@/lib/diagnoses";
+import { readBelongings } from "@/lib/belongings";
 import { isolationLabel, type IsolationKind } from "@/lib/hygiene-shared";
 import { activeRestraints } from "@/lib/restraints";
 import { restraintLabel, type RestraintKind } from "@/lib/restraints-shared";
@@ -22,6 +23,7 @@ export async function transferSheet(ctx: ApiContext, residentIdInput: unknown): 
   const restraints = await activeRestraints(ctx, residentId);
   const isolations = await activeIsolations(ctx, residentId);
   const diagnoses = (await readDiagnoses(ctx, residentId)).filter((item) => item.status === "current");
+  const belongings = (await readBelongings(ctx, residentId)).filter((item) => !item.removed);
   const vaccinations = (await sql`
     SELECT DISTINCT ON (lower(target)) target, to_char(given_on, 'YYYY-MM-DD') AS given_on
     FROM carecore_vaccinations WHERE resident_id = ${residentId}
@@ -99,6 +101,7 @@ export async function transferSheet(ctx: ApiContext, residentIdInput: unknown): 
     careLevel: summary.careLevel,
     primaryNurse: summary.primaryNurse,
     allergies,
+    belongings: belongings.map(({ name, kind, marking }) => ({ name, kind, marking })),
     vaccinations: vaccinations.map((row) => ({ target: String(row.target), givenOn: String(row.given_on) })),
     diagnoses: diagnoses.map(({ label, icdCode, kind, sinceOn }) => ({ label, icdCode, kind, sinceOn })),
     contacts: contacts.map((row) => ({

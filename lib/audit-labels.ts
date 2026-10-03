@@ -15,6 +15,7 @@ import { ISOLATION_KINDS } from "@/lib/hygiene-shared";
 import { POSITIONS, SKIN_FINDINGS } from "@/lib/repositioning-shared";
 import { ELIMINATION_AMOUNTS, ELIMINATION_KINDS } from "@/lib/elimination-shared";
 import { EVACUATION_MOBILITY, type EvacuationMobility } from "@/lib/evacuation-shared";
+import { BELONGING_KINDS, type BelongingKind } from "@/lib/belongings-shared";
 import { VACCINATION_PLACES, type VaccinationPlace } from "@/lib/vaccinations-shared";
 import { DIAGNOSIS_KINDS, DIAGNOSIS_STATUSES, type DiagnosisKind, type DiagnosisStatus } from "@/lib/diagnoses-shared";
 import { PARTICIPATION_STATUS } from "@/lib/activities-shared";
@@ -110,6 +111,7 @@ export const AUDIT_AREAS: Record<string, { area: string; href: string | null }> 
   end_of_life_wishes: { area: "Wünsche am Lebensende", href: "/bewohner" },
   resident_diagnosis: { area: "Diagnose", href: "/bewohner" },
   vaccination: { area: "Impfung", href: "/bewohner" },
+  resident_belonging: { area: "Hilfsmittel und Gegenstände", href: "/bewohner" },
   death_checklist: { area: "Ablauf nach dem Todesfall", href: "/bewohner" },
   assessment_instrument: { area: "Einschätzungsinstrumente", href: "/leitung/administration/konfiguration" },
   outbreak: { area: "Ausbruch", href: "/bewohner/hygiene" },
@@ -269,6 +271,9 @@ const TITLES: Record<string, string> = {
   "repositioning_entry:cancelled": "Positionswechsel storniert",
   "elimination_entry:created": "Ausscheidung erfasst",
   "elimination_entry:cancelled": "Ausscheidung storniert",
+  "resident_belonging:created": "Hilfsmittel bzw. Gegenstand erfasst",
+  "resident_belonging:updated": "Hilfsmittel bzw. Gegenstand geändert",
+  "resident_belonging:removed": "Hilfsmittel bzw. Gegenstand nicht mehr vorhanden",
   "vaccination:created": "Impfung erfasst",
   "vaccination:deleted": "Impfung entfernt (Fehleintrag)",
   "resident_diagnosis:created": "Diagnose erfasst",
@@ -412,6 +417,8 @@ const FIELDS: Record<string, string> = {
   items: "Punkte",
   label: "Bezeichnung",
   icdCode: "ICD-10-Code",
+  marking: "Kennzeichnung",
+  storedAt: "Standort",
   givenOn: "Geimpft am",
   against: "Impfung gegen",
   vaccine: "Präparat",
@@ -730,6 +737,8 @@ function show(field: string, value: unknown, context: { entityType: string; acti
   const text = String(value);
   if (context.entityType === "resident" && context.action === "resuscitation_updated" && field === "status")
     return RESUSCITATION(text) ?? "nicht erfasst";
+  if (context.entityType === "resident_belonging" && field === "kind")
+    return BELONGING_KINDS[text as BelongingKind] ?? text;
   if (context.entityType === "vaccination" && field === "place")
     return VACCINATION_PLACES[text as VaccinationPlace] ?? text;
   if (context.entityType === "resident_diagnosis" && field === "status")
