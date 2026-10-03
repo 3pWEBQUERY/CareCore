@@ -15,6 +15,7 @@ const KIND_ICONS: Record<WorkItemKind, ModuleIconName> = {
   plan: "plan",
   documentation: "note",
   task: "tasks",
+  restraint: "quality",
 };
 // Gliederung nach Dringlichkeit: Kritisch, Wichtig, Routine (entspricht der Einstufung der Punkte).
 const FILTERS = [

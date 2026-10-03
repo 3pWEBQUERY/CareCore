@@ -1,6 +1,7 @@
 "use client";
 
-import { useTerms } from "@/app/components/care-context";
+import { useTerms, useWorkContext } from "@/app/components/care-context";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import ResidentAppointmentEditor from "@/app/components/resident-appointment-editor";
@@ -17,12 +18,14 @@ import { RecordSuppliesView } from "./record-supplies-view";
 import { RecordHistoryView } from "./record-history-view";
 import { RecordDocumentsView } from "./record-documents-view";
 import { RecordDocumentationView } from "./record-documentation-view";
+import { RecordRestraintsView } from "./record-restraints-view";
 import { BodyObservationDialog } from "./record-body-dialog";
 import { ContactEditorDialog } from "./record-contact-dialog";
 import { SupplyEditorDialog } from "./record-supply-dialog";
 
 export function ResidentRecord(props: ResidentRecordProps) {
   const t = useTerms();
+  const country = useWorkContext()?.country;
   const r = useResidentRecord(props);
   const {
     resident,
@@ -45,6 +48,12 @@ export function ResidentRecord(props: ResidentRecordProps) {
     navigation,
     live,
   } = r;
+  const tabsRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    tabsRef.current
+      ?.querySelector<HTMLElement>("[aria-current='page']")
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activeView]);
   const master = live.summary.data?.master;
   const resuscitation = master?.resuscitationStatus ?? null;
   return (
@@ -156,7 +165,7 @@ export function ResidentRecord(props: ResidentRecordProps) {
           </div>
         </header>
 
-        <nav className="resident-record-tabs" aria-label={`Bereiche der ${t.prefix}akte`}>
+        <nav className="resident-record-tabs" ref={tabsRef} aria-label={`Bereiche der ${t.prefix}akte`}>
           {recordTabs.map((tab) => {
             const active =
               (tab === "Übersicht" && activeView === "overview") ||
@@ -167,7 +176,8 @@ export function ResidentRecord(props: ResidentRecordProps) {
               (tab === "Pflegebedarf" && activeView === "supplies") ||
               (tab === "Verlauf" && activeView === "history") ||
               (tab === "Dokumente" && activeView === "documents") ||
-              (tab === "Biografie" && activeView === "biography");
+              (tab === "Biografie" && activeView === "biography") ||
+              (tab === "FBM" && activeView === "restraints");
             return (
               <button
                 className={active ? "active" : ""}
@@ -175,8 +185,9 @@ export function ResidentRecord(props: ResidentRecordProps) {
                 key={tab}
                 aria-current={active ? "page" : undefined}
                 onClick={() => selectTab(tab)}
+                title={tab === "FBM" ? "Freiheitsbeschränkende Massnahmen" : undefined}
               >
-                {tab}
+                {tab === "FBM" && country === "DE" ? "FEM" : tab}
               </button>
             );
           })}
@@ -198,6 +209,8 @@ export function ResidentRecord(props: ResidentRecordProps) {
           <RecordHistoryView r={r} />
         ) : activeView === "documents" ? (
           <RecordDocumentsView r={r} />
+        ) : activeView === "restraints" ? (
+          <RecordRestraintsView r={r} />
         ) : (
           <RecordDocumentationView r={r} />
         )}

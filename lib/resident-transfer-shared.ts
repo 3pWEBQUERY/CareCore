@@ -32,6 +32,8 @@ export type TransferSheet = {
     severity: "critical" | "attention" | "info";
     details: string | null;
   }>;
+  // Laufende freiheitsbeschränkende Massnahmen (Art, Zeitraum, Beginn).
+  restraints: Array<{ label: string; schedule: string | null; since: string }>;
   nutrition: {
     diet: string | null;
     texture: string | null;

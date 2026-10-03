@@ -264,6 +264,7 @@ export function useResidentRecord({
     else if (tab === "Verlauf") setActiveView("history");
     else if (tab === "Dokumente") setActiveView("documents");
     else if (tab === "Biografie") setActiveView("biography");
+    else if (tab === "FBM") setActiveView("restraints");
   }
 
   // The "Speichern & nächster Bewohner" button submits with data-next and opens the next record.
