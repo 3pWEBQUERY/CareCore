@@ -313,8 +313,13 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
       wird als Eintrag „Arztvisite“ dokumentiert, schliesst die Frage und steht im Protokoll der Akte.
 - [ ] **Visite im Portal:** offene Fragen der Pflege der Ärztin bzw. dem Arzt im Portal zeigen und die Rückmeldung
       dort erfassen lassen.
-- [ ] **Leistungserfassung:** erbrachte Pflegeleistungen mit Zeit erfassen (aus Aufgaben und Massnahmen vorbelegt),
-      Auswertung je Person und Monat, Export für Einstufung und Abrechnung.
+- [x] **Leistungserfassung:** Dokumentation › Leistungen erfasst erbrachte Leistungen mit Zeit für die Person in der
+      Kopfzeile, vorbelegt aus erledigten Aufgaben und laufenden Massnahmen der Pflegeplanung. Leistungskatalog der
+      Einrichtung unter Administration (eigener Code, Minuten nur als Vorschlag, keine Normzeiten von CareCore).
+      Stornieren mit Begründung statt Löschen, alles im Protokoll der Akte. Leistungsauswertung je Person und Bereich
+      im Monat mit CSV-Export (Summen und Einzelleistungen). CareCore berechnet weder Pflegestufe noch Rechnung.
+- [ ] **Leistungen: Anbindung an Einstufungs- und Abrechnungssysteme:** Export im Format des jeweiligen Systems
+      (z. B. BESA, RAI, PLAISIR, Abrechnungssoftware), sobald die Schnittstellen der Kunden bekannt sind.
 - [ ] **Ausbruchs- und Isolationsübersicht:** Personen mit Isolation oder Hygienemassnahme je Wohnbereich,
       Verlauf und Meldung an die Leitung. Organisatorisch, keine Diagnose.
 - [ ] **Alltagsgestaltung und Aktivierung:** Angebote planen, Teilnahme je Person dokumentieren, Übersicht für

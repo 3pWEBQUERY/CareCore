@@ -40,6 +40,7 @@ const ENTITY_LABELS: Record<string, string> = {
   meal_entry: "Ernährung",
   nutrition_plan: "Ernährungsplan",
   resident_stay: "Aufenthalt",
+  service_record: "Pflegeleistung",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -82,6 +83,8 @@ const TITLES: Record<string, string> = {
   "resident:resuscitation_updated": "Reanimationsstatus geändert",
   "resident:advance_care_updated": "Vorsorge geändert",
   "documentation_entry:visit_answered": "Rückmeldung zur Visite erfasst",
+  "service_record:created": "Pflegeleistung erfasst",
+  "service_record:cancelled": "Pflegeleistung storniert",
   "resident:gender_updated": "Geschlecht geändert",
   "wound_entry:documented": "Wundverlauf dokumentiert",
 };

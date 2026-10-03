@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren und Visite. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite und Leistungserfassung. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -389,5 +389,177 @@
   .visit-resident li {
     flex-direction: column;
     align-items: stretch;
+  }
+}
+
+/* Leistungserfassung, Leistungsauswertung und Leistungskatalog */
+.service-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 18px;
+  margin-bottom: 18px;
+}
+.service-toolbar > .form-field {
+  width: min(100%, 220px);
+}
+.service-toolbar p {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.service-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  align-items: start;
+  gap: 16px;
+  margin-top: 18px;
+}
+.service-records,
+.service-suggestions,
+.services-report-card,
+.service-catalog-card {
+  padding: 16px 18px;
+}
+.service-records > header,
+.service-suggestions > header,
+.services-report-card > header,
+.service-catalog-card > header {
+  margin-bottom: 12px;
+}
+.service-records ul,
+.service-suggestion-group ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.service-records li,
+.service-suggestion-group li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.service-records li > div,
+.service-suggestion-group li > div {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.service-records li strong,
+.service-suggestion-group li strong {
+  font-size: 13px;
+}
+.service-records li small,
+.service-suggestion-group li small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.service-records li p {
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+.service-records li button,
+.service-suggestion-group li button {
+  flex: none;
+}
+.service-records li.cancelled {
+  background: var(--surface-soft);
+}
+.service-records li.cancelled strong,
+.service-records li.cancelled .service-minutes {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.service-cancel-reason {
+  color: var(--critical);
+}
+.service-minutes {
+  flex: none;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.service-suggestion-group + .service-suggestion-group {
+  margin-top: 16px;
+}
+.service-suggestion-group h3 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.service-empty,
+.services-report-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.services-report-toolbar {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) minmax(180px, 240px) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px 18px;
+  margin-bottom: 18px;
+}
+.services-report-toolbar p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.services-report-card {
+  margin-top: 18px;
+}
+.services-report-table {
+  overflow-x: auto;
+}
+.services-report-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.services-report-table th,
+.services-report-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.services-report-table th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.services-report-table td small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+.services-report-table a {
+  color: var(--brand-dark);
+  font-weight: 700;
+}
+.services-report-table tr.inactive td {
+  color: var(--muted);
+}
+@media (max-width: 960px) {
+  .service-layout,
+  .services-report-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .service-records li,
+  .service-suggestion-group li {
+    flex-wrap: wrap;
   }
 }

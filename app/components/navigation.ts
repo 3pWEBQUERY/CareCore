@@ -87,7 +87,12 @@ export const navigation: NavGroup[] = [
         icon: "residents",
         children: ["Übersicht", "Pflegeakten", "Verlauf & Archiv"],
       },
-      { id: "chart", label: "Dokumentation", icon: "note", children: ["Schnelldokumentation", "Verlauf", "Visite"] },
+      {
+        id: "chart",
+        label: "Dokumentation",
+        icon: "note",
+        children: ["Schnelldokumentation", "Verlauf", "Visite", "Leistungen"],
+      },
       {
         id: "med",
         label: "Medikation",
@@ -158,6 +163,7 @@ export const navigation: NavGroup[] = [
           "Kennzahlen Leitung",
           "Kennzahlen Personal",
           "Qualitätsindikatoren",
+          "Leistungsauswertung",
         ],
         childPermissions: {
           Massnahmen: "quality.manage",
@@ -167,6 +173,7 @@ export const navigation: NavGroup[] = [
           "Kennzahlen Leitung": "insights.read",
           "Kennzahlen Personal": "insights.read",
           Qualitätsindikatoren: "insights.read",
+          Leistungsauswertung: "insights.read",
         },
       },
       {
@@ -192,7 +199,15 @@ export const navigation: NavGroup[] = [
         label: "Administration",
         icon: "settings",
         permission: "administration.manage",
-        children: ["Organisation", "Pflegebedarf", "Konfiguration", "Portal", "Sprachen", "Datenübernahme"],
+        children: [
+          "Organisation",
+          "Pflegebedarf",
+          "Leistungskatalog",
+          "Konfiguration",
+          "Portal",
+          "Sprachen",
+          "Datenübernahme",
+        ],
       },
     ],
   },
@@ -242,6 +257,7 @@ const routes: Record<string, Record<string, string>> = {
     Schnelldokumentation: "/pflegedokumentation",
     Verlauf: "/pflegedokumentation/verlauf",
     Visite: "/pflegedokumentation/visite",
+    Leistungen: "/pflegedokumentation/leistungen",
   },
   med: {
     Medikamentenrunde: "/medikation/runde",
@@ -290,6 +306,7 @@ const routes: Record<string, Record<string, string>> = {
     "Kennzahlen Leitung": "/leitung/kennzahlen/leitung",
     "Kennzahlen Personal": "/leitung/kennzahlen/personal",
     Qualitätsindikatoren: "/leitung/kennzahlen/qualitaetsindikatoren",
+    Leistungsauswertung: "/leitung/kennzahlen/leistungen",
   },
   staff: {
     Mitarbeitende: "/leitung/teamleitung/mitarbeiter",
@@ -299,6 +316,7 @@ const routes: Record<string, Record<string, string>> = {
   admin: {
     Organisation: "/leitung/administration",
     Pflegebedarf: "/leitung/administration/pflegebedarf",
+    Leistungskatalog: "/leitung/administration/leistungskatalog",
     Konfiguration: "/leitung/administration/konfiguration",
     Portal: "/leitung/administration/portal",
     Sprachen: "/leitung/administration/sprachen",
