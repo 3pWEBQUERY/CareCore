@@ -16,6 +16,8 @@ const ACTION_TYPES = [
   "task_escalated",
   "btm_count_due",
   "device_check_due",
+  "fridge_reading_due",
+  "fridge_temperature_outside",
   "wound_overdue",
   "medication_effect_check",
   "visit_answered",
