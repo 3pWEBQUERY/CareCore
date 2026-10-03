@@ -1,4 +1,5 @@
 // Überleitungsbogen: Antwort der API und Grundlage der Druckansicht.
+import type { Diagnosis } from "./diagnoses-shared";
 import type { MasterData } from "./resident-record-shared";
 import type { Representative } from "./advance-care-shared";
 import type { CountryCode } from "./country";
@@ -23,6 +24,8 @@ export type TransferSheet = {
   careLevel: string | null;
   primaryNurse: string | null;
   allergies: string[];
+  // Aktuelle Diagnosen (Hauptdiagnosen zuerst), wie in der Akte erfasst.
+  diagnoses: Array<Pick<Diagnosis, "label" | "icdCode" | "kind" | "sinceOn">>;
   contacts: Array<{
     name: string;
     relationship: string | null;

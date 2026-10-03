@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Tippflächen der Namenslinks auf dem Handy sowie die Hauptüberschrift der Druckansichten. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Diagnosen, Tippflächen der Namenslinks auf dem Handy sowie die Hauptüberschrift der Druckansichten. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -1509,4 +1509,39 @@
   width: 5mm;
   height: 5mm;
   border: 1px solid #000;
+}
+/* Diagnosen (Stammdaten): Liste wie die Checkliste, ohne Häkchen; Code als kleines Kennzeichen. */
+.diagnosis-list li {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.diagnosis-list li.resolved strong {
+  color: var(--muted);
+}
+.diagnosis-code {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: 1px;
+}
+.diagnosis-actions {
+  display: flex;
+  gap: 6px;
+}
+.diagnosis-resolved summary {
+  min-height: 24px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.visit-diagnoses {
+  display: block;
+  margin: -4px 0 8px;
+  color: var(--muted);
+  font-size: 12px;
 }

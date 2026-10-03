@@ -9,6 +9,7 @@ import {
   EXPORT_COLUMN_LABELS,
   EXPORT_HIDDEN_COLUMNS,
   EXPORT_LEGAL_NOTE,
+  EXPORT_SECTION_VALUE_LABELS,
   EXPORT_VALUE_LABELS,
   type ResidentExport,
 } from "@/lib/data-export-shared";
@@ -119,7 +120,14 @@ export default function DataExportPrint() {
                 <dl key={index} className="export-row">
                   {Object.entries(row)
                     .filter(([key]) => !EXPORT_HIDDEN_COLUMNS.has(key) && label(key))
-                    .map(([key, value]) => [key, display(key, value, data.staff)] as const)
+                    .map(
+                      ([key, value]) =>
+                        [
+                          key,
+                          (typeof value === "string" && EXPORT_SECTION_VALUE_LABELS[section.key]?.[key]?.[value]) ||
+                            display(key, value, data.staff),
+                        ] as const,
+                    )
                     .filter((entry): entry is readonly [string, string] => entry[1] !== null)
                     .map(([key, value]) => (
                       <div key={key}>

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Printer, X } from "@phosphor-icons/react";
 import { formatDate, formatDateTime, useApiData } from "@/app/components/workspace-ui";
 import { ADVANCE_CARE_LABELS } from "@/lib/advance-care-shared";
+import { diagnosisText } from "@/lib/diagnoses-shared";
 import { LANGUAGES, RESUSCITATION_STATUSES } from "@/lib/resident-record-shared";
 import { ageOn, scheduleLabel, type TransferSheet } from "@/lib/resident-transfer-shared";
 
@@ -136,6 +137,22 @@ export default function TransferSheetPage() {
           <section className={`transfer-allergies ${data.allergies.length ? "known" : ""}`}>
             <strong>Allergien / Unverträglichkeiten</strong>
             <span>{data.allergies.length ? data.allergies.join(" · ") : "Keine Allergien erfasst"}</span>
+          </section>
+
+          <section className="transfer-allergies transfer-diagnoses">
+            <strong>Diagnosen</strong>
+            {data.diagnoses.length ? (
+              <span>
+                {data.diagnoses
+                  .map(
+                    (item) =>
+                      `${item.kind === "main" ? "Hauptdiagnose: " : ""}${diagnosisText(item)}${item.sinceOn ? `, seit ${formatDate(item.sinceOn)}` : ""}`,
+                  )
+                  .join(" · ")}
+              </span>
+            ) : (
+              <span>Keine Diagnosen erfasst</span>
+            )}
           </section>
 
           <div className="transfer-columns">

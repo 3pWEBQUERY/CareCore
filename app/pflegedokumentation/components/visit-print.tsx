@@ -89,6 +89,9 @@ export default function VisitPrint() {
                             <>
                               <strong>{resident.name}</strong>
                               <small>{[resident.room, resident.careUnit].filter(Boolean).join(" · ")}</small>
+                              {resident.diagnoses.length > 0 && (
+                                <small className="visit-diagnoses">Diagnosen: {resident.diagnoses.join(" · ")}</small>
+                              )}
                             </>
                           )}
                         </td>

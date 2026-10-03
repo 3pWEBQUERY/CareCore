@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { diagnosisText } from "@/lib/diagnoses-shared";
 import { ApiError, assertUuid, iso, text, type ApiContext, type Row } from "@/lib/api-context";
 import { residentAudit } from "@/lib/resident-audit";
 import { hasPermission } from "@/lib/server-data";
@@ -65,6 +66,7 @@ export async function visitOverview(ctx: ApiContext, careUnitInput: string | nul
           name: String(row.resident_name),
           room: String(row.room),
           careUnit: String(row.care_unit),
+          diagnoses: [],
           items: [],
         }),
       );
@@ -75,6 +77,18 @@ export async function visitOverview(ctx: ApiContext, careUnitInput: string | nul
       occurredAt: iso(row.occurred_at) ?? "",
       author: String(row.author),
     });
+  }
+  const residentIds = groups.flatMap((group) => group.residents.map((resident) => resident.id));
+  if (residentIds.length) {
+    const diagnoses = (await ctx.sql`
+      SELECT resident_id, label, icd_code FROM carecore_resident_diagnoses
+      WHERE resident_id = ANY(${residentIds}::uuid[]) AND status = 'current'
+      ORDER BY kind = 'secondary', since_on NULLS LAST, created_at`) as Row[];
+    for (const group of groups)
+      for (const resident of group.residents)
+        resident.diagnoses = diagnoses
+          .filter((row) => row.resident_id === resident.id)
+          .map((row) => diagnosisText({ label: String(row.label), icdCode: String(row.icd_code) }));
   }
   return {
     careUnitId,

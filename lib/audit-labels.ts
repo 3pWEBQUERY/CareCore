@@ -15,6 +15,7 @@ import { ISOLATION_KINDS } from "@/lib/hygiene-shared";
 import { POSITIONS, SKIN_FINDINGS } from "@/lib/repositioning-shared";
 import { ELIMINATION_AMOUNTS, ELIMINATION_KINDS } from "@/lib/elimination-shared";
 import { EVACUATION_MOBILITY, type EvacuationMobility } from "@/lib/evacuation-shared";
+import { DIAGNOSIS_KINDS, DIAGNOSIS_STATUSES, type DiagnosisKind, type DiagnosisStatus } from "@/lib/diagnoses-shared";
 import { PARTICIPATION_STATUS } from "@/lib/activities-shared";
 import { RESTRAINT_CONSENT, RESTRAINT_KINDS, RESTRAINT_REVIEW_OUTCOMES } from "@/lib/restraints-shared";
 import { SETTING_DEFINITIONS, type SettingKey } from "@/lib/settings-shared";
@@ -106,6 +107,7 @@ export const AUDIT_AREAS: Record<string, { area: string; href: string | null }> 
   repositioning_entry: { area: "Lagerung", href: "/pflegedokumentation/lagerung" },
   elimination_entry: { area: "Ausscheidung", href: "/pflegedokumentation/ausscheidung" },
   end_of_life_wishes: { area: "Wünsche am Lebensende", href: "/bewohner" },
+  resident_diagnosis: { area: "Diagnose", href: "/bewohner" },
   death_checklist: { area: "Ablauf nach dem Todesfall", href: "/bewohner" },
   assessment_instrument: { area: "Einschätzungsinstrumente", href: "/leitung/administration/konfiguration" },
   outbreak: { area: "Ausbruch", href: "/bewohner/hygiene" },
@@ -265,6 +267,9 @@ const TITLES: Record<string, string> = {
   "repositioning_entry:cancelled": "Positionswechsel storniert",
   "elimination_entry:created": "Ausscheidung erfasst",
   "elimination_entry:cancelled": "Ausscheidung storniert",
+  "resident_diagnosis:created": "Diagnose erfasst",
+  "resident_diagnosis:updated": "Diagnose geändert",
+  "resident_diagnosis:deleted": "Diagnose entfernt (Fehleintrag)",
   "end_of_life_wishes:created": "Wünsche für die letzte Lebensphase erfasst",
   "end_of_life_wishes:updated": "Wünsche für die letzte Lebensphase geändert",
   "death_checklist:created": "Checkliste nach dem Todesfall übernommen",
@@ -401,7 +406,10 @@ const FIELDS: Record<string, string> = {
   value: "Wert",
   hidden: "Ausgeblendet",
   items: "Punkte",
-  label: "Punkt",
+  label: "Bezeichnung",
+  icdCode: "ICD-10-Code",
+  sinceOn: "Seit",
+  resolvedOn: "Abgeschlossen am",
   leadId: "Leitung",
   managerId: "Leitung",
   siteType: "Standorttyp",
@@ -712,6 +720,10 @@ function show(field: string, value: unknown, context: { entityType: string; acti
   const text = String(value);
   if (context.entityType === "resident" && context.action === "resuscitation_updated" && field === "status")
     return RESUSCITATION(text) ?? "nicht erfasst";
+  if (context.entityType === "resident_diagnosis" && field === "status")
+    return DIAGNOSIS_STATUSES[text as DiagnosisStatus] ?? text;
+  if (context.entityType === "resident_diagnosis" && field === "kind")
+    return DIAGNOSIS_KINDS[text as DiagnosisKind] ?? text;
   if (context.entityType === "setting" && context.action === "terminology" && field === "value")
     return TERMINOLOGY(text) ?? text;
   const label = VALUE_LABELS[field]?.(text);

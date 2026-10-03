@@ -163,6 +163,9 @@ function VisitContent({ showToast }: { showToast: ShowToast }) {
                   </Link>
                   <span>{[resident.room, resident.careUnit].filter(Boolean).join(" · ")}</span>
                 </h3>
+                {resident.diagnoses.length > 0 && (
+                  <p className="visit-diagnoses">Diagnosen: {resident.diagnoses.join(" · ")}</p>
+                )}
                 <ul>
                   {resident.items.map((item) => (
                     <li key={item.id}>
