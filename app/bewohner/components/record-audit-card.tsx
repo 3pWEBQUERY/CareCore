@@ -41,7 +41,7 @@ export function RecordAuditCard({ residentId }: { residentId: string }) {
           {entries.length > 0 && (
             <ol>
               {entries.map((entry) => {
-                const described = describeAudit(entry);
+                const described = describeAudit(entry, t);
                 const text = { ...described, title: described.title.replace("Bewohnerbild", `${t.prefix}bild`) };
                 return (
                   <li key={entry.id}>

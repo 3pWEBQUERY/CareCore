@@ -146,7 +146,7 @@ test("Reanimationsstatus: Grundlage ist Pflicht, Änderungen werden eigens proto
     before: null,
     after: entries[0].after_data,
   });
-  assert.equal(described.title, "Stammdaten Reanimationsstatus geändert");
+  assert.equal(described.title, "Reanimationsstatus geändert");
   assert.match(described.detail, /Keine Reanimation \(DNR\) · Grundlage: Patientenverfügung/);
 });
 
@@ -173,7 +173,7 @@ test("Protokoll: lesbare Beschreibung der Einträge", () => {
   );
   assert.equal(
     describeAudit(entry({ entityType: "unbekannt_typ", action: "x_y", before: null, after: null })).title,
-    "unbekannt typ x y",
+    "Eintrag geändert",
   );
 });
 

@@ -19,6 +19,7 @@ import {
   PORTAL_AREA_KEYS,
   PORTAL_BASES,
   PORTAL_KINDS,
+  ORDER_STATUSES,
   type PortalAccessEntry,
   type PortalAccount,
   type PortalArea,
@@ -56,6 +57,10 @@ type GrantDraft = {
 const ACTIONS: Record<string, string> = {
   resident_viewed: "Daten angesehen",
   password_changed: "Passwort geändert",
+  message_sent: "Nachricht gesendet",
+  ...Object.fromEntries(
+    Object.entries(ORDER_STATUSES).map(([status, label]) => [`order_${status}`, `Bestellung ${label.toLowerCase()}`]),
+  ),
 };
 
 const grantScope = (grant: PortalGrant) =>
@@ -349,7 +354,7 @@ function PortalAdminBody({ showToast }: { showToast: ShowToast }) {
               {(log.data?.entries ?? []).map((entry) => (
                 <p key={entry.id}>
                   <span>{formatDateTime(entry.createdAt)}</span>
-                  {ACTIONS[entry.action] ?? entry.action}
+                  {ACTIONS[entry.action] ?? "Zugriff"}
                   {entry.residentName ? ` · ${entry.residentName}` : ""}
                 </p>
               ))}
