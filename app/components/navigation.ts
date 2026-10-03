@@ -86,7 +86,7 @@ export const navigation: NavGroup[] = [
         id: "residents",
         label: "Bewohner",
         icon: "residents",
-        children: ["Übersicht", "Pflegeakten", "Verlauf & Archiv", "Isolation & Ausbruch"],
+        children: ["Übersicht", "Pflegeakten", "Belegung", "Verlauf & Archiv", "Isolation & Ausbruch"],
       },
       {
         id: "chart",
@@ -258,6 +258,7 @@ const routes: Record<string, Record<string, string>> = {
   residents: {
     Übersicht: "/bewohner",
     Pflegeakten: "/bewohner/pflegeakte",
+    Belegung: "/bewohner/belegung",
     "Verlauf & Archiv": "/bewohner/verlauf",
     "Isolation & Ausbruch": "/bewohner/hygiene",
   },

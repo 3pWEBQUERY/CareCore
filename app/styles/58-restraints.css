@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch sowie Alltag & Aktivierung. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung sowie Belegung & Eintritt. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -867,6 +867,170 @@
 }
 @media (max-width: 760px) {
   .participation-list li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Belegung & Eintritt */
+.occupancy-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
+  align-items: start;
+  gap: 16px;
+  margin-top: 18px;
+}
+.occupancy-units,
+.occupancy-side {
+  display: grid;
+  gap: 16px;
+}
+.occupancy-unit,
+.occupancy-planned,
+.occupancy-waitlist,
+.occupancy-closed {
+  padding: 16px 18px;
+}
+.occupancy-unit > header,
+.occupancy-planned > header,
+.occupancy-waitlist > header,
+.occupancy-closed > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+}
+.occupancy-unit .card-subtitle strong {
+  color: var(--brand-dark);
+}
+.occupancy-bar {
+  height: 6px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--surface-soft);
+}
+.occupancy-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+  background: var(--brand);
+}
+.occupancy-rooms,
+.occupancy-planned ul,
+.occupancy-waitlist ul,
+.occupancy-closed ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.occupancy-rooms li {
+  display: grid;
+  grid-template-columns: minmax(120px, 160px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.occupancy-rooms li.inactive {
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+.occupancy-room-head {
+  display: grid;
+  gap: 2px;
+}
+.occupancy-room-head strong {
+  font-size: 13px;
+}
+.occupancy-room-head small,
+.occupancy-planned small,
+.occupancy-waitlist small,
+.occupancy-closed small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.occupancy-occupants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.occupancy-occupants span {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+  font-size: 12px;
+  font-weight: 600;
+}
+.occupancy-occupants span.planned {
+  background: var(--info-soft);
+  color: var(--info);
+}
+.occupancy-occupants span.transferred {
+  background: var(--attention-soft);
+  color: var(--attention);
+}
+.occupancy-planned li,
+.occupancy-waitlist li,
+.occupancy-closed li {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.occupancy-planned li > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+.occupancy-planned a {
+  color: var(--brand-dark);
+  font-size: 13px;
+  font-weight: 700;
+}
+.waitlist-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.waitlist-head strong,
+.occupancy-closed strong {
+  font-size: 13px;
+}
+.occupancy-waitlist p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.waitlist-status-note {
+  color: var(--muted);
+}
+.occupancy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.occupancy-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+@media (max-width: 1100px) {
+  .occupancy-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .occupancy-rooms li {
     grid-template-columns: minmax(0, 1fr);
   }
 }

@@ -102,6 +102,8 @@ export const AUDIT_AREAS: Record<string, { area: string; href: string | null }> 
   outbreak: { area: "Ausbruch", href: "/bewohner/hygiene" },
   activity: { area: "Angebot", href: "/alltag" },
   activity_participation: { area: "Teilnahme an Angebot", href: "/alltag" },
+  waitlist_entry: { area: "Warteliste", href: "/bewohner/belegung" },
+  room: { area: "Zimmer", href: "/bewohner/belegung" },
 };
 
 // Allgemeine Aktionen: „<Bereich> <Verb>“, z. B. „Rolle erstellt“.
@@ -208,6 +210,17 @@ const TITLES: Record<string, string> = {
   "resident:gender_updated": "Geschlecht geändert",
   "resident:imported": "{one} importiert",
   "resident:admitted": "{one} aufgenommen",
+  "resident:admission_planned": "Eintritt geplant",
+  "resident:admission_confirmed": "Eintritt bestätigt",
+  "resident:admission_cancelled": "Geplanter Eintritt abgesagt",
+  "waitlist_entry:created": "Eintrag auf der Warteliste erfasst",
+  "waitlist_entry:updated": "Eintrag der Warteliste geändert",
+  "waitlist_entry:status_waiting": "Warteliste: wartet wieder",
+  "waitlist_entry:status_offered": "Warteliste: Platz angeboten",
+  "waitlist_entry:status_withdrawn": "Warteliste: zurückgezogen",
+  "waitlist_entry:admitted": "Warteliste: Eintritt geplant",
+  "room:created": "Zimmer angelegt",
+  "room:updated": "Zimmer geändert",
   "resident_retention:deleted": "Akte nach Ablauf der Aufbewahrungsfrist gelöscht",
   "resident_transfer:created": "Überleitungsbogen erstellt",
   "medication:btm_marked": "Als Betäubungsmittel gekennzeichnet",
@@ -444,6 +457,10 @@ const FIELDS: Record<string, string> = {
   authorityReportedOn: "Meldung an die Behörde",
   authorityNote: "Notiz zur Meldung",
   durationMinutes: "Dauer (Minuten)",
+  beds: "Betten",
+  desiredFrom: "Gewünschter Eintritt",
+  registeredOn: "Angemeldet am",
+  admittedOn: "Eintritt",
   location: "Ort",
   leader: "Leitung des Angebots",
   repeatWeeks: "Wöchentlich (Anzahl)",
@@ -553,6 +570,9 @@ const STATUS_VALUES: Record<string, string> = {
   missed: "Ausgelassen",
   held: "Pausiert",
   ...PARTICIPATION_STATUS,
+  waiting: "Wartet",
+  offered: "Platz angeboten",
+  withdrawn: "Zurückgezogen",
 };
 
 const VALUE_LABELS: Record<string, (value: string) => string | undefined> = {

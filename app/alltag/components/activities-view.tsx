@@ -243,6 +243,7 @@ function ParticipationDialog({
     setChanges((current) => ({ ...current, [id]: { ...entryOf(id), ...change } }));
 
   async function submit() {
+    if (!detail) return;
     setSaving(true);
     setError("");
     try {
@@ -271,7 +272,7 @@ function ParticipationDialog({
       description={detail ? detail.activity.title : "Wird geladen …"}
       onClose={onClose}
       onSubmit={submit}
-      saving={saving || !detail}
+      saving={saving}
       error={error || data.error || ""}
       submitLabel="Teilnahme speichern"
     >
