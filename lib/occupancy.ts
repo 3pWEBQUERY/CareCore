@@ -438,3 +438,28 @@ export async function saveRoom(ctx: ApiContext, idInput: unknown, body: Record<s
   }
   return { id };
 }
+
+// QR-Code am Zimmer: wer aktuell im Zimmer wohnt (aktiv oder verlegt, Platz reserviert). Die Seite öffnet bei genau
+// einer anwesenden Person direkt deren Akte, sonst zeigt sie die Auswahl.
+export async function roomResidents(ctx: ApiContext, roomInput: unknown) {
+  const roomId = assertUuid(roomInput, "Zimmer");
+  const rooms = (await ctx.sql`
+    SELECT ro.id, ro.name, cu.name AS care_unit FROM carecore_rooms ro
+    JOIN carecore_care_units cu ON cu.id = ro.care_unit_id JOIN carecore_sites s ON s.id = cu.site_id
+    WHERE ro.id = ${roomId} AND s.organization_id = ${ctx.actor.organizationId}`) as Row[];
+  if (!rooms[0]) throw new ApiError("Zimmer nicht gefunden.", 404);
+  const residents = (await ctx.sql`
+    SELECT r.id, r.first_name || ' ' || r.last_name AS name, r.status FROM carecore_resident_stays st
+    JOIN carecore_residents r ON r.id = st.resident_id
+    WHERE st.room_id = ${roomId} AND st.ended_at IS NULL AND r.organization_id = ${ctx.actor.organizationId}
+      AND r.status IN ('active', 'transferred')
+    ORDER BY r.last_name, r.first_name`) as Row[];
+  return {
+    room: { id: roomId, name: String(rooms[0].name), careUnit: String(rooms[0].care_unit) },
+    residents: residents.map((row) => ({
+      id: String(row.id),
+      name: String(row.name),
+      status: row.status as "active" | "transferred",
+    })),
+  };
+}

@@ -445,15 +445,28 @@ function UnitCard({
             {unit.places !== unit.beds && ` · ${unit.beds} Betten in Zimmern erfasst`}
           </p>
         </div>
-        {canManageRooms && (
-          <button
-            className="secondary-button"
-            type="button"
-            onClick={() => onRoom({ id: null, careUnitId: unit.id, name: "", beds: "1", active: "yes" })}
-          >
-            Zimmer anlegen
-          </button>
-        )}
+        <div className="occupancy-actions">
+          {unit.rooms.some((room) => room.active) && (
+            <a
+              className="secondary-button"
+              href={`/c/bewohner/belegung/etiketten?unit=${unit.id}`}
+              target="_blank"
+              rel="noopener"
+              aria-label={`QR-Etiketten ${unit.name} drucken`}
+            >
+              QR-Etiketten
+            </a>
+          )}
+          {canManageRooms && (
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => onRoom({ id: null, careUnitId: unit.id, name: "", beds: "1", active: "yes" })}
+            >
+              Zimmer anlegen
+            </button>
+          )}
+        </div>
       </header>
       <div className="occupancy-bar" aria-hidden="true">
         <i style={{ width: `${used}%` }} />

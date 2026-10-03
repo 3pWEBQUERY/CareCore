@@ -1740,6 +1740,9 @@
   .advance-care-representative {
     font-size: 12px;
   }
+  .room-label-text small {
+    font-size: 11.5px;
+  }
   :root .operations-quick a {
     font-size: 11.5px;
   }
