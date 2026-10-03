@@ -1,5 +1,7 @@
 // Lesbare Darstellung der Protokolleinträge einer Bewohnerakte (Server und Browser).
+import { auditTitle } from "./audit-labels";
 import { RESUSCITATION_STATUSES, type ResuscitationStatus } from "./resident-record-shared";
+import { termsFor, type Terms } from "./terminology";
 
 export type ResidentAuditEntry = {
   id: string;
@@ -72,6 +74,16 @@ const ACTION_LABELS: Record<string, string> = {
   status_closed: "abgeschlossen",
 };
 
+// Aktionen, die als ganzer Satz lesbarer sind als „<Bereich> <Aktion>“.
+const TITLES: Record<string, string> = {
+  "medication_administration:prn_administered": "Reservegabe erfasst",
+  "medication_administration:effect_checked": "Wirkungskontrolle erfasst",
+  "resident:medication_allergies_updated": "Allergien geändert",
+  "resident:resuscitation_updated": "Reanimationsstatus geändert",
+  "resident:gender_updated": "Geschlecht geändert",
+  "wound_entry:documented": "Wundverlauf dokumentiert",
+};
+
 const FIELD_LABELS: Record<string, string> = {
   fullName: "Name",
   relationship: "Beziehung",
@@ -134,9 +146,14 @@ function nameOf(data: Record<string, unknown> | null) {
 const normalize = (value: unknown) => (value === "" || value === undefined ? null : value);
 const same = (a: unknown, b: unknown) => JSON.stringify(normalize(a)) === JSON.stringify(normalize(b));
 
-export function describeAudit(entry: ResidentAuditEntry) {
-  const entity = ENTITY_LABELS[entry.entityType] ?? entry.entityType.replace(/_/g, " ");
-  const action = ACTION_LABELS[entry.action] ?? entry.action.replace(/_/g, " ");
+export function describeAudit(entry: ResidentAuditEntry, terms: Terms = termsFor("resident")) {
+  const entity = ENTITY_LABELS[entry.entityType];
+  const action = ACTION_LABELS[entry.action];
+  // Bereiche ausserhalb der Akte (Aufgaben, Übergaben, Portal …) und seltene Aktionen: gemeinsame Bezeichnungen des
+  // Änderungsprotokolls, nie technische Schlüssel.
+  const title =
+    TITLES[`${entry.entityType}:${entry.action}`] ??
+    (entity && action ? `${entity} ${action}` : auditTitle(entry.entityType, entry.action, terms));
   const name = nameOf(entry.after) || nameOf(entry.before);
   const details: string[] = [];
   const sections = entry.after?.changedSections;
@@ -164,5 +181,5 @@ export function describeAudit(entry: ResidentAuditEntry) {
   }
   if (entry.entityType === "resident_supply" && entry.action === "issued" && entry.after?.quantity)
     details.push(`${entry.after.quantity} ${entry.after.unit ?? ""}`.trim());
-  return { title: `${entity} ${action}`, name, detail: details.join(" · ") };
+  return { title, name, detail: details.join(" · ") };
 }

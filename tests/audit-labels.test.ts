@@ -4,6 +4,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { AUDIT_AREAS, auditActionKnown, auditChanges, auditSettingTitle, auditTitle } from "../lib/audit-labels.ts";
 import { termsFor } from "../lib/terminology.ts";
+import { describeAudit } from "../lib/resident-audit-labels.ts";
 
 const terms = termsFor("resident");
 
@@ -134,4 +135,23 @@ test("Änderungsprotokoll: Titel, Einstellungen, Werte und verborgene Kennungen"
   assert.deepEqual(auditChanges("language", "released", null, { locale: "en" }), [
     { field: "Sprache", before: "–", after: "Englisch" },
   ]);
+});
+
+test("Protokoll der Bewohnerakte: deutsche Titel auch für Aufgaben, Übergaben, Portal und Ereignisse", () => {
+  const title = (entityType: string, action: string) =>
+    describeAudit({ id: "x", createdAt: "", actor: "", entityType, action, before: null, after: null }).title;
+  assert.equal(title("handover", "created"), "Übergabe erstellt");
+  assert.equal(title("task", "escalated"), "Aufgabe eskaliert");
+  assert.equal(title("quality_event", "reported"), "Ereignis gemeldet");
+  assert.equal(title("portal_grant", "revoked"), "Portalfreigabe widerrufen");
+  assert.equal(title("ai_draft", "created"), "KI-Entwurf erstellt");
+  assert.equal(title("resident", "stay_hospital"), "Aufenthalt: Spitalaufenthalt");
+  assert.equal(title("medication_administration", "effect_checked"), "Wirkungskontrolle erfasst");
+  assert.equal(title("wound", "created"), "Wunde angelegt");
+  for (const [entity, action] of [
+    ["resident_transfer", "created"],
+    ["pharmacy_order", "created"],
+    ["unbekannt", "neu_erfasst"],
+  ])
+    assert.doesNotMatch(title(entity, action), /_|\b(created|updated|reported)\b/);
 });
