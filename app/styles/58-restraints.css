@@ -1141,6 +1141,16 @@
   font-size: 13px;
   font-weight: 600;
 }
+.emediplan-form.area-editor-grid {
+  max-width: none;
+  margin: 0;
+}
+.emediplan-group > label {
+  display: grid;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 730;
+}
 .emediplan-group {
   display: grid;
   grid-template-columns: minmax(160px, 1fr) minmax(0, 2fr);

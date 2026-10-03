@@ -36,7 +36,7 @@ test("eMediplan: einlesen, prüfen und Zeile übernehmen", async ({ page }) => {
   const line = page.getByRole("article", { name: "Zeile 1" });
   await expect(line).toContainText("GTIN 7680123456789");
   await expect(line.getByLabel("Dosis (Verordnung 1)")).toHaveValue("1 STK");
-  await expect(line.getByLabel("Dosis (Verordnung 2)")).toHaveValue("0,5 STK");
+  await expect(line.getByLabel("Dosis (Verordnung 2)")).toHaveValue("0.5 STK");
   await line.getByLabel("Präparat", { exact: true }).fill(name);
   await line.getByLabel("Verordnet von").fill("Dr. Meier");
   await line.getByRole("button", { name: "Geprüft – als 2 Verordnungen übernehmen" }).click();
