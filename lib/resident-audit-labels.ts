@@ -43,6 +43,8 @@ const ENTITY_LABELS: Record<string, string> = {
   resident_stay: "Aufenthalt",
   service_record: "Pflegeleistung",
   isolation_measure: "Isolation",
+  repositioning_plan: "Lagerungsplan",
+  repositioning_entry: "Positionswechsel",
   activity_participation: "Teilnahme an Angebot",
 };
 
@@ -91,6 +93,11 @@ const TITLES: Record<string, string> = {
   "isolation_measure:created": "Isolation erfasst",
   "isolation_measure:reviewed": "Isolation überprüft",
   "isolation_measure:ended": "Isolation aufgehoben",
+  "repositioning_plan:created": "Lagerungsplan festgelegt",
+  "repositioning_plan:updated": "Lagerungsplan geändert",
+  "repositioning_plan:ended": "Lagerungsplan beendet",
+  "repositioning_entry:created": "Positionswechsel erfasst",
+  "repositioning_entry:cancelled": "Positionswechsel storniert",
   "activity_participation:recorded": "Teilnahme an Angebot erfasst",
   "resident:admission_planned": "Eintritt geplant",
   "resident:emediplan_read": "eMediplan eingelesen",

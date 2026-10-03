@@ -12,6 +12,7 @@ import { RESUSCITATION_STATUSES } from "@/lib/resident-record-shared";
 import { ADVANCE_ANSWERS, ADVANCE_CARE_LABELS } from "@/lib/advance-care-shared";
 import { SERVICE_SOURCES } from "@/lib/services-shared";
 import { ISOLATION_KINDS } from "@/lib/hygiene-shared";
+import { POSITIONS, SKIN_FINDINGS } from "@/lib/repositioning-shared";
 import { PARTICIPATION_STATUS } from "@/lib/activities-shared";
 import { RESTRAINT_CONSENT, RESTRAINT_KINDS, RESTRAINT_REVIEW_OUTCOMES } from "@/lib/restraints-shared";
 import { SETTING_DEFINITIONS, type SettingKey } from "@/lib/settings-shared";
@@ -99,6 +100,8 @@ export const AUDIT_AREAS: Record<string, { area: string; href: string | null }> 
   service_record: { area: "Pflegeleistung", href: "/pflegedokumentation/leistungen" },
   service_catalog: { area: "Leistungskatalog", href: "/leitung/administration/leistungskatalog" },
   isolation_measure: { area: "Isolation", href: "/bewohner/hygiene" },
+  repositioning_plan: { area: "Lagerung", href: "/pflegedokumentation/lagerung" },
+  repositioning_entry: { area: "Lagerung", href: "/pflegedokumentation/lagerung" },
   outbreak: { area: "Ausbruch", href: "/bewohner/hygiene" },
   activity: { area: "Angebot", href: "/alltag" },
   activity_participation: { area: "Teilnahme an Angebot", href: "/alltag" },
@@ -247,6 +250,11 @@ const TITLES: Record<string, string> = {
   "isolation_measure:created": "Isolation erfasst",
   "isolation_measure:reviewed": "Isolation überprüft",
   "isolation_measure:ended": "Isolation aufgehoben",
+  "repositioning_plan:created": "Lagerungsplan festgelegt",
+  "repositioning_plan:updated": "Lagerungsplan geändert",
+  "repositioning_plan:ended": "Lagerungsplan beendet",
+  "repositioning_entry:created": "Positionswechsel erfasst",
+  "repositioning_entry:cancelled": "Positionswechsel storniert",
   "outbreak:declared": "Ausbruch erfasst",
   "outbreak:updated": "Ausbruch geändert",
   "outbreak:ended": "Ausbruch beendet",
@@ -358,6 +366,9 @@ const FIELDS: Record<string, string> = {
   notes: "Hinweis",
   note: "Notiz",
   reason: "Begründung",
+  intervalMinutes: "Intervall (Minuten)",
+  position: "Position",
+  skin: "Hautbefund",
   description: "Beschreibung",
   active: "Aktiv",
   enabled: "Eingeschaltet",
@@ -610,6 +621,8 @@ const VALUE_LABELS: Record<string, (value: string) => string | undefined> = {
     standard: "Pflegestandard",
   }),
   basis: pick(PORTAL_BASES),
+  position: pick(POSITIONS),
+  skin: pick(SKIN_FINDINGS),
   areas: (value) => {
     const label = pick(PORTAL_AREAS)(value);
     return label === undefined ? undefined : short(label);

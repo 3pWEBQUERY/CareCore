@@ -7,12 +7,23 @@ import { activeIsolations } from "@/lib/hygiene";
 import { isolationLabel, type IsolationKind } from "@/lib/hygiene-shared";
 import { activeRestraints } from "@/lib/restraints";
 import { restraintLabel, type RestraintKind } from "@/lib/restraints-shared";
+import { dueRepositioning } from "@/lib/repositioning";
+import { formatInterval } from "@/lib/repositioning-shared";
 
 // "Mein Dienst": what is due today per resident of a care unit, gathered from the
 // modules (medication, vital signs, wounds, assessments, care plan, documentation, tasks).
 
 export type WorkItemKind =
-  "medication" | "vitals" | "wound" | "assessment" | "plan" | "documentation" | "task" | "restraint" | "isolation";
+  | "medication"
+  | "vitals"
+  | "wound"
+  | "assessment"
+  | "plan"
+  | "documentation"
+  | "task"
+  | "restraint"
+  | "isolation"
+  | "repositioning";
 
 export type WorkItem = {
   kind: WorkItemKind;
@@ -43,9 +54,21 @@ const TONE_WEIGHT = { critical: 0, attention: 1, info: 2 };
 export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | null): Promise<Worklist> {
   const careUnitId = careUnitIdInput ? assertUuid(careUnitIdInput, "Wohnbereich") : null;
   const org = ctx.actor.organizationId;
-  const [residents, vitals, wounds, plans, docs, tasks, rounds, assessments, settings, restraints, isolations] =
-    await Promise.all([
-      ctx.sql`
+  const [
+    residents,
+    vitals,
+    wounds,
+    plans,
+    docs,
+    tasks,
+    rounds,
+    assessments,
+    settings,
+    restraints,
+    isolations,
+    repositioning,
+  ] = await Promise.all([
+    ctx.sql`
       SELECT r.id, r.first_name, r.last_name, COALESCE(ro.name, '') AS room, COALESCE(cu.name, '') AS care_unit, cu.id AS care_unit_id
       FROM carecore_residents r
       JOIN LATERAL (SELECT care_unit_id, room_id FROM carecore_resident_stays WHERE resident_id = r.id AND ended_at IS NULL
@@ -55,18 +78,18 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
       WHERE r.organization_id = ${org} AND r.status = 'active'
         AND (${careUnitId}::uuid IS NULL OR stay.care_unit_id = ${careUnitId}::uuid)
       ORDER BY ro.name NULLS LAST, r.last_name, r.first_name` as Promise<Row[]>,
-      ctx.sql`
+    ctx.sql`
       SELECT r.id AS resident_id, MAX(v.measured_at) AS last_at,
         BOOL_OR(v.status = 'critical' AND v.measured_at > NOW() - INTERVAL '24 hours') AS critical
       FROM carecore_residents r LEFT JOIN carecore_vital_measurements v ON v.resident_id = r.id
       WHERE r.organization_id = ${org} AND r.status = 'active' GROUP BY r.id` as Promise<Row[]>,
-      ctx.sql`
+    ctx.sql`
       SELECT w.resident_id, w.title, w.severity,
         (COALESCE(e.observed_at, w.discovered_at, w.created_at) + make_interval(days => w.care_interval_days)) < NOW() + INTERVAL '12 hours' AS due
       FROM carecore_wounds w JOIN carecore_residents r ON r.id = w.resident_id AND r.organization_id = ${org}
       LEFT JOIN LATERAL (SELECT observed_at FROM carecore_wound_entries WHERE wound_id = w.id ORDER BY observed_at DESC LIMIT 1) e ON TRUE
       WHERE w.status IN ('active', 'healing') AND w.care_interval_days IS NOT NULL` as Promise<Row[]>,
-      ctx.sql`
+    ctx.sql`
       SELECT r.id AS resident_id, p.id AS plan_id,
         (p.status = 'review' OR p.review_on <= (NOW() AT TIME ZONE o.timezone)::date OR EXISTS (
           SELECT 1 FROM carecore_care_goals g WHERE g.care_plan_id = p.id AND g.status = 'active'
@@ -74,23 +97,24 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
       FROM carecore_residents r JOIN carecore_organizations o ON o.id = r.organization_id
       LEFT JOIN carecore_care_plans p ON p.resident_id = r.id AND p.status IN ('draft', 'active', 'review')
       WHERE r.organization_id = ${org} AND r.status = 'active'` as Promise<Row[]>,
-      ctx.sql`
+    ctx.sql`
       SELECT r.id AS resident_id, MAX(d.occurred_at) AS last_at
       FROM carecore_residents r LEFT JOIN carecore_documentation_entries d ON d.resident_id = r.id
       WHERE r.organization_id = ${org} AND r.status = 'active' GROUP BY r.id` as Promise<Row[]>,
-      ctx.sql`
+    ctx.sql`
       SELECT t.resident_id, t.title, t.priority, (t.due_at < NOW()) AS overdue,
         to_char(t.due_at AT TIME ZONE o.timezone, 'HH24:MI') AS time
       FROM carecore_tasks t JOIN carecore_organizations o ON o.id = t.organization_id
       WHERE t.organization_id = ${org} AND t.resident_id IS NOT NULL AND t.status IN ('open', 'in_progress', 'escalated')
         AND t.due_at < ((NOW() AT TIME ZONE o.timezone)::date + 1) AT TIME ZONE o.timezone
       ORDER BY t.due_at` as Promise<Row[]>,
-      Promise.all((Object.keys(ROUNDS) as RoundKey[]).map((round) => listRound(ctx, round, null))),
-      dueAssessments(ctx),
-      readSettings(ctx),
-      activeRestraints(ctx),
-      activeIsolations(ctx),
-    ]);
+    Promise.all((Object.keys(ROUNDS) as RoundKey[]).map((round) => listRound(ctx, round, null))),
+    dueAssessments(ctx),
+    readSettings(ctx),
+    activeRestraints(ctx),
+    activeIsolations(ctx),
+    dueRepositioning(ctx),
+  ]);
   // Reminder thresholds of "Leitung · Konfiguration".
   const overdueMs = settings.medicationOverdue.enabled ? (settings.medicationOverdue.value ?? 30) * 60_000 : Infinity;
   const vitalsMs = (settings.vitalsReminder.value ?? 7) * 86_400_000;
@@ -244,6 +268,29 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
       );
     }
 
+    // Lagerung laut Plan: fällig (letzter Wechsel plus Intervall) oder in der nächsten Stunde.
+    for (const plan of by(repositioning, id)) {
+      const due = Date.parse(iso(plan.due_at) ?? "");
+      const time = String(plan.time);
+      const every = `alle ${formatInterval(Number(plan.interval_minutes))}`;
+      if (due <= now)
+        items.push({
+          kind: "repositioning",
+          label: "Lagerung fällig",
+          detail: `seit ${time} · ${every}`,
+          tone: "attention",
+          href: "/c/pflegedokumentation/lagerung",
+        });
+      else if (due - now <= 3_600_000)
+        items.push({
+          kind: "repositioning",
+          label: "Lagerung",
+          detail: `um ${time} · ${every}`,
+          tone: "info",
+          href: "/c/pflegedokumentation/lagerung",
+        });
+    }
+
     items.sort((a, b) => TONE_WEIGHT[a.tone] - TONE_WEIGHT[b.tone]);
     return { id, name, initials: initials(name), room: String(row.room), careUnit: String(row.care_unit), items };
   });
@@ -258,6 +305,7 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
     task: 0,
     restraint: 0,
     isolation: 0,
+    repositioning: 0,
   };
   for (const resident of list) for (const item of resident.items) totals[item.kind] += 1;
   const urgency = (resident: WorkResident) =>
