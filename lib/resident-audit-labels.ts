@@ -46,6 +46,8 @@ const ENTITY_LABELS: Record<string, string> = {
   repositioning_plan: "Lagerungsplan",
   repositioning_entry: "Positionswechsel",
   elimination_entry: "Ausscheidung",
+  end_of_life_wishes: "Wünsche für die letzte Lebensphase",
+  death_checklist: "Ablauf nach dem Todesfall",
   activity_participation: "Teilnahme an Angebot",
 };
 
@@ -87,6 +89,7 @@ const TITLES: Record<string, string> = {
   "medication_administration:effect_checked": "Wirkungskontrolle erfasst",
   "resident:medication_allergies_updated": "Allergien geändert",
   "resident:resuscitation_updated": "Reanimationsstatus geändert",
+  "resident:evacuation_updated": "Angaben für den Notfall geändert",
   "resident:advance_care_updated": "Vorsorge geändert",
   "documentation_entry:visit_answered": "Rückmeldung zur Visite erfasst",
   "service_record:created": "Pflegeleistung erfasst",
@@ -101,6 +104,11 @@ const TITLES: Record<string, string> = {
   "repositioning_entry:cancelled": "Positionswechsel storniert",
   "elimination_entry:created": "Ausscheidung erfasst",
   "elimination_entry:cancelled": "Ausscheidung storniert",
+  "end_of_life_wishes:created": "Wünsche für die letzte Lebensphase erfasst",
+  "end_of_life_wishes:updated": "Wünsche für die letzte Lebensphase geändert",
+  "death_checklist:created": "Checkliste nach dem Todesfall übernommen",
+  "death_checklist:item_done": "Punkt nach dem Todesfall erledigt",
+  "death_checklist:item_reopened": "Punkt nach dem Todesfall wieder geöffnet",
   "activity_participation:recorded": "Teilnahme an Angebot erfasst",
   "resident:admission_planned": "Eintritt geplant",
   "resident:emediplan_read": "eMediplan eingelesen",
@@ -140,6 +148,14 @@ const FIELD_LABELS: Record<string, string> = {
   preferences: "Vorlieben",
   strengths: "Stärken",
   sensitiveTopics: "Sensible Themen",
+  place: "Ort",
+  companionship: "Begleitung",
+  spiritual: "Religiöse oder spirituelle Wünsche",
+  funeral: "Bestattung",
+  notify: "Wer informiert werden soll",
+  otherWishes: "Weitere Wünsche",
+  discussedWith: "Besprochen mit",
+  discussedOn: "Besprochen am",
   title: "Bezeichnung",
   bodyLocation: "Lokalisation",
   woundType: "Wundart",
@@ -168,6 +184,8 @@ const FIELD_LABELS: Record<string, string> = {
   careMandate: "Vorsorgeauftrag / -vollmacht",
   careMandateOn: "Errichtet am",
   careMandateEffectiveOn: "Wirksam seit",
+  evacuationMobility: "Mobilität im Notfall",
+  evacuationNote: "Hinweise für den Notfall",
 };
 
 const NAME_KEYS = ["fullName", "label", "itemName", "title", "name", "metric", "medication", "file"];

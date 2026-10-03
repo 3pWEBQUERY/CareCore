@@ -411,18 +411,24 @@ Einrichtung bzw. die Pflegeplanung fest, gesetzliche Grundlagen werden beim Bau 
       Intervall – alles von der Einrichtung. Das Instrument erscheint in den Einschätzungen neben dem Katalog (mit
       Quelle), Fälligkeiten nach dem Intervall der Einrichtung. Nach der ersten Einschätzung ergibt eine Änderung eine
       neue Fassung, frühere Ergebnisse bleiben; „nicht mehr anbieten“ statt löschen; alles im Protokoll.
-- [ ] **Wünsche am Lebensende und Todesfall:** In „Vorsorge & Vertretung“ festhalten, was die Person für die letzte
-      Lebensphase wünscht (Ort, Begleitung, religiöse oder spirituelle Wünsche, Bestattung, wer informiert werden soll).
-      Beim Erfassen eines Todesfalls eine Checkliste der Einrichtung (z. B. Ärztin informiert, Angehörige informiert,
-      Bestattung beauftragt), deren Punkte die Einrichtung selbst festlegt.
-- [ ] **Evakuierungs- und Notfallliste:** Druckbare Liste je Wohnbereich mit Zimmer, Name und der dokumentierten
-      Mobilität (gehfähig, mit Hilfsmittel, Rollstuhl, bettlägerig) sowie Hinweisen wie Sauerstoff oder Reanimationsstatus,
-      für Brandfall und Evakuation; Stand mit Datum.
+- [x] **Wünsche am Lebensende und Todesfall:** In den Stammdaten neben „Vorsorge & Vertretung“ die Karte „Wünsche
+      für die letzte Lebensphase“ (Ort, Begleitung, religiöse oder spirituelle Wünsche, Bestattung, wer informiert
+      werden soll, Weiteres; besprochen mit/am). Im Änderungsprotokoll stehen nur die geänderten Abschnitte, nicht der
+      Inhalt. Die Punkte der „Checkliste nach einem Todesfall“ legt die Administration unter Leitung · Konfiguration
+      selbst fest (keine Vorgabe); beim Erfassen des Todesfalls werden sie für die Person übernommen und in der Karte
+      „Ablauf nach dem Todesfall“ mit Zeit, Person und Vermerk abgehakt. Für frühere Todesfälle lässt sich die
+      Checkliste nachträglich übernehmen. Beides ist Teil der Auskunft (Datenexport).
+- [x] **Evakuierungs- und Notfallliste:** In den Stammdaten die Karte „Brandfall & Evakuation“ mit der Mobilität im
+      Notfall (geht selbständig, mit Hilfsmittel oder Begleitung, Rollstuhl, bettlägerig) und Hinweisen wie Sauerstoff;
+      Änderungen mit eigenem Protokolleintrag. Unter Belegung & Eintritt je Wohnbereich „Evakuierungsliste“: A4 mit
+      Zimmer, Name, Mobilität, Hinweisen (Reanimationsstatus, laufende Isolation, eigene Hinweise), Kästchen zum
+      Abhaken, Zählung nach Mobilität und Stand mit Datum und Uhrzeit; extern verlegte Personen als abwesend markiert.
 
 ### Niedrig / UI/UX
 
-- [ ] **Tippflächen auf dem Handy:** Namenslinks in Dokumentation › Visite und Alltag & Aktivierung › Teilnahme je
-      Person sind kleiner als 24 × 24 px (WCAG 2.2, 2.5.8); Zeilenhöhe bzw. Abstand vergrössern.
+- [x] **Tippflächen auf dem Handy:** Namenslinks in Dokumentation › Visite und Alltag & Aktivierung › Teilnahme je
+      Person (sowie in den Tabellen der Leistungsauswertung) sind auf dem Handy mindestens 24 px hoch (WCAG 2.2,
+      2.5.8); Optik unverändert. Klicktest `e2e/touch-targets.spec.ts` misst jede Tippfläche.
 
 ## Braucht eine Entscheidung oder externe Quelle
 

@@ -7,6 +7,7 @@ test("Druckansichten: Hauptüberschrift auch ohne Daten", async ({ page }) => {
   const cases: Array<[string, RegExp]> = [
     ["/c/bewohner/ueberleitung?dialog=0", /^Überleitungsbogen$/],
     ["/c/medikation/btm/buch?dialog=0", /^BtM-Buch$/],
+    ["/c/bewohner/belegung/evakuierung?unit=00000000-0000-4000-8000-000000000000&dialog=0", /^Evakuierungsliste$/],
     ["/c/mein-dienstplan/team/drucken?monat=2001-01&dialog=0", /^Teamplan .*Januar 2001$/],
   ];
   for (const [url, name] of cases) {

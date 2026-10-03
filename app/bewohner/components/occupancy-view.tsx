@@ -457,6 +457,17 @@ function UnitCard({
               QR-Etiketten
             </a>
           )}
+          {unit.occupied > 0 && (
+            <a
+              className="secondary-button"
+              href={`/c/bewohner/belegung/evakuierung?unit=${unit.id}`}
+              target="_blank"
+              rel="noopener"
+              aria-label={`Evakuierungsliste ${unit.name} drucken`}
+            >
+              Evakuierungsliste
+            </a>
+          )}
           {canManageRooms && (
             <button
               className="secondary-button"

@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport sowie die Hauptüberschrift der Druckansichten. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Tippflächen der Namenslinks auf dem Handy sowie die Hauptüberschrift der Druckansichten. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -870,6 +870,15 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+/* Handy: Namenslinks (Visite, Teilnahme je Person, Auswertungen) mindestens 24 px hoch (WCAG 2.2, 2.5.8). */
+@media (max-width: 960px) {
+  .visit-resident h3 a,
+  .services-report-table td > a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+  }
+}
 
 /* Belegung & Eintritt */
 .occupancy-layout {
@@ -1357,4 +1366,147 @@
   margin: 0;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+/* Wünsche für die letzte Lebensphase und Checkliste nach dem Todesfall (Stammdaten der Akte). */
+.end-of-life-wish strong {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.end-of-life-updated {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.death-checklist-empty {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+}
+.death-checklist {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.death-checklist li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #edf1f5;
+}
+.death-checklist li:last-child {
+  border-bottom: 0;
+}
+.death-checklist-mark {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+}
+.death-checklist li.done .death-checklist-mark {
+  border-color: var(--success);
+  color: #fff;
+  background: var(--success);
+}
+.death-checklist li > div {
+  display: grid;
+  gap: 2px;
+}
+.death-checklist strong {
+  color: var(--ink);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+.death-checklist small {
+  color: var(--muted);
+  font-size: 11px;
+}
+/* Wie die Knöpfe im Kartenkopf der Akte. */
+.death-checklist-action {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.death-checklist-action svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+/* Evakuierungs- und Notfallliste: ein Wohnbereich pro Seite, gut lesbar auch ausgedruckt. */
+.evacuation-sheet {
+  max-width: 190mm;
+  margin: 0 auto 10mm;
+  color: #000;
+}
+.evacuation-sheet + .evacuation-sheet {
+  break-before: page;
+}
+.evacuation-sheet header h1 {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 2mm;
+  font-size: 16px;
+}
+.evacuation-sheet header h1 span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.evacuation-sheet header p {
+  margin: 0 0 4mm;
+  font-size: 12px;
+}
+.evacuation-sheet table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.evacuation-sheet th,
+.evacuation-sheet td {
+  padding: 2.2mm 2mm;
+  border: 1px solid #9aa7b4;
+  text-align: left;
+  vertical-align: top;
+}
+.evacuation-sheet thead th {
+  background: #eef2f6;
+  font-weight: 700;
+}
+.evacuation-sheet tr {
+  break-inside: avoid;
+}
+.evacuation-sheet tr.absent td {
+  color: #5b6b7b;
+}
+.evacuation-sheet td.mobility-wheelchair,
+.evacuation-sheet td.mobility-bedridden {
+  font-weight: 700;
+}
+.evacuation-sheet td.mobility-unknown {
+  font-style: italic;
+}
+.evacuation-sheet .evacuation-check {
+  width: 22mm;
+  text-align: center;
+}
+.evacuation-sheet .evacuation-check span {
+  display: inline-block;
+  width: 5mm;
+  height: 5mm;
+  border: 1px solid #000;
 }
