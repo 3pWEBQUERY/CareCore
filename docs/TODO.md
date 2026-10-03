@@ -385,10 +385,14 @@ Einrichtung bzw. die Pflegeplanung fest, gesetzliche Grundlagen werden beim Bau 
       keines vor). Die Tagesliste zeigt „Lagerung fällig“ (letzter Wechsel plus Intervall) bzw. den Wechsel in der
       nächsten Stunde. Verlauf über 24 Stunden, 3 oder 7 Tage; Stornieren mit Grund statt Löschen; Plan ändern oder mit
       Grund beenden; alles im Protokoll der Akte. Bei verletzter Haut Hinweis auf das Wundmanagement.
-- [ ] **Auskunft und Datenexport je Person:** Auf Verlangen der Person bzw. Vertretung alle gespeicherten Daten einer
-      Akte als PDF und maschinenlesbar (JSON) ausgeben, mit Protokolleintrag (Recht auf Auskunft bzw.
-      Datenherausgabe; CH DSG Art. 25 und 28, DE/AT DSGVO Art. 15 und 20 – beim Bau an der Quelle prüfen). Nur
-      Administration, mit Bestätigung.
+- [x] **Auskunft und Datenexport je Person:** Akte › Verlauf › „Auskunft & Datenexport“ (nur Administration): mit
+      Angabe, wer die Auskunft verlangt, als lesbare Fassung zum Drucken bzw. als PDF (nach Bereichen, deutsche
+      Bezeichnungen, Mitarbeitende mit Namen) oder als Datei (JSON, strukturiert und maschinenlesbar). Enthalten sind alle
+      Bereiche der Akte samt Änderungsprotokoll und Portal (Freigaben, Nachrichten, Zugriffe); Dateien sind mit ihren
+      Angaben aufgeführt und werden auf Wunsch einzeln herausgegeben. Jede Auskunft steht im Protokoll der Akte.
+      Grundlagen geprüft: CH DSG Art. 25 (kostenlos, verständlich, in der Regel innert 30 Tagen) und Art. 28; DE/AT
+      DSGVO Art. 15 und 20, Frist nach Art. 12 Abs. 3. Tests stellen sicher, dass jede Tabelle mit Personenbezug und jede
+      Spalte erfasst ist.
 
 ### Mittel
 

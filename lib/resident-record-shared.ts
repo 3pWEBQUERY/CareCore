@@ -73,6 +73,8 @@ export type RecordSummary = {
   canWrite: boolean;
   // Änderungsprotokoll: nur für die Leitung (Rollen mit team.manage oder administration.manage).
   canViewAudit: boolean;
+  // Auskunft und Datenexport (Administration).
+  canExport: boolean;
   // Vertretungsberechtigte Person aus den Kontaktpersonen (nach Vorrang der Rolle), für den Aktenkopf.
   representative: Representative | null;
 };

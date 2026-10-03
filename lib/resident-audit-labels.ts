@@ -101,6 +101,7 @@ const TITLES: Record<string, string> = {
   "activity_participation:recorded": "Teilnahme an Angebot erfasst",
   "resident:admission_planned": "Eintritt geplant",
   "resident:emediplan_read": "eMediplan eingelesen",
+  "resident:data_exported": "Auskunft erteilt (Datenexport)",
   "resident:admission_confirmed": "Eintritt bestätigt",
   "resident:admission_cancelled": "Geplanter Eintritt abgesagt",
   "activity_participation:removed": "Teilnahme an Angebot entfernt",
