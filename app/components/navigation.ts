@@ -98,8 +98,16 @@ export const navigation: NavGroup[] = [
         id: "med",
         label: "Medikation",
         icon: "med",
-        children: ["Medikamentenrunde", "Medikamentenplan", "Reserven", "Bestände", "BtM-Kontrolle", "Bestellungen"],
-        childPermissions: { Bestellungen: "medication.manage" },
+        children: [
+          "Medikamentenrunde",
+          "Medikamentenplan",
+          "Reserven",
+          "Bestände",
+          "BtM-Kontrolle",
+          "Bestellungen",
+          "eMediplan",
+        ],
+        childPermissions: { Bestellungen: "medication.manage", eMediplan: "medication.manage" },
       },
       {
         id: "vitals",
@@ -275,6 +283,7 @@ const routes: Record<string, Record<string, string>> = {
     Bestände: "/medikation/bestaende",
     "BtM-Kontrolle": "/medikation/btm",
     Bestellungen: "/medikation/bestellungen",
+    eMediplan: "/medikation/emediplan",
   },
   vitals: {
     Vitalwerte: "/vitalwerte",

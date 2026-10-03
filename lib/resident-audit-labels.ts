@@ -93,6 +93,7 @@ const TITLES: Record<string, string> = {
   "isolation_measure:ended": "Isolation aufgehoben",
   "activity_participation:recorded": "Teilnahme an Angebot erfasst",
   "resident:admission_planned": "Eintritt geplant",
+  "resident:emediplan_read": "eMediplan eingelesen",
   "resident:admission_confirmed": "Eintritt bestätigt",
   "resident:admission_cancelled": "Geplanter Eintritt abgesagt",
   "activity_participation:removed": "Teilnahme an Angebot entfernt",

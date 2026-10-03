@@ -306,8 +306,13 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
       Definition nicht ganz abbilden, steht „Annäherung“. Die offizielle Erhebung bleibt beim Bedarfsabklärungsinstrument.
 - [ ] **Qualitätsindikatoren DE (§ 113 SGB XI):** braucht die halbjährliche Ergebniserfassung (Mobilität,
       Selbständigkeit, Integrationsgespräch u. a.) als eigene strukturierte Erhebung; erst danach auswertbar.
-- [ ] **eMediplan einlesen (CH):** Medikationsplan per QR-Code (CHMED) als Entwurf übernehmen; eine Fachperson prüft
-      und gibt jede Verordnung frei. Keine automatische Prüfung oder Änderung.
+- [x] **eMediplan einlesen (CH):** Medikation › eMediplan liest den Inhalt des QR-Codes (CHMED16A, komprimiert oder
+      nicht) als Entwurf für die Person in der Kopfzeile. - Gezeigt werden Personenabgleich (Name, Geburtsdatum), Dosierung Morgen/Mittag/Abend/Nacht, Reserve, Zeitraum,
+      Grund und Verordnende. - Jede Zeile prüft eine Fachperson und übernimmt sie einzeln als Verordnung, mit den Pflichtangaben des
+      Medikamentenplans; verschiedene Dosen werden zu getrennten Verordnungen. - GTIN und Pharmacode löst CareCore ohne Arzneimitteldatenbank nicht auf: Das Präparat wird beim ersten Mal
+      zugeordnet, und die Zuordnung wird für den nächsten Plan gemerkt. - Komplexe Schemata werden von Hand erfasst. Keine automatische Prüfung oder Änderung.
+- [ ] **eMediplan CHMED23A und Kamera:** neueres Format CHMED23A lesen; QR-Code direkt mit der Kamera scannen (heute:
+      QR-Scanner im Tastaturmodus oder Text einfügen).
 - [x] **Visite vorbereiten:** Dokumentation › Visite sammelt die offenen Einträge „Für Visite“ je Hausärztin bzw.
       Hausarzt (aus den Stammdaten), filterbar nach Wohnbereich, mit Visitenliste zum Drucken (A4). Die Rückmeldung
       wird als Eintrag „Arztvisite“ dokumentiert, schliesst die Frage und steht im Protokoll der Akte.
