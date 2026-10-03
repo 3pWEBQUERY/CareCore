@@ -254,6 +254,17 @@ export const EXPORT_COLUMN_LABELS: Record<string, string> = {
   width_cm: "Breite (cm)",
   witness_user_id: "Zweitunterschrift von",
   wound_edge: "Wundrand",
+  // Wünsche für die letzte Lebensphase und Ablauf nach dem Todesfall.
+  place: "Ort",
+  companionship: "Begleitung",
+  spiritual: "Religiöse oder spirituelle Wünsche",
+  funeral: "Bestattung",
+  notify: "Wer informiert werden soll",
+  other_wishes: "Weitere Wünsche",
+  discussed_with: "Besprochen mit",
+  discussed_on: "Besprochen am",
+  done_at: "Erledigt am",
+  done_by: "Erledigt von",
   // Zusatzangaben der Auskunft selbst.
   art: "Art",
   medication_name: "Präparat",

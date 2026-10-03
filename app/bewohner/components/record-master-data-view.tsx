@@ -14,6 +14,7 @@ import {
   type ResuscitationStatus,
 } from "@/lib/resident-record-shared";
 import type { ResidentRecordState } from "./use-resident-record";
+import { RecordEndOfLifeCards } from "./record-end-of-life-cards";
 import { ADVANCE_ANSWERS, ADVANCE_CARE_LABELS, type AdvanceAnswer } from "@/lib/advance-care-shared";
 
 const GENDERS: Record<string, string> = {
@@ -472,6 +473,10 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
               </div>
             </div>
           </section>
+
+          {resident.id && (
+            <RecordEndOfLifeCards residentId={resident.id} residentName={resident.name} onAction={onAction} />
+          )}
 
           <section className="record-card master-data-card">
             <div className="record-card-heading">

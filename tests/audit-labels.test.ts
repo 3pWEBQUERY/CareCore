@@ -76,6 +76,10 @@ const COMPUTED = [
   "user:lock",
   "user:restore",
   "user:deleted",
+  "end_of_life_wishes:created",
+  "end_of_life_wishes:updated",
+  "death_checklist:item_done",
+  "death_checklist:item_reopened",
 ];
 
 test("Änderungsprotokoll: jede protokollierte Aktion hat eine deutsche Bezeichnung", () => {

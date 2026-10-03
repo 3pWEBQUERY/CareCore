@@ -104,6 +104,8 @@ export const AUDIT_AREAS: Record<string, { area: string; href: string | null }> 
   repositioning_plan: { area: "Lagerung", href: "/pflegedokumentation/lagerung" },
   repositioning_entry: { area: "Lagerung", href: "/pflegedokumentation/lagerung" },
   elimination_entry: { area: "Ausscheidung", href: "/pflegedokumentation/ausscheidung" },
+  end_of_life_wishes: { area: "Wünsche am Lebensende", href: "/bewohner" },
+  death_checklist: { area: "Ablauf nach dem Todesfall", href: "/bewohner" },
   assessment_instrument: { area: "Einschätzungsinstrumente", href: "/leitung/administration/konfiguration" },
   outbreak: { area: "Ausbruch", href: "/bewohner/hygiene" },
   activity: { area: "Angebot", href: "/alltag" },
@@ -261,6 +263,11 @@ const TITLES: Record<string, string> = {
   "repositioning_entry:cancelled": "Positionswechsel storniert",
   "elimination_entry:created": "Ausscheidung erfasst",
   "elimination_entry:cancelled": "Ausscheidung storniert",
+  "end_of_life_wishes:created": "Wünsche für die letzte Lebensphase erfasst",
+  "end_of_life_wishes:updated": "Wünsche für die letzte Lebensphase geändert",
+  "death_checklist:created": "Checkliste nach dem Todesfall übernommen",
+  "death_checklist:item_done": "Punkt nach dem Todesfall erledigt",
+  "death_checklist:item_reopened": "Punkt nach dem Todesfall wieder geöffnet",
   "assessment_instrument:created": "Eigenes Einschätzungsinstrument angelegt",
   "assessment_instrument:updated": "Eigenes Einschätzungsinstrument geändert",
   "assessment_instrument:versioned": "Neue Fassung eines eigenen Einschätzungsinstruments",
@@ -342,6 +349,7 @@ export const auditActionKnown = (entityType: string, action: string) =>
 
 const EXTRA_SETTINGS: Record<string, string> = {
   hidden_vitals: "Erfasste Vitalwerte",
+  death_checklist: "Checkliste nach einem Todesfall",
   terminology: "Bezeichnung der betreuten Personen",
 };
 
@@ -388,6 +396,8 @@ const FIELDS: Record<string, string> = {
   enabled: "Eingeschaltet",
   value: "Wert",
   hidden: "Ausgeblendet",
+  items: "Punkte",
+  label: "Punkt",
   leadId: "Leitung",
   managerId: "Leitung",
   siteType: "Standorttyp",

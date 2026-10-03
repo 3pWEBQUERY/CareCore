@@ -411,10 +411,13 @@ Einrichtung bzw. die Pflegeplanung fest, gesetzliche Grundlagen werden beim Bau 
       Intervall – alles von der Einrichtung. Das Instrument erscheint in den Einschätzungen neben dem Katalog (mit
       Quelle), Fälligkeiten nach dem Intervall der Einrichtung. Nach der ersten Einschätzung ergibt eine Änderung eine
       neue Fassung, frühere Ergebnisse bleiben; „nicht mehr anbieten“ statt löschen; alles im Protokoll.
-- [ ] **Wünsche am Lebensende und Todesfall:** In „Vorsorge & Vertretung“ festhalten, was die Person für die letzte
-      Lebensphase wünscht (Ort, Begleitung, religiöse oder spirituelle Wünsche, Bestattung, wer informiert werden soll).
-      Beim Erfassen eines Todesfalls eine Checkliste der Einrichtung (z. B. Ärztin informiert, Angehörige informiert,
-      Bestattung beauftragt), deren Punkte die Einrichtung selbst festlegt.
+- [x] **Wünsche am Lebensende und Todesfall:** In den Stammdaten neben „Vorsorge & Vertretung“ die Karte „Wünsche
+      für die letzte Lebensphase“ (Ort, Begleitung, religiöse oder spirituelle Wünsche, Bestattung, wer informiert
+      werden soll, Weiteres; besprochen mit/am). Im Änderungsprotokoll stehen nur die geänderten Abschnitte, nicht der
+      Inhalt. Die Punkte der „Checkliste nach einem Todesfall“ legt die Administration unter Leitung · Konfiguration
+      selbst fest (keine Vorgabe); beim Erfassen des Todesfalls werden sie für die Person übernommen und in der Karte
+      „Ablauf nach dem Todesfall“ mit Zeit, Person und Vermerk abgehakt. Für frühere Todesfälle lässt sich die
+      Checkliste nachträglich übernehmen. Beides ist Teil der Auskunft (Datenexport).
 - [ ] **Evakuierungs- und Notfallliste:** Druckbare Liste je Wohnbereich mit Zimmer, Name und der dokumentierten
       Mobilität (gehfähig, mit Hilfsmittel, Rollstuhl, bettlägerig) sowie Hinweisen wie Sauerstoff oder Reanimationsstatus,
       für Brandfall und Evakuation; Stand mit Datum.

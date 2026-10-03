@@ -37,6 +37,21 @@ export const EXPORT_SECTIONS: Array<{ key: string; title: string; tables: string
     query: (sql, id) => sql`SELECT * FROM carecore_resident_biographies WHERE resident_id = ${id}`,
   },
   {
+    key: "end_of_life",
+    title: "Wünsche am Lebensende und Ablauf nach dem Todesfall",
+    tables: ["carecore_end_of_life_wishes", "carecore_death_checklist_items"],
+    query: async (sql, id) => {
+      const [wishes, items] = (await Promise.all([
+        sql`SELECT * FROM carecore_end_of_life_wishes WHERE resident_id = ${id}`,
+        sql`SELECT * FROM carecore_death_checklist_items WHERE resident_id = ${id} ORDER BY position`,
+      ])) as Row[][];
+      return [
+        ...wishes.map((row) => ({ ...row, art: "Wünsche" })),
+        ...items.map((row) => ({ ...row, art: "Checkliste" })),
+      ];
+    },
+  },
+  {
     key: "flags",
     title: "Hinweise und Risiken",
     tables: ["carecore_resident_clinical_flags"],

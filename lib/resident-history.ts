@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readTerms } from "@/lib/settings";
 import { ApiError, assertResident, iso, text, auditStatement, type ApiContext, type Row } from "@/lib/api-context";
 import { initials } from "@/lib/medication-shared";
+import { deathChecklistSnapshot } from "@/lib/end-of-life";
 import {
   EXIT_KINDS,
   LIFECYCLE_LABELS,
@@ -168,6 +169,8 @@ export async function recordExit(ctx: ApiContext, residentIdInput: unknown, body
     ctx.sql`
       UPDATE carecore_care_plans SET status = 'closed', closed_at = NOW(), closed_reason = ${label}, updated_at = NOW()
       WHERE resident_id = ${residentId} AND status IN ('draft', 'active', 'review') AND ${closes}`,
+    // Todesfall: die Checkliste der Einrichtung für die Person übernehmen (leer, solange keine festgelegt ist).
+    ...(kind === "deceased" ? [deathChecklistSnapshot(ctx.sql, ctx.actor.organizationId, residentId)] : []),
     auditStatement(
       ctx,
       "resident",
