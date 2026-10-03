@@ -7,6 +7,8 @@ test("Arbeitsplatz: alle Bausteine verschieben, Breite und Bereich wählen, ausb
   page,
 }) => {
   await login(page, FAGE);
+  // Ausgangslage: Standard-Layout (auch nach einem abgebrochenen Lauf).
+  await page.request.delete("/api/dashboard/layout");
   const errors = watchErrors(page);
   await page.goto("/c");
   const top = page.locator(".home-desk-grid.dashboard-area");
@@ -40,7 +42,14 @@ test("Arbeitsplatz: alle Bausteine verschieben, Breite und Bereich wählen, ausb
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Guten (Morgen|Tag|Abend), /);
   await page.getByRole("button", { name: "Fertig" }).click();
 
-  // Nach dem Neuladen (Layout aus der Datenbank) bleibt alles so.
+  // Nach dem Neuladen (Layout aus der Datenbank) bleibt alles so – erst nachdem alles gespeichert ist.
+  const saved = async () => {
+    const { layout } = (await (await page.request.get("/api/dashboard/layout")).json()) as {
+      layout: { top: string[]; hidden: string[] };
+    };
+    return layout.top.filter((id) => !layout.hidden.includes(id));
+  };
+  await expect.poll(saved).toEqual(["today", "news"]);
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await expect.poll(() => ids(top)).toEqual(["today", "news"]);

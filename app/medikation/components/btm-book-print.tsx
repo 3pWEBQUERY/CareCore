@@ -37,6 +37,7 @@ export default function BtmBookPrint() {
           <X className="button-icon" /> Schliessen
         </button>
       </div>
+      {!(valid && data) && <h1 className="print-hidden-heading">BtM-Buch</h1>}
       {!valid ? (
         <p className="roster-print-message" role="alert">
           Keine Bestandsposition angegeben.

@@ -62,6 +62,7 @@ export default function RoomLabels() {
           <X className="button-icon" /> Schliessen
         </button>
       </div>
+      {(error || !ready) && <h1 className="print-hidden-heading">QR-Etiketten Zimmer</h1>}
       {error ? (
         <p className="roster-print-message" role="alert">
           Die Etiketten konnten nicht erstellt werden: {error}

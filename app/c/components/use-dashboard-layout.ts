@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DashboardLayoutState,
   DashboardWidgetId,
@@ -17,19 +17,31 @@ export function useDashboardLayout() {
   const [dashboardEditing, setDashboardEditing] = useState(false);
   const [layout, setLayout] = useState<DashboardLayoutState>(readStoredDashboardLayout);
   const [draggedWidget, setDraggedWidget] = useState<DashboardWidgetId | null>(null);
+  // Speichern nacheinander: bei schnellen Änderungen darf ein älterer Stand nie den neueren überschreiben.
+  const saving = useRef<Promise<unknown>>(Promise.resolve());
+  // Hat die Person schon geändert, überschreibt das (später eintreffende) gespeicherte Layout ihre Änderung nicht.
+  const changed = useRef(false);
 
   useEffect(() => {
     let active = true;
     void fetch("/api/dashboard/layout", { credentials: "same-origin" })
       .then((response) => (response.ok ? (response.json() as Promise<{ layout: unknown }>) : null))
       .then((payload) => {
-        if (active && payload?.layout) setLayout(sanitizeDashboardLayout(payload.layout));
+        if (active && !changed.current && payload?.layout) setLayout(sanitizeDashboardLayout(payload.layout));
       })
       .catch(() => undefined);
     return () => {
       active = false;
     };
   }, []);
+
+  // Änderungen an den Server nacheinander senden.
+  function save(init: RequestInit) {
+    changed.current = true;
+    saving.current = saving.current
+      .then(() => fetch("/api/dashboard/layout", { credentials: "same-origin", ...init }))
+      .catch(() => undefined);
+  }
 
   function persist(next: DashboardLayoutState) {
     setLayout(next);
@@ -38,12 +50,7 @@ export function useDashboardLayout() {
     } catch {
       // Ohne Browser-Speicher bleibt das Layout in der Datenbank.
     }
-    void fetch("/api/dashboard/layout", {
-      method: "PUT",
-      credentials: "same-origin",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(next),
-    }).catch(() => undefined);
+    save({ method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(next) });
   }
 
   const inTop = (id: DashboardWidgetId) => layout.top.includes(id);
@@ -103,7 +110,7 @@ export function useDashboardLayout() {
     } catch {
       // Ohne Browser-Speicher genügt das Löschen in der Datenbank.
     }
-    void fetch("/api/dashboard/layout", { method: "DELETE", credentials: "same-origin" }).catch(() => undefined);
+    save({ method: "DELETE" });
   }
 
   return {

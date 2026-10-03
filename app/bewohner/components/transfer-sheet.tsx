@@ -54,6 +54,7 @@ export default function TransferSheetPage() {
           <X className="button-icon" /> Schliessen
         </button>
       </div>
+      {!(valid && !error && data) && <h1 className="print-hidden-heading">Überleitungsbogen</h1>}
       {!valid ? (
         <p className="roster-print-message" role="alert">
           Keine {t.prefix}akte gewählt.
