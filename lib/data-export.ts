@@ -206,6 +206,12 @@ export const EXPORT_SECTIONS: Array<{ key: string; title: string; tables: string
     },
   },
   {
+    key: "elimination",
+    title: "Ausscheidung und Kontinenz",
+    tables: ["carecore_elimination_entries"],
+    query: (sql, id) => sql`SELECT * FROM carecore_elimination_entries WHERE resident_id = ${id} ORDER BY occurred_at`,
+  },
+  {
     key: "restraints",
     title: "Freiheitsbeschränkende Massnahmen",
     tables: ["carecore_restraint_measures", "carecore_restraint_reviews"],

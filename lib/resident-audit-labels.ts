@@ -45,6 +45,7 @@ const ENTITY_LABELS: Record<string, string> = {
   isolation_measure: "Isolation",
   repositioning_plan: "Lagerungsplan",
   repositioning_entry: "Positionswechsel",
+  elimination_entry: "Ausscheidung",
   activity_participation: "Teilnahme an Angebot",
 };
 
@@ -98,6 +99,8 @@ const TITLES: Record<string, string> = {
   "repositioning_plan:ended": "Lagerungsplan beendet",
   "repositioning_entry:created": "Positionswechsel erfasst",
   "repositioning_entry:cancelled": "Positionswechsel storniert",
+  "elimination_entry:created": "Ausscheidung erfasst",
+  "elimination_entry:cancelled": "Ausscheidung storniert",
   "activity_participation:recorded": "Teilnahme an Angebot erfasst",
   "resident:admission_planned": "Eintritt geplant",
   "resident:emediplan_read": "eMediplan eingelesen",

@@ -13,6 +13,7 @@ import { ADVANCE_ANSWERS, ADVANCE_CARE_LABELS } from "@/lib/advance-care-shared"
 import { SERVICE_SOURCES } from "@/lib/services-shared";
 import { ISOLATION_KINDS } from "@/lib/hygiene-shared";
 import { POSITIONS, SKIN_FINDINGS } from "@/lib/repositioning-shared";
+import { ELIMINATION_AMOUNTS, ELIMINATION_KINDS } from "@/lib/elimination-shared";
 import { PARTICIPATION_STATUS } from "@/lib/activities-shared";
 import { RESTRAINT_CONSENT, RESTRAINT_KINDS, RESTRAINT_REVIEW_OUTCOMES } from "@/lib/restraints-shared";
 import { SETTING_DEFINITIONS, type SettingKey } from "@/lib/settings-shared";
@@ -102,6 +103,7 @@ export const AUDIT_AREAS: Record<string, { area: string; href: string | null }> 
   isolation_measure: { area: "Isolation", href: "/bewohner/hygiene" },
   repositioning_plan: { area: "Lagerung", href: "/pflegedokumentation/lagerung" },
   repositioning_entry: { area: "Lagerung", href: "/pflegedokumentation/lagerung" },
+  elimination_entry: { area: "Ausscheidung", href: "/pflegedokumentation/ausscheidung" },
   outbreak: { area: "Ausbruch", href: "/bewohner/hygiene" },
   activity: { area: "Angebot", href: "/alltag" },
   activity_participation: { area: "Teilnahme an Angebot", href: "/alltag" },
@@ -256,6 +258,8 @@ const TITLES: Record<string, string> = {
   "repositioning_plan:ended": "Lagerungsplan beendet",
   "repositioning_entry:created": "Positionswechsel erfasst",
   "repositioning_entry:cancelled": "Positionswechsel storniert",
+  "elimination_entry:created": "Ausscheidung erfasst",
+  "elimination_entry:cancelled": "Ausscheidung storniert",
   "outbreak:declared": "Ausbruch erfasst",
   "outbreak:updated": "Ausbruch geändert",
   "outbreak:ended": "Ausbruch beendet",
@@ -371,6 +375,9 @@ const FIELDS: Record<string, string> = {
   requestedBy: "Verlangt von",
   position: "Position",
   skin: "Hautbefund",
+  bristol: "Stuhlform (Bristol)",
+  volume: "Menge",
+  material: "Material",
   description: "Beschreibung",
   active: "Aktiv",
   enabled: "Eingeschaltet",
@@ -619,12 +626,14 @@ const VALUE_LABELS: Record<string, (value: string) => string | undefined> = {
     ...PORTAL_KINDS,
     ...RESTRAINT_KINDS,
     ...ISOLATION_KINDS,
+    ...ELIMINATION_KINDS,
     document: "Dokument",
     standard: "Pflegestandard",
   }),
   basis: pick(PORTAL_BASES),
   position: pick(POSITIONS),
   skin: pick(SKIN_FINDINGS),
+  volume: pick(ELIMINATION_AMOUNTS),
   areas: (value) => {
     const label = pick(PORTAL_AREAS)(value);
     return label === undefined ? undefined : short(label);
