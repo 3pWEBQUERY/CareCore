@@ -254,6 +254,8 @@ export const EXPORT_COLUMN_LABELS: Record<string, string> = {
   width_cm: "Breite (cm)",
   witness_user_id: "Zweitunterschrift von",
   wound_edge: "Wundrand",
+  evacuation_mobility: "Mobilität im Notfall",
+  evacuation_note: "Hinweise für den Notfall",
   // Wünsche für die letzte Lebensphase und Ablauf nach dem Todesfall.
   place: "Ort",
   companionship: "Begleitung",
@@ -284,6 +286,10 @@ export const EXPORT_VALUE_LABELS: Record<string, string> = {
   care_team: "Pflegeteam",
   permanent: "Daueraufenthalt",
   temporary: "Ferien- bzw. Kurzaufenthalt",
+  independent: "Geht selbständig",
+  assisted: "Geht mit Hilfsmittel oder Begleitung",
+  wheelchair: "Rollstuhl",
+  bedridden: "Bettlägerig – Transport liegend",
   true: "ja",
   false: "nein",
 };

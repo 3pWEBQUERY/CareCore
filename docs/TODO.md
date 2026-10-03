@@ -418,9 +418,11 @@ Einrichtung bzw. die Pflegeplanung fest, gesetzliche Grundlagen werden beim Bau 
       selbst fest (keine Vorgabe); beim Erfassen des Todesfalls werden sie für die Person übernommen und in der Karte
       „Ablauf nach dem Todesfall“ mit Zeit, Person und Vermerk abgehakt. Für frühere Todesfälle lässt sich die
       Checkliste nachträglich übernehmen. Beides ist Teil der Auskunft (Datenexport).
-- [ ] **Evakuierungs- und Notfallliste:** Druckbare Liste je Wohnbereich mit Zimmer, Name und der dokumentierten
-      Mobilität (gehfähig, mit Hilfsmittel, Rollstuhl, bettlägerig) sowie Hinweisen wie Sauerstoff oder Reanimationsstatus,
-      für Brandfall und Evakuation; Stand mit Datum.
+- [x] **Evakuierungs- und Notfallliste:** In den Stammdaten die Karte „Brandfall & Evakuation“ mit der Mobilität im
+      Notfall (geht selbständig, mit Hilfsmittel oder Begleitung, Rollstuhl, bettlägerig) und Hinweisen wie Sauerstoff;
+      Änderungen mit eigenem Protokolleintrag. Unter Belegung & Eintritt je Wohnbereich „Evakuierungsliste“: A4 mit
+      Zimmer, Name, Mobilität, Hinweisen (Reanimationsstatus, laufende Isolation, eigene Hinweise), Kästchen zum
+      Abhaken, Zählung nach Mobilität und Stand mit Datum und Uhrzeit; extern verlegte Personen als abwesend markiert.
 
 ### Niedrig / UI/UX
 

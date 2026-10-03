@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall sowie die Hauptüberschrift der Druckansichten. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste sowie die Hauptüberschrift der Druckansichten. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -1436,4 +1436,68 @@
   width: 13px;
   height: 13px;
   flex: none;
+}
+/* Evakuierungs- und Notfallliste: ein Wohnbereich pro Seite, gut lesbar auch ausgedruckt. */
+.evacuation-sheet {
+  max-width: 190mm;
+  margin: 0 auto 10mm;
+  color: #000;
+}
+.evacuation-sheet + .evacuation-sheet {
+  break-before: page;
+}
+.evacuation-sheet header h1 {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 2mm;
+  font-size: 16px;
+}
+.evacuation-sheet header h1 span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.evacuation-sheet header p {
+  margin: 0 0 4mm;
+  font-size: 12px;
+}
+.evacuation-sheet table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.evacuation-sheet th,
+.evacuation-sheet td {
+  padding: 2.2mm 2mm;
+  border: 1px solid #9aa7b4;
+  text-align: left;
+  vertical-align: top;
+}
+.evacuation-sheet thead th {
+  background: #eef2f6;
+  font-weight: 700;
+}
+.evacuation-sheet tr {
+  break-inside: avoid;
+}
+.evacuation-sheet tr.absent td {
+  color: #5b6b7b;
+}
+.evacuation-sheet td.mobility-wheelchair,
+.evacuation-sheet td.mobility-bedridden {
+  font-weight: 700;
+}
+.evacuation-sheet td.mobility-unknown {
+  font-style: italic;
+}
+.evacuation-sheet .evacuation-check {
+  width: 22mm;
+  text-align: center;
+}
+.evacuation-sheet .evacuation-check span {
+  display: inline-block;
+  width: 5mm;
+  height: 5mm;
+  border: 1px solid #000;
 }

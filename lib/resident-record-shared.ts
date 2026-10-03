@@ -1,4 +1,5 @@
 import type { AdvanceAnswer, Representative } from "./advance-care-shared";
+import type { EvacuationMobility } from "./evacuation-shared";
 // Resident record (Bewohnerakte): master data, key figures, timeline and documents,
 // shared by the API and the record panel.
 
@@ -56,6 +57,9 @@ export type MasterData = {
   careMandate: AdvanceAnswer | null;
   careMandateOn: string | null;
   careMandateEffectiveOn: string | null;
+  // Brandfall und Evakuation: wie die Person das Haus verlässt, und Hinweise wie Sauerstoff oder Hörgerät.
+  evacuationMobility: EvacuationMobility | null;
+  evacuationNote: string | null;
 };
 
 export type RecordSummary = {

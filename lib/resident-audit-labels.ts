@@ -89,6 +89,7 @@ const TITLES: Record<string, string> = {
   "medication_administration:effect_checked": "Wirkungskontrolle erfasst",
   "resident:medication_allergies_updated": "Allergien geändert",
   "resident:resuscitation_updated": "Reanimationsstatus geändert",
+  "resident:evacuation_updated": "Angaben für den Notfall geändert",
   "resident:advance_care_updated": "Vorsorge geändert",
   "documentation_entry:visit_answered": "Rückmeldung zur Visite erfasst",
   "service_record:created": "Pflegeleistung erfasst",
@@ -183,6 +184,8 @@ const FIELD_LABELS: Record<string, string> = {
   careMandate: "Vorsorgeauftrag / -vollmacht",
   careMandateOn: "Errichtet am",
   careMandateEffectiveOn: "Wirksam seit",
+  evacuationMobility: "Mobilität im Notfall",
+  evacuationNote: "Hinweise für den Notfall",
 };
 
 const NAME_KEYS = ["fullName", "label", "itemName", "title", "name", "metric", "medication", "file"];

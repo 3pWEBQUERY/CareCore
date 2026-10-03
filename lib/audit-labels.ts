@@ -14,6 +14,7 @@ import { SERVICE_SOURCES } from "@/lib/services-shared";
 import { ISOLATION_KINDS } from "@/lib/hygiene-shared";
 import { POSITIONS, SKIN_FINDINGS } from "@/lib/repositioning-shared";
 import { ELIMINATION_AMOUNTS, ELIMINATION_KINDS } from "@/lib/elimination-shared";
+import { EVACUATION_MOBILITY, type EvacuationMobility } from "@/lib/evacuation-shared";
 import { PARTICIPATION_STATUS } from "@/lib/activities-shared";
 import { RESTRAINT_CONSENT, RESTRAINT_KINDS, RESTRAINT_REVIEW_OUTCOMES } from "@/lib/restraints-shared";
 import { SETTING_DEFINITIONS, type SettingKey } from "@/lib/settings-shared";
@@ -213,6 +214,7 @@ const TITLES: Record<string, string> = {
   "resident:master_data_checked": "Stammdaten geprüft",
   "resident:medication_allergies_updated": "Allergien geändert",
   "resident:resuscitation_updated": "Reanimationsstatus geändert",
+  "resident:evacuation_updated": "Angaben für den Notfall geändert",
   "resident:advance_care_updated": "Vorsorge geändert",
   "documentation_entry:visit_answered": "Rückmeldung zur Visite erfasst",
   "resident:gender_updated": "Geschlecht geändert",
@@ -360,6 +362,8 @@ export const auditSettingTitle = (key: string) =>
 const FIELDS: Record<string, string> = {
   advanceDirective: "Patientenverfügung",
   advanceDirectiveOn: "Patientenverfügung vom",
+  evacuationMobility: "Mobilität im Notfall",
+  evacuationNote: "Hinweise für den Notfall",
   advanceDirectiveLocation: "Aufbewahrungsort",
   careMandate: "Vorsorgeauftrag / -vollmacht",
   careMandateOn: "Errichtet am",
@@ -636,6 +640,7 @@ const VALUE_LABELS: Record<string, (value: string) => string | undefined> = {
   residentConsent: pick(RESTRAINT_CONSENT),
   advanceDirective: pick(ADVANCE_ANSWERS),
   careMandate: pick(ADVANCE_ANSWERS),
+  evacuationMobility: (value) => EVACUATION_MOBILITY[value as EvacuationMobility]?.label,
   representativeRole: pick(ADVANCE_CARE_LABELS.CH.roles),
   origin: pick(ORIGIN_LABELS),
   kind: pick({

@@ -14,6 +14,7 @@ import {
   type ResuscitationStatus,
 } from "@/lib/resident-record-shared";
 import type { ResidentRecordState } from "./use-resident-record";
+import { EVACUATION_MOBILITY, EVACUATION_MOBILITY_KEYS } from "@/lib/evacuation-shared";
 import { RecordEndOfLifeCards } from "./record-end-of-life-cards";
 import { ADVANCE_ANSWERS, ADVANCE_CARE_LABELS, type AdvanceAnswer } from "@/lib/advance-care-shared";
 
@@ -359,6 +360,38 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
                     value={values.resuscitationDecidedOn ? formatDate(values.resuscitationDecidedOn) : ""}
                   />
                 )}
+              </label>
+            </div>
+          </section>
+
+          <section className="record-card master-data-card" aria-labelledby="evacuation-title">
+            <div className="record-card-heading">
+              <div>
+                <span className="record-section-label">Notfall</span>
+                <h3 id="evacuation-title">Brandfall &amp; Evakuation</h3>
+              </div>
+            </div>
+            <div className="master-data-form-grid single-column">
+              <label>
+                <span>Mobilität im Notfall</span>
+                <CareOptionSelect
+                  label="Mobilität im Notfall"
+                  value={values.evacuationMobility ?? ""}
+                  onChange={(value) => set("evacuationMobility", (value || null) as MasterData["evacuationMobility"])}
+                  disabled={!editable}
+                  options={[
+                    { value: "", label: "Nicht erfasst" },
+                    ...EVACUATION_MOBILITY_KEYS.map((value) => ({ value, label: EVACUATION_MOBILITY[value].label })),
+                  ]}
+                />
+              </label>
+              <label>
+                <span>Hinweise für den Notfall</span>
+                <input
+                  maxLength={300}
+                  placeholder={editable ? "z. B. Sauerstoff, Hörgerät, nachts orientierungslos" : undefined}
+                  {...field("evacuationNote")}
+                />
               </label>
             </div>
           </section>

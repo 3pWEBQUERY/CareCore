@@ -30,6 +30,7 @@ import { auditOrigin } from "@/lib/audit-origin";
 import { insuranceNumberError, socialNumberError } from "@/lib/country";
 import { organizationCountry } from "@/lib/organization-country";
 import { isRepresentativeRole, type AdvanceAnswer } from "@/lib/advance-care-shared";
+import { EVACUATION_MOBILITY } from "@/lib/evacuation-shared";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -111,6 +112,8 @@ export async function recordSummary(ctx: ApiContext, residentIdInput: unknown): 
     careMandate: (r.care_mandate as AdvanceAnswer | null) ?? null,
     careMandateOn: (r.care_mandate_day as string | null) ?? null,
     careMandateEffectiveOn: (r.care_mandate_effective_day as string | null) ?? null,
+    evacuationMobility: (r.evacuation_mobility as MasterData["evacuationMobility"]) ?? null,
+    evacuationNote: (r.evacuation_note as string | null) ?? null,
   };
   const missing = [
     !master.resuscitationStatus && "Reanimationsstatus",
@@ -179,6 +182,9 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
   const answer = (value: unknown) => (value === "yes" || value === "no" ? value : null);
   const advanceDirective = answer(body.advanceDirective);
   const careMandate = answer(body.careMandate);
+  const evacuationMobility = body.evacuationMobility ? String(body.evacuationMobility) : null;
+  if (evacuationMobility && !(evacuationMobility in EVACUATION_MOBILITY))
+    throw new ApiError("Ungültige Angabe zur Mobilität im Notfall.");
   let nurseId: string | null = null;
   if (body.primaryNurseId) {
     nurseId = assertUuid(body.primaryNurseId, "Bezugspflege");
@@ -215,6 +221,8 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
     careMandate,
     careMandateOn: careMandate === "yes" ? dateOf(body.careMandateOn, "Datum des Vorsorgeauftrags") : null,
     careMandateEffectiveOn: careMandate === "yes" ? dateOf(body.careMandateEffectiveOn, "Datum der Wirksamkeit") : null,
+    evacuationMobility,
+    evacuationNote: optional(body.evacuationNote, 300),
   };
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Zurich" });
   for (const [value, label] of [
@@ -278,6 +286,13 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
     careMandateEffectiveOn: data.careMandateEffectiveOn,
   };
   const advanceChanged = JSON.stringify(advanceBefore) !== JSON.stringify(advanceAfter);
+  // Angaben für Brandfall und Evakuation ebenso.
+  const evacuationBefore = {
+    evacuationMobility: (b.evacuation_mobility as string | null) ?? null,
+    evacuationNote: (b.evacuation_note as string | null) ?? null,
+  };
+  const evacuationAfter = { evacuationMobility: data.evacuationMobility, evacuationNote: data.evacuationNote };
+  const evacuationChanged = JSON.stringify(evacuationBefore) !== JSON.stringify(evacuationAfter);
   try {
     await ctx.sql.transaction([
       ctx.sql`
@@ -292,6 +307,7 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
         advance_directive = ${data.advanceDirective}, advance_directive_on = ${data.advanceDirectiveOn},
         advance_directive_location = ${data.advanceDirectiveLocation}, care_mandate = ${data.careMandate},
         care_mandate_on = ${data.careMandateOn}, care_mandate_effective_on = ${data.careMandateEffectiveOn},
+        evacuation_mobility = ${data.evacuationMobility}, evacuation_note = ${data.evacuationNote},
         master_data_checked_at = NOW(), master_data_checked_by = ${ctx.actor.id}, updated_at = NOW()
       WHERE id = ${residentId}`,
       auditStatement(
@@ -321,6 +337,9 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
         : []),
       ...(advanceChanged
         ? [auditStatement(ctx, "resident", residentId, "advance_care_updated", advanceBefore, advanceAfter)]
+        : []),
+      ...(evacuationChanged
+        ? [auditStatement(ctx, "resident", residentId, "evacuation_updated", evacuationBefore, evacuationAfter)]
         : []),
     ]);
   } catch (error) {
