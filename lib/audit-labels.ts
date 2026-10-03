@@ -10,6 +10,7 @@ import { PORTAL_AREAS, PORTAL_BASES, PORTAL_KINDS } from "@/lib/portal-shared";
 import { EFFECTIVENESS, SEVERITIES } from "@/lib/quality-shared";
 import { RESUSCITATION_STATUSES } from "@/lib/resident-record-shared";
 import { ADVANCE_ANSWERS, ADVANCE_CARE_LABELS } from "@/lib/advance-care-shared";
+import { SERVICE_SOURCES } from "@/lib/services-shared";
 import { RESTRAINT_CONSENT, RESTRAINT_KINDS, RESTRAINT_REVIEW_OUTCOMES } from "@/lib/restraints-shared";
 import { SETTING_DEFINITIONS, type SettingKey } from "@/lib/settings-shared";
 import { TASK_PRIORITIES, TASK_RECURRENCE, TASK_STATUS } from "@/lib/tasks-shared";
@@ -93,6 +94,8 @@ export const AUDIT_AREAS: Record<string, { area: string; href: string | null }> 
   ai_draft: { area: "KI-Entwurf", href: null },
   ai_search: { area: "KI-Suche", href: null },
   restraint_measure: { area: "Freiheitsbeschränkende Massnahme", href: "/bewohner" },
+  service_record: { area: "Pflegeleistung", href: "/pflegedokumentation/leistungen" },
+  service_catalog: { area: "Leistungskatalog", href: "/leitung/administration/leistungskatalog" },
 };
 
 // Allgemeine Aktionen: „<Bereich> <Verb>“, z. B. „Rolle erstellt“.
@@ -195,6 +198,7 @@ const TITLES: Record<string, string> = {
   "resident:medication_allergies_updated": "Allergien geändert",
   "resident:resuscitation_updated": "Reanimationsstatus geändert",
   "resident:advance_care_updated": "Vorsorge geändert",
+  "documentation_entry:visit_answered": "Rückmeldung zur Visite erfasst",
   "resident:gender_updated": "Geschlecht geändert",
   "resident:imported": "{one} importiert",
   "resident:admitted": "{one} aufgenommen",
@@ -215,6 +219,10 @@ const TITLES: Record<string, string> = {
   "restraint_measure:updated": "Freiheitsbeschränkende Massnahme geändert",
   "restraint_measure:reviewed": "Freiheitsbeschränkende Massnahme überprüft",
   "restraint_measure:ended": "Freiheitsbeschränkende Massnahme beendet",
+  "service_record:created": "Pflegeleistung erfasst",
+  "service_record:cancelled": "Pflegeleistung storniert",
+  "service_catalog:created": "Leistung im Katalog angelegt",
+  "service_catalog:updated": "Leistung im Katalog geändert",
   "pharmacy_order:cancelled": "Apothekenbestellung storniert",
   "training_enrollment:enrolled": "Zur Schulung angemeldet",
   "training_enrollment:withdrawn": "Von der Schulung abgemeldet",
@@ -410,6 +418,10 @@ const FIELDS: Record<string, string> = {
   substanceB: "Wirkstoff B",
   recommendation: "Empfehlung",
   source: "Quelle",
+  minutes: "Minuten",
+  performedAt: "Erbracht am",
+  cancelReason: "Grund der Stornierung",
+  defaultMinutes: "Vorschlag Minuten",
   witness: "Zeuge",
   expected: "Soll",
   counted: "Gezählt",
@@ -557,6 +569,7 @@ const VALUE_LABELS: Record<string, (value: string) => string | undefined> = {
   },
   services: pick(SERVICES),
   recurrence: pick(TASK_RECURRENCE),
+  source: pick(SERVICE_SOURCES),
   country: (value) => COUNTRIES[value as keyof typeof COUNTRIES]?.name,
   region: (value) => regionNames.get(value),
   gender: pick({ female: "weiblich", male: "männlich", diverse: "divers", unspecified: "nicht angegeben" }),
