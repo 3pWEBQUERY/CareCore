@@ -430,6 +430,37 @@ Einrichtung bzw. die Pflegeplanung fest, gesetzliche Grundlagen werden beim Bau 
       Person (sowie in den Tabellen der Leistungsauswertung) sind auf dem Handy mindestens 24 px hoch (WCAG 2.2,
       2.5.8); Optik unverändert. Klicktest `e2e/touch-targets.spec.ts` misst jede Tippfläche.
 
+## Analyse vom 03.10.2026 (dritter Rundgang): noch zu erstellen
+
+Fachliche Lücken der Akte; was die Einrichtung festlegt, bleibt bei ihr (keine Vorgaben, keine Empfehlungen).
+
+### Hoch
+
+- [x] **Diagnosen je Person:** Karte „Diagnosen“ in den Stammdaten: Bezeichnung wie von Ärztin/Arzt gestellt,
+      freiwilliger ICD-10-Code (nur die Form wird geprüft, keine Code-Datenbank), seit, Quelle, Haupt- oder
+      Nebendiagnose, aktuell oder abgeschlossen (mit Datum), Bemerkung. Überholte Diagnosen werden abgeschlossen,
+      Fehleinträge mit Begründung entfernt; Schutz gegen gleichzeitige Änderungen; alles im Protokoll der Akte. Aktuelle
+      Diagnosen stehen im Überleitungsbogen, in Visite und Visitenliste; alle in der Auskunft.
+
+### Mittel
+
+- [ ] **Impfungen:** je Person Datum, Impfung bzw. Impfstoff, Charge und wer geimpft hat (im Haus oder extern);
+      Übersicht je Wohnbereich (z. B. wer in dieser Saison gegen Grippe geimpft ist) für Ausbruch und Meldungen. Keine
+      Impfempfehlungen durch CareCore.
+- [ ] **Hilfsmittel und persönliche Gegenstände:** Brille, Hörgerät, Zahnprothese, Rollator, Rollstuhl usw. je Person
+      mit Kennzeichnung und Standort; im Überleitungsbogen „mitgegeben“ abhaken, damit nichts verloren geht.
+
+### Niedrig / UI/UX
+
+Automatischer Rundgang über 89 Seiten je Desktop (1440 px) und Handy (390 px): keine Skriptfehler, kein seitliches
+Scrollen, je Seite eine Hauptüberschrift, keine unbeschrifteten Felder. Gefunden:
+
+- [ ] **Tippflächen unter 24 px (WCAG 2.2, 2.5.8), auch auf dem Desktop:** Textknöpfe der leeren Startseiten-Karten
+      (15 px), Übergabe › „Als Übergabepunkt übernehmen“ (15 × 16 px), Teamleitung › Aufgaben › „Archivieren“ (14 px),
+      Namenslinks in Visite und Teilnahme (15–21 px). Trefferfläche unsichtbar vergrössern, Optik unverändert.
+- [ ] **QR-Etiketten auf dem Handy:** Die A4-Vorschau scrollt seitlich (90 px); Vorschau auf die Breite einpassen,
+      Druck unverändert.
+
 ## Braucht eine Entscheidung oder externe Quelle
 
 - **Verwaltung von Bewohnergeldern (Barbetrag, Taschengeld):** In vielen Heimen üblich (Kasse je Person mit Belegen).

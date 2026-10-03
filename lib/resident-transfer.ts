@@ -6,6 +6,7 @@ import type { TransferSheet } from "./resident-transfer-shared";
 import { auditOrigin } from "@/lib/audit-origin";
 import { organizationCountry } from "@/lib/organization-country";
 import { activeIsolations } from "@/lib/hygiene";
+import { readDiagnoses } from "@/lib/diagnoses";
 import { isolationLabel, type IsolationKind } from "@/lib/hygiene-shared";
 import { activeRestraints } from "@/lib/restraints";
 import { restraintLabel, type RestraintKind } from "@/lib/restraints-shared";
@@ -20,6 +21,7 @@ export async function transferSheet(ctx: ApiContext, residentIdInput: unknown): 
   const { sql } = ctx;
   const restraints = await activeRestraints(ctx, residentId);
   const isolations = await activeIsolations(ctx, residentId);
+  const diagnoses = (await readDiagnoses(ctx, residentId)).filter((item) => item.status === "current");
   const [facility, resident, contacts, flags, nutrition, plan, wounds, body, vitals, notes, orders] =
     (await Promise.all([
       sql`
@@ -93,6 +95,7 @@ export async function transferSheet(ctx: ApiContext, residentIdInput: unknown): 
     careLevel: summary.careLevel,
     primaryNurse: summary.primaryNurse,
     allergies,
+    diagnoses: diagnoses.map(({ label, icdCode, kind, sinceOn }) => ({ label, icdCode, kind, sinceOn })),
     contacts: contacts.map((row) => ({
       name: String(row.full_name),
       relationship: text(row.relationship),

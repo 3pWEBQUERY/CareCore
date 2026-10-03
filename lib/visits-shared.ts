@@ -13,6 +13,8 @@ export type VisitResident = {
   name: string;
   room: string;
   careUnit: string;
+  // Aktuelle Diagnosen (Hauptdiagnosen zuerst) als Kurzform, z. B. „Morbus Parkinson (G20)“.
+  diagnoses: string[];
   items: VisitItem[];
 };
 
