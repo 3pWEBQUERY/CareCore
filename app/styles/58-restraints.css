@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung sowie die Hauptüberschrift der Druckansichten. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport sowie die Hauptüberschrift der Druckansichten. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -1308,4 +1308,53 @@
 .repositioning-plan dd {
   margin: 0;
   font-size: 13px;
+}
+
+/* Auskunft & Datenexport: Karte in der Akte und lesbare Fassung zum Drucken. */
+.record-export-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.export-legal,
+.export-notes {
+  margin: 0 0 8px;
+  font-size: 11px;
+}
+.export-notes {
+  padding-left: 16px;
+}
+.export-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 10px;
+  font-size: 11px;
+}
+.export-sheet section {
+  break-inside: auto;
+}
+.export-sheet .export-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 16px;
+  margin: 0 0 6px;
+  padding: 6px 0;
+  border-bottom: 1px solid #e5eaf0;
+  break-inside: avoid;
+  font-size: 10.5px;
+}
+.export-sheet .export-row div {
+  display: grid;
+  grid-template-columns: 11em minmax(0, 1fr);
+  gap: 6px;
+  min-width: 0;
+}
+.export-sheet .export-row dt {
+  color: var(--muted);
+}
+.export-sheet .export-row dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }

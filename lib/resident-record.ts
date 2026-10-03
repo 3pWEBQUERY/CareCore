@@ -140,6 +140,7 @@ export async function recordSummary(ctx: ApiContext, residentIdInput: unknown): 
     staff,
     canWrite: hasPermission(ctx.actor, "residents.write"),
     canViewAudit: canViewResidentAudit(ctx.actor),
+    canExport: hasPermission(ctx.actor, "administration.manage"),
     representative: isRepresentativeRole(r.representative_role)
       ? {
           name: String(r.representative_name),

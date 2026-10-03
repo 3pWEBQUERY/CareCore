@@ -17,6 +17,7 @@ import { appointmentDateLabel, appointmentLocalParts } from "@/lib/resident-appo
 import { HistoryFilter } from "./resident-record-data";
 import type { ResidentRecordState } from "./use-resident-record";
 import { RecordAuditCard } from "./record-audit-card";
+import { RecordExportCard } from "./record-export-card";
 import { useNow } from "@/app/components/use-now";
 
 export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
@@ -232,6 +233,9 @@ export function RecordHistoryView({ r }: { r: ResidentRecordState }) {
         </aside>
       </div>
       {resident.id && live.summary.data?.canViewAudit && <RecordAuditCard residentId={resident.id} />}
+      {resident.id && live.summary.data?.canExport && (
+        <RecordExportCard residentId={resident.id} residentName={resident.name} />
+      )}
     </main>
   );
 }

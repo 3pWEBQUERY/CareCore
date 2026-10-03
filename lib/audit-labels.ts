@@ -215,6 +215,7 @@ const TITLES: Record<string, string> = {
   "resident:admitted": "{one} aufgenommen",
   "resident:admission_planned": "Eintritt geplant",
   "resident:emediplan_read": "eMediplan eingelesen",
+  "resident:data_exported": "Auskunft erteilt (Datenexport)",
   "resident:admission_confirmed": "Eintritt bestätigt",
   "resident:admission_cancelled": "Geplanter Eintritt abgesagt",
   "waitlist_entry:created": "Eintrag auf der Warteliste erfasst",
@@ -367,6 +368,7 @@ const FIELDS: Record<string, string> = {
   note: "Notiz",
   reason: "Begründung",
   intervalMinutes: "Intervall (Minuten)",
+  requestedBy: "Verlangt von",
   position: "Position",
   skin: "Hautbefund",
   description: "Beschreibung",
@@ -694,6 +696,16 @@ const SKIP_ALWAYS = new Set(["id", "organization_id", "created_at", "updated_at"
 const norm = (key: string) => key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 
 export type AuditChange = { field: string; before: string; after: string };
+
+// Deutsche Bezeichnung eines Feldes (Auskunft, Protokoll); null, wenn keine hinterlegt ist.
+export function fieldLabel(key: string) {
+  return FIELDS[key] ?? FIELDS[norm(key)] ?? null;
+}
+
+// Wert eines Feldes in lesbarer Form (Auswahlwerte, Datum, ja/nein); null bei verschachtelten Angaben.
+export function fieldValue(key: string, value: unknown) {
+  return show(FIELDS[key] ? key : norm(key), value, { entityType: "", action: "" });
+}
 
 export function auditChanges(entityType: string, action: string, before: unknown, after: unknown): AuditChange[] {
   const b = before && typeof before === "object" ? (before as Record<string, unknown>) : null;
