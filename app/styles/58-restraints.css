@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite und Leistungserfassung. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung sowie Isolation & Ausbruch. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -561,5 +561,140 @@
   .service-records li,
   .service-suggestion-group li {
     flex-wrap: wrap;
+  }
+}
+
+/* Isolation & Ausbruch */
+.hygiene-toolbar {
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px 18px;
+  margin-bottom: 18px;
+}
+.hygiene-toolbar p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.outbreak-card {
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  border-color: var(--critical);
+  background: var(--critical-soft);
+}
+.outbreak-card > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.outbreak-card .eyebrow {
+  color: var(--critical);
+}
+.outbreak-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.outbreak-measures {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.outbreak-authority {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.isolation-group,
+.hygiene-history,
+.hygiene-empty {
+  margin-top: 16px;
+  padding: 16px 18px;
+}
+.isolation-group > header,
+.hygiene-history > header {
+  margin-bottom: 12px;
+}
+.isolation-group ul,
+.hygiene-history ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.isolation-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(0, 3fr) auto;
+  align-items: start;
+  gap: 12px 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.isolation-person {
+  display: grid;
+  gap: 2px;
+}
+.isolation-person a {
+  color: var(--brand-dark);
+  font-size: 13px;
+  font-weight: 700;
+}
+.isolation-person small,
+.isolation-detail small,
+.hygiene-history small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.isolation-detail {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.isolation-detail strong {
+  font-size: 13px;
+}
+.isolation-detail p,
+.hygiene-history p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.isolation-precautions {
+  color: var(--muted);
+}
+.isolation-review {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+.hygiene-history li {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.hygiene-history strong {
+  font-size: 13px;
+}
+@media (max-width: 960px) {
+  .hygiene-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .isolation-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .isolation-review {
+    justify-items: start;
   }
 }

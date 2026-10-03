@@ -216,8 +216,14 @@ export default function TransferSheetPage() {
 
           <section>
             <h2>Risiken &amp; aktuelle Hinweise</h2>
-            {data.flags.length || data.restraints.length || data.carePlan?.focus ? (
+            {data.flags.length || data.isolations.length || data.restraints.length || data.carePlan?.focus ? (
               <ul className="transfer-list">
+                {data.isolations.map((isolation) => (
+                  <li key={`${isolation.label}-${isolation.since}`} className="critical">
+                    <strong>{isolation.label}</strong> – {isolation.reason}
+                    {isolation.precautions && ` · ${isolation.precautions}`} (seit {formatDate(isolation.since)})
+                  </li>
+                ))}
                 {data.flags.map((flag) => (
                   <li key={flag.label} className={flag.severity}>
                     <strong>{flag.label}</strong>

@@ -41,6 +41,7 @@ const ENTITY_LABELS: Record<string, string> = {
   nutrition_plan: "Ernährungsplan",
   resident_stay: "Aufenthalt",
   service_record: "Pflegeleistung",
+  isolation_measure: "Isolation",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -85,6 +86,9 @@ const TITLES: Record<string, string> = {
   "documentation_entry:visit_answered": "Rückmeldung zur Visite erfasst",
   "service_record:created": "Pflegeleistung erfasst",
   "service_record:cancelled": "Pflegeleistung storniert",
+  "isolation_measure:created": "Isolation erfasst",
+  "isolation_measure:reviewed": "Isolation überprüft",
+  "isolation_measure:ended": "Isolation aufgehoben",
   "resident:gender_updated": "Geschlecht geändert",
   "wound_entry:documented": "Wundverlauf dokumentiert",
 };
