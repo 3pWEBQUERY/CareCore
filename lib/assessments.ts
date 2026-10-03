@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { ApiError, assertResident, iso, num, text, type ApiContext, type Row } from "@/lib/api-context";
 import { residentAudit } from "@/lib/resident-audit";
-import { INSTRUMENTS, bandFor, instrumentByCode, scoreAnswers, type Instrument } from "@/lib/assessment-instruments";
+import { bandFor, scoreAnswers, type Instrument } from "@/lib/assessment-instruments";
+import { allInstruments } from "@/lib/assessment-custom";
 import { initials } from "@/lib/medication-shared";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -33,8 +34,8 @@ export type DueItem = {
   lastCompletedAt: string | null;
 };
 
-function mapResult(row: Row): AssessmentResult {
-  const instrument = instrumentByCode(String(row.code));
+function mapResult(row: Row, instruments: Instrument[]): AssessmentResult {
+  const instrument = instruments.find((item) => item.code === String(row.code));
   const score = num(row.score);
   const band = instrument && score !== null ? bandFor(instrument, score) : null;
   return {
@@ -83,7 +84,7 @@ async function residentsOf(ctx: ApiContext) {
 }
 
 // Latest completed result per resident and instrument (including legacy instruments).
-async function latestResults(ctx: ApiContext) {
+async function latestResults(ctx: ApiContext, instruments: Instrument[]) {
   const rows = (await ctx.sql`
     SELECT DISTINCT ON (rec.resident_id, a.code) rec.id, rec.resident_id, a.code, a.name, rec.score, rec.risk_level, rec.completed_at,
       to_char(rec.next_due_on, 'YYYY-MM-DD') AS next_due, rec.summary, rec.answers, u.display_name AS assessor
@@ -93,13 +94,14 @@ async function latestResults(ctx: ApiContext) {
     LEFT JOIN carecore_users u ON u.id = rec.assessor_user_id
     WHERE rec.status = 'completed'
     ORDER BY rec.resident_id, a.code, rec.completed_at DESC`) as Row[];
-  return rows.map(mapResult);
+  return rows.map((row) => mapResult(row, instruments));
 }
 
 export async function assessmentsOverview(ctx: ApiContext) {
-  const [residents, latest] = await Promise.all([residentsOf(ctx), latestResults(ctx)]);
+  const instruments = await allInstruments(ctx);
+  const [residents, latest] = await Promise.all([residentsOf(ctx), latestResults(ctx, instruments)]);
   return {
-    instruments: INSTRUMENTS,
+    instruments,
     residents: residents.map((row) => {
       const name = `${row.first_name} ${row.last_name}`;
       return {
@@ -116,9 +118,10 @@ export async function assessmentsOverview(ctx: ApiContext) {
 
 // Missing core instruments, overdue and upcoming (7 days) reassessments, and open drafts.
 export async function dueAssessments(ctx: ApiContext): Promise<DueItem[]> {
+  const instruments = await allInstruments(ctx);
   const [residents, latest, open, day] = await Promise.all([
     residentsOf(ctx),
-    latestResults(ctx),
+    latestResults(ctx, instruments),
     ctx.sql`
       SELECT rec.resident_id, a.code, a.name, to_char(rec.due_on, 'YYYY-MM-DD') AS due_on
       FROM carecore_assessment_records rec
@@ -136,7 +139,7 @@ export async function dueAssessments(ctx: ApiContext): Promise<DueItem[]> {
       residentName: `${row.first_name} ${row.last_name}`,
       room: String(row.room),
     };
-    for (const instrument of INSTRUMENTS) {
+    for (const instrument of instruments) {
       const last = latest.find((r) => r.residentId === base.residentId && r.code === instrument.code);
       if (!last) {
         if (instrument.core)
@@ -175,6 +178,7 @@ export async function dueAssessments(ctx: ApiContext): Promise<DueItem[]> {
 
 export async function residentHistory(ctx: ApiContext, residentIdInput: unknown, codeInput: unknown) {
   const residentId = await assertResident(ctx, residentIdInput);
+  const instruments = await allInstruments(ctx);
   const rows = (await ctx.sql`
     SELECT rec.id, rec.resident_id, a.code, a.name, rec.score, rec.risk_level, rec.completed_at, to_char(rec.next_due_on, 'YYYY-MM-DD') AS next_due,
       rec.summary, rec.answers, u.display_name AS assessor
@@ -183,12 +187,15 @@ export async function residentHistory(ctx: ApiContext, residentIdInput: unknown,
     LEFT JOIN carecore_users u ON u.id = rec.assessor_user_id
     WHERE rec.resident_id = ${residentId} AND rec.status = 'completed' AND (${typeof codeInput === "string" ? codeInput : null}::text IS NULL OR a.code = ${typeof codeInput === "string" ? codeInput : null})
     ORDER BY rec.completed_at DESC LIMIT 50`) as Row[];
-  return rows.map(mapResult);
+  return rows.map((row) => mapResult(row, instruments));
 }
 
 export async function recordAssessment(ctx: ApiContext, body: Record<string, unknown>) {
   const residentId = await assertResident(ctx, body.residentId);
-  const instrument = typeof body.instrument === "string" ? instrumentByCode(body.instrument) : undefined;
+  const instrument =
+    typeof body.instrument === "string"
+      ? (await allInstruments(ctx)).find((item) => item.code === body.instrument)
+      : undefined;
   if (!instrument) throw new ApiError("Unbekanntes Instrument.");
   const answers = (body.answers ?? {}) as Record<string, unknown>;
   const score = scoreAnswers(instrument, answers);

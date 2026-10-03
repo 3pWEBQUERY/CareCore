@@ -156,6 +156,7 @@ export function OverviewView({ showToast }: { showToast: ShowToast }) {
       </section>
       {creating && data.data && (
         <AssessmentDialog
+          instruments={data.data.instruments}
           residents={residents}
           onClose={() => setCreating(false)}
           onSaved={(message) => {
@@ -167,6 +168,7 @@ export function OverviewView({ showToast }: { showToast: ShowToast }) {
       )}
       {viewing && (
         <HistoryPanel
+          instruments={data.data?.instruments ?? []}
           result={viewing}
           residentName={nameOf(viewing.residentId)?.name ?? ""}
           canWrite={data.data?.canWrite ?? false}

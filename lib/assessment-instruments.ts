@@ -23,6 +23,8 @@ export type Instrument = {
   reassessDays: number;
   // Core instruments are expected for every resident (shown as missing otherwise).
   core: boolean;
+  // Eigenes Instrument der Einrichtung: Inhalt, Bereiche und Intervall stammen von der Einrichtung.
+  custom?: { source: string; version: string };
 };
 
 const scale = (labels: string[], start = 1): InstrumentOption[] =>
