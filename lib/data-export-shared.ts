@@ -3,6 +3,7 @@
 import { DIAGNOSIS_KINDS, DIAGNOSIS_STATUSES } from "@/lib/diagnoses-shared";
 import { VACCINATION_PLACES } from "@/lib/vaccinations-shared";
 import { BELONGING_KINDS } from "@/lib/belongings-shared";
+import { CONSENT_DECISIONS } from "@/lib/consents-shared";
 
 export type ExportSection = { key: string; title: string; rows: Array<Record<string, unknown>> };
 
@@ -262,6 +263,12 @@ export const EXPORT_COLUMN_LABELS: Record<string, string> = {
   evacuation_note: "Hinweise für den Notfall",
   icd_code: "ICD-10-Code",
   marking: "Kennzeichnung",
+  topic: "Thema",
+  decision: "Entscheid",
+  decided_by: "Entschieden von",
+  decided_on: "Datum des Entscheids",
+  revoked_on: "Widerrufen am",
+  revoke_note: "Bemerkung zum Widerruf",
   location: "Standort",
   removed_at: "Nicht mehr vorhanden seit",
   removed_by: "Vermerkt von",
@@ -304,6 +311,7 @@ export const EXPORT_SECTION_VALUE_LABELS: Record<string, Record<string, Record<s
   diagnoses: { status: DIAGNOSIS_STATUSES, kind: DIAGNOSIS_KINDS },
   vaccinations: { place: VACCINATION_PLACES },
   belongings: { kind: BELONGING_KINDS },
+  consents: { decision: CONSENT_DECISIONS },
 };
 
 export const EXPORT_VALUE_LABELS: Record<string, string> = {

@@ -56,6 +56,13 @@ export const EXPORT_SECTIONS: Array<{ key: string; title: string; tables: string
     query: (sql, id) => sql`SELECT * FROM carecore_resident_belongings WHERE resident_id = ${id} ORDER BY created_at`,
   },
   {
+    key: "consents",
+    title: "Einwilligungen und Freigaben",
+    tables: ["carecore_resident_consents"],
+    query: (sql, id) =>
+      sql`SELECT * FROM carecore_resident_consents WHERE resident_id = ${id} ORDER BY decided_on, created_at`,
+  },
+  {
     key: "end_of_life",
     title: "Wünsche am Lebensende und Ablauf nach dem Todesfall",
     tables: ["carecore_end_of_life_wishes", "carecore_death_checklist_items"],

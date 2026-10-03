@@ -467,6 +467,46 @@ Scrollen, je Seite eine Hauptüberschrift, keine unbeschrifteten Felder. Gefunde
 - [x] **QR-Etiketten auf dem Handy:** Die Vorschau zeigt die Etiketten auf dem Handy untereinander (kein seitliches
       Scrollen mehr); der Druck bleibt A4 mit 3 × 7 Etiketten. Im Klicktest geprüft.
 
+## Neue Funktionen ohne Medizinprodukt (03.10.2026): noch zu erstellen
+
+Nur Dokumentation, Organisation und Kommunikation; Fristen, Grenzen und Listen legt die Einrichtung fest. Zweckbestimmung
+als Entwurf in `docs/ZWECKBESTIMMUNG.md`.
+
+### Hoch
+
+- [x] **Einwilligungen & Freigaben je Person:** Themen legt die Administration unter Leitung › Konfiguration fest
+      (keine Vorgabe). In der Akte unter Stammdaten die Karte „Einwilligungen & Freigaben“: Stand je Thema (zugestimmt,
+      abgelehnt, widerrufen, nicht erfasst), Entscheid mit wer (Person oder Vertretung), Datum und Bemerkung; ein
+      neuer Entscheid gilt ab seinem Datum, frühere bleiben im Verlauf; Widerruf mit Datum. Neue Seite Bewohner ›
+      Einwilligungen: Stand je Thema und Wohnbereich (abgelehnt und widerrufen zuerst). Protokoll der Akte und Auskunft.
+- [ ] **Wartung von Geräten und Hilfsmitteln der Einrichtung:** Pflegebetten, Lifter, Waagen, Blutdruckgeräte usw.
+      mit Inventarnummer, Standort, nächster Prüfung (Frist von Einrichtung bzw. Hersteller), Prüfungen mit Ergebnis
+      und Mängeln; Hinweis bei fälliger Prüfung an die Leitung.
+- [ ] **Küchenliste je Wohnbereich:** Kostform, Konsistenz, Allergien und Vorlieben aus dem Ernährungsplan als
+      Druckliste (A4) mit Stand.
+
+### Mittel
+
+- [ ] **Temperaturprotokoll Medikamentenkühlschrank:** Kühlschränke der Einrichtung, Messungen mit Wert und Person;
+      Grenzen und Messrhythmus legt die Einrichtung fest; Hinweis bei fehlender Messung bzw. Wert ausserhalb der
+      Grenzen der Einrichtung.
+- [ ] **Fahrdienst und externe Termine:** Arzt, Spital, Coiffeur, Fusspflege mit Transport, Begleitung und
+      mitzugebenden Unterlagen; Tagesliste für den Empfang.
+- [ ] **Einarbeitung neuer Mitarbeitender:** Checkliste je Rolle (Punkte legt die Einrichtung fest), mit Abzeichnen
+      durch die einarbeitende Person.
+- [ ] **Rückmeldungen und Beschwerden:** von Angehörigen und Bewohnenden, mit Bearbeitung, Antwort und Frist der
+      Einrichtung; Auswertung für das Qualitätsmanagement.
+
+### Niedrig
+
+- [ ] **Wäsche- und Inventarliste beim Eintritt:** Kleidung und Einrichtungsgegenstände der Person mit Kennzeichnung.
+
+### Braucht eine externe Fachperson
+
+- [ ] **Zweckbestimmung prüfen lassen:** `docs/ZWECKBESTIMMUNG.md` und die dort genannten Funktionen nahe an der
+      Grenze (Wechselwirkungs-Hinweise, Einschätzungsinstrumente, Vitalwert-Grenzen und Trendhinweise, CareCore KI)
+      durch eine Fachperson für Medizinprodukte-Regulierung prüfen lassen.
+
 ## Braucht eine Entscheidung oder externe Quelle
 
 - **Verwaltung von Bewohnergeldern (Barbetrag, Taschengeld):** In vielen Heimen üblich (Kasse je Person mit Belegen).
