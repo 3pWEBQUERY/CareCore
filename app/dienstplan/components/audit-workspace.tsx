@@ -35,6 +35,12 @@ const ACTIONS: Record<string, string> = {
   clock_out: "ausgestempelt",
   corrected: "korrigiert",
   ai_applied: "KI-Vorschlag übernommen",
+  reported: "gemeldet",
+  incomplete: "unvollständig",
+  open_shift_interest: "Interesse gemeldet",
+  open_shift_assigned: "zugeteilt",
+  open_shift_declined: "abgelehnt",
+  open_shift_withdrawn: "Interesse zurückgezogen",
 };
 const ENTITIES: Record<string, string> = {
   shift: "Dienst",
@@ -51,6 +57,8 @@ const ENTITIES: Record<string, string> = {
   time_entry: "Zeiteintrag",
   time_correction: "Korrektur",
   ai_run: "KI",
+  absence: "Abwesenheit",
+  open_shift_interest: "Offener Dienst",
 };
 const STATUS: Record<string, string> = {
   PUBLISHED: "veröffentlicht",
@@ -67,6 +75,8 @@ const STATUS: Record<string, string> = {
   FAILED: "fehlgeschlagen",
   COMPLETE: "erfasst",
   INCOMPLETE: "unvollständig",
+  ASSIGNED: "zugeteilt",
+  PENDING: "offen",
 };
 const SOURCES: Record<string, string> = {
   UI: "Oberfläche",
@@ -75,6 +85,8 @@ const SOURCES: Record<string, string> = {
   SYSTEM: "System",
   SEED: "Demo",
   IMPORT: "Übernahme",
+  MANUAL: "Manuell",
+  CORRECTION: "Korrektur",
 };
 
 // Audit-Log für die Leitung (Spec 8.12): unveränderlich, filterbar nach Person, Zeitraum, Aktion.
@@ -105,7 +117,7 @@ export default function AuditWorkspace() {
       typeof v.date === "string" ? formatDate(v.date) : "",
       typeof v.employeeId === "string" ? (names.get(v.employeeId) ?? "") : "",
       typeof v.shiftTypeId === "string" ? (typeNames.get(v.shiftTypeId) ?? "") : "",
-      typeof v.status === "string" ? (STATUS[v.status] ?? v.status) : "",
+      typeof v.status === "string" ? (STATUS[v.status] ?? "") : "",
     ].filter(Boolean);
     return parts.join(" · ");
   };
@@ -184,12 +196,12 @@ export default function AuditWorkspace() {
                     {(data ?? []).map((entry) => (
                       <tr key={entry.id}>
                         <td>{new Date(entry.createdAt).toLocaleString("de-CH", { timeZone: "Europe/Zurich" })}</td>
-                        <td>{ENTITIES[entry.entityType] ?? entry.entityType}</td>
-                        <td>{ACTIONS[entry.action] ?? entry.action}</td>
+                        <td>{ENTITIES[entry.entityType] ?? "Dienstplan"}</td>
+                        <td>{ACTIONS[entry.action] ?? "geändert"}</td>
                         <td>{summary(entry.before)}</td>
                         <td>{summary(entry.after)}</td>
                         <td>{entry.actor}</td>
-                        <td>{SOURCES[entry.source] ?? entry.source}</td>
+                        <td>{SOURCES[entry.source] ?? "System"}</td>
                         <td>{entry.reason ?? ""}</td>
                       </tr>
                     ))}
