@@ -248,6 +248,41 @@ export async function portalResidentDetail(
         }));
       })(),
     );
+  if (has("activities"))
+    tasks.push(
+      (async () => {
+        const [attended, upcoming] = (await Promise.all([
+          sql`
+            SELECT a.title, a.category, a.starts_at FROM carecore_activity_participations p
+            JOIN carecore_activities a ON a.id = p.activity_id
+            WHERE p.resident_id = ${residentId} AND p.status = 'participated' AND a.cancelled_at IS NULL
+              AND a.starts_at > NOW() - INTERVAL '30 days'
+            ORDER BY a.starts_at DESC LIMIT 100`,
+          // Angebote des eigenen Wohnbereichs und des ganzen Hauses in den nächsten 14 Tagen.
+          sql`
+            SELECT a.title, a.category, a.starts_at, a.location FROM carecore_activities a
+            JOIN carecore_residents r ON r.id = ${residentId} AND r.organization_id = a.organization_id
+            LEFT JOIN LATERAL (SELECT care_unit_id FROM carecore_resident_stays WHERE resident_id = r.id AND ended_at IS NULL
+              ORDER BY started_at DESC LIMIT 1) stay ON TRUE
+            WHERE a.cancelled_at IS NULL AND a.starts_at >= NOW() AND a.starts_at < NOW() + INTERVAL '14 days'
+              AND (a.care_unit_id IS NULL OR a.care_unit_id = stay.care_unit_id)
+            ORDER BY a.starts_at LIMIT 50`,
+        ])) as Row[][];
+        detail.activities = {
+          attended: attended.map((row) => ({
+            title: String(row.title),
+            category: String(row.category),
+            startsAt: iso(row.starts_at) ?? "",
+          })),
+          upcoming: upcoming.map((row) => ({
+            title: String(row.title),
+            category: String(row.category),
+            startsAt: iso(row.starts_at) ?? "",
+            location: String(row.location ?? ""),
+          })),
+        };
+      })(),
+    );
   await Promise.all(tasks);
   await logStatement(sql, actor, residentId, "resident_viewed", resident.areas);
   return detail;

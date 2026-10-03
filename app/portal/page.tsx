@@ -349,6 +349,36 @@ function PortalDetail({ detail }: { detail: PortalResidentDetail }) {
           </ul>
         </section>
       )}
+      {detail.activities && (
+        <section className="portal-card">
+          <h2>Alltag &amp; Aktivitäten</h2>
+          <h3>Teilgenommen (30 Tage)</h3>
+          <ul className="portal-list">
+            {detail.activities.attended.map((entry, index) => (
+              <li key={index}>
+                <strong>{entry.title}</strong>
+                <small>
+                  {dateTime(entry.startsAt)} · {entry.category}
+                </small>
+              </li>
+            ))}
+            {!detail.activities.attended.length && <li>Keine Teilnahme in den letzten 30 Tagen erfasst.</li>}
+          </ul>
+          <h3>Kommende Angebote (14 Tage)</h3>
+          <ul className="portal-list">
+            {detail.activities.upcoming.map((entry, index) => (
+              <li key={index}>
+                <strong>{entry.title}</strong>
+                <small>
+                  {dateTime(entry.startsAt)}
+                  {entry.location ? ` · ${entry.location}` : ""} · {entry.category}
+                </small>
+              </li>
+            ))}
+            {!detail.activities.upcoming.length && <li>Keine Angebote geplant.</li>}
+          </ul>
+        </section>
+      )}
       {detail.wounds && (
         <section className="portal-card">
           <h2>Wunden</h2>

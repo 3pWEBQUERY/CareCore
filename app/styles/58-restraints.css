@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung sowie Isolation & Ausbruch. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch sowie Alltag & Aktivierung. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -696,5 +696,177 @@
   }
   .isolation-review {
     justify-items: start;
+  }
+}
+
+/* Alltag & Aktivierung */
+.activities-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  margin-bottom: 18px;
+}
+.activities-toolbar > .area-custom-select {
+  width: min(100%, 240px);
+}
+.activities-week {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.activities-week strong {
+  min-width: 190px;
+  font-size: 14px;
+  text-align: center;
+}
+.activities-week .button-icon.flip {
+  transform: rotate(180deg);
+}
+.activities-days {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+.activities-day {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px 16px;
+  padding: 14px 18px;
+}
+.activities-day.today {
+  border-color: var(--brand);
+}
+.activities-day-list {
+  display: grid;
+  gap: 8px;
+}
+.activities-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.activity-card {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.activity-card.cancelled {
+  background: var(--surface-soft);
+}
+.activity-card.cancelled .activity-body > strong {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.activity-time {
+  display: grid;
+  gap: 2px;
+}
+.activity-time strong {
+  font-size: 14px;
+}
+.activity-time small,
+.activity-body small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.activity-body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.activity-body > strong {
+  font-size: 13px;
+}
+.activity-body p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.activity-counts {
+  color: var(--brand-dark);
+  font-weight: 700;
+}
+.activity-cancelled {
+  color: var(--critical);
+}
+.activity-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.participation-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.participation-list li {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+.participation-person {
+  display: grid;
+  gap: 2px;
+}
+.participation-person strong {
+  font-size: 13px;
+}
+.participation-person small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.participation-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.participation-note {
+  grid-column: 1 / -1;
+}
+.participation-report {
+  margin-top: 18px;
+  padding: 16px 18px;
+}
+.participation-report > header {
+  margin-bottom: 12px;
+}
+.portal-card h3 {
+  margin: 12px 0 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+@media (max-width: 960px) {
+  .activities-day {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .activity-card {
+    grid-template-columns: 60px minmax(0, 1fr);
+  }
+  .activity-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+@media (max-width: 760px) {
+  .participation-list li {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

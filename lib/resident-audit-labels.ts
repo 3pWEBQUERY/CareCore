@@ -1,4 +1,5 @@
 // Lesbare Darstellung der Protokolleinträge einer Bewohnerakte (Server und Browser).
+import { PARTICIPATION_STATUS, type ParticipationStatus } from "@/lib/activities-shared";
 import { auditTitle } from "./audit-labels";
 import { RESUSCITATION_STATUSES, type ResuscitationStatus } from "./resident-record-shared";
 import { termsFor, type Terms } from "./terminology";
@@ -42,6 +43,7 @@ const ENTITY_LABELS: Record<string, string> = {
   resident_stay: "Aufenthalt",
   service_record: "Pflegeleistung",
   isolation_measure: "Isolation",
+  activity_participation: "Teilnahme an Angebot",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -89,6 +91,8 @@ const TITLES: Record<string, string> = {
   "isolation_measure:created": "Isolation erfasst",
   "isolation_measure:reviewed": "Isolation überprüft",
   "isolation_measure:ended": "Isolation aufgehoben",
+  "activity_participation:recorded": "Teilnahme an Angebot erfasst",
+  "activity_participation:removed": "Teilnahme an Angebot entfernt",
   "resident:gender_updated": "Geschlecht geändert",
   "wound_entry:documented": "Wundverlauf dokumentiert",
 };
@@ -194,6 +198,10 @@ export function describeAudit(entry: ResidentAuditEntry, terms: Terms = termsFor
         !same(entry.before[key], entry.after?.[key]),
     );
     if (changed.length) details.push(`Geändert: ${changed.map((key) => FIELD_LABELS[key]).join(", ")}`);
+  }
+  if (entry.entityType === "activity_participation") {
+    const status = entry.after?.status as ParticipationStatus | null | undefined;
+    if (status && status in PARTICIPATION_STATUS) details.push(PARTICIPATION_STATUS[status]);
   }
   if (entry.entityType === "resident_supply" && entry.action === "issued" && entry.after?.quantity)
     details.push(`${entry.after.quantity} ${entry.after.unit ?? ""}`.trim());

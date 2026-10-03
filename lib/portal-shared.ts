@@ -12,6 +12,7 @@ export const PORTAL_AREAS = {
   reports: "Pflegeberichte (14 Tage)",
   appointments: "Termine (kommende)",
   wounds: "Wunden (offene)",
+  activities: "Alltag & Aktivitäten (Teilnahme 30 Tage, Angebote 14 Tage)",
   messages: "Nachrichten mit der Pflege",
 } as const;
 export type PortalArea = keyof typeof PORTAL_AREAS;
@@ -80,6 +81,11 @@ export type PortalResidentDetail = PortalResident & {
   reports?: Array<{ category: string; title: string; body: string; occurredAt: string }>;
   appointments?: Array<{ title: string; startsAt: string; location: string; category: string }>;
   wounds?: Array<{ title: string; location: string; status: string; since: string | null }>;
+  // Teilgenommene Angebote der letzten 30 Tage und kommende Angebote (ohne Bemerkungen der Pflege).
+  activities?: {
+    attended: Array<{ title: string; category: string; startsAt: string }>;
+    upcoming: Array<{ title: string; category: string; startsAt: string; location: string }>;
+  };
 };
 
 export const isPortalArea = (value: unknown): value is PortalArea => typeof value === "string" && value in PORTAL_AREAS;

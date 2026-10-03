@@ -34,7 +34,8 @@ export type ModuleIconName =
   | "sidebar"
   | "filter"
   | "logout"
-  | "close";
+  | "close"
+  | "activity";
 
 export type NavModule = {
   id: string;
@@ -112,6 +113,12 @@ export const navigation: NavGroup[] = [
         label: "Planung & Einschätzungen",
         icon: "plan",
         children: ["Pflegeplanung", "Ziele & Massnahmen", "Auswertung", "Einschätzungen", "Fälligkeiten"],
+      },
+      {
+        id: "activities",
+        label: "Alltag & Aktivierung",
+        icon: "activity",
+        children: ["Angebote", "Teilnahme je Person"],
       },
       {
         id: "rai",
@@ -283,6 +290,7 @@ const routes: Record<string, Record<string, string>> = {
     Einschätzungen: "/einschaetzungen",
     Fälligkeiten: "/einschaetzungen/faelligkeiten",
   },
+  activities: { Angebote: "/alltag", "Teilnahme je Person": "/alltag/teilnahme" },
   rai: {
     Übersicht: "/rai",
     Erfassung: "/rai/erfassung",

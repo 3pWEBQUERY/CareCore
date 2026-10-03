@@ -326,8 +326,9 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
       Behörde. Neue Isolationen gehen an die Leitung, Ausbrüche an die Mitarbeitenden des Bereichs. Die Tagesliste
       zeigt „Isolation beachten/überprüfen“, und der Überleitungsbogen enthält laufende Isolationen. Der Verlauf
       umfasst 90 Tage, alles steht im Protokoll. Ohne Diagnose und ohne eigene Schwellen für einen Ausbruch.
-- [ ] **Alltagsgestaltung und Aktivierung:** Angebote planen, Teilnahme je Person dokumentieren, Übersicht für
-      Angehörige im Portal (wenn freigegeben).
+- [x] **Alltagsgestaltung und Aktivierung:** Neues Modul Alltag & Aktivierung: - **Angebote:** Wochenplan mit Gruppenangeboten und Einzelbetreuung je Wohnbereich oder für das ganze Haus,
+      auf Wunsch wöchentlich wiederholt (bis 12 Wochen). Bearbeiten und Absagen mit Grund. - **Teilnahme:** ab Beginn je Person erfassbar (teilgenommen, abgelehnt, nicht anwesend) mit Bemerkung. - **Teilnahme je Person:** Monatsübersicht mit Kategorien und CSV-Export. - **Portal:** neuer Bereich „Alltag & Aktivitäten“ (wenn freigegeben) mit Teilnahme der letzten 30 Tage und den
+      kommenden Angeboten, ohne Bemerkungen der Pflege. - Keine Vorgabe, wie viel Aktivierung eine Person braucht.
 - [ ] **Belegung und Eintritt:** Warteliste, geplante Eintritte, Zimmerplanung mit freien Plätzen je Wohnbereich.
 
 ### Niedrig / UI/UX
