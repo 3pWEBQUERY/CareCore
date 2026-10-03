@@ -133,7 +133,7 @@ function ServiceDialog({
       submitLabel="Leistung speichern"
     >
       {catalog.length > 0 && (
-        <div className="area-editor-wide form-field">
+        <label className="area-editor-wide">
           <span>Aus dem Leistungskatalog</span>
           <CareOptionSelect
             label="Aus dem Leistungskatalog"
@@ -147,13 +147,13 @@ function ServiceDialog({
               })),
             ]}
           />
-        </div>
+        </label>
       )}
       <label className="area-editor-wide">
         <span>Leistung</span>
         <input required maxLength={160} value={draft.title} onChange={(event) => set("title", event.target.value)} />
       </label>
-      <div className="form-field">
+      <label>
         <span>Bereich</span>
         <CareOptionSelect
           label="Bereich"
@@ -161,7 +161,7 @@ function ServiceDialog({
           onChange={(value) => set("category", value)}
           options={SERVICE_CATEGORIES.map((category) => ({ value: category, label: category }))}
         />
-      </div>
+      </label>
       <label>
         <span>Zeit (Minuten)</span>
         <input

@@ -84,7 +84,7 @@ function CatalogDialog({
         <span>Bezeichnung</span>
         <input required maxLength={160} value={draft.name} onChange={(event) => set("name", event.target.value)} />
       </label>
-      <div className="form-field">
+      <label>
         <span>Bereich</span>
         <CareOptionSelect
           label="Bereich"
@@ -92,7 +92,7 @@ function CatalogDialog({
           onChange={(value) => set("category", value)}
           options={SERVICE_CATEGORIES.map((category) => ({ value: category, label: category }))}
         />
-      </div>
+      </label>
       <label>
         <span>Code (optional)</span>
         <input maxLength={40} value={draft.code} onChange={(event) => set("code", event.target.value)} />
@@ -109,7 +109,7 @@ function CatalogDialog({
           onChange={(event) => set("defaultMinutes", event.target.value)}
         />
       </label>
-      <div className="form-field">
+      <label>
         <span>Status</span>
         <CareOptionSelect
           label="Status"
@@ -120,7 +120,7 @@ function CatalogDialog({
             { value: "no", label: "Inaktiv (nicht mehr wählbar)" },
           ]}
         />
-      </div>
+      </label>
     </EditorDialog>
   );
 }
