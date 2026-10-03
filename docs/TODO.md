@@ -299,10 +299,13 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
 
 ### Mittel
 
-- [ ] **Nationale Qualitätsindikatoren als Auswertung:** Kennzahlen aus vorhandenen Daten (z. B. Gewichtsverlust,
-      Schmerzerfassung, freiheitsbeschränkende Massnahmen, Anzahl Wirkstoffe) zusammenzählen und exportieren, nach
-      den Definitionen der Behörde (CH: medizinische Qualitätsindikatoren für Pflegeheime; DE: Indikatoren nach
-      § 113 SGB XI). Nur Statistik, keine Beurteilung einzelner Personen.
+- [x] **Nationale Qualitätsindikatoren als Auswertung:** Leitung › Qualität & Kennzahlen › Qualitätsindikatoren:
+      die medizinischen Qualitätsindikatoren der Schweizer Pflegeheime (Mangelernährung, Rumpffixation / Sitzgelegenheit,
+      Bettgitter, Polymedikation, Schmerz Selbsteinschätzung, Dekubitus) am Stichtag, je Wohnbereich, mit den gezählten
+      Personen und Export als CSV. Jeder Indikator nennt die Definition und wie CareCore zählt; wo die Daten die
+      Definition nicht ganz abbilden, steht „Annäherung“. Die offizielle Erhebung bleibt beim Bedarfsabklärungsinstrument.
+- [ ] **Qualitätsindikatoren DE (§ 113 SGB XI):** braucht die halbjährliche Ergebniserfassung (Mobilität,
+      Selbständigkeit, Integrationsgespräch u. a.) als eigene strukturierte Erhebung; erst danach auswertbar.
 - [ ] **eMediplan einlesen (CH):** Medikationsplan per QR-Code (CHMED) als Entwurf übernehmen; eine Fachperson prüft
       und gibt jede Verordnung frei. Keine automatische Prüfung oder Änderung.
 - [ ] **Visite vorbereiten:** Einträge „Für Visite“ je Ärztin/Arzt sammeln, als Liste drucken oder im Portal

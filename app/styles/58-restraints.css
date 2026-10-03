@@ -1,4 +1,4 @@
-/* Freiheitsbeschränkende Massnahmen (Tab „FBM“), Reiterleiste der Akte sowie Vorsorge & Vertretung. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung und Qualitätsindikatoren. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -174,4 +174,86 @@
 }
 .record-legal-badges .status-badge::before {
   flex: none;
+}
+/* Qualitätsindikatoren (Leitung › Qualität & Kennzahlen). */
+.quality-indicators-toolbar {
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.quality-indicators-toolbar p,
+.quality-indicators-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.quality-indicators-meta {
+  margin: 12px 0 18px;
+}
+.quality-indicators-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.quality-indicator-card {
+  padding: 16px 18px;
+}
+.quality-indicator-card header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.quality-indicator-value {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+.quality-indicator-value strong {
+  color: var(--ink);
+  font-size: 24px;
+}
+.quality-indicator-method {
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.quality-indicator-method strong {
+  color: var(--ink);
+}
+.quality-indicator-residents {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.quality-indicator-residents li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.quality-indicator-residents a {
+  color: var(--brand-dark);
+  font-weight: 700;
+}
+.quality-indicator-residents span,
+.quality-indicators-empty {
+  color: var(--muted);
+  font-size: 12px;
+}
+@media (max-width: 760px) {
+  .quality-indicators-toolbar,
+  .quality-indicators-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
