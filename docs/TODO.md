@@ -367,7 +367,52 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
       Dienstplan, Visitenliste und QR-Etiketten): genau eine Hauptüberschrift auch beim Laden, bei Fehlern und ohne Daten
       (für Screenreader, im Druck unsichtbar); mit Klicktest.
 
+## Analyse vom 03.10.2026 (zweiter Rundgang): noch zu erstellen
+
+Automatischer Rundgang über alle 80 Seiten der Navigation, je Desktop (1366 px) und Handy (390 px), als Administration:
+keine Skriptfehler, keine fehlgeschlagenen Anfragen, kein seitliches Scrollen, je Seite genau eine Hauptüberschrift,
+keine Knöpfe oder Links ohne Namen, keine Eingabefelder ohne Beschriftung, keine Bilder ohne Alternativtext, keine
+englischen oder technischen Begriffe; Ladezeit im Median 0,75 s (höchstens 1,3 s). Danach Abgleich mit den Abläufen im
+Heimalltag. Es gilt weiter: Dokumentation, Organisation und Kommunikation – keine Diagnosen, keine Dosierungen, keine
+eigenen Grenzwerte oder Intervalle; Instrumente nur nach veröffentlichter Methode, Fristen und Intervalle legt die
+Einrichtung bzw. die Pflegeplanung fest, gesetzliche Grundlagen werden beim Bau an der Quelle geprüft.
+
+### Hoch
+
+- [ ] **Lagerungs- und Bewegungsprotokoll:** Positionswechsel mit Uhrzeit, Position (z. B. Rücken, 30° links/rechts,
+      Sitzen) und Hautbefund in wenigen Klicks, auch offline. Das Intervall stammt aus der Massnahme der Pflegeplanung
+      (keine Vorgabe von CareCore); die Tagesliste zeigt, wann der nächste Wechsel laut Plan fällig ist, und Verlauf als
+      Zeitleiste je Schicht. Heute gibt es dafür nur Freitext in der Dokumentation.
+- [ ] **Auskunft und Datenexport je Person:** Auf Verlangen der Person bzw. Vertretung alle gespeicherten Daten einer
+      Akte als PDF und maschinenlesbar (JSON) ausgeben, mit Protokolleintrag (Recht auf Auskunft bzw.
+      Datenherausgabe; CH DSG Art. 25 und 28, DE/AT DSGVO Art. 15 und 20 – beim Bau an der Quelle prüfen). Nur
+      Administration, mit Bestätigung.
+
+### Mittel
+
+- [ ] **Ausscheidungs- und Kontinenzprotokoll:** Stuhlgang (mit Konsistenz nach Bristol-Stuhlformen-Skala, wie
+      veröffentlicht), Wasserlassen, Inkontinenzereignisse und Material. Anzeige „letzter Stuhlgang vor … Tagen“; eine
+      Erinnerung nur mit Tageszahl, die die Einrichtung festlegt (ohne Vorgabewert).
+- [ ] **Schmerzeinschätzung bei eingeschränkter Kommunikation:** Fremdeinschätzung nach einem veröffentlichten
+      Instrument (z. B. BESD bzw. PAINAD; Lizenz und Wortlaut beim Bau prüfen) in den Einschätzungen, neben der
+      vorhandenen Numerischen Rating-Skala. Auszählung nach der Methode, Beurteilung bei der Fachperson.
+- [ ] **Wünsche am Lebensende und Todesfall:** In „Vorsorge & Vertretung“ festhalten, was die Person für die letzte
+      Lebensphase wünscht (Ort, Begleitung, religiöse oder spirituelle Wünsche, Bestattung, wer informiert werden soll).
+      Beim Erfassen eines Todesfalls eine Checkliste der Einrichtung (z. B. Ärztin informiert, Angehörige informiert,
+      Bestattung beauftragt), deren Punkte die Einrichtung selbst festlegt.
+- [ ] **Evakuierungs- und Notfallliste:** Druckbare Liste je Wohnbereich mit Zimmer, Name und der dokumentierten
+      Mobilität (gehfähig, mit Hilfsmittel, Rollstuhl, bettlägerig) sowie Hinweisen wie Sauerstoff oder Reanimationsstatus,
+      für Brandfall und Evakuation; Stand mit Datum.
+
+### Niedrig / UI/UX
+
+- [ ] **Tippflächen auf dem Handy:** Namenslinks in Dokumentation › Visite und Alltag & Aktivierung › Teilnahme je
+      Person sind kleiner als 24 × 24 px (WCAG 2.2, 2.5.8); Zeilenhöhe bzw. Abstand vergrössern.
+
 ## Braucht eine Entscheidung oder externe Quelle
+
+- **Verwaltung von Bewohnergeldern (Barbetrag, Taschengeld):** In vielen Heimen üblich (Kasse je Person mit Belegen).
+  Gehört eher zur Heimverwaltung als zur Pflege; vor dem Bau entscheiden, ob CareCore das abdecken soll.
 
 - **Backups / Disaster Recovery:** Für diese Installation in Railway eingeschaltet; bei weiteren Installationen je
   Installation einschalten (`docs/BETRIEB.md`). Ziele für RPO und RTO legt der Betreiber mit der Einrichtung fest.
