@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Diagnosen, Impfungen, Hilfsmittel & Gegenstände, Einwilligungen, Tippflächen kleiner Links und Textknöpfe sowie die Hauptüberschrift der Druckansichten. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Diagnosen, Impfungen, Hilfsmittel & Gegenstände, Einwilligungen, Geräte & Prüfungen, Tippflächen kleiner Links und Textknöpfe sowie die Hauptüberschrift der Druckansichten. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -1685,4 +1685,71 @@
   padding: 5px 0;
   color: var(--brand-dark);
   font-weight: 700;
+}
+/* Geräte & Prüfungen (Leitung › Qualität). */
+.device-filter {
+  margin: 18px 0 0;
+}
+.device-list {
+  margin-top: 18px;
+  padding: 6px 18px;
+}
+.device-list > ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.device-list > ul > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid #edf1f5;
+}
+.device-list > ul > li:last-child {
+  border-bottom: 0;
+}
+.device-list > ul > li > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.device-list strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+.device-list small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.device-list li.due .device-due {
+  color: #9a5b00;
+  font-weight: 700;
+}
+.device-list li.retired strong {
+  color: var(--muted);
+}
+.device-defect {
+  color: #a43b2d !important;
+}
+.device-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.device-checks {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  color: var(--muted);
+  font-size: 12px;
+}
+@media (max-width: 760px) {
+  .device-list > ul > li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .device-actions {
+    justify-content: flex-start;
+  }
 }

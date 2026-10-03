@@ -15,6 +15,7 @@ const ACTION_TYPES = [
   "task_due",
   "task_escalated",
   "btm_count_due",
+  "device_check_due",
   "wound_overdue",
   "medication_effect_check",
   "visit_answered",

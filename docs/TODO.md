@@ -479,9 +479,12 @@ als Entwurf in `docs/ZWECKBESTIMMUNG.md`.
       abgelehnt, widerrufen, nicht erfasst), Entscheid mit wer (Person oder Vertretung), Datum und Bemerkung; ein
       neuer Entscheid gilt ab seinem Datum, frühere bleiben im Verlauf; Widerruf mit Datum. Neue Seite Bewohner ›
       Einwilligungen: Stand je Thema und Wohnbereich (abgelehnt und widerrufen zuerst). Protokoll der Akte und Auskunft.
-- [ ] **Wartung von Geräten und Hilfsmitteln der Einrichtung:** Pflegebetten, Lifter, Waagen, Blutdruckgeräte usw.
-      mit Inventarnummer, Standort, nächster Prüfung (Frist von Einrichtung bzw. Hersteller), Prüfungen mit Ergebnis
-      und Mängeln; Hinweis bei fälliger Prüfung an die Leitung.
+- [x] **Wartung von Geräten und Hilfsmitteln der Einrichtung:** Leitung › Qualität & Kennzahlen › „Geräte &
+      Prüfungen“: Gerät mit Kategorie, Inventarnummer, Hersteller, Standort, Prüffrist in Monaten (von Einrichtung bzw.
+      Hersteller, keine Vorgabe) und nächster Prüfung; Prüfung mit Datum, Ergebnis (in Ordnung / Mängel mit
+      Beschreibung), wer geprüft hat und nächster Prüfung (Vorschlag nach Frist, änderbar); ausser Betrieb mit Grund.
+      Kennzahlen (in Betrieb, fällig, Mängel offen), Filter nach Kategorie. Benachrichtigung „Prüfung fällig“ an
+      Personen mit Recht „Qualität verwalten“, einmal je Prüfzyklus. Alles im Änderungsprotokoll.
 - [ ] **Küchenliste je Wohnbereich:** Kostform, Konsistenz, Allergien und Vorlieben aus dem Ernährungsplan als
       Druckliste (A4) mit Stand.
 
