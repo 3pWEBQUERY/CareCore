@@ -186,6 +186,7 @@ export const navigation: NavGroup[] = [
           "Kennzahlen Personal",
           "Qualitätsindikatoren",
           "Leistungsauswertung",
+          "Geräte & Prüfungen",
         ],
         childPermissions: {
           Massnahmen: "quality.manage",
@@ -196,6 +197,7 @@ export const navigation: NavGroup[] = [
           "Kennzahlen Personal": "insights.read",
           Qualitätsindikatoren: "insights.read",
           Leistungsauswertung: "insights.read",
+          "Geräte & Prüfungen": "quality.manage",
         },
       },
       {
@@ -336,6 +338,7 @@ const routes: Record<string, Record<string, string>> = {
     "Kennzahlen Personal": "/leitung/kennzahlen/personal",
     Qualitätsindikatoren: "/leitung/kennzahlen/qualitaetsindikatoren",
     Leistungsauswertung: "/leitung/kennzahlen/leistungen",
+    "Geräte & Prüfungen": "/leitung/qualitaet/geraete",
   },
   staff: {
     Mitarbeitende: "/leitung/teamleitung/mitarbeiter",

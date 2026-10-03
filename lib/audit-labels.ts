@@ -15,6 +15,7 @@ import { ISOLATION_KINDS } from "@/lib/hygiene-shared";
 import { POSITIONS, SKIN_FINDINGS } from "@/lib/repositioning-shared";
 import { ELIMINATION_AMOUNTS, ELIMINATION_KINDS } from "@/lib/elimination-shared";
 import { EVACUATION_MOBILITY, type EvacuationMobility } from "@/lib/evacuation-shared";
+import { DEVICE_CHECK_RESULTS, type DeviceCheckResult } from "@/lib/devices-shared";
 import { CONSENT_DECISIONS, type ConsentDecision } from "@/lib/consents-shared";
 import { BELONGING_KINDS, type BelongingKind } from "@/lib/belongings-shared";
 import { VACCINATION_PLACES, type VaccinationPlace } from "@/lib/vaccinations-shared";
@@ -114,6 +115,7 @@ export const AUDIT_AREAS: Record<string, { area: string; href: string | null }> 
   vaccination: { area: "Impfung", href: "/bewohner" },
   resident_belonging: { area: "Hilfsmittel und Gegenstände", href: "/bewohner" },
   resident_consent: { area: "Einwilligung", href: "/bewohner/einwilligungen" },
+  device: { area: "Gerät", href: "/leitung/qualitaet/geraete" },
   death_checklist: { area: "Ablauf nach dem Todesfall", href: "/bewohner" },
   assessment_instrument: { area: "Einschätzungsinstrumente", href: "/leitung/administration/konfiguration" },
   outbreak: { area: "Ausbruch", href: "/bewohner/hygiene" },
@@ -273,6 +275,10 @@ const TITLES: Record<string, string> = {
   "repositioning_entry:cancelled": "Positionswechsel storniert",
   "elimination_entry:created": "Ausscheidung erfasst",
   "elimination_entry:cancelled": "Ausscheidung storniert",
+  "device:created": "Gerät erfasst",
+  "device:updated": "Gerät geändert",
+  "device:checked": "Prüfung eines Geräts erfasst",
+  "device:retired": "Gerät ausser Betrieb genommen",
   "resident_consent:recorded": "Einwilligung bzw. Ablehnung erfasst",
   "resident_consent:revoked": "Einwilligung widerrufen",
   "resident_belonging:created": "Hilfsmittel bzw. Gegenstand erfasst",
@@ -423,6 +429,12 @@ const FIELDS: Record<string, string> = {
   label: "Bezeichnung",
   icdCode: "ICD-10-Code",
   marking: "Kennzeichnung",
+  inventoryNumber: "Inventarnummer",
+  manufacturer: "Hersteller / Modell",
+  intervalMonths: "Prüffrist (Monate)",
+  checkedOn: "Geprüft am",
+  findings: "Mängel",
+  performedBy: "Geprüft von",
   topic: "Thema",
   topics: "Themen",
   decision: "Entscheid",
@@ -747,6 +759,8 @@ function show(field: string, value: unknown, context: { entityType: string; acti
   const text = String(value);
   if (context.entityType === "resident" && context.action === "resuscitation_updated" && field === "status")
     return RESUSCITATION(text) ?? "nicht erfasst";
+  if (context.entityType === "device" && field === "result")
+    return DEVICE_CHECK_RESULTS[text as DeviceCheckResult] ?? text;
   if (context.entityType === "resident_consent" && field === "decision")
     return CONSENT_DECISIONS[text as ConsentDecision] ?? text;
   if (context.entityType === "resident_belonging" && field === "kind")

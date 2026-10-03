@@ -1,6 +1,7 @@
 import { ApiError, type ApiContext, type Sql } from "@/lib/api-context";
 import { createLearningReminders } from "@/lib/learning";
 import { createBtmReminders } from "@/lib/medication-btm";
+import { createDeviceReminders } from "@/lib/devices";
 import { createEffectCheckReminders } from "@/lib/medication-effect";
 import { dispatchPush, pushKeys, webPushSender, type PushSender } from "@/lib/push";
 import { createRosterReminders } from "@/lib/roster/reminders";
@@ -40,6 +41,7 @@ export async function runPushSchedule(sql: Sql, send?: PushSender) {
       createBtmReminders(ctx),
       createWoundReminders(ctx),
       createEffectCheckReminders(ctx),
+      createDeviceReminders(ctx),
     ]).catch((error) => console.error("Reminders failed", error));
   }
   return dispatchPush(sql, sender);
