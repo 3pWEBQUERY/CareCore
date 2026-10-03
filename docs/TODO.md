@@ -403,9 +403,14 @@ Einrichtung bzw. die Pflegeplanung fest, gesetzliche Grundlagen werden beim Bau 
       oder 14 Tage; Stornieren mit Grund; alles im Protokoll der Akte und in der Auskunft. Einstellung „Hinweis
       Stuhlgang“ (Tageszahl der Einrichtung, ohne Vorgabewert): erst damit zeigt die Tagesliste „Stuhlgang beobachten“,
       und nur für Personen, für die das Protokoll geführt wird.
-- [ ] **Schmerzeinschätzung bei eingeschränkter Kommunikation:** Fremdeinschätzung nach einem veröffentlichten
-      Instrument (z. B. BESD bzw. PAINAD; Lizenz und Wortlaut beim Bau prüfen) in den Einschätzungen, neben der
-      vorhandenen Numerischen Rating-Skala. Auszählung nach der Methode, Beurteilung bei der Fachperson.
+- [x] **Schmerzeinschätzung bei eingeschränkter Kommunikation:** Lizenz an der Quelle geprüft: BESD (Deutsche
+      Schmerzgesellschaft) ist nur nichtkommerziell frei; kommerzielle Nutzung und elektronische Veröffentlichung
+      brauchen die vorherige schriftliche Erlaubnis. Bei PAINAD (Warden et al. 2003) ist das Nutzungsrecht nicht geklärt.
+      Darum liefert CareCore keines davon mit. Stattdessen „Eigene Instrumente“ unter Konfiguration (Administration):
+      Name, Quelle und Nutzungsrecht (Pflicht), Fragen mit Antworten und Punkten, Bereiche laut Instrument (optional) und
+      Intervall – alles von der Einrichtung. Das Instrument erscheint in den Einschätzungen neben dem Katalog (mit
+      Quelle), Fälligkeiten nach dem Intervall der Einrichtung. Nach der ersten Einschätzung ergibt eine Änderung eine
+      neue Fassung, frühere Ergebnisse bleiben; „nicht mehr anbieten“ statt löschen; alles im Protokoll.
 - [ ] **Wünsche am Lebensende und Todesfall:** In „Vorsorge & Vertretung“ festhalten, was die Person für die letzte
       Lebensphase wünscht (Ort, Begleitung, religiöse oder spirituelle Wünsche, Bestattung, wer informiert werden soll).
       Beim Erfassen eines Todesfalls eine Checkliste der Einrichtung (z. B. Ärztin informiert, Angehörige informiert,

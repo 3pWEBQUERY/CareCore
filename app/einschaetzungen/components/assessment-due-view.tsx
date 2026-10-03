@@ -11,7 +11,6 @@ import {
   useApiData,
   type ShowToast,
 } from "@/app/components/workspace-ui";
-import { instrumentByCode } from "@/lib/assessment-instruments";
 import type { DueItem } from "@/lib/assessments";
 import { initials } from "@/lib/medication-shared";
 import AssessmentDialog from "./assessment-dialog";
@@ -91,7 +90,7 @@ export function DueView({ showToast }: { showToast: ShowToast }) {
               <span>
                 <strong>{item.dueOn ? formatDate(item.dueOn) : "–"}</strong>
               </span>
-              {due.data?.canWrite && instrumentByCode(item.code) ? (
+              {due.data?.canWrite && overview.data?.instruments.some((instrument) => instrument.code === item.code) ? (
                 <button className="quiet-button" type="button" onClick={() => setStarting(item)}>
                   Erfassen
                 </button>
@@ -108,6 +107,7 @@ export function DueView({ showToast }: { showToast: ShowToast }) {
       </section>
       {starting && overview.data && (
         <AssessmentDialog
+          instruments={overview.data.instruments}
           residents={overview.data.residents}
           residentId={starting.residentId}
           instrument={starting.code}

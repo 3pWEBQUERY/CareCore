@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import { EditorDialog, requestJson, todayInZurich } from "@/app/components/workspace-ui";
-import { INSTRUMENTS, bandFor, instrumentByCode, scoreAnswers } from "@/lib/assessment-instruments";
+import { bandFor, scoreAnswers, type Instrument } from "@/lib/assessment-instruments";
 import { useCareResident, useTerms } from "@/app/components/care-context";
 
 const plusDays = (days: number) => {
@@ -13,12 +13,15 @@ const plusDays = (days: number) => {
 };
 
 export default function AssessmentDialog({
+  instruments,
   residents,
   residentId: initialResident,
   instrument: initialInstrument,
   onClose,
   onSaved,
 }: {
+  // Katalog und eigene Instrumente der Einrichtung (aus /api/assessments).
+  instruments: Instrument[];
   residents: Array<{ id: string; name: string; room: string }>;
   residentId?: string;
   instrument?: string;
@@ -30,10 +33,11 @@ export default function AssessmentDialog({
   const [residentId, setResidentId] = useState(
     initialResident ?? residents.find((r) => r.id === contextId)?.id ?? residents[0]?.id ?? "",
   );
+  const byCode = (value: string) => instruments.find((item) => item.code === value);
   const [code, setCode] = useState(
-    initialInstrument && instrumentByCode(initialInstrument) ? initialInstrument : INSTRUMENTS[0].code,
+    initialInstrument && byCode(initialInstrument) ? initialInstrument : instruments[0].code,
   );
-  const instrument = instrumentByCode(code)!;
+  const instrument = byCode(code) ?? instruments[0];
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [nextDueOn, setNextDueOn] = useState(() => plusDays(instrument.reassessDays));
   const [note, setNote] = useState("");
@@ -46,7 +50,7 @@ export default function AssessmentDialog({
   const resident = residents.find((r) => r.id === residentId);
 
   const chooseInstrument = (name: string) => {
-    const next = INSTRUMENTS.find((i) => i.name === name);
+    const next = instruments.find((i) => i.name === name);
     if (!next) return;
     setCode(next.code);
     setAnswers({});
@@ -79,7 +83,11 @@ export default function AssessmentDialog({
       id="assessment"
       eyebrow="CareCore Einschätzungen"
       title={instrument.name}
-      description={instrument.description}
+      description={
+        instrument.custom
+          ? [instrument.description, `Quelle: ${instrument.custom.source}`].filter(Boolean).join(" · ")
+          : instrument.description
+      }
       onClose={onClose}
       onSubmit={save}
       saving={saving}
@@ -107,7 +115,7 @@ export default function AssessmentDialog({
           <CareSelect
             label="Instrument"
             value={instrument.name}
-            options={INSTRUMENTS.map((i) => i.name)}
+            options={instruments.map((i) => i.name)}
             onChange={chooseInstrument}
           />
         )}

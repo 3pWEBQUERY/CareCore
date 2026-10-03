@@ -4,12 +4,13 @@ import { useState } from "react";
 import { X } from "@phosphor-icons/react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { formatDateTime, useApiData, type ShowToast } from "@/app/components/workspace-ui";
-import { instrumentByCode } from "@/lib/assessment-instruments";
+import type { Instrument } from "@/lib/assessment-instruments";
 import type { AssessmentResult } from "@/lib/assessments";
 import AssessmentDialog from "./assessment-dialog";
 import { Overview } from "./assessment-view-utils";
 
 export function HistoryPanel({
+  instruments,
   result,
   residentName,
   canWrite,
@@ -18,6 +19,7 @@ export function HistoryPanel({
   onChanged,
   onClose,
 }: {
+  instruments: Instrument[];
   result: AssessmentResult;
   residentName: string;
   canWrite: boolean;
@@ -30,12 +32,13 @@ export function HistoryPanel({
     `/api/assessments/residents/${result.residentId}?instrument=${result.code}`,
   );
   const [repeat, setRepeat] = useState(false);
-  const instrument = instrumentByCode(result.code);
+  const instrument = instruments.find((item) => item.code === result.code);
   const labelOf = (key: string, value: unknown) =>
     instrument?.items.find((i) => i.key === key)?.options.find((o) => o.value === value)?.label ?? String(value);
   if (repeat)
     return (
       <AssessmentDialog
+        instruments={instruments}
         residents={residents}
         residentId={result.residentId}
         instrument={result.code}
