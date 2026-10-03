@@ -9,11 +9,13 @@ import {
   careUnitTaskCategories,
   draftFromAppointment,
   initialAppointmentDraft,
+  TRANSPORT_LABELS,
   zurichTimeToIso,
   type AppointmentCareUnit,
   type AppointmentDraft,
   type AppointmentKind,
   type AppointmentResident,
+  type AppointmentTransport,
   type ResidentAppointment,
 } from "@/lib/resident-appointments";
 import { useEscapeClose } from "@/app/components/use-escape-close";
@@ -23,6 +25,8 @@ const times = Array.from(
   (_, index) => `${String(Math.floor(index / 4)).padStart(2, "0")}:${String((index % 4) * 15).padStart(2, "0")}`,
 );
 const statusLabels = { scheduled: "Geplant", completed: "Abgeschlossen", cancelled: "Abgesagt" } as const;
+const NO_PICKUP = "Keine Abholung";
+const NO_TRANSPORT = "Nicht festgelegt";
 
 export default function ResidentAppointmentEditor({
   appointment,
@@ -64,6 +68,7 @@ export default function ResidentAppointmentEditor({
       residentId: kind === "resident" ? current.residentId : "",
       careUnitId: kind === "care_unit_task" ? current.careUnitId : "",
       category: kind === "resident" ? appointmentCategories[0] : careUnitTaskCategories[0],
+      outside: kind === "resident" ? current.outside : false,
     }));
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -83,6 +88,12 @@ export default function ResidentAppointmentEditor({
       setError("Bitte einen gültigen Zeitraum mit Endzeit nach der Startzeit wählen.");
       return;
     }
+    const outside = draft.kind === "resident" && draft.outside;
+    const pickupAt = outside && draft.pickupTime ? zurichTimeToIso(draft.date, draft.pickupTime) : "";
+    if (pickupAt && Date.parse(pickupAt) >= Date.parse(endsAt)) {
+      setError("Die Abholung muss vor dem Terminende liegen.");
+      return;
+    }
     setSaving(true);
     try {
       const response = await fetch(appointment ? `/api/appointments/${appointment.id}` : "/api/appointments", {
@@ -99,6 +110,12 @@ export default function ResidentAppointmentEditor({
           location: draft.location,
           notes: draft.notes,
           status: draft.status,
+          outside,
+          transport: outside ? draft.transport : null,
+          transportNote: outside ? draft.transportNote : "",
+          pickupAt,
+          escort: outside ? draft.escort : "",
+          documents: outside ? draft.documents : "",
         }),
       });
       const payload = await response.json().catch(() => null);
@@ -288,6 +305,75 @@ export default function ResidentAppointmentEditor({
                   }
                 />
               </label>
+            )}
+            {draft.kind === "resident" && (
+              <div className="area-editor-wide repositioning-choices" role="group" aria-label="Ausser Haus">
+                <button
+                  type="button"
+                  className={`day-toggle ${draft.outside ? "active" : ""}`}
+                  aria-pressed={draft.outside}
+                  onClick={() => update("outside", !draft.outside)}
+                >
+                  Termin ausser Haus (Fahrdienst)
+                </button>
+              </div>
+            )}
+            {draft.kind === "resident" && draft.outside && (
+              <>
+                <label>
+                  <span>Transport</span>
+                  <CareSelect
+                    label="Transport"
+                    value={draft.transport ? TRANSPORT_LABELS[draft.transport] : NO_TRANSPORT}
+                    options={[NO_TRANSPORT, ...Object.values(TRANSPORT_LABELS)]}
+                    onChange={(value) =>
+                      update(
+                        "transport",
+                        (Object.keys(TRANSPORT_LABELS) as AppointmentTransport[]).find(
+                          (key) => TRANSPORT_LABELS[key] === value,
+                        ) ?? null,
+                      )
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Abholung im Haus</span>
+                  <CareSelect
+                    label="Abholung"
+                    value={draft.pickupTime || NO_PICKUP}
+                    options={[NO_PICKUP, ...times]}
+                    onChange={(value) => update("pickupTime", value === NO_PICKUP ? "" : value)}
+                  />
+                </label>
+                <label>
+                  <span>Transport-Details</span>
+                  <input
+                    maxLength={300}
+                    value={draft.transportNote}
+                    onChange={(event) => update("transportNote", event.target.value)}
+                    placeholder="z. B. Firma, Buchungsnummer, mit Rollstuhl"
+                  />
+                </label>
+                <label>
+                  <span>Begleitung</span>
+                  <input
+                    maxLength={200}
+                    value={draft.escort}
+                    onChange={(event) => update("escort", event.target.value)}
+                    placeholder="z. B. Tochter, Mitarbeitende oder ohne Begleitung"
+                  />
+                </label>
+                <label className="area-editor-wide">
+                  <span>Mitzugebende Unterlagen</span>
+                  <textarea
+                    rows={2}
+                    maxLength={2000}
+                    value={draft.documents}
+                    onChange={(event) => update("documents", event.target.value)}
+                    placeholder="z. B. Überleitungsbogen, Medikamentenplan, Versichertenkarte"
+                  />
+                </label>
+              </>
             )}
             <label className="area-editor-wide">
               <span>Hinweise für das Team</span>

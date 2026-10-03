@@ -27,7 +27,8 @@ export async function GET(request: Request) {
     const [appointments, residents, careUnits] = await Promise.all([
       sql`SELECT a.id, a.kind, a.resident_id, CONCAT(r.first_name, ' ', r.last_name) AS resident_name, r.status AS resident_status,
           COALESCE(a.care_unit_id, stay.care_unit_id) AS care_unit_id, cu.name AS care_unit_name, room.name AS room_name,
-          a.title, a.category, a.starts_at, a.ends_at, a.location, a.notes, a.status, a.created_at, a.updated_at
+          a.title, a.category, a.starts_at, a.ends_at, a.location, a.notes, a.status, a.outside, a.transport,
+          a.transport_note, a.pickup_at, a.escort, a.documents, a.created_at, a.updated_at
         FROM carecore_resident_appointments a
         LEFT JOIN carecore_residents r ON r.id = a.resident_id AND r.organization_id = a.organization_id
         LEFT JOIN LATERAL (SELECT care_unit_id, room_id FROM carecore_resident_stays WHERE resident_id = r.id AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1) stay ON TRUE
@@ -79,8 +80,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Wohnbereich nicht gefunden oder nicht mehr aktiv." }, { status: 404 });
     }
     const id = randomUUID();
-    await sql`INSERT INTO carecore_resident_appointments (id, organization_id, kind, resident_id, care_unit_id, title, category, starts_at, ends_at, location, notes, status, created_by, updated_by)
-      VALUES (${id}, ${actor.organizationId}, ${parsed.kind}, ${parsed.residentId}, ${parsed.careUnitId}, ${parsed.title}, ${parsed.category}, ${parsed.startsAt}, ${parsed.endsAt}, ${parsed.location || null}, ${parsed.notes || null}, ${parsed.status}, ${actor.id}, ${actor.id})`;
+    await sql`INSERT INTO carecore_resident_appointments (id, organization_id, kind, resident_id, care_unit_id, title, category, starts_at, ends_at, location, notes, status, outside, transport, transport_note, pickup_at, escort, documents, created_by, updated_by)
+      VALUES (${id}, ${actor.organizationId}, ${parsed.kind}, ${parsed.residentId}, ${parsed.careUnitId}, ${parsed.title}, ${parsed.category}, ${parsed.startsAt}, ${parsed.endsAt}, ${parsed.location || null}, ${parsed.notes || null}, ${parsed.status}, ${parsed.outside}, ${parsed.transport}, ${parsed.transportNote}, ${parsed.pickupAt}, ${parsed.escort}, ${parsed.documents}, ${actor.id}, ${actor.id})`;
     return NextResponse.json({ id }, { status: 201 });
   } catch (error) {
     console.error("Appointments POST failed", error);

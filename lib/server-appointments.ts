@@ -2,7 +2,9 @@ import {
   appointmentCategories,
   appointmentStatuses,
   careUnitTaskCategories,
+  TRANSPORT_LABELS,
   type AppointmentKind,
+  type AppointmentTransport,
   type AppointmentStatus,
 } from "@/lib/resident-appointments";
 
@@ -35,6 +37,16 @@ export function parseAppointmentInput(input: AppointmentInput) {
   if (!Number.isFinite(starts) || !Number.isFinite(ends) || ends <= starts)
     return { error: "Die Endzeit muss nach der Startzeit liegen." } as const;
   if (!appointmentStatuses.includes(status)) return { error: "Bitte einen gültigen Status auswählen." } as const;
+  // Ausser Haus (nur Termine einer Person): Transport, Abholung, Begleitung, Unterlagen.
+  const outside = kind === "resident" && input.outside === true;
+  const transportInput = text(input.transport, 24);
+  const transport = outside && transportInput ? (transportInput as AppointmentTransport) : null;
+  if (transport && !(transport in TRANSPORT_LABELS))
+    return { error: "Bitte einen gültigen Transport auswählen." } as const;
+  const pickupInput = outside ? text(input.pickupAt, 40) : "";
+  const pickup = pickupInput ? Date.parse(pickupInput) : null;
+  if (pickup !== null && !Number.isFinite(pickup)) return { error: "Die Abholzeit ist ungültig." } as const;
+  if (pickup !== null && pickup >= ends) return { error: "Die Abholung muss vor dem Terminende liegen." } as const;
   return {
     kind,
     residentId: kind === "resident" ? residentId : null,
@@ -46,5 +58,11 @@ export function parseAppointmentInput(input: AppointmentInput) {
     location,
     notes,
     status,
+    outside,
+    transport,
+    transportNote: outside ? text(input.transportNote, 300) : "",
+    pickupAt: pickup === null ? null : new Date(pickup).toISOString(),
+    escort: outside ? text(input.escort, 200) : "",
+    documents: outside ? text(input.documents, 2000) : "",
   };
 }

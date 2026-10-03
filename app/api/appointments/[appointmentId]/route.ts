@@ -20,7 +20,13 @@ export async function PATCH(request: Request, context: Context) {
     const rows = await sql`UPDATE carecore_resident_appointments a
       SET kind = ${parsed.kind}, resident_id = ${parsed.residentId}, care_unit_id = ${parsed.careUnitId}, title = ${parsed.title}, category = ${parsed.category},
           starts_at = ${parsed.startsAt}, ends_at = ${parsed.endsAt}, location = ${parsed.location || null},
-          notes = ${parsed.notes || null}, status = ${parsed.status}, updated_by = ${actor.id}, updated_at = NOW()
+          notes = ${parsed.notes || null}, status = ${parsed.status}, outside = ${parsed.outside},
+          transport = ${parsed.transport}, transport_note = ${parsed.transportNote}, pickup_at = ${parsed.pickupAt},
+          escort = ${parsed.escort}, documents = ${parsed.documents},
+          departed_at = CASE WHEN ${parsed.outside} THEN a.departed_at END,
+          departed_by = CASE WHEN ${parsed.outside} THEN a.departed_by END,
+          returned_at = CASE WHEN ${parsed.outside} THEN a.returned_at END,
+          returned_by = CASE WHEN ${parsed.outside} THEN a.returned_by END, updated_by = ${actor.id}, updated_at = NOW()
       WHERE a.id = ${appointmentId} AND a.organization_id = ${actor.organizationId}
         AND (
           (${parsed.kind} = 'resident' AND EXISTS (SELECT 1 FROM carecore_residents r WHERE r.id = ${parsed.residentId} AND r.organization_id = ${actor.organizationId} AND r.status IN ('active', 'planned')))
