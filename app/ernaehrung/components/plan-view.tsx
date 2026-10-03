@@ -94,6 +94,23 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
         ]}
       />
       {overview.error && <LoadError message={overview.error} onRetry={overview.reload} />}
+      {(overview.data?.careUnits.length ?? 0) > 0 && (
+        <nav className="kitchen-links" aria-label="Küchenliste drucken">
+          <span>Küchenliste:</span>
+          {overview.data?.careUnits.map((unit) => (
+            <a
+              key={unit.id}
+              className="death-checklist-action"
+              href={`/c/ernaehrung/kuechenliste?unit=${unit.id}`}
+              target="_blank"
+              rel="noopener"
+              aria-label={`Küchenliste ${unit.name} drucken`}
+            >
+              {unit.name}
+            </a>
+          ))}
+        </nav>
+      )}
       <div className="medication-two-column header-resident-layout">
         <section className="med-main-column">
           {resident && detail.error && <LoadError message={detail.error} onRetry={detail.reload} />}

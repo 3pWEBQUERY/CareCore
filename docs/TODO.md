@@ -485,8 +485,10 @@ als Entwurf in `docs/ZWECKBESTIMMUNG.md`.
       Beschreibung), wer geprüft hat und nächster Prüfung (Vorschlag nach Frist, änderbar); ausser Betrieb mit Grund.
       Kennzahlen (in Betrieb, fällig, Mängel offen), Filter nach Kategorie. Benachrichtigung „Prüfung fällig“ an
       Personen mit Recht „Qualität verwalten“, einmal je Prüfzyklus. Alles im Änderungsprotokoll.
-- [ ] **Küchenliste je Wohnbereich:** Kostform, Konsistenz, Allergien und Vorlieben aus dem Ernährungsplan als
-      Druckliste (A4) mit Stand.
+- [x] **Küchenliste je Wohnbereich:** Im Ernährungsplan je Wohnbereich „Küchenliste“: A4 quer mit Zimmer, Name,
+      Kostform, Konsistenz, Allergien, Vorlieben, Hilfe beim Essen, Mahlzeitenrhythmus, Trinkmengenbegrenzung und
+      Hinweisen aus dem Ernährungsplan; Personen ohne Plan erscheinen als „kein Ernährungsplan“; Stand mit Datum und
+      Uhrzeit.
 
 ### Mittel
 
