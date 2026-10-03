@@ -351,8 +351,12 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
       zurückgezogen (mit Grund). Die Reihenfolge der Vergabe entscheidet die Leitung. Eintritt planen reserviert ein freies
       Bett; der Eintritt wird am Eintrittstag bestätigt, eine Absage mit Grund gibt das Bett frei und der Eintrag wartet
       wieder. Alles im Protokoll.
-- [ ] **Warteliste: Aufbewahrung:** abgeschlossene Anfragen nach einer festgelegten Frist löschen (Frist durch die
-      Einrichtung, analog zur Aufbewahrung der Akten).
+- [x] **Warteliste: Aufbewahrung:** Einstellung „Aufbewahrungsfrist Warteliste“ (Monate, von der Einrichtung
+      festgelegt; ohne Frist wird nichts vorgeschlagen). Die Karte „Löschfristen Warteliste“ unter Konfiguration zeigt
+      abgeschlossene Anfragen (zurückgezogen oder Platz vergeben) nach Ablauf der Frist; gelöscht wird einzeln oder
+      gesammelt nur auf Bestätigung der Administration. Ein noch geplanter Eintritt bleibt stehen, die Akte einer
+      eingetretenen Person bleibt unverändert. Das Protokoll behält die Einträge ohne Inhalte, die Löschung wird ohne Namen
+      protokolliert.
 
 ### Niedrig / UI/UX
 

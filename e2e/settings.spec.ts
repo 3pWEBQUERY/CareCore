@@ -243,13 +243,15 @@ test("Branding: grosses Logo wird verkleinert und gespeichert", async ({ page })
 });
 
 // Datenschutz: ohne Frist schlägt CareCore nichts vor; mit Frist zeigt die Karte den Stand.
-test("Löschfristen: Karte folgt der Aufbewahrungsfrist der Einrichtung", async ({ page }) => {
+test("Löschfristen: Karten folgen den Aufbewahrungsfristen der Einrichtung", async ({ page }) => {
   await login(page, ADMIN);
   const errors = watchErrors(page);
   try {
     await page.goto("/c/leitung/administration/konfiguration");
-    const card = page.locator(".admin-retention-card");
+    const card = page.getByRole("region", { name: "Löschfristen", exact: true });
+    const waitlist = page.getByRole("region", { name: "Löschfristen Warteliste" });
     await expect(card).toContainText("Aufbewahrungsfrist ist noch nicht festgelegt");
+    await expect(waitlist).toContainText("Einstellung „Aufbewahrungsfrist Warteliste“");
     expect(
       (
         await page.request.patch("/api/settings/residentRetentionYears", { data: { enabled: true, value: 10 } })
@@ -258,8 +260,17 @@ test("Löschfristen: Karte folgt der Aufbewahrungsfrist der Einrichtung", async 
     await page.reload();
     await expect(card).toContainText("10 Jahre nach dem Austritt");
     await expect(card).toContainText("Keine Akte mit abgelaufener Frist.");
+    expect(
+      (
+        await page.request.patch("/api/settings/waitlistRetentionMonths", { data: { enabled: true, value: 24 } })
+      ).status(),
+    ).toBe(200);
+    await page.reload();
+    await expect(waitlist).toContainText("24 Monate nach dem Abschluss");
+    await expect(waitlist).toContainText("Keine Anfrage mit abgelaufener Frist.");
   } finally {
     await page.request.patch("/api/settings/residentRetentionYears", { data: { enabled: false } });
+    await page.request.patch("/api/settings/waitlistRetentionMonths", { data: { enabled: false } });
   }
   expect(errors).toEqual([]);
 });

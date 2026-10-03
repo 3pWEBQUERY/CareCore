@@ -35,6 +35,18 @@ Mit der Akte werden auch Medikationsdaten gelöscht, darunter bewohnereigene Bet
 Buchungen. Für solche Unterlagen können gesetzliche Aufbewahrungspflichten gelten. Die Einrichtung wählt die Frist so,
 dass sie alle für sie geltenden Pflichten erfüllt; CareCore gibt dafür keinen Wert vor.
 
+## Warteliste
+
+- Eigene Frist: Leitung › Konfiguration › „Aufbewahrungsfrist Warteliste“ (1–120 Monate). Ohne Frist wird nichts
+  vorgeschlagen.
+- Zur Löschung stehen nur abgeschlossene Anfragen an (zurückgezogen oder Platz vergeben); Stichtag ist der Abschluss.
+  Anfragen, deren Eintritt noch geplant ist, und wartende Anfragen nie.
+- Die Karte „Löschfristen Warteliste“ listet fällige Anfragen; die Administration löscht einzeln oder gesammelt nach
+  Bestätigung. Der Server prüft Recht und Frist erneut, alles in einer Transaktion.
+- Gelöscht werden Name, Geburtsdatum, Kontakt, Bedarf und Status der Anfrage. Die Akte einer eingetretenen Person bleibt
+  unverändert. Protokolleinträge zur Anfrage bleiben ohne Inhalte stehen; die Löschung wird mit Abschlussdatum und Frist
+  protokolliert, ohne Namen.
+
 ## Grenzen
 
 - Freitext ausserhalb der Akte (z. B. Messenger-Nachrichten, Dokumente ohne Aktenbezug) wird nicht durchsucht.
