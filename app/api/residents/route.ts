@@ -27,8 +27,10 @@ export async function GET() {
         LEFT JOIN LATERAL (SELECT care_level FROM carecore_care_plans WHERE resident_id = r.id AND status = 'active' ORDER BY updated_at DESC LIMIT 1) cp ON TRUE
         LEFT JOIN LATERAL (SELECT label, severity, created_at FROM carecore_resident_clinical_flags WHERE resident_id = r.id AND active = TRUE ORDER BY created_at DESC LIMIT 1) flag ON TRUE
         WHERE r.organization_id = ${actor.organizationId}
-        -- Die eigene Wohngruppe (Stammwohnbereich) steht zuerst, danach alle weiteren Bewohner.
-        ORDER BY (stay.care_unit_id IS NOT DISTINCT FROM (SELECT primary_care_unit_id FROM carecore_user_profiles WHERE user_id = ${actor.id})) DESC,
+        -- Laufende Aufenthalte vor ausgetretenen und verstorbenen Personen; darin die eigene Wohngruppe
+        -- (Stammwohnbereich) zuerst. Ohne Stammwohnbereich gilt keine Wohngruppe als eigene.
+        ORDER BY (r.status IN ('discharged', 'deceased', 'archived')),
+          COALESCE(stay.care_unit_id = (SELECT primary_care_unit_id FROM carecore_user_profiles WHERE user_id = ${actor.id}), FALSE) DESC,
           su.name NULLS LAST, r.last_name, r.first_name`,
       sql`SELECT cu.id, cu.name FROM carecore_care_units cu JOIN carecore_sites s ON s.id = cu.site_id WHERE s.organization_id = ${actor.organizationId} AND cu.active = TRUE ORDER BY cu.name`,
       sql`SELECT cu.name FROM carecore_user_profiles p LEFT JOIN carecore_care_units cu ON cu.id = p.primary_care_unit_id WHERE p.user_id = ${actor.id} LIMIT 1`,
