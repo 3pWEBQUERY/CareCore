@@ -4,7 +4,9 @@ import { ApiError, iso, type Row, type Sql } from "@/lib/api-context";
 import { hashPassword, hashSessionToken, verifyPassword } from "@/lib/auth";
 import { RESUSCITATION_STATUSES, type ResuscitationStatus } from "@/lib/resident-record-shared";
 import { carecoreDb } from "@/lib/server-data";
+import { portalVisitItems } from "@/lib/portal-visits";
 import {
+  portalAreaAllowed,
   portalAreas,
   portalPasswordProblem,
   type PortalArea,
@@ -124,7 +126,7 @@ export async function portalResidents(sql: Sql, actor: PortalActor): Promise<Por
     birthDate: (row.birth_date as string | null) ?? null,
     careUnit: String(row.care_unit),
     room: String(row.room),
-    areas: portalAreas((row.areas as unknown[]).flat()),
+    areas: portalAreas((row.areas as unknown[]).flat()).filter((area) => portalAreaAllowed(actor.kind, area)),
   }));
 }
 
@@ -282,6 +284,12 @@ export async function portalResidentDetail(
           })),
         };
       })(),
+    );
+  if (has("visit"))
+    tasks.push(
+      portalVisitItems(sql, residentId).then((visit) => {
+        detail.visit = visit;
+      }),
     );
   await Promise.all(tasks);
   await logStatement(sql, actor, residentId, "resident_viewed", resident.areas);

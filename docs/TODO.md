@@ -321,8 +321,11 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
 - [x] **Visite vorbereiten:** Dokumentation › Visite sammelt die offenen Einträge „Für Visite“ je Hausärztin bzw.
       Hausarzt (aus den Stammdaten), filterbar nach Wohnbereich, mit Visitenliste zum Drucken (A4). Die Rückmeldung
       wird als Eintrag „Arztvisite“ dokumentiert, schliesst die Frage und steht im Protokoll der Akte.
-- [ ] **Visite im Portal:** offene Fragen der Pflege der Ärztin bzw. dem Arzt im Portal zeigen und die Rückmeldung
-      dort erfassen lassen.
+- [x] **Visite im Portal:** neuer Portal-Bereich „Visite“, nur für Zugänge der Art Ärztin / Arzt (auch serverseitig
+      geprüft). Das Portal zeigt die offenen Fragen „Für Visite“ der freigegebenen Personen mit Feld für die Rückmeldung
+      und die Rückmeldungen der letzten 14 Tage. Die Rückmeldung wird als Eintrag „Arztvisite“ mit „Name (Portal)“
+      dokumentiert und schliesst die Frage; korrigierte oder bereits beantwortete Fragen werden abgewiesen. Im Protokoll der
+      Akte und im Portal-Protokoll; die Pflege des Wohnbereichs erhält einen Hinweis.
 - [x] **Leistungserfassung:** Dokumentation › Leistungen erfasst erbrachte Leistungen mit Zeit für die Person in der
       Kopfzeile, vorbelegt aus erledigten Aufgaben und laufenden Massnahmen der Pflegeplanung. Leistungskatalog der
       Einrichtung unter Administration (eigener Code, Minuten nur als Vorschlag, keine Normzeiten von CareCore).

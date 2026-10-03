@@ -50,7 +50,8 @@ export async function listEntries(ctx: ApiContext, params: URLSearchParams): Pro
   const days = [1, 7, 30, 90].includes(Number(params.get("days"))) ? Number(params.get("days")) : 7;
   const query = (params.get("q") ?? "").trim().slice(0, 100);
   const rows = (await ctx.sql`
-    SELECT d.*, r.first_name || ' ' || r.last_name AS resident_name, COALESCE(ro.name, '') AS room, u.display_name AS author,
+    SELECT d.*, r.first_name || ' ' || r.last_name AS resident_name, COALESCE(ro.name, '') AS room,
+      COALESCE(u.display_name, d.metadata ->> 'portalAuthor') AS author,
       fix.id AS amended_by_id, fix.created_at AS amended_by_at, fu.display_name AS amended_by_author
     FROM carecore_documentation_entries d
     JOIN carecore_residents r ON r.id = d.resident_id AND r.organization_id = ${ctx.actor.organizationId}

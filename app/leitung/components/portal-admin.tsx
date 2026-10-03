@@ -17,6 +17,7 @@ import {
 import {
   PORTAL_AREAS,
   PORTAL_AREA_KEYS,
+  portalAreaAllowed,
   PORTAL_BASES,
   PORTAL_KINDS,
   ORDER_STATUSES,
@@ -58,6 +59,7 @@ const ACTIONS: Record<string, string> = {
   resident_viewed: "Daten angesehen",
   password_changed: "Passwort geändert",
   message_sent: "Nachricht gesendet",
+  visit_answered: "Rückmeldung zur Visite erfasst",
   ...Object.fromEntries(
     Object.entries(ORDER_STATUSES).map(([status, label]) => [`order_${status}`, `Bestellung ${label.toLowerCase()}`]),
   ),
@@ -508,7 +510,7 @@ function PortalAdminBody({ showToast }: { showToast: ShowToast }) {
           <fieldset className="area-editor-wide">
             <legend>Freigegebene Bereiche</legend>
             <div className="area-service-options">
-              {PORTAL_AREA_KEYS.map((area) => (
+              {PORTAL_AREA_KEYS.filter((area) => portalAreaAllowed(selected.kind, area)).map((area) => (
                 <label key={area}>
                   <input
                     type="checkbox"

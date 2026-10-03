@@ -347,7 +347,8 @@ export async function recordTimeline(ctx: ApiContext, residentIdInput: unknown):
   const residentId = await assertResident(ctx, residentIdInput);
   const [docs, vitals, meds, appointments] = (await Promise.all([
     ctx.sql`
-      SELECT d.id, d.title, d.category, d.body, d.importance, d.occurred_at, u.display_name AS author
+      SELECT d.id, d.title, d.category, d.body, d.importance, d.occurred_at,
+        COALESCE(u.display_name, d.metadata ->> 'portalAuthor') AS author
       FROM carecore_documentation_entries d LEFT JOIN carecore_users u ON u.id = d.author_user_id
       WHERE d.resident_id = ${residentId} AND d.occurred_at > NOW() - INTERVAL '60 days'
       ORDER BY d.occurred_at DESC LIMIT 150`,

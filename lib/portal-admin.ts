@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/server-data";
 import {
   PORTAL_BASES,
   PORTAL_KINDS,
+  portalAreaAllowed,
   portalAreas,
   portalPasswordProblem,
   type PortalAccessEntry,
@@ -175,7 +176,7 @@ export async function resetPortalPassword(ctx: ApiContext, idInput: unknown) {
   return { password };
 }
 
-async function parseGrant(ctx: ApiContext, body: Record<string, unknown>) {
+async function parseGrant(ctx: ApiContext, kind: PortalKind, body: Record<string, unknown>) {
   const org = ctx.actor.organizationId;
   const residentId = typeof body.residentId === "string" && body.residentId ? body.residentId : null;
   const careUnitId = typeof body.careUnitId === "string" && body.careUnitId ? body.careUnitId : null;
@@ -194,6 +195,8 @@ async function parseGrant(ctx: ApiContext, body: Record<string, unknown>) {
   }
   const areas = portalAreas(body.areas);
   if (!areas.length) throw new ApiError("Bitte mindestens einen Bereich freigeben.");
+  if (areas.some((area) => !portalAreaAllowed(kind, area)))
+    throw new ApiError("Die Visite kann nur einem Zugang für Ärztin / Arzt freigegeben werden.");
   const basis = typeof body.basis === "string" && body.basis in PORTAL_BASES ? (body.basis as PortalBasis) : null;
   if (!basis) throw new ApiError("Bitte die Grundlage der Freigabe wählen.");
   const validFrom = typeof body.validFrom === "string" && DATE.test(body.validFrom) ? body.validFrom : null;
@@ -205,7 +208,7 @@ async function parseGrant(ctx: ApiContext, body: Record<string, unknown>) {
 export async function createPortalGrant(ctx: ApiContext, accountIdInput: unknown, body: Record<string, unknown>) {
   requireAdmin(ctx);
   const account = await loadAccount(ctx, accountIdInput);
-  const grant = await parseGrant(ctx, body);
+  const grant = await parseGrant(ctx, account.kind as PortalKind, body);
   const id = randomUUID();
   await ctx.sql.transaction([
     ctx.sql`
@@ -221,7 +224,7 @@ export async function createPortalGrant(ctx: ApiContext, accountIdInput: unknown
 async function loadGrant(ctx: ApiContext, idInput: unknown) {
   const id = assertUuid(idInput, "Freigabe");
   const rows = (await ctx.sql`
-    SELECT g.* FROM carecore_portal_grants g JOIN carecore_portal_accounts a ON a.id = g.account_id
+    SELECT g.*, a.kind AS account_kind FROM carecore_portal_grants g JOIN carecore_portal_accounts a ON a.id = g.account_id
     WHERE g.id = ${id} AND a.organization_id = ${ctx.actor.organizationId}`) as Row[];
   if (!rows[0]) throw new ApiError("Freigabe nicht gefunden.", 404);
   if (rows[0].revoked_at) throw new ApiError("Die Freigabe ist bereits widerrufen.", 409);
@@ -230,8 +233,8 @@ async function loadGrant(ctx: ApiContext, idInput: unknown) {
 
 export async function updatePortalGrant(ctx: ApiContext, idInput: unknown, body: Record<string, unknown>) {
   requireAdmin(ctx);
-  const before = await loadGrant(ctx, idInput);
-  const grant = await parseGrant(ctx, body);
+  const { account_kind: kind, ...before } = await loadGrant(ctx, idInput);
+  const grant = await parseGrant(ctx, kind as PortalKind, body);
   await ctx.sql.transaction([
     ctx.sql`
       UPDATE carecore_portal_grants SET resident_id = ${grant.residentId}, care_unit_id = ${grant.careUnitId},

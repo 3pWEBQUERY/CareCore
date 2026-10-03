@@ -32,7 +32,7 @@ export async function visitOverview(ctx: ApiContext, careUnitInput: string | nul
     ctx.sql`
       SELECT v.entry_id, v.physician, v.resolved_at, q.body AS question, a.body AS response,
         r.id AS resident_id, r.first_name || ' ' || r.last_name AS resident_name,
-        COALESCE(u.display_name, 'Unbekannt') AS resolved_by
+        COALESCE(u.display_name, pa.display_name || ' (Portal)', 'Unbekannt') AS resolved_by
       FROM carecore_visit_resolutions v
       JOIN carecore_documentation_entries q ON q.id = v.entry_id
       LEFT JOIN carecore_documentation_entries a ON a.id = v.response_entry_id
@@ -40,6 +40,7 @@ export async function visitOverview(ctx: ApiContext, careUnitInput: string | nul
       LEFT JOIN LATERAL (SELECT care_unit_id FROM carecore_resident_stays WHERE resident_id = r.id AND ended_at IS NULL
         ORDER BY started_at DESC LIMIT 1) stay ON TRUE
       LEFT JOIN carecore_users u ON u.id = v.resolved_by
+      LEFT JOIN carecore_portal_accounts pa ON pa.id = v.resolved_by_portal_account_id
       WHERE v.organization_id = ${org} AND v.resolved_at > NOW() - INTERVAL '14 days'
         AND (${careUnitId}::uuid IS NULL OR stay.care_unit_id = ${careUnitId}::uuid)
       ORDER BY v.resolved_at DESC LIMIT 100`,
