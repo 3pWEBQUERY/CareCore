@@ -269,6 +269,52 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - **Sicherheit:** Zwei-Faktor-Pflicht für Leitung und Administration (einschaltbar unter Konfiguration ›
   Sicherheit), Passwort-Richtlinie ab 10 Zeichen, Administration kann alle Sitzungen einer Person beenden.
 
+## Analyse vom 03.10.2026: noch zu erstellen
+
+Rundgang über alle 89 Seiten (Desktop und Handy, als Administration): keine Skriptfehler, keine fehlgeschlagenen
+Anfragen, kein seitliches Scrollen, keine technischen oder englischen Begriffe; Ladezeit im Median 1,5 s. Die
+Protokolle (Administration, Bewohnerakte, Dienstplan, Portalzugriffe) sind deutsch. Alle PRD-Bereiche oben sind
+umgesetzt; die folgenden Punkte gehen darüber hinaus. Alles bleibt Dokumentation, Organisation und Kommunikation:
+keine Diagnosen, keine Dosierungen, keine eigenen Grenzwerte (Entscheid 01.10.2026). Gesetzliche Grundlagen und
+Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt die Einrichtung fest.
+
+### Hoch
+
+- [ ] **Freiheitsbeschränkende Massnahmen (FBM):** eigenes Protokoll je Person: Art (z. B. Bettgitter, Gurt,
+      Sensormatte, geschlossene Tür), Grund, Beginn und Ende, wer entschieden hat, Information der vertretungsberechtigten
+      Person, nächste Überprüfung mit Erinnerung. Rechtsgrundlage je Land (CH: ZGB Art. 383–385; DE: § 1831 BGB;
+      AT: Heimaufenthaltsgesetz) beim Bau prüfen. Heute nur als Ereignisart im Qualitätsmanagement möglich.
+- [ ] **Vorsorge und Vertretung in den Stammdaten:** Patientenverfügung, Vorsorgeauftrag bzw. -vollmacht,
+      vertretungsberechtigte Person mit Kontakt und Dokument; Hinweis im Aktenkopf und im Überleitungsbogen.
+      Ergänzt den bestehenden Reanimationsstatus.
+- [ ] **Anbindung an das elektronische Patientendossier:** CH: EPD über eine Stammgemeinschaft; DE: Telematikinfrastruktur
+      (ePA, KIM); AT: ELGA. Anschlusspflichten und Profile (IHE, FHIR) je Land prüfen. Grösster Integrationsschritt,
+      braucht Partner und Zertifizierung.
+
+### Mittel
+
+- [ ] **Nationale Qualitätsindikatoren als Auswertung:** Kennzahlen aus vorhandenen Daten (z. B. Gewichtsverlust,
+      Schmerzerfassung, freiheitsbeschränkende Massnahmen, Anzahl Wirkstoffe) zusammenzählen und exportieren, nach
+      den Definitionen der Behörde (CH: medizinische Qualitätsindikatoren für Pflegeheime; DE: Indikatoren nach
+      § 113 SGB XI). Nur Statistik, keine Beurteilung einzelner Personen.
+- [ ] **eMediplan einlesen (CH):** Medikationsplan per QR-Code (CHMED) als Entwurf übernehmen; eine Fachperson prüft
+      und gibt jede Verordnung frei. Keine automatische Prüfung oder Änderung.
+- [ ] **Visite vorbereiten:** Einträge „Für Visite“ je Ärztin/Arzt sammeln, als Liste drucken oder im Portal
+      zeigen; Rückmeldung der Ärztin als Dokumentationseintrag.
+- [ ] **Leistungserfassung:** erbrachte Pflegeleistungen mit Zeit erfassen (aus Aufgaben und Massnahmen vorbelegt),
+      Auswertung je Person und Monat, Export für Einstufung und Abrechnung.
+- [ ] **Ausbruchs- und Isolationsübersicht:** Personen mit Isolation oder Hygienemassnahme je Wohnbereich,
+      Verlauf und Meldung an die Leitung. Organisatorisch, keine Diagnose.
+- [ ] **Alltagsgestaltung und Aktivierung:** Angebote planen, Teilnahme je Person dokumentieren, Übersicht für
+      Angehörige im Portal (wenn freigegeben).
+- [ ] **Belegung und Eintritt:** Warteliste, geplante Eintritte, Zimmerplanung mit freien Plätzen je Wohnbereich.
+
+### Niedrig / UI/UX
+
+- [ ] **QR-Code je Zimmer:** Etikett drucken; Scannen öffnet die Akte der Person im Zimmer (nach Anmeldung).
+- [ ] **Druckansichten** (`/bewohner/ueberleitung`, `/medikation/btm/buch`, `/mein-dienstplan/team/drucken`): eine
+      Hauptüberschrift für Screenreader ergänzen (heute ohne `h1`).
+
 ## Braucht eine Entscheidung oder externe Quelle
 
 - **Backups / Disaster Recovery:** Für diese Installation in Railway eingeschaltet; bei weiteren Installationen je
