@@ -3,11 +3,14 @@ import { dueAssessments } from "@/lib/assessments";
 import { listRound } from "@/lib/medication-round";
 import { ROUNDS, initials, type RoundKey } from "@/lib/medication-shared";
 import { readSettings } from "@/lib/settings";
+import { activeRestraints } from "@/lib/restraints";
+import { restraintLabel, type RestraintKind } from "@/lib/restraints-shared";
 
 // "Mein Dienst": what is due today per resident of a care unit, gathered from the
 // modules (medication, vital signs, wounds, assessments, care plan, documentation, tasks).
 
-export type WorkItemKind = "medication" | "vitals" | "wound" | "assessment" | "plan" | "documentation" | "task";
+export type WorkItemKind =
+  "medication" | "vitals" | "wound" | "assessment" | "plan" | "documentation" | "task" | "restraint";
 
 export type WorkItem = {
   kind: WorkItemKind;
@@ -38,7 +41,7 @@ const TONE_WEIGHT = { critical: 0, attention: 1, info: 2 };
 export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | null): Promise<Worklist> {
   const careUnitId = careUnitIdInput ? assertUuid(careUnitIdInput, "Wohnbereich") : null;
   const org = ctx.actor.organizationId;
-  const [residents, vitals, wounds, plans, docs, tasks, rounds, assessments, settings] = await Promise.all([
+  const [residents, vitals, wounds, plans, docs, tasks, rounds, assessments, settings, restraints] = await Promise.all([
     ctx.sql`
       SELECT r.id, r.first_name, r.last_name, COALESCE(ro.name, '') AS room, COALESCE(cu.name, '') AS care_unit, cu.id AS care_unit_id
       FROM carecore_residents r
@@ -82,6 +85,7 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
     Promise.all((Object.keys(ROUNDS) as RoundKey[]).map((round) => listRound(ctx, round, null))),
     dueAssessments(ctx),
     readSettings(ctx),
+    activeRestraints(ctx),
   ]);
   // Reminder thresholds of "Leitung · Konfiguration".
   const overdueMs = settings.medicationOverdue.enabled ? (settings.medicationOverdue.value ?? 30) * 60_000 : Infinity;
@@ -198,11 +202,36 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
         href: "/c/betrieb/aufgaben",
       });
 
+    // Freiheitsbeschränkende Massnahmen: Überprüfung fällig, Vertretung noch nicht informiert.
+    for (const measure of by(restraints, id)) {
+      const label = restraintLabel({ kind: measure.kind as RestraintKind, description: String(measure.description) });
+      const href = `/c/bewohner?resident=${id}&ansicht=fbm`;
+      if (measure.review_due)
+        items.push({ kind: "restraint", label: "FBM überprüfen", detail: label, tone: "attention", href });
+      if (measure.representative_pending)
+        items.push({
+          kind: "restraint",
+          label: "Vertretung über FBM informieren",
+          detail: label,
+          tone: "attention",
+          href,
+        });
+    }
+
     items.sort((a, b) => TONE_WEIGHT[a.tone] - TONE_WEIGHT[b.tone]);
     return { id, name, initials: initials(name), room: String(row.room), careUnit: String(row.care_unit), items };
   });
 
-  const totals = { medication: 0, vitals: 0, wound: 0, assessment: 0, plan: 0, documentation: 0, task: 0 };
+  const totals = {
+    medication: 0,
+    vitals: 0,
+    wound: 0,
+    assessment: 0,
+    plan: 0,
+    documentation: 0,
+    task: 0,
+    restraint: 0,
+  };
   for (const resident of list) for (const item of resident.items) totals[item.kind] += 1;
   const urgency = (resident: WorkResident) =>
     resident.items.length ? Math.min(...resident.items.map((item) => TONE_WEIGHT[item.tone])) : 9;

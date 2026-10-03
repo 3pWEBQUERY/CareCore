@@ -37,7 +37,8 @@ export type RecordView =
   | "appointments"
   | "history"
   | "documents"
-  | "biography";
+  | "biography"
+  | "restraints";
 
 export type DocumentationFlag = "important" | "visit" | "observation" | "handover";
 
@@ -112,6 +113,7 @@ export const recordTabs = [
   "Pflegebedarf",
   "Verlauf",
   "Dokumente",
+  "FBM",
 ];
 
 export type ResidentBiography = {

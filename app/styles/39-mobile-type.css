@@ -1734,6 +1734,9 @@
   .admin-country-region {
     font-size: 12px;
   }
+  .restraint-facts dt {
+    font-size: 12px;
+  }
   :root .operations-quick a {
     font-size: 11.5px;
   }

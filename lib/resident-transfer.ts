@@ -4,6 +4,8 @@ import { listOrders } from "./medication-orders";
 import { recordSummary } from "./resident-record";
 import type { TransferSheet } from "./resident-transfer-shared";
 import { auditOrigin } from "@/lib/audit-origin";
+import { activeRestraints } from "@/lib/restraints";
+import { restraintLabel, type RestraintKind } from "@/lib/restraints-shared";
 
 const text = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : null);
 
@@ -13,6 +15,7 @@ export async function transferSheet(ctx: ApiContext, residentIdInput: unknown): 
   const summary = await recordSummary(ctx, residentIdInput);
   const residentId = String(residentIdInput);
   const { sql } = ctx;
+  const restraints = await activeRestraints(ctx, residentId);
   const [facility, resident, contacts, flags, nutrition, plan, wounds, body, vitals, notes, orders] =
     (await Promise.all([
       sql`
@@ -97,6 +100,11 @@ export async function transferSheet(ctx: ApiContext, residentIdInput: unknown): 
       category: String(row.category),
       severity: String(row.severity) as "critical" | "attention" | "info",
       details: text(row.details),
+    })),
+    restraints: restraints.map((row) => ({
+      label: restraintLabel({ kind: row.kind as RestraintKind, description: String(row.description) }),
+      schedule: text(row.schedule),
+      since: iso(row.starts_at) ?? "",
     })),
     nutrition: nutrition[0]
       ? {

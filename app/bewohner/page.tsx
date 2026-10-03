@@ -34,7 +34,12 @@ export default function ResidentsPage() {
     filteredResidents,
   } = r;
   // The open record steps through the residents of the directory as filtered, keeping the tab.
-  const [recordView, setRecordView] = useState<RecordView>("overview");
+  // „?resident=…&ansicht=fbm“ (z. B. aus der Tagesliste) öffnet die Akte direkt bei den Massnahmen.
+  const [recordView, setRecordView] = useState<RecordView>(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("ansicht") === "fbm"
+      ? "restraints"
+      : "overview",
+  );
   const navigationList =
     selectedResident && filteredResidents.some((item) => item.id === selectedResident.id)
       ? filteredResidents

@@ -280,10 +280,13 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
 
 ### Hoch
 
-- [ ] **Freiheitsbeschränkende Massnahmen (FBM):** eigenes Protokoll je Person: Art (z. B. Bettgitter, Gurt,
-      Sensormatte, geschlossene Tür), Grund, Beginn und Ende, wer entschieden hat, Information der vertretungsberechtigten
-      Person, nächste Überprüfung mit Erinnerung. Rechtsgrundlage je Land (CH: ZGB Art. 383–385; DE: § 1831 BGB;
-      AT: Heimaufenthaltsgesetz) beim Bau prüfen. Heute nur als Ereignisart im Qualitätsmanagement möglich.
+- [x] **Freiheitsbeschränkende Massnahmen (FBM):** Reiter „FBM“ (in DE „FEM“) in der Akte: Art, Beschreibung,
+      Grund und Zweck, geprüfte mildere Massnahmen, anordnende Person, Haltung und Information der Person,
+      Vertretung mit Datum der Information, Genehmigung bzw. Meldung je Land, Beginn, Zeitraum, geplantes Ende.
+      Überprüfung mit Ergebnis (weiterführen mit neuem Termin oder beenden) und Begründung; den Termin legt die
+      Einrichtung je Massnahme fest. Tagesliste erinnert an fällige Überprüfungen und an die noch nicht informierte
+      Vertretung; laufende Massnahmen stehen im Überleitungsbogen; jede Änderung im Änderungsprotokoll. Grundlagen
+      geprüft: CH ZGB Art. 383–385, DE § 1831 Abs. 4 BGB, AT HeimAufG §§ 6–7.
 - [ ] **Vorsorge und Vertretung in den Stammdaten:** Patientenverfügung, Vorsorgeauftrag bzw. -vollmacht,
       vertretungsberechtigte Person mit Kontakt und Dokument; Hinweis im Aktenkopf und im Überleitungsbogen.
       Ergänzt den bestehenden Reanimationsstatus.

@@ -192,12 +192,18 @@ export default function TransferSheetPage() {
 
           <section>
             <h2>Risiken &amp; aktuelle Hinweise</h2>
-            {data.flags.length || data.carePlan?.focus ? (
+            {data.flags.length || data.restraints.length || data.carePlan?.focus ? (
               <ul className="transfer-list">
                 {data.flags.map((flag) => (
                   <li key={flag.label} className={flag.severity}>
                     <strong>{flag.label}</strong>
                     {flag.details && ` – ${flag.details}`}
+                  </li>
+                ))}
+                {data.restraints.map((measure) => (
+                  <li key={`${measure.label}-${measure.since}`} className="attention">
+                    <strong>Freiheitsbeschränkende Massnahme: {measure.label}</strong>
+                    {measure.schedule && ` – ${measure.schedule}`} (seit {formatDate(measure.since)})
                   </li>
                 ))}
                 {data.carePlan?.focus && (

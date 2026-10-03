@@ -9,6 +9,7 @@ import { PERMISSION_LABELS } from "@/lib/permission-labels";
 import { PORTAL_AREAS, PORTAL_BASES, PORTAL_KINDS } from "@/lib/portal-shared";
 import { EFFECTIVENESS, SEVERITIES } from "@/lib/quality-shared";
 import { RESUSCITATION_STATUSES } from "@/lib/resident-record-shared";
+import { RESTRAINT_CONSENT, RESTRAINT_KINDS, RESTRAINT_REVIEW_OUTCOMES } from "@/lib/restraints-shared";
 import { SETTING_DEFINITIONS, type SettingKey } from "@/lib/settings-shared";
 import { TASK_PRIORITIES, TASK_RECURRENCE, TASK_STATUS } from "@/lib/tasks-shared";
 import { TERMINOLOGIES, type Terms } from "@/lib/terminology";
@@ -90,6 +91,7 @@ export const AUDIT_AREAS: Record<string, { area: string; href: string | null }> 
   portal_thread: { area: "Portalnachricht", href: "/bewohner" },
   ai_draft: { area: "KI-Entwurf", href: null },
   ai_search: { area: "KI-Suche", href: null },
+  restraint_measure: { area: "Freiheitsbeschränkende Massnahme", href: "/bewohner" },
 };
 
 // Allgemeine Aktionen: „<Bereich> <Verb>“, z. B. „Rolle erstellt“.
@@ -207,6 +209,10 @@ const TITLES: Record<string, string> = {
   "portal_thread:started": "Portalnachricht begonnen",
   "ai_search:asked": "Frage an die KI-Suche",
   "support_request:reported": "Problem gemeldet",
+  "restraint_measure:created": "Freiheitsbeschränkende Massnahme erfasst",
+  "restraint_measure:updated": "Freiheitsbeschränkende Massnahme geändert",
+  "restraint_measure:reviewed": "Freiheitsbeschränkende Massnahme überprüft",
+  "restraint_measure:ended": "Freiheitsbeschränkende Massnahme beendet",
   "pharmacy_order:cancelled": "Apothekenbestellung storniert",
   "training_enrollment:enrolled": "Zur Schulung angemeldet",
   "training_enrollment:withdrawn": "Von der Schulung abgemeldet",
@@ -284,6 +290,16 @@ export const auditSettingTitle = (key: string) =>
 
 // Felder, die das Protokoll zeigt. Alles andere (technische Kennungen, Dateitypen, Zwischenwerte) bleibt verborgen.
 const FIELDS: Record<string, string> = {
+  alternatives: "Geprüfte mildere Massnahmen",
+  orderedBy: "Angeordnet von",
+  residentConsent: "Haltung der Person",
+  residentInformed: "Person vorab informiert",
+  representativeName: "Vertretung",
+  representativeInformedOn: "Vertretung informiert am",
+  approvalReference: "Genehmigung / Meldung",
+  startsAt: "Beginn",
+  plannedUntil: "Geplantes Ende",
+  schedule: "Zeitraum",
   name: "Bezeichnung",
   title: "Titel",
   code: "Kürzel",
@@ -508,9 +524,11 @@ const VALUE_LABELS: Record<string, (value: string) => string | undefined> = {
     achieved: "Erreicht",
     not_achieved: "Nicht erreicht",
     ongoing: "Weiter verfolgen",
+    ...RESTRAINT_REVIEW_OUTCOMES,
   }),
+  residentConsent: pick(RESTRAINT_CONSENT),
   origin: pick(ORIGIN_LABELS),
-  kind: pick({ ...PORTAL_KINDS, document: "Dokument", standard: "Pflegestandard" }),
+  kind: pick({ ...PORTAL_KINDS, ...RESTRAINT_KINDS, document: "Dokument", standard: "Pflegestandard" }),
   basis: pick(PORTAL_BASES),
   areas: (value) => {
     const label = pick(PORTAL_AREAS)(value);
