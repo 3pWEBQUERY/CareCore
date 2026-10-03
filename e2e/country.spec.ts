@@ -42,5 +42,14 @@ test("Land wählen: Pflegegrade in Konfiguration und Aufnahme, zurück zur Schwe
   );
   await page.goto("/c/leitung/administration/konfiguration");
   await expect(card.getByRole("button", { name: "Schweiz" })).toHaveAttribute("aria-pressed", "true");
+
+  // Änderungsprotokoll: lesbar auf Deutsch statt „organization country updated“.
+  const entry = page.locator(".leadership-register-list button").first();
+  await expect(entry).toContainText("Land und Region der Einrichtung geändert");
+  await entry.click();
+  const detail = page.locator(".leadership-decision");
+  await expect(detail).toContainText("Deutschland → Schweiz");
+  await expect(detail).toContainText("Bayern → –");
+  await expect(page.locator("#admin-log")).not.toContainText("country");
   expect(errors).toEqual([]);
 });

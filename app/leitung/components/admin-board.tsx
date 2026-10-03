@@ -54,7 +54,7 @@ export function AdminBoard({ view }: { view: AdminView }) {
   const visible = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("de-CH");
     return log.filter((entry) =>
-      `${entry.area} ${entry.action} ${entry.subject} ${entry.actor}`.toLocaleLowerCase("de-CH").includes(needle),
+      `${entry.title} ${entry.area} ${entry.subject} ${entry.actor}`.toLocaleLowerCase("de-CH").includes(needle),
     );
   }, [log, query]);
   const selectedIndex = Math.max(
@@ -161,9 +161,7 @@ export function AdminBoard({ view }: { view: AdminView }) {
                 <ModuleIcon name={entry.href ? iconFor(entry.href) : "docs"} />
               </span>
               <span>
-                <strong>
-                  {entry.area} {entry.action}
-                </strong>
+                <strong>{entry.title}</strong>
                 <small>{[entry.subject, entry.actor].filter(Boolean).join(" · ")}</small>
               </span>
               <span>
@@ -186,7 +184,7 @@ export function AdminBoard({ view }: { view: AdminView }) {
         <div className="card-header">
           <div>
             <p className="eyebrow">Änderung</p>
-            <h2 className="card-title">{selected ? `${selected.area} ${selected.action}` : "Kein Eintrag gewählt"}</h2>
+            <h2 className="card-title">{selected ? selected.title : "Kein Eintrag gewählt"}</h2>
           </div>
           {selected && <span className="status-badge info">{selected.area}</span>}
         </div>
