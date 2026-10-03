@@ -9,10 +9,12 @@ export function useRecordContacts({
   resident,
   onAction,
   confirm,
+  onChanged,
 }: {
   resident: ResidentRecordData;
   onAction: (message: string) => void;
   confirm: Confirm;
+  onChanged?: () => void;
 }) {
   const [contacts, setContacts] = useState<ResidentContact[]>([]);
   const [contactsLoading, setContactsLoading] = useState(Boolean(resident.id));
@@ -56,6 +58,7 @@ export function useRecordContacts({
               email: contact.email ?? "",
               isPrimary: contact.is_primary,
               isEmergencyContact: contact.is_emergency_contact,
+              representativeRole: contact.representative_role ?? null,
             },
           }
         : { id: null, draft: { ...emptyContact, isPrimary: contacts.length === 0 } },
@@ -100,6 +103,7 @@ export function useRecordContacts({
         );
       });
       setContactEditor(null);
+      onChanged?.();
       onAction(contactEditor.id ? "Kontaktperson aktualisiert" : "Kontaktperson hinzugefügt");
     } catch {
       setContactsError("Kontaktperson konnte nicht gespeichert werden.");
@@ -127,6 +131,7 @@ export function useRecordContacts({
         return;
       }
       setContacts((current) => current.filter((item) => item.id !== contact.id));
+      onChanged?.();
       onAction("Kontaktperson entfernt");
     } catch {
       setContactsError("Kontaktperson konnte nicht entfernt werden.");

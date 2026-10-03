@@ -80,6 +80,7 @@ const TITLES: Record<string, string> = {
   "medication_administration:effect_checked": "Wirkungskontrolle erfasst",
   "resident:medication_allergies_updated": "Allergien geändert",
   "resident:resuscitation_updated": "Reanimationsstatus geändert",
+  "resident:advance_care_updated": "Vorsorge geändert",
   "resident:gender_updated": "Geschlecht geändert",
   "wound_entry:documented": "Wundverlauf dokumentiert",
 };
@@ -133,6 +134,13 @@ const FIELD_LABELS: Record<string, string> = {
   instructions: "Anleitung",
   frequency: "Häufigkeit",
   responsibleRole: "Zuständigkeit",
+  representativeRole: "Vertretung",
+  advanceDirective: "Patientenverfügung",
+  advanceDirectiveOn: "Datum der Patientenverfügung",
+  advanceDirectiveLocation: "Aufbewahrungsort",
+  careMandate: "Vorsorgeauftrag / -vollmacht",
+  careMandateOn: "Errichtet am",
+  careMandateEffectiveOn: "Wirksam seit",
 };
 
 const NAME_KEYS = ["fullName", "label", "itemName", "title", "name", "metric", "medication", "file"];

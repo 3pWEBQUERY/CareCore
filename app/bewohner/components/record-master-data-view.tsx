@@ -1,6 +1,6 @@
 "use client";
 
-import { useCountry, useTerms } from "@/app/components/care-context";
+import { useCountry, useTerms, useWorkContext } from "@/app/components/care-context";
 import { useState } from "react";
 import { CalendarDots, Check, ClipboardText, PencilSimple, Plus, Trash, User } from "@phosphor-icons/react";
 import { formatDate, formatDateTime, requestJson } from "@/app/components/workspace-ui";
@@ -14,6 +14,7 @@ import {
   type ResuscitationStatus,
 } from "@/lib/resident-record-shared";
 import type { ResidentRecordState } from "./use-resident-record";
+import { ADVANCE_ANSWERS, ADVANCE_CARE_LABELS, type AdvanceAnswer } from "@/lib/advance-care-shared";
 
 const GENDERS: Record<string, string> = {
   female: "Weiblich",
@@ -25,6 +26,7 @@ const GENDERS: Record<string, string> = {
 export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
   const t = useTerms();
   const country = useCountry();
+  const advanceLabels = ADVANCE_CARE_LABELS[useWorkContext()?.country ?? "CH"];
   const {
     resident,
     contentRef,
@@ -360,6 +362,117 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
             </div>
           </section>
 
+          <section className="record-card master-data-card" aria-labelledby="advance-care-title">
+            <div className="record-card-heading">
+              <div>
+                <span className="record-section-label">Vorsorge</span>
+                <h3 id="advance-care-title">Vorsorge &amp; Vertretung</h3>
+              </div>
+            </div>
+            <div className="master-data-form-grid single-column">
+              <label>
+                <span>Patientenverfügung</span>
+                <CareOptionSelect
+                  label="Patientenverfügung"
+                  value={values.advanceDirective ?? ""}
+                  onChange={(value) =>
+                    setDraft((current) =>
+                      current
+                        ? value
+                          ? { ...current, advanceDirective: value as AdvanceAnswer }
+                          : {
+                              ...current,
+                              advanceDirective: null,
+                              advanceDirectiveOn: null,
+                              advanceDirectiveLocation: null,
+                            }
+                        : current,
+                    )
+                  }
+                  disabled={!editable}
+                  options={[
+                    { value: "", label: "Nicht erfasst" },
+                    ...Object.entries(ADVANCE_ANSWERS).map(([value, label]) => ({ value, label })),
+                  ]}
+                />
+              </label>
+              {values.advanceDirective === "yes" && (
+                <>
+                  <label>
+                    <span>Verfasst am</span>
+                    {editable ? (
+                      <input type="date" {...field("advanceDirectiveOn")} />
+                    ) : (
+                      <input readOnly value={values.advanceDirectiveOn ? formatDate(values.advanceDirectiveOn) : ""} />
+                    )}
+                  </label>
+                  <label>
+                    <span>Aufbewahrungsort</span>
+                    <input
+                      placeholder={editable ? "z. B. Kopie unter Dokumente, Original bei der Tochter" : undefined}
+                      {...field("advanceDirectiveLocation")}
+                    />
+                  </label>
+                </>
+              )}
+              <label>
+                <span>{advanceLabels.careMandate}</span>
+                <CareOptionSelect
+                  label={advanceLabels.careMandate}
+                  value={values.careMandate ?? ""}
+                  onChange={(value) =>
+                    setDraft((current) =>
+                      current
+                        ? value
+                          ? { ...current, careMandate: value as AdvanceAnswer }
+                          : { ...current, careMandate: null, careMandateOn: null, careMandateEffectiveOn: null }
+                        : current,
+                    )
+                  }
+                  disabled={!editable}
+                  options={[
+                    { value: "", label: "Nicht erfasst" },
+                    ...Object.entries(ADVANCE_ANSWERS).map(([value, label]) => ({ value, label })),
+                  ]}
+                />
+              </label>
+              {values.careMandate === "yes" && (
+                <>
+                  <label>
+                    <span>Errichtet am</span>
+                    {editable ? (
+                      <input type="date" {...field("careMandateOn")} />
+                    ) : (
+                      <input readOnly value={values.careMandateOn ? formatDate(values.careMandateOn) : ""} />
+                    )}
+                  </label>
+                  <label>
+                    <span>{advanceLabels.careMandateEffective}</span>
+                    {editable ? (
+                      <input type="date" {...field("careMandateEffectiveOn")} />
+                    ) : (
+                      <input
+                        readOnly
+                        value={values.careMandateEffectiveOn ? formatDate(values.careMandateEffectiveOn) : ""}
+                      />
+                    )}
+                  </label>
+                </>
+              )}
+              <div className="advance-care-representative">
+                <span>Vertretungsberechtigte Person</span>
+                {summary?.representative ? (
+                  <strong>
+                    {summary.representative.name} · {advanceLabels.roles[summary.representative.role]}
+                    {summary.representative.phone ? ` · ${summary.representative.phone}` : ""}
+                  </strong>
+                ) : (
+                  <small>Keine erfasst – bei der Kontaktperson unter „Vertretungsberechtigt als“ festlegen.</small>
+                )}
+              </div>
+            </div>
+          </section>
+
           <section className="record-card master-data-card">
             <div className="record-card-heading">
               <div>
@@ -416,6 +529,9 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
                       <div className="resident-contact-badges">
                         {contact.is_primary && <span>Hauptkontakt</span>}
                         {contact.is_emergency_contact && <span className="emergency">Notfall</span>}
+                        {contact.representative_role && (
+                          <span title={advanceLabels.roles[contact.representative_role]}>Vertretung</span>
+                        )}
                       </div>
                     </div>
                     <div className="resident-contact-details">

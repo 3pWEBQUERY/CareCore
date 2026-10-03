@@ -287,9 +287,12 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
       Einrichtung je Massnahme fest. Tagesliste erinnert an fällige Überprüfungen und an die noch nicht informierte
       Vertretung; laufende Massnahmen stehen im Überleitungsbogen; jede Änderung im Änderungsprotokoll. Grundlagen
       geprüft: CH ZGB Art. 383–385, DE § 1831 Abs. 4 BGB, AT HeimAufG §§ 6–7.
-- [ ] **Vorsorge und Vertretung in den Stammdaten:** Patientenverfügung, Vorsorgeauftrag bzw. -vollmacht,
-      vertretungsberechtigte Person mit Kontakt und Dokument; Hinweis im Aktenkopf und im Überleitungsbogen.
-      Ergänzt den bestehenden Reanimationsstatus.
+- [x] **Vorsorge und Vertretung in den Stammdaten:** Karte „Vorsorge & Vertretung“: Patientenverfügung (liegt vor /
+      nicht vor / nicht erfasst, Datum, Aufbewahrungsort) und Vorsorgeauftrag bzw. Vorsorgevollmacht (Datum, wirksam
+      seit). Kontaktpersonen erhalten eine Rolle „vertretungsberechtigt als“ mit Bezeichnungen je Land. Aktenkopf zeigt
+      „PV: Ja / Nein / nicht erfasst“ und „Vertretung: Name“; Überleitungsbogen enthält beides; das FBM-Formular
+      übernimmt die Vertretung. Jede Änderung der Vorsorge mit eigenem Protokolleintrag. CareCore prüft keine
+      Wirksamkeit.
 - [ ] **Anbindung an das elektronische Patientendossier:** CH: EPD über eine Stammgemeinschaft; DE: Telematikinfrastruktur
       (ePA, KIM); AT: ELGA. Anschlusspflichten und Profile (IHE, FHIR) je Land prüfen. Grösster Integrationsschritt,
       braucht Partner und Zertifizierung.

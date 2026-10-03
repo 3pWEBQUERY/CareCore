@@ -1,12 +1,15 @@
 "use client";
 
-import { useTerms } from "@/app/components/care-context";
+import { useTerms, useWorkContext } from "@/app/components/care-context";
+import { CareOptionSelect } from "@/app/components/care-form-controls";
+import { ADVANCE_CARE_LABELS, REPRESENTATIVE_ROLE_KEYS, isRepresentativeRole } from "@/lib/advance-care-shared";
 import { Check, X } from "@phosphor-icons/react";
 import { useEscapeClose } from "@/app/components/use-escape-close";
 import type { ResidentRecordState } from "./use-resident-record";
 
 export function ContactEditorDialog({ r }: { r: ResidentRecordState }) {
   const t = useTerms();
+  const roles = ADVANCE_CARE_LABELS[useWorkContext()?.country ?? "CH"].roles;
   const { resident, contactEditor, setContactEditor, contactSaving, saveContact, contactsError } = r;
   useEscapeClose(() => !contactSaving && setContactEditor(null), Boolean(contactEditor));
   if (!contactEditor) return null;
@@ -81,6 +84,27 @@ export function ContactEditorDialog({ r }: { r: ResidentRecordState }) {
                   )
                 }
                 placeholder="name@beispiel.ch"
+              />
+            </label>
+            <label className="wide">
+              <span>Vertretungsberechtigt als</span>
+              <CareOptionSelect
+                label="Vertretungsberechtigt als"
+                value={contactEditor.draft.representativeRole ?? ""}
+                onChange={(value) =>
+                  setContactEditor((current) =>
+                    current
+                      ? {
+                          ...current,
+                          draft: { ...current.draft, representativeRole: isRepresentativeRole(value) ? value : null },
+                        }
+                      : current,
+                  )
+                }
+                options={[
+                  { value: "", label: "Nicht vertretungsberechtigt" },
+                  ...REPRESENTATIVE_ROLE_KEYS.map((role) => ({ value: role, label: roles[role] })),
+                ]}
               />
             </label>
           </div>
