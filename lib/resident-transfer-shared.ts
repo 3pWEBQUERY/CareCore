@@ -38,6 +38,7 @@ export type TransferSheet = {
     details: string | null;
   }>;
   // Laufende freiheitsbeschränkende Massnahmen (Art, Zeitraum, Beginn).
+  isolations: Array<{ label: string; reason: string; precautions: string | null; since: string }>;
   restraints: Array<{ label: string; schedule: string | null; since: string }>;
   nutrition: {
     diet: string | null;

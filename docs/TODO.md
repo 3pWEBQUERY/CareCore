@@ -320,8 +320,12 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
       im Monat mit CSV-Export (Summen und Einzelleistungen). CareCore berechnet weder Pflegestufe noch Rechnung.
 - [ ] **Leistungen: Anbindung an Einstufungs- und Abrechnungssysteme:** Export im Format des jeweiligen Systems
       (z. B. BESA, RAI, PLAISIR, Abrechnungssoftware), sobald die Schnittstellen der Kunden bekannt sind.
-- [ ] **Ausbruchs- und Isolationsübersicht:** Personen mit Isolation oder Hygienemassnahme je Wohnbereich,
-      Verlauf und Meldung an die Leitung. Organisatorisch, keine Diagnose.
+- [x] **Ausbruchs- und Isolationsübersicht:** Bewohner › Isolation & Ausbruch zeigt laufende Isolationen je
+      Wohnbereich (Art, Anlass und Massnahmen gemäss Anordnung, nächste Überprüfung). Überprüfen heisst weiterführen
+      oder aufheben, mit Begründung. Den Ausbruch erklärt und beendet die Leitung, mit Massnahmen und Meldung an die
+      Behörde. Neue Isolationen gehen an die Leitung, Ausbrüche an die Mitarbeitenden des Bereichs. Die Tagesliste
+      zeigt „Isolation beachten/überprüfen“, und der Überleitungsbogen enthält laufende Isolationen. Der Verlauf
+      umfasst 90 Tage, alles steht im Protokoll. Ohne Diagnose und ohne eigene Schwellen für einen Ausbruch.
 - [ ] **Alltagsgestaltung und Aktivierung:** Angebote planen, Teilnahme je Person dokumentieren, Übersicht für
       Angehörige im Portal (wenn freigegeben).
 - [ ] **Belegung und Eintritt:** Warteliste, geplante Eintritte, Zimmerplanung mit freien Plätzen je Wohnbereich.

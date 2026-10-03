@@ -11,6 +11,7 @@ import { EFFECTIVENESS, SEVERITIES } from "@/lib/quality-shared";
 import { RESUSCITATION_STATUSES } from "@/lib/resident-record-shared";
 import { ADVANCE_ANSWERS, ADVANCE_CARE_LABELS } from "@/lib/advance-care-shared";
 import { SERVICE_SOURCES } from "@/lib/services-shared";
+import { ISOLATION_KINDS } from "@/lib/hygiene-shared";
 import { RESTRAINT_CONSENT, RESTRAINT_KINDS, RESTRAINT_REVIEW_OUTCOMES } from "@/lib/restraints-shared";
 import { SETTING_DEFINITIONS, type SettingKey } from "@/lib/settings-shared";
 import { TASK_PRIORITIES, TASK_RECURRENCE, TASK_STATUS } from "@/lib/tasks-shared";
@@ -96,6 +97,8 @@ export const AUDIT_AREAS: Record<string, { area: string; href: string | null }> 
   restraint_measure: { area: "Freiheitsbeschränkende Massnahme", href: "/bewohner" },
   service_record: { area: "Pflegeleistung", href: "/pflegedokumentation/leistungen" },
   service_catalog: { area: "Leistungskatalog", href: "/leitung/administration/leistungskatalog" },
+  isolation_measure: { area: "Isolation", href: "/bewohner/hygiene" },
+  outbreak: { area: "Ausbruch", href: "/bewohner/hygiene" },
 };
 
 // Allgemeine Aktionen: „<Bereich> <Verb>“, z. B. „Rolle erstellt“.
@@ -223,6 +226,12 @@ const TITLES: Record<string, string> = {
   "service_record:cancelled": "Pflegeleistung storniert",
   "service_catalog:created": "Leistung im Katalog angelegt",
   "service_catalog:updated": "Leistung im Katalog geändert",
+  "isolation_measure:created": "Isolation erfasst",
+  "isolation_measure:reviewed": "Isolation überprüft",
+  "isolation_measure:ended": "Isolation aufgehoben",
+  "outbreak:declared": "Ausbruch erfasst",
+  "outbreak:updated": "Ausbruch geändert",
+  "outbreak:ended": "Ausbruch beendet",
   "pharmacy_order:cancelled": "Apothekenbestellung storniert",
   "training_enrollment:enrolled": "Zur Schulung angemeldet",
   "training_enrollment:withdrawn": "Von der Schulung abgemeldet",
@@ -422,6 +431,10 @@ const FIELDS: Record<string, string> = {
   performedAt: "Erbracht am",
   cancelReason: "Grund der Stornierung",
   defaultMinutes: "Vorschlag Minuten",
+  precautions: "Hygienemassnahmen",
+  measures: "Massnahmen",
+  authorityReportedOn: "Meldung an die Behörde",
+  authorityNote: "Notiz zur Meldung",
   witness: "Zeuge",
   expected: "Soll",
   counted: "Gezählt",
@@ -552,7 +565,13 @@ const VALUE_LABELS: Record<string, (value: string) => string | undefined> = {
   careMandate: pick(ADVANCE_ANSWERS),
   representativeRole: pick(ADVANCE_CARE_LABELS.CH.roles),
   origin: pick(ORIGIN_LABELS),
-  kind: pick({ ...PORTAL_KINDS, ...RESTRAINT_KINDS, document: "Dokument", standard: "Pflegestandard" }),
+  kind: pick({
+    ...PORTAL_KINDS,
+    ...RESTRAINT_KINDS,
+    ...ISOLATION_KINDS,
+    document: "Dokument",
+    standard: "Pflegestandard",
+  }),
   basis: pick(PORTAL_BASES),
   areas: (value) => {
     const label = pick(PORTAL_AREAS)(value);
