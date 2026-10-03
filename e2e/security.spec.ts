@@ -22,8 +22,12 @@ test("Sitzungen beenden: Person ist überall abgemeldet", async ({ page, browser
 test("Such-Assistenz: Frage in der Suche an CareCore KI stellen", async ({ page }) => {
   await login(page, ADMIN);
   await page.goto("/c");
-  await page.keyboard.press("Control+k");
   const dialog = page.getByRole("dialog", { name: "Globale Suche" });
+  // Das Tastenkürzel wirkt erst, wenn die Seite geladen ist; Öffnen ist wiederholbar.
+  await expect(async () => {
+    await page.keyboard.press("Control+k");
+    await expect(dialog).toBeVisible({ timeout: 1000 });
+  }).toPass();
   await dialog.getByLabel("Suchbegriff").fill("Wer ist diese Woche gestürzt?");
   const ask = dialog.getByRole("button", { name: /CareCore KI fragen/ });
   await expect(ask).toBeVisible();
