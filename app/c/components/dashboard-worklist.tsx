@@ -18,6 +18,7 @@ const KIND_ICONS: Record<WorkItemKind, ModuleIconName> = {
   restraint: "quality",
   isolation: "alert",
   repositioning: "pulse",
+  elimination: "note",
 };
 // Gliederung nach Dringlichkeit: Kritisch, Wichtig, Routine (entspricht der Einstufung der Punkte).
 const FILTERS = [

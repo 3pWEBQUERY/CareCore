@@ -13,6 +13,7 @@ export type SettingKey =
   | "weightLossPercent"
   | "weightLossDays"
   | "fluidBehindDays"
+  | "stoolReminderDays"
   | "navigationBadges"
   | "keyboardShortcuts"
   | "residentRetentionYears"
@@ -122,6 +123,19 @@ export const SETTING_DEFINITIONS: Record<SettingKey, Definition> = {
       value
         ? `Hinweis, wenn das persönliche Trinkziel an ${value} ${value === 1 ? "Tag" : "Tagen in Folge"} nicht erreicht wurde`
         : "Anzahl Tage ist noch nicht festgelegt",
+    unit: "Tage",
+    min: 1,
+    max: 14,
+    defaults: { enabled: false, value: null },
+  },
+  stoolReminderDays: {
+    title: "Hinweis Stuhlgang",
+    icon: "note",
+    area: "Tagesliste",
+    describe: (value) =>
+      value
+        ? `Hinweis in der Tagesliste, wenn seit ${value} ${value === 1 ? "Tag" : "Tagen"} kein Stuhlgang dokumentiert ist (nur für Personen mit Ausscheidungsprotokoll)`
+        : "Anzahl Tage ist noch nicht festgelegt – es gibt keinen Hinweis",
     unit: "Tage",
     min: 1,
     max: 14,

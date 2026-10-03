@@ -8,6 +8,7 @@ import { isolationLabel, type IsolationKind } from "@/lib/hygiene-shared";
 import { activeRestraints } from "@/lib/restraints";
 import { restraintLabel, type RestraintKind } from "@/lib/restraints-shared";
 import { dueRepositioning } from "@/lib/repositioning";
+import { dueStool } from "@/lib/elimination";
 import { formatInterval } from "@/lib/repositioning-shared";
 
 // "Mein Dienst": what is due today per resident of a care unit, gathered from the
@@ -23,7 +24,8 @@ export type WorkItemKind =
   | "task"
   | "restraint"
   | "isolation"
-  | "repositioning";
+  | "repositioning"
+  | "elimination";
 
 export type WorkItem = {
   kind: WorkItemKind;
@@ -67,6 +69,7 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
     restraints,
     isolations,
     repositioning,
+    stool,
   ] = await Promise.all([
     ctx.sql`
       SELECT r.id, r.first_name, r.last_name, COALESCE(ro.name, '') AS room, COALESCE(cu.name, '') AS care_unit, cu.id AS care_unit_id
@@ -114,6 +117,7 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
     activeRestraints(ctx),
     activeIsolations(ctx),
     dueRepositioning(ctx),
+    dueStool(ctx),
   ]);
   // Reminder thresholds of "Leitung · Konfiguration".
   const overdueMs = settings.medicationOverdue.enabled ? (settings.medicationOverdue.value ?? 30) * 60_000 : Infinity;
@@ -291,6 +295,20 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
         });
     }
 
+    // Ausscheidung: kein Stuhlgang seit der Tageszahl der Einrichtung (nur mit geführtem Protokoll).
+    for (const entry of by(stool, id)) {
+      const since = Number(entry.since);
+      items.push({
+        kind: "elimination",
+        label: "Stuhlgang beobachten",
+        detail: entry.never
+          ? `kein Stuhlgang dokumentiert seit Beginn des Protokolls (${since} ${since === 1 ? "Tag" : "Tage"})`
+          : `letzter Stuhlgang vor ${since} ${since === 1 ? "Tag" : "Tagen"}`,
+        tone: "attention",
+        href: "/c/pflegedokumentation/ausscheidung",
+      });
+    }
+
     items.sort((a, b) => TONE_WEIGHT[a.tone] - TONE_WEIGHT[b.tone]);
     return { id, name, initials: initials(name), room: String(row.room), careUnit: String(row.care_unit), items };
   });
@@ -306,6 +324,7 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
     restraint: 0,
     isolation: 0,
     repositioning: 0,
+    elimination: 0,
   };
   for (const resident of list) for (const item of resident.items) totals[item.kind] += 1;
   const urgency = (resident: WorkResident) =>

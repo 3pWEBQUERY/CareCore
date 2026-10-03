@@ -11,7 +11,8 @@ test("Lagerung: Plan festlegen, Positionswechsel erfassen und stornieren, Plan b
   await page.goto("/c/pflegedokumentation/lagerung");
   await expect(page.getByRole("heading", { name: "Lagerung & Bewegung", level: 1 })).toBeVisible();
   const planCard = page.getByRole("region", { name: "Lagerungsplan", exact: true });
-  // Ausgangslage: kein laufender Plan (auch nach einem abgebrochenen Lauf).
+  // Ausgangslage: kein laufender Plan (auch nach einem abgebrochenen Lauf); erst nach dem Laden prüfen.
+  await expect(planCard.getByRole("button", { name: /^Plan (festlegen|ändern)$/ })).toBeVisible();
   if (await planCard.getByRole("button", { name: "Plan beenden" }).isVisible()) {
     await planCard.getByRole("button", { name: "Plan beenden" }).click();
     const end = page.getByRole("dialog", { name: "Lagerungsplan beenden" });

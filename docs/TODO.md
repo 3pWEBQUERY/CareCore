@@ -396,9 +396,13 @@ Einrichtung bzw. die Pflegeplanung fest, gesetzliche Grundlagen werden beim Bau 
 
 ### Mittel
 
-- [ ] **Ausscheidungs- und Kontinenzprotokoll:** Stuhlgang (mit Konsistenz nach Bristol-Stuhlformen-Skala, wie
-      veröffentlicht), Wasserlassen, Inkontinenzereignisse und Material. Anzeige „letzter Stuhlgang vor … Tagen“; eine
-      Erinnerung nur mit Tageszahl, die die Einrichtung festlegt (ohne Vorgabewert).
+- [x] **Ausscheidungs- und Kontinenzprotokoll:** Dokumentation › Ausscheidung für die Person in der Kopfzeile:
+      Stuhlgang mit Form nach der Bristol-Stuhlformen-Skala (deutsche Übersetzung der veröffentlichten Beschreibungen,
+      ohne Bewertung), Wasserlassen, Urin- und Stuhlinkontinenz, Wechsel des Inkontinenzmaterials, jeweils mit Menge,
+      Uhrzeit und Bemerkung, auch offline vorgemerkt. Anzeige „letzter Stuhlgang heute / vor … Tagen“; Verlauf über 3, 7
+      oder 14 Tage; Stornieren mit Grund; alles im Protokoll der Akte und in der Auskunft. Einstellung „Hinweis
+      Stuhlgang“ (Tageszahl der Einrichtung, ohne Vorgabewert): erst damit zeigt die Tagesliste „Stuhlgang beobachten“,
+      und nur für Personen, für die das Protokoll geführt wird.
 - [ ] **Schmerzeinschätzung bei eingeschränkter Kommunikation:** Fremdeinschätzung nach einem veröffentlichten
       Instrument (z. B. BESD bzw. PAINAD; Lizenz und Wortlaut beim Bau prüfen) in den Einschätzungen, neben der
       vorhandenen Numerischen Rating-Skala. Auszählung nach der Methode, Beurteilung bei der Fachperson.

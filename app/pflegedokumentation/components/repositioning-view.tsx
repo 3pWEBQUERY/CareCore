@@ -399,9 +399,11 @@ function RepositioningContent({ showToast }: { showToast: ShowToast }) {
               <header>
                 <h2 className="card-title">Lagerungsplan</h2>
                 <p className="card-subtitle">
-                  {view?.plan
-                    ? `Festgelegt ${formatDateTime(view.plan.createdAt)} · ${view.plan.createdBy}`
-                    : "Noch kein Plan festgelegt"}
+                  {!view
+                    ? "Wird geladen …"
+                    : view.plan
+                      ? `Festgelegt ${formatDateTime(view.plan.createdAt)} · ${view.plan.createdBy}`
+                      : "Noch kein Plan festgelegt"}
                 </p>
               </header>
               {view?.plan ? (

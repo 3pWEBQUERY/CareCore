@@ -30,6 +30,7 @@ const OFFLINE_PAGES = [
   "/c/bewohner",
   "/c/pflegedokumentation",
   "/c/pflegedokumentation/lagerung",
+  "/c/pflegedokumentation/ausscheidung",
   "/c/medikation/runde",
   "/c/medikation",
   "/c/vitalwerte",
