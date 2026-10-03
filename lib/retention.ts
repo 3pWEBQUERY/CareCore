@@ -113,3 +113,92 @@ export async function deleteResidentRecord(ctx: ApiContext, residentIdInput: unk
   ]);
   await removeMedia(media.map((entry) => entry.storage_key));
 }
+
+// ---------- Warteliste ----------
+// Abgeschlossene Anfragen (zurückgezogen oder Platz vergeben) nach der Frist der Einrichtung. Abgeschlossene Einträge
+// lassen sich nicht mehr ändern; ihr Abschluss ist die letzte Änderung. Ein vergebener Platz, dessen Eintritt noch
+// geplant ist, bleibt stehen (eine Absage setzt den Eintrag zurück auf die Warteliste).
+
+export type WaitlistRetentionCase = {
+  id: string;
+  name: string;
+  status: "admitted" | "withdrawn";
+  closedOn: string;
+  dueOn: string;
+};
+
+async function waitlistMonths(ctx: ApiContext) {
+  const setting = (await readSettings(ctx)).waitlistRetentionMonths;
+  return setting.enabled && setting.value ? setting.value : null;
+}
+
+async function dueWaitlistRows(ctx: ApiContext, months: number, ids: string[] | null) {
+  return (await ctx.sql`
+    WITH org AS (SELECT timezone FROM carecore_organizations WHERE id = ${ctx.actor.organizationId}),
+    closed AS (
+      SELECT w.id, w.first_name, w.last_name, w.status, (w.updated_at AT TIME ZONE org.timezone)::date AS closed_on
+      FROM carecore_waitlist_entries w CROSS JOIN org
+      LEFT JOIN carecore_residents r ON r.id = w.resident_id
+      WHERE w.organization_id = ${ctx.actor.organizationId} AND w.status IN ('admitted', 'withdrawn')
+        AND (r.id IS NULL OR r.status <> 'planned')
+        AND (${ids === null} OR w.id = ANY(${ids ?? []}::uuid[])))
+    SELECT c.*, (c.closed_on + make_interval(months => ${months}::int))::date AS due_on
+    FROM closed c CROSS JOIN org
+    WHERE c.closed_on + make_interval(months => ${months}::int) <= (NOW() AT TIME ZONE org.timezone)::date
+    ORDER BY c.closed_on, c.last_name`) as Row[];
+}
+
+export async function waitlistRetentionOverview(ctx: ApiContext) {
+  requireAdmin(ctx);
+  const months = await waitlistMonths(ctx);
+  if (!months) return { months: null, cases: [] as WaitlistRetentionCase[] };
+  const rows = await dueWaitlistRows(ctx, months, null);
+  return {
+    months,
+    cases: rows.map((row): WaitlistRetentionCase => ({
+      id: String(row.id),
+      name: `${row.first_name} ${row.last_name}`,
+      status: row.status as WaitlistRetentionCase["status"],
+      closedOn: (iso(row.closed_on) ?? "").slice(0, 10),
+      dueOn: (iso(row.due_on) ?? "").slice(0, 10),
+    })),
+  };
+}
+
+// Löscht die gewählten fälligen Anfragen endgültig (Kontaktangaben und Bedarf). Im Protokoll bleiben die Einträge ohne
+// Inhalte stehen; die Löschung selbst wird ohne Namen protokolliert.
+export async function deleteWaitlistEntries(ctx: ApiContext, idsInput: unknown) {
+  requireAdmin(ctx);
+  if (!Array.isArray(idsInput) || !idsInput.length || idsInput.length > 500)
+    throw new ApiError("Bitte die zu löschenden Anfragen wählen.");
+  const ids = [...new Set(idsInput.map((id) => assertUuid(id, "Anfrage")))];
+  const months = await waitlistMonths(ctx);
+  if (!months) throw new ApiError("Bitte zuerst die Aufbewahrungsfrist der Warteliste festlegen.", 409);
+  const rows = await dueWaitlistRows(ctx, months, ids);
+  if (rows.length !== ids.length)
+    throw new ApiError("Die Aufbewahrungsfrist ist nicht für alle gewählten Anfragen abgelaufen.", 409);
+  const org = ctx.actor.organizationId;
+  try {
+    await ctx.sql.transaction([
+      ctx.sql`
+        UPDATE carecore_audit_log SET before_data = NULL, after_data = NULL
+        WHERE organization_id = ${org} AND entity_type = 'waitlist_entry' AND entity_id = ANY(${ids}::uuid[])`,
+      // Gleichzeitig wieder geöffnet (abgesagter Eintritt): nichts löschen.
+      ctx.sql`
+        WITH gone AS (DELETE FROM carecore_waitlist_entries
+          WHERE organization_id = ${org} AND id = ANY(${ids}::uuid[]) AND status IN ('admitted', 'withdrawn') RETURNING id)
+        SELECT carecore_assert((SELECT COUNT(*) FROM gone) = ${ids.length}, 'WAITLIST_CHANGED')`,
+      ...rows.map((row) =>
+        auditStatement(ctx, "waitlist_entry", String(row.id), "deleted", null, {
+          closedOn: (iso(row.closed_on) ?? "").slice(0, 10),
+          retentionMonths: months,
+        }),
+      ),
+    ]);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("WAITLIST_CHANGED"))
+      throw new ApiError("Eine der Anfragen wurde inzwischen geändert. Bitte neu laden.", 409);
+    throw error;
+  }
+  return { deleted: rows.length };
+}

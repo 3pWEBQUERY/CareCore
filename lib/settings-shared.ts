@@ -16,6 +16,7 @@ export type SettingKey =
   | "navigationBadges"
   | "keyboardShortcuts"
   | "residentRetentionYears"
+  | "waitlistRetentionMonths"
   | "strongLoginRequired"
   | "passwordMinLength";
 
@@ -151,6 +152,19 @@ export const SETTING_DEFINITIONS: Record<SettingKey, Definition> = {
     unit: "Jahre",
     min: 1,
     max: 30,
+    defaults: { enabled: false, value: null },
+  },
+  waitlistRetentionMonths: {
+    title: "Aufbewahrungsfrist Warteliste",
+    icon: "docs",
+    area: "Datenschutz",
+    describe: (value) =>
+      value
+        ? `Abgeschlossene Anfragen der Warteliste (zurückgezogen oder Platz vergeben) können ${value} Monate nach dem Abschluss gelöscht werden`
+        : "Frist ist noch nicht festgelegt – es wird nichts zur Löschung vorgeschlagen",
+    unit: "Monate",
+    min: 1,
+    max: 120,
     defaults: { enabled: false, value: null },
   },
   // Sicherheit: Zwei-Faktor-Pflicht für Leitung und Administration, Mindestlänge neuer Passwörter.

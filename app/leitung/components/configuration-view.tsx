@@ -12,7 +12,7 @@ import { LOGO_UPLOAD_MAX_BYTES } from "@/lib/branding-shared";
 import { logoDataUrl } from "./logo-file";
 import { SETTING_DEFINITIONS, SETTING_KEYS, type AppSettings, type SettingKey } from "@/lib/settings-shared";
 import { notifyAdminChanged } from "./admin-board";
-import { RetentionCard } from "./retention-card";
+import { RetentionCard, WaitlistRetentionCard } from "./retention-card";
 import { ApiKeysCard } from "./api-keys-card";
 import { WebhooksCard } from "./webhooks-card";
 import { SsoCard } from "./sso-card";
@@ -352,6 +352,7 @@ export function ConfigurationView({
           </div>
         </section>
         <RetentionCard showToast={showToast} />
+        <WaitlistRetentionCard showToast={showToast} />
         <ApiKeysCard showToast={showToast} />
         <WebhooksCard showToast={showToast} />
         <SsoCard showToast={showToast} />
