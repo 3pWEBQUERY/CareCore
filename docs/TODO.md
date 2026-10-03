@@ -426,8 +426,9 @@ Einrichtung bzw. die Pflegeplanung fest, gesetzliche Grundlagen werden beim Bau 
 
 ### Niedrig / UI/UX
 
-- [ ] **Tippflächen auf dem Handy:** Namenslinks in Dokumentation › Visite und Alltag & Aktivierung › Teilnahme je
-      Person sind kleiner als 24 × 24 px (WCAG 2.2, 2.5.8); Zeilenhöhe bzw. Abstand vergrössern.
+- [x] **Tippflächen auf dem Handy:** Namenslinks in Dokumentation › Visite und Alltag & Aktivierung › Teilnahme je
+      Person (sowie in den Tabellen der Leistungsauswertung) sind auf dem Handy mindestens 24 px hoch (WCAG 2.2,
+      2.5.8); Optik unverändert. Klicktest `e2e/touch-targets.spec.ts` misst jede Tippfläche.
 
 ## Braucht eine Entscheidung oder externe Quelle
 

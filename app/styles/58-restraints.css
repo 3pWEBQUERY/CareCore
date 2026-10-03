@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste sowie die Hauptüberschrift der Druckansichten. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Tippflächen der Namenslinks auf dem Handy sowie die Hauptüberschrift der Druckansichten. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -868,6 +868,15 @@
 @media (max-width: 760px) {
   .participation-list li {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Handy: Namenslinks (Visite, Teilnahme je Person, Auswertungen) mindestens 24 px hoch (WCAG 2.2, 2.5.8). */
+@media (max-width: 960px) {
+  .visit-resident h3 a,
+  .services-report-table td > a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
   }
 }
 
