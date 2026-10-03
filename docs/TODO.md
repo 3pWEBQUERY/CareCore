@@ -492,9 +492,12 @@ als Entwurf in `docs/ZWECKBESTIMMUNG.md`.
 
 ### Mittel
 
-- [ ] **Temperaturprotokoll Medikamentenkühlschrank:** Kühlschränke der Einrichtung, Messungen mit Wert und Person;
+- [x] **Temperaturprotokoll Medikamentenkühlschrank:** Kühlschränke der Einrichtung, Messungen mit Wert und Person;
       Grenzen und Messrhythmus legt die Einrichtung fest; Hinweis bei fehlender Messung bzw. Wert ausserhalb der
-      Grenzen der Einrichtung.
+      Grenzen der Einrichtung. Umgesetzt unter Medikation › Kühlschrank: Grenzen und Messrhythmus je Kühlschrank (leer =
+      kein Hinweis), Messung mit Datum, Uhrzeit, Wert und Person; ausserhalb der Grenzen ist die Massnahme Pflicht;
+      Messungen speichern die damals geltenden Grenzen; Erinnerung an die Leitung Medikation bei fälliger Messung und
+      bei Wert ausserhalb der Grenzen; Verlauf der letzten 31 Tage.
 - [ ] **Fahrdienst und externe Termine:** Arzt, Spital, Coiffeur, Fusspflege mit Transport, Begleitung und
       mitzugebenden Unterlagen; Tagesliste für den Empfang.
 - [ ] **Einarbeitung neuer Mitarbeitender:** Checkliste je Rolle (Punkte legt die Einrichtung fest), mit Abzeichnen

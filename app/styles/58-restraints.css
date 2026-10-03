@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Diagnosen, Impfungen, Hilfsmittel & Gegenstände, Einwilligungen, Geräte & Prüfungen, Küchenliste, Tippflächen kleiner Links und Textknöpfe sowie die Hauptüberschrift der Druckansichten. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Diagnosen, Impfungen, Hilfsmittel & Gegenstände, Einwilligungen, Geräte & Prüfungen, Kühlschrank-Temperatur, Küchenliste, Tippflächen kleiner Links und Textknöpfe sowie die Hauptüberschrift der Druckansichten. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -1752,6 +1752,11 @@
   .device-actions {
     justify-content: flex-start;
   }
+}
+/* Kühlschrank-Temperatur: letzter Wert ausserhalb der Grenzen der Einrichtung. */
+.diagnosis-code.fridge-outside {
+  color: #a43b2d;
+  background: var(--critical-soft);
 }
 /* Küchenliste (A4 quer): breiter als die Evakuierungsliste, Allergien hervorgehoben. */
 .kitchen-sheet {

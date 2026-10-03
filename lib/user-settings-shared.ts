@@ -20,6 +20,11 @@ export const NOTIFY_CATEGORIES = {
     detail: "Fällige Wirkungskontrollen nach deinen Reservegaben",
     prefix: "medication_effect",
   },
+  fridge: {
+    label: "Kühlschrank-Temperatur",
+    detail: "Fällige Messungen und Werte ausserhalb der Grenzen der Einrichtung",
+    prefix: "fridge_",
+  },
 } as const;
 export type NotifyCategory = keyof typeof NOTIFY_CATEGORIES;
 
