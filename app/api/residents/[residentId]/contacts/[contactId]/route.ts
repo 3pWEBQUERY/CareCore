@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isRepresentativeRole } from "@/lib/advance-care-shared";
 import { residentAudit } from "@/lib/resident-audit";
 import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 
@@ -11,6 +12,7 @@ type ContactInput = {
   email?: unknown;
   isPrimary?: unknown;
   isEmergencyContact?: unknown;
+  representativeRole?: unknown;
 };
 
 async function contactContext(residentId: string, contactId: string) {
@@ -32,12 +34,14 @@ function contactValues(input: ContactInput) {
     email: value("email", 160),
     isPrimary: input.isPrimary === true,
     isEmergencyContact: input.isEmergencyContact === true,
+    // Rolle als vertretungsberechtigte Person (z. B. Vorsorgeauftrag), sonst null.
+    representativeRole: isRepresentativeRole(input.representativeRole) ? input.representativeRole : null,
   };
 }
 
 async function contactSnapshot(sql: ReturnType<typeof carecoreDb>, contactId: string) {
   const rows =
-    await sql`SELECT full_name, relationship, phone, email, is_primary, is_emergency_contact FROM carecore_resident_contacts WHERE id = ${contactId}`;
+    await sql`SELECT full_name, relationship, phone, email, is_primary, is_emergency_contact, representative_role FROM carecore_resident_contacts WHERE id = ${contactId}`;
   const row = rows[0];
   return row
     ? {
@@ -47,6 +51,7 @@ async function contactSnapshot(sql: ReturnType<typeof carecoreDb>, contactId: st
         email: row.email,
         isPrimary: row.is_primary,
         isEmergencyContact: row.is_emergency_contact,
+        representativeRole: row.representative_role,
       }
     : null;
 }
@@ -62,7 +67,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ resid
     const before = await contactSnapshot(active.sql, contactId);
     const results = await active.sql.transaction([
       active.sql`UPDATE carecore_resident_contacts SET is_primary = FALSE, updated_at = NOW() WHERE resident_id = ${residentId} AND id <> ${contactId} AND ${input.isPrimary}`,
-      active.sql`UPDATE carecore_resident_contacts SET full_name = ${input.fullName}, relationship = ${input.relationship || null}, phone = ${input.phone || null}, email = ${input.email || null}, is_primary = ${input.isPrimary}, is_emergency_contact = ${input.isEmergencyContact}, updated_at = NOW() WHERE id = ${contactId} RETURNING id, full_name, relationship, phone, email, is_primary, is_emergency_contact, updated_at`,
+      active.sql`UPDATE carecore_resident_contacts SET full_name = ${input.fullName}, relationship = ${input.relationship || null}, phone = ${input.phone || null}, email = ${input.email || null}, is_primary = ${input.isPrimary}, is_emergency_contact = ${input.isEmergencyContact}, representative_role = ${input.representativeRole}, updated_at = NOW() WHERE id = ${contactId} RETURNING id, full_name, relationship, phone, email, is_primary, is_emergency_contact, representative_role, updated_at`,
       residentAudit(active.sql, active.actor, {
         residentId,
         entityType: "resident_contact",

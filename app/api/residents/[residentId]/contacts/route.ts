@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { isRepresentativeRole } from "@/lib/advance-care-shared";
 import { residentAudit } from "@/lib/resident-audit";
 import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 
@@ -12,6 +13,7 @@ type ContactInput = {
   email?: unknown;
   isPrimary?: unknown;
   isEmergencyContact?: unknown;
+  representativeRole?: unknown;
 };
 
 async function residentContext(residentId: string) {
@@ -33,6 +35,8 @@ function contactValues(input: ContactInput) {
     email: value("email", 160),
     isPrimary: input.isPrimary === true,
     isEmergencyContact: input.isEmergencyContact === true,
+    // Rolle als vertretungsberechtigte Person (z. B. Vorsorgeauftrag), sonst null.
+    representativeRole: isRepresentativeRole(input.representativeRole) ? input.representativeRole : null,
   };
 }
 
@@ -43,7 +47,7 @@ export async function GET(_request: Request, context: { params: Promise<{ reside
     if (!active) return NextResponse.json({ error: "Akte nicht verfügbar." }, { status: 404 });
     if (!hasPermission(active.actor, "residents.read")) return forbidden();
     const contacts =
-      await active.sql`SELECT id, full_name, relationship, phone, email, is_primary, is_emergency_contact, updated_at FROM carecore_resident_contacts WHERE resident_id = ${residentId} ORDER BY is_primary DESC, is_emergency_contact DESC, full_name ASC`;
+      await active.sql`SELECT id, full_name, relationship, phone, email, is_primary, is_emergency_contact, representative_role, updated_at FROM carecore_resident_contacts WHERE resident_id = ${residentId} ORDER BY is_primary DESC, is_emergency_contact DESC, full_name ASC`;
     return NextResponse.json({ contacts });
   } catch (error) {
     console.error("Contacts GET failed", error);
@@ -62,7 +66,7 @@ export async function POST(request: Request, context: { params: Promise<{ reside
     const id = randomUUID();
     const results = await active.sql.transaction([
       active.sql`UPDATE carecore_resident_contacts SET is_primary = FALSE, updated_at = NOW() WHERE resident_id = ${residentId} AND ${input.isPrimary}`,
-      active.sql`INSERT INTO carecore_resident_contacts (id, resident_id, full_name, relationship, phone, email, is_primary, is_emergency_contact) VALUES (${id}, ${residentId}, ${input.fullName}, ${input.relationship || null}, ${input.phone || null}, ${input.email || null}, ${input.isPrimary}, ${input.isEmergencyContact}) RETURNING id, full_name, relationship, phone, email, is_primary, is_emergency_contact, updated_at`,
+      active.sql`INSERT INTO carecore_resident_contacts (id, resident_id, full_name, relationship, phone, email, is_primary, is_emergency_contact, representative_role) VALUES (${id}, ${residentId}, ${input.fullName}, ${input.relationship || null}, ${input.phone || null}, ${input.email || null}, ${input.isPrimary}, ${input.isEmergencyContact}, ${input.representativeRole}) RETURNING id, full_name, relationship, phone, email, is_primary, is_emergency_contact, representative_role, updated_at`,
       residentAudit(active.sql, active.actor, {
         residentId,
         entityType: "resident_contact",

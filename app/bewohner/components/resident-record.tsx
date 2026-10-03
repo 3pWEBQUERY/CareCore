@@ -7,6 +7,8 @@ import Image from "next/image";
 import ResidentAppointmentEditor from "@/app/components/resident-appointment-editor";
 import { Camera, CaretDown, CaretUp, Printer, X } from "@phosphor-icons/react";
 import { RESUSCITATION_STATUSES, resuscitationShort } from "@/lib/resident-record-shared";
+import { ADVANCE_CARE_LABELS, advanceShort } from "@/lib/advance-care-shared";
+import { formatDate } from "@/app/components/workspace-ui";
 import { ResidentRecordProps, recordTabs } from "./resident-record-data";
 import { useResidentRecord } from "./use-resident-record";
 import { RecordOverviewView } from "./record-overview-view";
@@ -56,6 +58,7 @@ export function ResidentRecord(props: ResidentRecordProps) {
   }, [activeView]);
   const master = live.summary.data?.master;
   const resuscitation = master?.resuscitationStatus ?? null;
+  const representative = live.summary.data?.representative ?? null;
   return (
     <div
       className="resident-record-layer"
@@ -141,15 +144,37 @@ export function ResidentRecord(props: ResidentRecordProps) {
               </a>
             )}
             {master && (
-              <span
-                className={`status-badge record-resuscitation ${resuscitation === "dnr" ? "critical" : resuscitation ? "info" : "attention"}`}
-                title={
-                  resuscitation
-                    ? `${RESUSCITATION_STATUSES[resuscitation].label} · Grundlage: ${master.resuscitationSource ?? "–"}`
-                    : "Reanimationsstatus nicht erfasst (Stammdaten)"
-                }
-              >
-                {resuscitationShort(resuscitation)}
+              <span className="record-legal-badges">
+                <span
+                  className={`status-badge record-resuscitation ${resuscitation === "dnr" ? "critical" : resuscitation ? "info" : "attention"}`}
+                  title={
+                    resuscitation
+                      ? `${RESUSCITATION_STATUSES[resuscitation].label} · Grundlage: ${master.resuscitationSource ?? "–"}`
+                      : "Reanimationsstatus nicht erfasst (Stammdaten)"
+                  }
+                >
+                  {resuscitationShort(resuscitation)}
+                </span>
+                <span
+                  className={`status-badge record-advance-care ${master.advanceDirective ? "info" : "attention"}`}
+                  title={
+                    master.advanceDirective === "yes"
+                      ? `Patientenverfügung liegt vor${master.advanceDirectiveOn ? ` (${formatDate(master.advanceDirectiveOn)})` : ""}${master.advanceDirectiveLocation ? ` · ${master.advanceDirectiveLocation}` : ""}`
+                      : master.advanceDirective === "no"
+                        ? "Keine Patientenverfügung"
+                        : "Patientenverfügung nicht erfasst (Stammdaten)"
+                  }
+                >
+                  {advanceShort(master.advanceDirective)}
+                </span>
+                {representative && (
+                  <span
+                    className="status-badge info record-representative"
+                    title={`${representative.name} · ${ADVANCE_CARE_LABELS[country ?? "CH"].roles[representative.role]}${representative.phone ? ` · ${representative.phone}` : ""}`}
+                  >
+                    Vertretung: {representative.name}
+                  </span>
+                )}
               </span>
             )}
             <span className={`status-badge ${resident.status}`}>{resident.statusLabel}</span>

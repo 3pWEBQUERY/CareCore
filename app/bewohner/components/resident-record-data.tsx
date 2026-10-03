@@ -1,5 +1,7 @@
 "use client";
 
+import type { RepresentativeRole } from "@/lib/advance-care-shared";
+
 export type ResidentRecordData = {
   id?: string;
   photoUrl?: string;
@@ -135,6 +137,7 @@ export type ResidentContact = {
   email: string | null;
   is_primary: boolean;
   is_emergency_contact: boolean;
+  representative_role: RepresentativeRole | null;
   updated_at: string;
 };
 
@@ -145,6 +148,7 @@ export type ContactDraft = {
   email: string;
   isPrimary: boolean;
   isEmergencyContact: boolean;
+  representativeRole: RepresentativeRole | null;
 };
 
 export const emptyBiography: ResidentBiography = {
@@ -165,6 +169,7 @@ export const emptyContact: ContactDraft = {
   email: "",
   isPrimary: false,
   isEmergencyContact: true,
+  representativeRole: null,
 };
 
 export type CareSupplyProduct = {

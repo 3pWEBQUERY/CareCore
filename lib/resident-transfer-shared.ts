@@ -1,5 +1,7 @@
 // Überleitungsbogen: Antwort der API und Grundlage der Druckansicht.
 import type { MasterData } from "./resident-record-shared";
+import type { Representative } from "./advance-care-shared";
+import type { CountryCode } from "./country";
 
 export type TransferSheet = {
   createdAt: string;
@@ -15,6 +17,9 @@ export type TransferSheet = {
     room: string | null;
   };
   master: MasterData;
+  // Vertretungsberechtigte Person (Kontaktperson mit Rolle) und Land für deren Bezeichnung.
+  representative: Representative | null;
+  country: CountryCode;
   careLevel: string | null;
   primaryNurse: string | null;
   allergies: string[];

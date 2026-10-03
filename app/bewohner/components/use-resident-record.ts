@@ -98,7 +98,7 @@ export function useResidentRecord({
     openContactEditor,
     saveContact,
     deleteContact,
-  } = useRecordContacts({ resident, onAction, confirm });
+  } = useRecordContacts({ resident, onAction, confirm, onChanged: () => reloadSummary.current() });
   const {
     activeBodyObservationId,
     setActiveBodyObservationId,
@@ -143,6 +143,12 @@ export function useResidentRecord({
   } = useRecordMasterData({ resident, setBodyError, onGenderChanged, onAction, onPhotoChanged, residentPhotoInputRef });
   const contentRef = useRef<HTMLElement>(null);
   const live = useRecordLive(resident);
+  // Kontaktpersonen bestimmen die Vertretung im Aktenkopf: nach Änderungen die Zusammenfassung neu laden.
+  const reloadSummary = useRef<() => void>(() => undefined);
+  const { reload: reloadLiveSummary } = live.summary;
+  useEffect(() => {
+    reloadSummary.current = reloadLiveSummary;
+  }, [reloadLiveSummary]);
   const { entries, docEntries, careDomains, historyEntries } = live;
   const [activeView, setActiveView] = useState<RecordView>(initialView ?? "overview");
   useEffect(() => {

@@ -51,7 +51,7 @@ const zurichDay = (date = new Date()) => new Intl.DateTimeFormat("en-CA", { time
 const zurichTime = (date = new Date()) =>
   new Intl.DateTimeFormat("de-CH", { timeZone: "Europe/Zurich", hour: "2-digit", minute: "2-digit" }).format(date);
 
-const emptyDraft = (): Draft => ({
+const emptyDraft = (representativeName = ""): Draft => ({
   id: null,
   kind: "",
   description: "",
@@ -61,7 +61,7 @@ const emptyDraft = (): Draft => ({
   orderedBy: "",
   residentConsent: "",
   residentInformed: false,
-  representativeName: "",
+  representativeName,
   representativeInformed: false,
   representativeInformedOn: zurichDay(),
   approvalReference: "",
@@ -214,7 +214,7 @@ export function RecordRestraintsView({ r }: { r: ResidentRecordState }) {
             type="button"
             onClick={() => {
               setError("");
-              setDraft(emptyDraft());
+              setDraft(emptyDraft(r.live.summary.data?.representative?.name ?? ""));
             }}
           >
             <Plus aria-hidden="true" /> Massnahme erfassen

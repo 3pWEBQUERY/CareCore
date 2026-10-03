@@ -1,4 +1,4 @@
-/* Freiheitsbeschränkende Massnahmen in der Akte (Tab „FBM“). */
+/* Freiheitsbeschränkende Massnahmen (Tab „FBM“), Reiterleiste der Akte sowie Vorsorge & Vertretung. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -139,4 +139,39 @@
   .resident-record-tabs button {
     flex: none;
   }
+}
+/* Vorsorge & Vertretung in den Stammdaten. */
+.advance-care-representative {
+  display: grid;
+  gap: 7px;
+  color: #455b70;
+  font-size: 10px;
+  font-weight: 730;
+}
+.advance-care-representative strong {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+.advance-care-representative small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+/* Reanimationsstatus, Patientenverfügung und Vertretung im Aktenkopf: untereinander, damit der Kopf nicht breiter
+   wird als mit dem REA-Abzeichen allein. */
+.record-legal-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.record-legal-badges .status-badge {
+  max-width: 150px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.record-legal-badges .status-badge::before {
+  flex: none;
 }

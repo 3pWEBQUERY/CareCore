@@ -9,6 +9,7 @@ import { PERMISSION_LABELS } from "@/lib/permission-labels";
 import { PORTAL_AREAS, PORTAL_BASES, PORTAL_KINDS } from "@/lib/portal-shared";
 import { EFFECTIVENESS, SEVERITIES } from "@/lib/quality-shared";
 import { RESUSCITATION_STATUSES } from "@/lib/resident-record-shared";
+import { ADVANCE_ANSWERS, ADVANCE_CARE_LABELS } from "@/lib/advance-care-shared";
 import { RESTRAINT_CONSENT, RESTRAINT_KINDS, RESTRAINT_REVIEW_OUTCOMES } from "@/lib/restraints-shared";
 import { SETTING_DEFINITIONS, type SettingKey } from "@/lib/settings-shared";
 import { TASK_PRIORITIES, TASK_RECURRENCE, TASK_STATUS } from "@/lib/tasks-shared";
@@ -193,6 +194,7 @@ const TITLES: Record<string, string> = {
   "resident:master_data_checked": "Stammdaten geprüft",
   "resident:medication_allergies_updated": "Allergien geändert",
   "resident:resuscitation_updated": "Reanimationsstatus geändert",
+  "resident:advance_care_updated": "Vorsorge geändert",
   "resident:gender_updated": "Geschlecht geändert",
   "resident:imported": "{one} importiert",
   "resident:admitted": "{one} aufgenommen",
@@ -290,6 +292,13 @@ export const auditSettingTitle = (key: string) =>
 
 // Felder, die das Protokoll zeigt. Alles andere (technische Kennungen, Dateitypen, Zwischenwerte) bleibt verborgen.
 const FIELDS: Record<string, string> = {
+  advanceDirective: "Patientenverfügung",
+  advanceDirectiveOn: "Patientenverfügung vom",
+  advanceDirectiveLocation: "Aufbewahrungsort",
+  careMandate: "Vorsorgeauftrag / -vollmacht",
+  careMandateOn: "Errichtet am",
+  careMandateEffectiveOn: "Wirksam seit",
+  representativeRole: "Vertretungsberechtigt als",
   alternatives: "Geprüfte mildere Massnahmen",
   orderedBy: "Angeordnet von",
   residentConsent: "Haltung der Person",
@@ -527,6 +536,9 @@ const VALUE_LABELS: Record<string, (value: string) => string | undefined> = {
     ...RESTRAINT_REVIEW_OUTCOMES,
   }),
   residentConsent: pick(RESTRAINT_CONSENT),
+  advanceDirective: pick(ADVANCE_ANSWERS),
+  careMandate: pick(ADVANCE_ANSWERS),
+  representativeRole: pick(ADVANCE_CARE_LABELS.CH.roles),
   origin: pick(ORIGIN_LABELS),
   kind: pick({ ...PORTAL_KINDS, ...RESTRAINT_KINDS, document: "Dokument", standard: "Pflegestandard" }),
   basis: pick(PORTAL_BASES),

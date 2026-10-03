@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Printer, X } from "@phosphor-icons/react";
 import { formatDate, formatDateTime, useApiData } from "@/app/components/workspace-ui";
+import { ADVANCE_CARE_LABELS } from "@/lib/advance-care-shared";
 import { LANGUAGES, RESUSCITATION_STATUSES } from "@/lib/resident-record-shared";
 import { ageOn, scheduleLabel, type TransferSheet } from "@/lib/resident-transfer-shared";
 
@@ -105,6 +106,29 @@ export default function TransferSheetPage() {
                     .filter(Boolean)
                     .join(" · ")
                 : "Nicht erfasst"}
+            </span>
+          </section>
+
+          <section className="transfer-allergies transfer-advance-care">
+            <strong>Vorsorge &amp; Vertretung</strong>
+            <span>
+              {[
+                data.master.advanceDirective === "yes"
+                  ? `Patientenverfügung liegt vor${data.master.advanceDirectiveOn ? ` (${formatDate(data.master.advanceDirectiveOn)})` : ""}${data.master.advanceDirectiveLocation ? `, ${data.master.advanceDirectiveLocation}` : ""}`
+                  : data.master.advanceDirective === "no"
+                    ? "Keine Patientenverfügung"
+                    : "Patientenverfügung nicht erfasst",
+                data.master.careMandate === "yes"
+                  ? `${ADVANCE_CARE_LABELS[data.country].careMandate} liegt vor`
+                  : data.master.careMandate === "no"
+                    ? `${ADVANCE_CARE_LABELS[data.country].careMandate} liegt nicht vor`
+                    : null,
+                data.representative
+                  ? `Vertretung: ${data.representative.name} (${ADVANCE_CARE_LABELS[data.country].roles[data.representative.role]}${data.representative.phone ? `, ${data.representative.phone}` : ""})`
+                  : "Vertretungsberechtigte Person nicht erfasst",
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </span>
           </section>
 

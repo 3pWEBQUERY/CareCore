@@ -1,3 +1,4 @@
+import type { AdvanceAnswer, Representative } from "./advance-care-shared";
 // Resident record (Bewohnerakte): master data, key figures, timeline and documents,
 // shared by the API and the record panel.
 
@@ -47,6 +48,14 @@ export type MasterData = {
   // Grundlage des Entscheids, z. B. „Patientenverfügung“ oder „Ärztliche Verordnung Dr. …“.
   resuscitationSource: string | null;
   resuscitationDecidedOn: string | null;
+  // Vorsorge: liegt eine Patientenverfügung bzw. ein Vorsorgeauftrag (DE/AT: Vorsorgevollmacht) vor?
+  advanceDirective: AdvanceAnswer | null;
+  advanceDirectiveOn: string | null;
+  // Wo das Original liegt, z. B. „Kopie im Dokumentenordner, Original bei der Tochter“.
+  advanceDirectiveLocation: string | null;
+  careMandate: AdvanceAnswer | null;
+  careMandateOn: string | null;
+  careMandateEffectiveOn: string | null;
 };
 
 export type RecordSummary = {
@@ -64,6 +73,8 @@ export type RecordSummary = {
   canWrite: boolean;
   // Änderungsprotokoll: nur für die Leitung (Rollen mit team.manage oder administration.manage).
   canViewAudit: boolean;
+  // Vertretungsberechtigte Person aus den Kontaktpersonen (nach Vorrang der Rolle), für den Aktenkopf.
+  representative: Representative | null;
 };
 
 export type TimelineCategory = "Pflege" | "Vitalwerte" | "Medikation" | "Termine";

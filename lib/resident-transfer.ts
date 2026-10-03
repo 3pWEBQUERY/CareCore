@@ -4,6 +4,7 @@ import { listOrders } from "./medication-orders";
 import { recordSummary } from "./resident-record";
 import type { TransferSheet } from "./resident-transfer-shared";
 import { auditOrigin } from "@/lib/audit-origin";
+import { organizationCountry } from "@/lib/organization-country";
 import { activeRestraints } from "@/lib/restraints";
 import { restraintLabel, type RestraintKind } from "@/lib/restraints-shared";
 
@@ -84,6 +85,8 @@ export async function transferSheet(ctx: ApiContext, residentIdInput: unknown): 
       room: text(place.room),
     },
     master: summary.master,
+    representative: summary.representative,
+    country: await organizationCountry(ctx),
     careLevel: summary.careLevel,
     primaryNurse: summary.primaryNurse,
     allergies,

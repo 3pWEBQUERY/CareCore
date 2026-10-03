@@ -29,6 +29,7 @@ import { hasPermission } from "@/lib/server-data";
 import { auditOrigin } from "@/lib/audit-origin";
 import { insuranceNumberError, socialNumberError } from "@/lib/country";
 import { organizationCountry } from "@/lib/organization-country";
+import { isRepresentativeRole, type AdvanceAnswer } from "@/lib/advance-care-shared";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -50,6 +51,10 @@ export async function recordSummary(ctx: ApiContext, residentIdInput: unknown): 
     ctx.sql`
       SELECT r.*, to_char(r.date_of_birth, 'YYYY-MM-DD') AS birth_day, to_char(r.admitted_on, 'YYYY-MM-DD') AS admitted_day,
         to_char(r.resuscitation_decided_on, 'YYYY-MM-DD') AS resuscitation_day,
+        to_char(r.advance_directive_on, 'YYYY-MM-DD') AS advance_directive_day,
+        to_char(r.care_mandate_on, 'YYYY-MM-DD') AS care_mandate_day,
+        to_char(r.care_mandate_effective_on, 'YYYY-MM-DD') AS care_mandate_effective_day,
+        rep.full_name AS representative_name, rep.representative_role, rep.phone AS representative_phone,
         nurse.display_name AS nurse_name, checker.display_name AS checker_name,
         plan.care_level, owner.display_name AS plan_owner,
         EXISTS (SELECT 1 FROM carecore_resident_contacts c WHERE c.resident_id = r.id AND c.is_emergency_contact) AS has_emergency_contact,
@@ -60,6 +65,11 @@ export async function recordSummary(ctx: ApiContext, residentIdInput: unknown): 
       LEFT JOIN LATERAL (SELECT care_level, owner_user_id FROM carecore_care_plans
         WHERE resident_id = r.id AND status IN ('draft', 'active', 'review') LIMIT 1) plan ON TRUE
       LEFT JOIN carecore_users owner ON owner.id = plan.owner_user_id
+      LEFT JOIN LATERAL (SELECT full_name, representative_role, phone FROM carecore_resident_contacts c
+        WHERE c.resident_id = r.id AND c.representative_role IS NOT NULL
+        ORDER BY array_position(ARRAY['mandate', 'official', 'spouse', 'relative', 'other']::varchar[], c.representative_role),
+          c.is_primary DESC, c.full_name
+        LIMIT 1) rep ON TRUE
       WHERE r.id = ${residentId}` as Promise<Row[]>,
     ctx.sql`
       SELECT measured_at, metric, status FROM carecore_vital_measurements
@@ -95,9 +105,16 @@ export async function recordSummary(ctx: ApiContext, residentIdInput: unknown): 
     resuscitationStatus: (r.resuscitation_status as MasterData["resuscitationStatus"]) ?? null,
     resuscitationSource: (r.resuscitation_source as string | null) ?? null,
     resuscitationDecidedOn: (r.resuscitation_day as string | null) ?? null,
+    advanceDirective: (r.advance_directive as AdvanceAnswer | null) ?? null,
+    advanceDirectiveOn: (r.advance_directive_day as string | null) ?? null,
+    advanceDirectiveLocation: (r.advance_directive_location as string | null) ?? null,
+    careMandate: (r.care_mandate as AdvanceAnswer | null) ?? null,
+    careMandateOn: (r.care_mandate_day as string | null) ?? null,
+    careMandateEffectiveOn: (r.care_mandate_effective_day as string | null) ?? null,
   };
   const missing = [
     !master.resuscitationStatus && "Reanimationsstatus",
+    !master.advanceDirective && "Patientenverfügung",
     !master.dateOfBirth && "Geburtsdatum",
     !master.admittedOn && "Eintrittsdatum",
     !master.primaryNurseId && "Bezugspflege",
@@ -123,6 +140,13 @@ export async function recordSummary(ctx: ApiContext, residentIdInput: unknown): 
     staff,
     canWrite: hasPermission(ctx.actor, "residents.write"),
     canViewAudit: canViewResidentAudit(ctx.actor),
+    representative: isRepresentativeRole(r.representative_role)
+      ? {
+          name: String(r.representative_name),
+          role: r.representative_role,
+          phone: (r.representative_phone as string | null) ?? null,
+        }
+      : null,
   };
 }
 
@@ -151,6 +175,9 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
   const resuscitationSource = resuscitationStatus ? optional(body.resuscitationSource, 200) : null;
   if (resuscitationStatus && !resuscitationSource)
     throw new ApiError("Bitte die Grundlage des Reanimationsstatus angeben (z. B. Patientenverfügung).");
+  const answer = (value: unknown) => (value === "yes" || value === "no" ? value : null);
+  const advanceDirective = answer(body.advanceDirective);
+  const careMandate = answer(body.careMandate);
   let nurseId: string | null = null;
   if (body.primaryNurseId) {
     nurseId = assertUuid(body.primaryNurseId, "Bezugspflege");
@@ -180,14 +207,31 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
     resuscitationStatus,
     resuscitationSource,
     resuscitationDecidedOn: resuscitationStatus ? dateOf(body.resuscitationDecidedOn, "Datum des Entscheids") : null,
+    advanceDirective,
+    advanceDirectiveOn:
+      advanceDirective === "yes" ? dateOf(body.advanceDirectiveOn, "Datum der Patientenverfügung") : null,
+    advanceDirectiveLocation: advanceDirective === "yes" ? optional(body.advanceDirectiveLocation, 200) : null,
+    careMandate,
+    careMandateOn: careMandate === "yes" ? dateOf(body.careMandateOn, "Datum des Vorsorgeauftrags") : null,
+    careMandateEffectiveOn: careMandate === "yes" ? dateOf(body.careMandateEffectiveOn, "Datum der Wirksamkeit") : null,
   };
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Zurich" });
+  for (const [value, label] of [
+    [data.advanceDirectiveOn, "Das Datum der Patientenverfügung"],
+    [data.careMandateOn, "Das Datum des Vorsorgeauftrags"],
+    [data.careMandateEffectiveOn, "Das Datum der Wirksamkeit"],
+  ] as const)
+    if (value && value > today) throw new ApiError(`${label} liegt in der Zukunft.`);
   if (
     data.resuscitationDecidedOn &&
     data.resuscitationDecidedOn > new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Zurich" })
   )
     throw new ApiError("Das Datum des Entscheids liegt in der Zukunft.");
   const before = (await ctx.sql`
-    SELECT *, to_char(resuscitation_decided_on, 'YYYY-MM-DD') AS resuscitation_day
+    SELECT *, to_char(resuscitation_decided_on, 'YYYY-MM-DD') AS resuscitation_day,
+      to_char(advance_directive_on, 'YYYY-MM-DD') AS advance_directive_day,
+      to_char(care_mandate_on, 'YYYY-MM-DD') AS care_mandate_day,
+      to_char(care_mandate_effective_on, 'YYYY-MM-DD') AS care_mandate_effective_day
     FROM carecore_residents WHERE id = ${residentId}`) as Row[];
   const b = before[0];
   // Nummern im Format des Landes der Einrichtung; ein unveränderter Wert (z. B. aus der Zeit vor einem Wechsel des
@@ -215,6 +259,24 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
   };
   // Der Reanimationsstatus ist ein klinischer Entscheid: jede Änderung erhält einen eigenen Protokolleintrag.
   const resuscitationChanged = JSON.stringify(resuscitationBefore) !== JSON.stringify(resuscitationAfter);
+  // Vorsorge ebenso mit eigenem Eintrag.
+  const advanceBefore = {
+    advanceDirective: (b.advance_directive as string | null) ?? null,
+    advanceDirectiveOn: (b.advance_directive_day as string | null) ?? null,
+    advanceDirectiveLocation: (b.advance_directive_location as string | null) ?? null,
+    careMandate: (b.care_mandate as string | null) ?? null,
+    careMandateOn: (b.care_mandate_day as string | null) ?? null,
+    careMandateEffectiveOn: (b.care_mandate_effective_day as string | null) ?? null,
+  };
+  const advanceAfter = {
+    advanceDirective: data.advanceDirective,
+    advanceDirectiveOn: data.advanceDirectiveOn,
+    advanceDirectiveLocation: data.advanceDirectiveLocation,
+    careMandate: data.careMandate,
+    careMandateOn: data.careMandateOn,
+    careMandateEffectiveOn: data.careMandateEffectiveOn,
+  };
+  const advanceChanged = JSON.stringify(advanceBefore) !== JSON.stringify(advanceAfter);
   try {
     await ctx.sql.transaction([
       ctx.sql`
@@ -226,6 +288,9 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
         gp_phone = ${data.gpPhone}, pharmacy = ${data.pharmacy}, insurer = ${data.insurer},
         insurance_number = ${data.insuranceNumber}, resuscitation_status = ${data.resuscitationStatus},
         resuscitation_source = ${data.resuscitationSource}, resuscitation_decided_on = ${data.resuscitationDecidedOn},
+        advance_directive = ${data.advanceDirective}, advance_directive_on = ${data.advanceDirectiveOn},
+        advance_directive_location = ${data.advanceDirectiveLocation}, care_mandate = ${data.careMandate},
+        care_mandate_on = ${data.careMandateOn}, care_mandate_effective_on = ${data.careMandateEffectiveOn},
         master_data_checked_at = NOW(), master_data_checked_by = ${ctx.actor.id}, updated_at = NOW()
       WHERE id = ${residentId}`,
       auditStatement(
@@ -252,6 +317,9 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
               resuscitationAfter,
             ),
           ]
+        : []),
+      ...(advanceChanged
+        ? [auditStatement(ctx, "resident", residentId, "advance_care_updated", advanceBefore, advanceAfter)]
         : []),
     ]);
   } catch (error) {
