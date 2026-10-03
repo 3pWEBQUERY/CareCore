@@ -17,6 +17,7 @@ const ACTION_TYPES = [
   "btm_count_due",
   "wound_overdue",
   "medication_effect_check",
+  "visit_answered",
   "rai_due",
   "supply_low",
   "support_request",

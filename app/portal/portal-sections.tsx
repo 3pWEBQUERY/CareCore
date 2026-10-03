@@ -301,6 +301,7 @@ const HELP_STEPS: Array<{ title: string; image: string; alt: string; text: strin
     text: [
       "Unter „Personen“ sehen Sie nur die Personen und Bereiche, die die Einrichtung für Sie freigegeben hat – zum Beispiel Medikation, Vitalwerte oder Termine.",
       "Das Portal ist nur zum Lesen. Jeder Abruf wird protokolliert.",
+      "Ärztinnen und Ärzte mit Freigabe „Visite“ sehen dort die offenen Fragen der Pflege und erfassen ihre Rückmeldung direkt; sie steht danach mit ihrem Namen in der Pflegedokumentation.",
     ],
   },
   {

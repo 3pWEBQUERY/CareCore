@@ -41,7 +41,8 @@ export async function historyOverview(ctx: ApiContext) {
       LEFT JOIN carecore_rooms ro ON ro.id = stay.room_id
       LEFT JOIN LATERAL (SELECT severity FROM carecore_resident_clinical_flags WHERE resident_id = r.id AND active
         ORDER BY CASE severity WHEN 'critical' THEN 0 WHEN 'attention' THEN 1 ELSE 2 END LIMIT 1) flag ON TRUE
-      LEFT JOIN LATERAL (SELECT d.title, d.category, d.body, d.occurred_at, u.display_name AS author
+      LEFT JOIN LATERAL (SELECT d.title, d.category, d.body, d.occurred_at,
+        COALESCE(u.display_name, d.metadata ->> 'portalAuthor') AS author
         FROM carecore_documentation_entries d LEFT JOIN carecore_users u ON u.id = d.author_user_id
         WHERE d.resident_id = r.id ORDER BY d.occurred_at DESC LIMIT 1) doc ON TRUE
       WHERE r.organization_id = ${ctx.actor.organizationId}
@@ -88,7 +89,8 @@ export async function historyDetail(ctx: ApiContext, residentIdInput: unknown): 
       LEFT JOIN carecore_rooms ro ON ro.id = s.room_id
       WHERE s.resident_id = ${residentId} ORDER BY s.started_at DESC`,
     ctx.sql`
-      SELECT d.id, d.title, d.category, d.body, d.importance, d.occurred_at, u.display_name AS author
+      SELECT d.id, d.title, d.category, d.body, d.importance, d.occurred_at,
+        COALESCE(u.display_name, d.metadata ->> 'portalAuthor') AS author
       FROM carecore_documentation_entries d LEFT JOIN carecore_users u ON u.id = d.author_user_id
       WHERE d.resident_id = ${residentId} ORDER BY d.occurred_at DESC LIMIT 8`,
   ])) as [Row[], Row[]];

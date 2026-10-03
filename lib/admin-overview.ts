@@ -59,7 +59,7 @@ export async function adminOverview(ctx: ApiContext, view: AdminView): Promise<A
   const [weeks, logRows, todo, settings, t] = await Promise.all([
     trendRows(ctx, view),
     ctx.sql`
-      SELECT a.id, a.created_at, a.entity_type, a.entity_id, a.action, a.before_data, a.after_data, COALESCE(u.display_name, 'System') AS actor,
+      SELECT a.id, a.created_at, a.entity_type, a.entity_id, a.action, a.before_data, a.after_data, COALESCE(u.display_name, a.after_data ->> 'portalActor', 'System') AS actor,
         CASE
           WHEN a.entity_type IN ('user', 'user_mfa') THEN (SELECT display_name FROM carecore_users WHERE id = a.entity_id)
           WHEN a.entity_type = 'task' THEN (SELECT title FROM carecore_tasks WHERE id = a.entity_id)

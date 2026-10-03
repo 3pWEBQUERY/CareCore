@@ -92,6 +92,19 @@
   border-radius: 6px;
   font: inherit;
 }
+.portal-form textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 400;
+  resize: vertical;
+}
+/* Rückmeldung zur Visite direkt unter der Frage. */
+.portal-list .portal-form {
+  max-width: 640px;
+  margin-top: 10px;
+}
 .portal-error {
   margin: 0;
   color: var(--critical);

@@ -14,9 +14,15 @@ export const PORTAL_AREAS = {
   wounds: "Wunden (offene)",
   activities: "Alltag & Aktivitäten (Teilnahme 30 Tage, Angebote 14 Tage)",
   messages: "Nachrichten mit der Pflege",
+  visit: "Visite (offene Fragen der Pflege beantworten, nur Ärztin / Arzt)",
 } as const;
 export type PortalArea = keyof typeof PORTAL_AREAS;
 export const PORTAL_AREA_KEYS = Object.keys(PORTAL_AREAS) as PortalArea[];
+
+// Bereiche, die nur ein Zugang der Art Ärztin / Arzt erhalten kann (bei anderen Zugängen wirkungslos).
+const PHYSICIAN_AREAS: PortalArea[] = ["visit"];
+export const portalAreaAllowed = (kind: PortalKind, area: PortalArea) =>
+  kind === "physician" || !PHYSICIAN_AREAS.includes(area);
 
 // Worauf die Freigabe beruht; der Vermerk hält Einzelheiten fest (z. B. Datum der Einwilligung).
 export const PORTAL_BASES = {
@@ -85,6 +91,11 @@ export type PortalResidentDetail = PortalResident & {
   activities?: {
     attended: Array<{ title: string; category: string; startsAt: string }>;
     upcoming: Array<{ title: string; category: string; startsAt: string; location: string }>;
+  };
+  // Offene Fragen der Pflege für die Visite und Rückmeldungen der letzten 14 Tage.
+  visit?: {
+    open: Array<{ id: string; category: string; body: string; occurredAt: string; author: string }>;
+    answered: Array<{ question: string; response: string; physician: string; resolvedAt: string }>;
   };
 };
 
