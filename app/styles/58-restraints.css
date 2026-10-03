@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung und Qualitätsindikatoren. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren und Visite. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -255,5 +255,139 @@
   .quality-indicators-toolbar,
   .quality-indicators-list {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Visite vorbereiten */
+.visit-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 18px;
+  margin-bottom: 18px;
+}
+.visit-toolbar > :first-child {
+  width: min(100%, 260px);
+}
+.visit-toolbar a[aria-disabled="true"] {
+  opacity: 0.55;
+  pointer-events: none;
+}
+.visit-groups {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+.visit-group,
+.visit-resolved {
+  padding: 16px 18px;
+}
+.visit-group > header,
+.visit-resolved > header {
+  margin-bottom: 10px;
+}
+.visit-resident + .visit-resident {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.visit-resident h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.visit-resident h3 a {
+  color: var(--brand-dark);
+}
+.visit-resident h3 span,
+.visit-resident small,
+.visit-resolved small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.visit-resident ul,
+.visit-resolved ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.visit-resident li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.visit-resident li p,
+.visit-resolved li p {
+  margin: 0 0 3px;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.visit-resident li button {
+  flex: none;
+}
+.visit-resolved {
+  margin-top: 16px;
+}
+.visit-resolved li {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.visit-resolved li span {
+  color: var(--muted);
+  font-weight: 700;
+}
+.visit-answer-question span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.visit-answer-question p {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--surface-soft);
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+.visit-sheet h2 span {
+  margin-left: 8px;
+  color: #5f6f86;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.visit-sheet td:first-child {
+  width: 24%;
+}
+.visit-sheet-answer {
+  width: 38%;
+  height: 52px;
+  border-left: 1px solid #e2e8f0;
+}
+.visit-sheet-empty {
+  margin: 18px 0;
+  color: #5f6f86;
+}
+@media (max-width: 760px) {
+  .visit-resident li {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

@@ -308,8 +308,11 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
       Selbständigkeit, Integrationsgespräch u. a.) als eigene strukturierte Erhebung; erst danach auswertbar.
 - [ ] **eMediplan einlesen (CH):** Medikationsplan per QR-Code (CHMED) als Entwurf übernehmen; eine Fachperson prüft
       und gibt jede Verordnung frei. Keine automatische Prüfung oder Änderung.
-- [ ] **Visite vorbereiten:** Einträge „Für Visite“ je Ärztin/Arzt sammeln, als Liste drucken oder im Portal
-      zeigen; Rückmeldung der Ärztin als Dokumentationseintrag.
+- [x] **Visite vorbereiten:** Dokumentation › Visite sammelt die offenen Einträge „Für Visite“ je Hausärztin bzw.
+      Hausarzt (aus den Stammdaten), filterbar nach Wohnbereich, mit Visitenliste zum Drucken (A4). Die Rückmeldung
+      wird als Eintrag „Arztvisite“ dokumentiert, schliesst die Frage und steht im Protokoll der Akte.
+- [ ] **Visite im Portal:** offene Fragen der Pflege der Ärztin bzw. dem Arzt im Portal zeigen und die Rückmeldung
+      dort erfassen lassen.
 - [ ] **Leistungserfassung:** erbrachte Pflegeleistungen mit Zeit erfassen (aus Aufgaben und Massnahmen vorbelegt),
       Auswertung je Person und Monat, Export für Einstufung und Abrechnung.
 - [ ] **Ausbruchs- und Isolationsübersicht:** Personen mit Isolation oder Hygienemassnahme je Wohnbereich,

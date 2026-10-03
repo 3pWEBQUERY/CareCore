@@ -195,6 +195,7 @@ const TITLES: Record<string, string> = {
   "resident:medication_allergies_updated": "Allergien geändert",
   "resident:resuscitation_updated": "Reanimationsstatus geändert",
   "resident:advance_care_updated": "Vorsorge geändert",
+  "documentation_entry:visit_answered": "Rückmeldung zur Visite erfasst",
   "resident:gender_updated": "Geschlecht geändert",
   "resident:imported": "{one} importiert",
   "resident:admitted": "{one} aufgenommen",
