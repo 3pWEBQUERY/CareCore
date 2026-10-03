@@ -211,6 +211,7 @@ const TITLES: Record<string, string> = {
   "resident:imported": "{one} importiert",
   "resident:admitted": "{one} aufgenommen",
   "resident:admission_planned": "Eintritt geplant",
+  "resident:emediplan_read": "eMediplan eingelesen",
   "resident:admission_confirmed": "Eintritt bestätigt",
   "resident:admission_cancelled": "Geplanter Eintritt abgesagt",
   "waitlist_entry:created": "Eintrag auf der Warteliste erfasst",
