@@ -71,7 +71,7 @@ export function TeamleadEmployeeEditor({
           <div>
             <p className="eyebrow">CareCore Teamleitung · Mitarbeitende</p>
             <h2 id="teamlead-employee-title">{employee.display_name} verwalten</h2>
-            <p>Profil, Rolle und Arbeitsbereich werden nachvollziehbar in Neon gespeichert.</p>
+            <p>Profil, Rolle und Arbeitsbereich werden nachvollziehbar im Änderungsprotokoll gespeichert.</p>
           </div>
           <button
             className="profile-panel-close"
