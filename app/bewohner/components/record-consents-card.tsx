@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CareDatePicker } from "@/app/components/care-form-controls";
 import { ArrowCounterClockwise, Plus } from "@phosphor-icons/react";
 import { EditorDialog, formatDate, requestJson, todayInZurich, useApiData } from "@/app/components/workspace-ui";
 import {
@@ -222,12 +223,11 @@ export function RecordConsentsCard({
           </label>
           <label>
             <span>Datum</span>
-            <input
-              type="date"
-              required
-              max={todayInZurich()}
+            <CareDatePicker
+              label="Datum"
               value={draft.decidedOn}
-              onChange={(event) => setDraft({ ...draft, decidedOn: event.target.value })}
+              max={todayInZurich()}
+              onChange={(value) => setDraft({ ...draft, decidedOn: value })}
             />
           </label>
           <label className="area-editor-wide">
@@ -263,12 +263,11 @@ export function RecordConsentsCard({
         >
           <label>
             <span>Widerrufen am</span>
-            <input
-              type="date"
-              required
-              max={todayInZurich()}
+            <CareDatePicker
+              label="Widerrufen am"
               value={revokedOn}
-              onChange={(event) => setRevokedOn(event.target.value)}
+              max={todayInZurich()}
+              onChange={(value) => setRevokedOn(value)}
             />
           </label>
           <label className="area-editor-wide">

@@ -29,6 +29,7 @@ import { hasPermission } from "@/lib/server-data";
 import { auditOrigin } from "@/lib/audit-origin";
 import { insuranceNumberError, socialNumberError } from "@/lib/country";
 import { organizationCountry } from "@/lib/organization-country";
+import { readInsurers } from "@/lib/insurers";
 import { isRepresentativeRole, type AdvanceAnswer } from "@/lib/advance-care-shared";
 import { EVACUATION_MOBILITY } from "@/lib/evacuation-shared";
 
@@ -192,6 +193,32 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
       await ctx.sql`SELECT 1 FROM carecore_user_profiles WHERE user_id = ${nurseId} AND organization_id = ${ctx.actor.organizationId}`;
     if (!staff[0]) throw new ApiError("Die Bezugspflege gehört nicht zu dieser Organisation.");
   }
+  // Zimmerwechsel (auch in einen anderen Wohnbereich): Auswahl aus den Zimmern, die die Administration unter Belegung
+  // anlegt. Der bisherige Aufenthalt endet jetzt, der neue beginnt; beides bleibt im Verlauf.
+  let roomMove: { stayId: string; from: Row; room: Row } | null = null;
+  if (body.roomId) {
+    const roomId = assertUuid(body.roomId, "Zimmer");
+    const [stay] = (await ctx.sql`
+      SELECT r.status, st.id, st.room_id, st.care_unit_id FROM carecore_residents r
+      LEFT JOIN LATERAL (SELECT id, room_id, care_unit_id FROM carecore_resident_stays
+        WHERE resident_id = r.id AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1) st ON TRUE
+      WHERE r.id = ${residentId}`) as Row[];
+    if (stay?.room_id !== roomId) {
+      if (!stay?.id || !["active", "planned"].includes(String(stay.status)))
+        throw new ApiError("Ein Zimmerwechsel ist nur während eines laufenden Aufenthalts möglich.");
+      const [room] = (await ctx.sql`
+        SELECT ro.id, ro.name, ro.care_unit_id, ro.beds,
+          (SELECT COUNT(*) FROM carecore_resident_stays st JOIN carecore_residents r ON r.id = st.resident_id
+            WHERE st.room_id = ro.id AND st.ended_at IS NULL AND r.status IN ('active', 'planned')
+              AND st.resident_id <> ${residentId})::int AS occupied
+        FROM carecore_rooms ro JOIN carecore_care_units cu ON cu.id = ro.care_unit_id JOIN carecore_sites s ON s.id = cu.site_id
+        WHERE ro.id = ${roomId} AND s.organization_id = ${ctx.actor.organizationId} AND ro.active AND cu.active`) as Row[];
+      if (!room) throw new ApiError("Zimmer nicht gefunden. Zimmer legt die Administration unter „Belegung“ an.");
+      if (Number(room.occupied) >= Number(room.beds))
+        throw new ApiError(`In ${String(room.name)} ist kein Bett mehr frei.`, 409);
+      roomMove = { stayId: String(stay.id), from: stay, room };
+    }
+  }
   const data = {
     firstName,
     lastName,
@@ -256,6 +283,9 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
       ? insuranceNumberError(country, data.insuranceNumber)
       : null;
   if (insuranceError) throw new ApiError(insuranceError);
+  // Versicherung aus der Liste der Einrichtung; ein früher frei erfasster Wert bleibt gültig, solange er unverändert ist.
+  if (data.insurer && data.insurer !== b.insurer && !(await readInsurers(ctx)).insurers.includes(data.insurer))
+    throw new ApiError("Bitte eine Versicherung aus der Liste wählen. Die Liste verwaltet die Administration.");
   const resuscitationBefore = {
     status: (b.resuscitation_status as string | null) ?? null,
     source: (b.resuscitation_source as string | null) ?? null,
@@ -341,10 +371,32 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
       ...(evacuationChanged
         ? [auditStatement(ctx, "resident", residentId, "evacuation_updated", evacuationBefore, evacuationAfter)]
         : []),
+      ...(roomMove
+        ? [
+            ctx.sql`
+              WITH changed AS (
+                UPDATE carecore_resident_stays SET ended_at = GREATEST(started_at, NOW())
+                WHERE id = ${roomMove.stayId} AND ended_at IS NULL RETURNING id)
+              SELECT carecore_assert(EXISTS (SELECT 1 FROM changed), 'STAY_CHANGED')`,
+            ctx.sql`
+              INSERT INTO carecore_resident_stays (id, resident_id, care_unit_id, room_id, started_at, created_by)
+              VALUES (${randomUUID()}, ${residentId}, ${roomMove.room.care_unit_id}, ${roomMove.room.id}, NOW(), ${ctx.actor.id})`,
+            auditStatement(
+              ctx,
+              "resident",
+              residentId,
+              "room_changed",
+              { roomId: roomMove.from.room_id ?? null, careUnitId: roomMove.from.care_unit_id ?? null },
+              { roomId: roomMove.room.id, careUnitId: roomMove.room.care_unit_id, room: roomMove.room.name },
+            ),
+          ]
+        : []),
     ]);
   } catch (error) {
     if (String(error).includes("external_number"))
       throw new ApiError(`Diese ${(await readTerms(ctx)).prefix}nummer ist bereits vergeben.`, 409);
+    if (String(error).includes("STAY_CHANGED"))
+      throw new ApiError("Der Aufenthalt wurde inzwischen geändert. Bitte die Akte neu laden.", 409);
     throw error;
   }
 }

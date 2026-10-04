@@ -9,7 +9,7 @@ import type { SchedulePayload } from "@/lib/roster/view-types";
 import { RosterRequestError, rosterRequest } from "./roster-api";
 import { SidePanel } from "./side-panel";
 import { ViolationList } from "./violation-dialog";
-import { CareOptionSelect } from "@/app/components/care-form-controls";
+import { CareDatePicker, CareOptionSelect } from "@/app/components/care-form-controls";
 
 type Pending = {
   violations: Violation[];
@@ -213,10 +213,10 @@ export function AiPlanningPanel({
               {scope === "week" && (
                 <label>
                   <span>Woche ab (Montag)</span>
-                  <input
-                    type="date"
+                  <CareDatePicker
+                    label="Woche ab (Montag)"
                     value={week}
-                    onChange={(event) => event.target.value && setWeek(weekStart(event.target.value))}
+                    onChange={(value) => value && setWeek(weekStart(value))}
                   />
                 </label>
               )}

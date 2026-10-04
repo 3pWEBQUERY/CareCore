@@ -8,7 +8,7 @@ import { PHOTO_ACCEPT, preparePhoto } from "@/lib/resident-photo-client";
 import { todayInZurich, useApiData } from "@/app/components/workspace-ui";
 import { useEscapeClose } from "@/app/components/use-escape-close";
 import { NOT_ASSESSED, careLevelOptions } from "@/lib/country";
-import { CareDatePicker, CareSelect, formatCareDate } from "../../components/care-form-controls";
+import { CareDatePicker, CareOptionSelect, CareSelect, formatCareDate } from "../../components/care-form-controls";
 import { Icon } from "./residents-utils";
 
 type IntakeOptions = {
@@ -37,7 +37,7 @@ function IntakeForm({ onClose, onSuccess }: Props) {
   const [gender, setGender] = useState("Weiblich");
   const [admissionDate, setAdmissionDate] = useState(todayInZurich);
   const [chosenUnitId, setUnitId] = useState<string | null>(null);
-  const [room, setRoom] = useState("");
+  const [roomId, setRoomId] = useState("");
   const country = useCountry();
   const [careLevel, setCareLevel] = useState(NOT_ASSESSED);
   const [nurseId, setNurseId] = useState<string | null>(null);
@@ -47,6 +47,7 @@ function IntakeForm({ onClose, onSuccess }: Props) {
     chosenUnitId ?? units.find((item) => item.id === options.data?.primaryCareUnitId)?.id ?? units[0]?.id ?? null;
   const unit = units.find((item) => item.id === unitId)?.name ?? "";
   const unitRooms = (options.data?.rooms ?? []).filter((item) => item.careUnitId === unitId);
+  const room = unitRooms.find((item) => item.id === roomId)?.name ?? "";
   const nurse = options.data?.staff.find((item) => item.id === nurseId)?.name ?? NO_NURSE;
   const [note, setNote] = useState("");
   // Optionales Bild der Person, im Browser verkleinert; wird mit der Aufnahme gespeichert.
@@ -77,6 +78,10 @@ function IntakeForm({ onClose, onSuccess }: Props) {
       setError("Bitte das Geburtsdatum wählen.");
       return;
     }
+    if (!room) {
+      setError("Bitte ein Zimmer wählen.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -90,7 +95,7 @@ function IntakeForm({ onClose, onSuccess }: Props) {
           gender,
           admissionDate,
           careUnitId: unitId,
-          room,
+          roomId,
           careLevel,
           primaryNurseId: nurseId,
           status,
@@ -280,27 +285,32 @@ function IntakeForm({ onClose, onSuccess }: Props) {
                 options={units.map((item) => item.name)}
                 onChange={(name) => {
                   setUnitId(units.find((item) => item.name === name)?.id ?? null);
-                  setRoom("");
+                  setRoomId("");
                 }}
               />
             </label>
             <label>
               Zimmer
-              <input
-                value={room}
-                onChange={(event) => setRoom(event.target.value)}
-                placeholder={unitRooms[0] ? `z. B. ${unitRooms[0].name}` : "z. B. Zimmer 216"}
-                list="intake-rooms"
-                maxLength={80}
-                required
+              <CareOptionSelect
+                label="Zimmer"
+                value={roomId}
+                placeholder={
+                  options.loading ? "Wird geladen …" : unitRooms.length ? "Zimmer wählen" : "Keine Zimmer erfasst"
+                }
+                disabled={!unitRooms.length}
+                options={unitRooms.map((item) => ({
+                  value: item.id,
+                  label: `${item.name} · ${item.free > 0 ? `${item.free} Bett${item.free === 1 ? "" : "en"} frei` : "belegt"}`,
+                  disabled: item.free < 1,
+                }))}
+                onChange={setRoomId}
               />
-              <datalist id="intake-rooms">
-                {unitRooms.map((item) => (
-                  <option key={item.id} value={item.name}>
-                    {item.free > 0 ? `${item.free} Bett${item.free === 1 ? "" : "en"} frei` : "belegt"}
-                  </option>
-                ))}
-              </datalist>
+              {!options.loading && !unitRooms.some((item) => item.free > 0) && (
+                <small className="intake-room-hint">
+                  {unitRooms.length ? "Kein Bett frei." : "Für diesen Wohnbereich sind keine Zimmer erfasst."} Zimmer
+                  legt die Administration unter „Belegung“ an.
+                </small>
+              )}
             </label>
             <label>
               Bezugspflege

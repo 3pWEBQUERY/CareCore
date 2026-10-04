@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CareDatePicker } from "@/app/components/care-form-controls";
 import { EditorDialog } from "@/app/components/workspace-ui";
 import type { SettingsPayload } from "@/lib/roster/settings-service";
 import { formatDate } from "@/lib/roster/time";
@@ -222,18 +223,22 @@ function PersonEditor({
       </label>
       <label>
         <span>Eintritt</span>
-        <input
-          type="date"
+        <CareDatePicker
+          label="Eintritt"
           value={form.employmentStart}
-          onChange={(e) => setForm({ ...form, employmentStart: e.target.value })}
+          max={form.employmentEnd || undefined}
+          clearable
+          onChange={(value) => setForm({ ...form, employmentStart: value })}
         />
       </label>
       <label>
         <span>Austritt</span>
-        <input
-          type="date"
+        <CareDatePicker
+          label="Austritt"
           value={form.employmentEnd}
-          onChange={(e) => setForm({ ...form, employmentEnd: e.target.value })}
+          min={form.employmentStart || undefined}
+          clearable
+          onChange={(value) => setForm({ ...form, employmentEnd: value })}
         />
       </label>
       <fieldset className="area-editor-wide">
@@ -300,15 +305,15 @@ function PersonEditor({
               {grant && (
                 <label className="roster-checkbox">
                   <span>gültig bis</span>
-                  <input
-                    type="date"
-                    style={{ width: 150 }}
+                  <CareDatePicker
+                    label={`${q.name} gültig bis`}
                     value={grant.validUntil ?? ""}
-                    onChange={(e) =>
+                    clearable
+                    onChange={(value) =>
                       setForm({
                         ...form,
                         qualifications: form.qualifications.map((g) =>
-                          g.qualificationId === q.id ? { ...g, validUntil: e.target.value || null } : g,
+                          g.qualificationId === q.id ? { ...g, validUntil: value || null } : g,
                         ),
                       })
                     }

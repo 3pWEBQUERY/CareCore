@@ -21,7 +21,13 @@ test("Lebensende: Checkliste festlegen, Wünsche erfassen, nach dem Todesfall ab
     "3. Bestattung beauftragt",
   ]);
 
-  const units = (await (await page.request.get("/api/organization")).json()) as { units: Array<{ name: string }> };
+  const units = (await (await page.request.get("/api/organization")).json()) as {
+    units: Array<{ id: string; name: string }>;
+  };
+  const room = await page.request.post("/api/occupancy/rooms", {
+    data: { careUnitId: units.units[0].id, name: `E${tag}`, beds: 1 },
+  });
+  expect(room.status()).toBe(201);
   const created = await page.request.post("/api/residents", {
     data: {
       // Am Ende der Liste, damit Tests mit festen Zeilen (z. B. „zweite Person“) unverändert bleiben.

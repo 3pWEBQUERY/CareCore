@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN, login, watchErrors } from "./support";
+import { ADMIN, login, pickDate, watchErrors } from "./support";
 
 // Geräte & Prüfungen: Gerät mit Frist erfassen, fällige Prüfung sehen, Prüfung mit Mängeln erfassen.
 test("Geräte & Prüfungen: erfassen, fällig, Prüfung mit Mängeln, nächste Prüfung nach Frist", async ({ page }) => {
@@ -14,7 +14,7 @@ test("Geräte & Prüfungen: erfassen, fällig, Prüfung mit Mängeln, nächste P
   await dialog.getByLabel("Kategorie").fill("Lifter");
   await dialog.getByLabel("Inventarnummer").fill("INV-42");
   await dialog.getByLabel("Prüffrist (Monate)").fill("12");
-  await dialog.getByLabel("Nächste Prüfung").fill("2026-01-15");
+  await pickDate(dialog, "Nächste Prüfung", "2026-01-15");
   await dialog.getByRole("button", { name: "Gerät speichern" }).click();
   await expect(dialog).toHaveCount(0);
 
@@ -22,8 +22,8 @@ test("Geräte & Prüfungen: erfassen, fällig, Prüfung mit Mängeln, nächste P
   await expect(row).toContainText("Prüfung fällig seit 15.01.2026");
   await row.getByRole("button", { name: "Prüfung erfassen" }).click();
   const check = page.getByRole("dialog", { name: "Prüfung erfassen" });
-  await check.getByLabel("Geprüft am").fill("2026-02-01");
-  await expect(check.getByLabel("Nächste Prüfung")).toHaveValue("2027-02-01");
+  await pickDate(check, "Geprüft am", "2026-02-01");
+  await expect(check.getByRole("button", { name: "Nächste Prüfung", exact: true })).toHaveText("01.02.2027");
   await check.getByLabel("Geprüft von").fill("Servicefirma Muster");
   await check.getByRole("button", { name: "Mängel" }).click();
   await check.getByLabel("Mängel").fill("Gurt eingerissen");

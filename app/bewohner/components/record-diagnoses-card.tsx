@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { PencilSimple, Plus, Trash } from "@phosphor-icons/react";
-import { CareOptionSelect } from "@/app/components/care-form-controls";
+import { CareDatePicker, CareOptionSelect } from "@/app/components/care-form-controls";
 import { EditorDialog, formatDate, requestJson, todayInZurich, useApiData } from "@/app/components/workspace-ui";
 import {
   DIAGNOSIS_KINDS,
@@ -239,11 +239,12 @@ export function RecordDiagnosesCard({
           </label>
           <label>
             <span>Seit</span>
-            <input
-              type="date"
-              max={todayInZurich()}
+            <CareDatePicker
+              clearable
+              label="Seit"
               value={draft.sinceOn}
-              onChange={(event) => setDraft({ ...draft, sinceOn: event.target.value })}
+              max={todayInZurich()}
+              onChange={(value) => setDraft({ ...draft, sinceOn: value })}
             />
           </label>
           <label>
@@ -267,11 +268,12 @@ export function RecordDiagnosesCard({
           {draft.status === "resolved" && (
             <label>
               <span>Abgeschlossen am</span>
-              <input
-                type="date"
-                max={todayInZurich()}
+              <CareDatePicker
+                clearable
+                label="Abgeschlossen am"
                 value={draft.resolvedOn}
-                onChange={(event) => setDraft({ ...draft, resolvedOn: event.target.value })}
+                max={todayInZurich()}
+                onChange={(value) => setDraft({ ...draft, resolvedOn: value })}
               />
             </label>
           )}

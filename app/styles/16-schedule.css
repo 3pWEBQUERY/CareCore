@@ -275,6 +275,19 @@
   font-weight: 750;
   text-transform: capitalize;
 }
+.schedule-date-trigger:disabled {
+  color: var(--muted);
+  background: #f7f9fc;
+  cursor: not-allowed;
+}
+.schedule-date-trigger:disabled:hover {
+  border-color: var(--line);
+  background: #f7f9fc;
+}
+.schedule-date-menu-actions {
+  display: flex;
+  gap: 6px;
+}
 .schedule-date-placeholder {
   color: var(--muted);
 }

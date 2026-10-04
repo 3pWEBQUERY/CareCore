@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN, login, watchErrors } from "./support";
+import { ADMIN, login, pickDate, watchErrors } from "./support";
 
 // Vorsorge und Vertretung: Patientenverfügung in den Stammdaten, vertretungsberechtigte Kontaktperson, beides im
 // Aktenkopf und im FBM-Formular vorbelegt.
@@ -16,7 +16,7 @@ test("Vorsorge: Patientenverfügung und Vertretung erscheinen im Aktenkopf", asy
   const card = page.locator("section", { has: page.getByRole("heading", { name: "Vorsorge & Vertretung" }) });
   await card.getByRole("combobox", { name: "Patientenverfügung" }).click();
   await page.getByRole("option", { name: "Liegt vor" }).click();
-  await card.getByLabel("Verfasst am").fill("2025-05-12");
+  await pickDate(card, "Verfasst am", "2025-05-12");
   await card.getByLabel("Aufbewahrungsort").fill("Original bei der Tochter");
   await page.getByRole("button", { name: "Stammdaten speichern" }).click();
   await expect(page.getByRole("button", { name: "Stammdaten bearbeiten" })).toBeVisible();

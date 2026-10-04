@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CareDatePicker } from "@/app/components/care-form-controls";
 import { ArrowCounterClockwise, Check, PencilSimple, Plus } from "@phosphor-icons/react";
 import {
   EditorDialog,
@@ -276,11 +277,12 @@ export function RecordEndOfLifeCards({
           </label>
           <label>
             <span>Besprochen am</span>
-            <input
-              type="date"
-              max={todayInZurich()}
+            <CareDatePicker
+              clearable
+              label="Besprochen am"
               value={draft.discussedOn}
-              onChange={(event) => setDraft({ ...draft, discussedOn: event.target.value })}
+              max={todayInZurich()}
+              onChange={(value) => setDraft({ ...draft, discussedOn: value })}
             />
           </label>
         </EditorDialog>

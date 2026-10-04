@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { EditorDialog } from "@/app/components/workspace-ui";
 import { localTime, plannedInterval } from "@/lib/roster/time";
 import type { GridShift, SchedulePayload } from "@/lib/roster/view-types";
-import { CareOptionSelect } from "@/app/components/care-form-controls";
+import { CareDatePicker, CareOptionSelect } from "@/app/components/care-form-controls";
 
 export type ShiftDraft = {
   employeeId: string;
@@ -145,7 +145,7 @@ export function ShiftEditor({
       )}
       <label>
         <span>Datum</span>
-        <input type="date" value={draft.date} onChange={(event) => set("date", event.target.value)} />
+        <CareDatePicker label="Datum" value={draft.date} onChange={(value) => set("date", value)} />
       </label>
       <label className="area-editor-wide">
         <span>Diensttyp</span>
@@ -270,7 +270,7 @@ export function MoveDialog({
       </label>
       <label>
         <span>Datum</span>
-        <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+        <CareDatePicker label="Datum" value={date} onChange={(value) => setDate(value)} />
       </label>
     </EditorDialog>
   );

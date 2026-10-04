@@ -3,7 +3,7 @@
 import { useState } from "react";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { ModuleIcon } from "@/app/components/module-icon";
-import { CareOptionSelect } from "@/app/components/care-form-controls";
+import { CareDatePicker, CareOptionSelect } from "@/app/components/care-form-controls";
 import { useTerms } from "@/app/components/care-context";
 import {
   EditorDialog,
@@ -531,18 +531,20 @@ function PortalAdminBody({ showToast }: { showToast: ShowToast }) {
           </fieldset>
           <label>
             <span>Gültig ab</span>
-            <input
-              type="date"
+            <CareDatePicker
+              clearable
+              label="Gültig ab"
               value={grant.validFrom}
-              onChange={(event) => setGrant({ ...grant, validFrom: event.target.value })}
+              onChange={(value) => setGrant({ ...grant, validFrom: value })}
             />
           </label>
           <label>
             <span>Gültig bis</span>
-            <input
-              type="date"
+            <CareDatePicker
+              clearable
+              label="Gültig bis"
               value={grant.validUntil}
-              onChange={(event) => setGrant({ ...grant, validUntil: event.target.value })}
+              onChange={(value) => setGrant({ ...grant, validUntil: value })}
             />
           </label>
           <fieldset className="area-editor-wide">

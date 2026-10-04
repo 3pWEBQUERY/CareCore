@@ -683,3 +683,13 @@
   justify-content: flex-end;
   gap: 4px;
 }
+.admin-insurers-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.admin-retention-list.admin-insurers-list {
+  max-height: 320px;
+  overflow-y: auto;
+}

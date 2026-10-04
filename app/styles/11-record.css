@@ -351,6 +351,12 @@
   background: white;
   box-shadow: 0 5px 18px rgba(23, 54, 64, 0.035);
 }
+/* Offene Kalender- oder Auswahlliste ragt über die Karte hinaus und liegt über den folgenden Karten. */
+.record-card:has(.schedule-date-menu) {
+  position: relative;
+  z-index: 6;
+  overflow: visible;
+}
 .record-card-heading {
   min-height: 67px;
   display: flex;

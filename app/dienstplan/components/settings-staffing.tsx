@@ -6,7 +6,7 @@ import type { SettingsPayload } from "@/lib/roster/settings-service";
 import { formatDate } from "@/lib/roster/time";
 import { WEEKDAY_SHORT, type ShiftTypeInfo } from "@/lib/roster/types";
 import { rosterRequest } from "./roster-api";
-import { CareOptionSelect } from "@/app/components/care-form-controls";
+import { CareDatePicker, CareOptionSelect } from "@/app/components/care-form-controls";
 import { act, type TabProps } from "./settings-tab-shared";
 
 // --- Mindestbesetzung ----------------------------------------------------------------------------
@@ -89,10 +89,10 @@ export function StaffingTab({ data, reload, showToast }: TabProps) {
         <div className="roster-form-grid">
           <label>
             Datum
-            <input
-              type="date"
+            <CareDatePicker
+              label="Datum"
               value={exception.date}
-              onChange={(e) => setException({ ...exception, date: e.target.value })}
+              onChange={(value) => setException({ ...exception, date: value })}
             />
           </label>
           <label>

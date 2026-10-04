@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import ModulePageShell from "@/app/components/module-page-shell";
-import { CareSelect } from "@/app/components/care-form-controls";
+import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import {
   EditorDialog,
   LoadError,
@@ -499,12 +499,11 @@ function FeedbackContent({ showToast }: { showToast: ShowToast }) {
           </label>
           <label>
             <span>Eingegangen am</span>
-            <input
-              type="date"
-              required
-              max={todayInZurich()}
+            <CareDatePicker
+              label="Eingegangen am"
               value={draft.receivedOn}
-              onChange={(event) => setDraft({ ...draft, receivedOn: event.target.value })}
+              max={todayInZurich()}
+              onChange={(value) => setDraft({ ...draft, receivedOn: value })}
             />
           </label>
           {data.topics.length > 0 && (
@@ -643,12 +642,11 @@ function FeedbackContent({ showToast }: { showToast: ShowToast }) {
         >
           <label>
             <span>Beantwortet am</span>
-            <input
-              type="date"
-              required
-              max={todayInZurich()}
+            <CareDatePicker
+              label="Beantwortet am"
               value={answer.answeredOn}
-              onChange={(event) => setAnswer({ ...answer, answeredOn: event.target.value })}
+              max={todayInZurich()}
+              onChange={(value) => setAnswer({ ...answer, answeredOn: value })}
             />
           </label>
           <label className="area-editor-wide">

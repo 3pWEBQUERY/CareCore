@@ -1,6 +1,6 @@
 "use client";
 
-import { CareOptionSelect } from "@/app/components/care-form-controls";
+import { CareDatePicker, CareOptionSelect } from "@/app/components/care-form-controls";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { PortalConversation } from "@/app/components/portal-conversation";
@@ -246,10 +246,10 @@ export function PortalOrders() {
                   </label>
                   <label>
                     Liefertag
-                    <input
-                      type="date"
+                    <CareDatePicker
+                      label="Liefertag"
                       value={input.expectedOn}
-                      onChange={(event) => setInput({ expectedOn: event.target.value })}
+                      onChange={(value) => setInput({ expectedOn: value })}
                     />
                   </label>
                   {order.status === "open" && (

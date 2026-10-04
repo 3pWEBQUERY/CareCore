@@ -6,7 +6,7 @@ import type { AuditEntry } from "@/lib/roster/audit-service";
 import type { SettingsPayload } from "@/lib/roster/settings-service";
 import { formatDate } from "@/lib/roster/time";
 import { useRosterData } from "./roster-api";
-import { CareOptionSelect } from "@/app/components/care-form-controls";
+import { CareDatePicker, CareOptionSelect } from "@/app/components/care-form-controls";
 
 const ACTIONS: Record<string, string> = {
   created: "angelegt",
@@ -148,11 +148,25 @@ export default function AuditWorkspace() {
               />
               <label className="roster-month">
                 <span className="sr-only">Von</span>
-                <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} aria-label="Von" />
+                <CareDatePicker
+                  label="Von"
+                  placeholder="Von"
+                  value={from}
+                  max={to || undefined}
+                  clearable
+                  onChange={(value) => setFrom(value)}
+                />
               </label>
               <label className="roster-month">
                 <span className="sr-only">Bis</span>
-                <input type="date" value={to} onChange={(e) => setTo(e.target.value)} aria-label="Bis" />
+                <CareDatePicker
+                  label="Bis"
+                  placeholder="Bis"
+                  value={to}
+                  min={from || undefined}
+                  clearable
+                  onChange={(value) => setTo(value)}
+                />
               </label>
               <CareOptionSelect
                 label="Aktion"

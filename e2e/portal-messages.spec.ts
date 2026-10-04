@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext, type Browser } from "@playwright/test";
-import { ADMIN, field, login, watchErrors } from "./support";
+import { ADMIN, field, login, pickDate, watchErrors } from "./support";
 
 // Portal ↔ Pflege: Angehörige schreibt aus dem Portal, die Pflege antwortet in „Portal-Nachrichten“.
 // Apothekenportal: die Pflege bestellt, die Apotheke bestätigt mit Liefertag.
@@ -98,7 +98,7 @@ test("Apothekenportal: Bestellung erfassen, Apotheke bestätigt mit Liefertag", 
   const portal = await portalPage(browser, account);
   const card = portal.page.locator(".portal-order").first();
   await expect(card).toContainText("2 Packungen Metformin 500 mg");
-  await card.getByLabel("Liefertag").fill("2026-10-02");
+  await pickDate(card, "Liefertag", "2026-10-02");
   await card.getByRole("button", { name: "Bestätigen" }).click();
   await expect(portal.page.locator(".portal-order").first()).toContainText("Bestätigt");
   await portal.context.close();

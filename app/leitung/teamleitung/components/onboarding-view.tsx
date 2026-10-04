@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ArrowCounterClockwise, Check } from "@phosphor-icons/react";
 import ModulePageShell from "@/app/components/module-page-shell";
-import { CareSelect } from "@/app/components/care-form-controls";
+import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
 import {
   EditorDialog,
   LoadError,
@@ -374,11 +374,10 @@ function OnboardingContent({ showToast }: { showToast: ShowToast }) {
           </label>
           <label>
             <span>Beginn</span>
-            <input
-              type="date"
-              required
+            <CareDatePicker
+              label="Beginn"
               value={start.startedOn}
-              onChange={(event) => setStart({ ...start, startedOn: event.target.value })}
+              onChange={(value) => setStart({ ...start, startedOn: value })}
             />
           </label>
           <label className="area-editor-wide">
