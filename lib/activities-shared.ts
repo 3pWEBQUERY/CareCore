@@ -48,6 +48,8 @@ export type ActivityWeek = {
   careUnitId: string | null;
   canWrite: boolean;
   activities: Activity[];
+  // Für die Leitung von Angeboten zugeteilte Mitarbeitende (Auswahl im Dialog).
+  leaders: string[];
 };
 
 export type ActivityParticipant = {

@@ -470,19 +470,20 @@ test("Rollen: Systemrolle kopieren – neue eigene Rolle mit denselben Berechtig
   await page.goto("/c/leitung/administration/mitarbeiter");
   const roles = page.locator(".admin-roles-card");
   await roles.locator(".admin-role-row", { hasText: "Pflege" }).first().click();
-  const panel = page.locator(".user-editor-panel");
-  const granted = await panel.locator(".user-editor-role button.active small").allTextContents();
+  const panel = page.locator(".editor-dialog");
+  const granted = panel.locator('.role-permission[aria-pressed="true"] strong');
+  await expect(granted.first()).toBeVisible();
+  const permissions = await granted.allTextContents();
   await panel.getByRole("button", { name: "Rolle kopieren" }).click();
-  await expect(panel.getByRole("heading", { name: "Kopie als eigene Rolle" })).toBeVisible();
-  const key = `pflege-e2e-${Date.now().toString(36)}`;
+  await expect(panel.getByRole("heading", { name: "Pflege kopieren" })).toBeVisible();
   await panel.getByLabel("Name").fill("Pflege Nachtdienst");
-  await panel.getByLabel("Rollen-Schlüssel").fill(key);
   await panel.getByRole("button", { name: "Rolle speichern" }).click();
   await expect(page.getByText("Rolle kopiert")).toBeVisible();
   const copy = roles.locator(".admin-role-row", { hasText: "Pflege Nachtdienst" });
   await expect(copy).toContainText("Eigene Rolle");
   await copy.click();
-  expect(await panel.locator(".user-editor-role button.active small").allTextContents()).toEqual(granted);
+  await expect(panel.getByRole("heading", { name: "Pflege Nachtdienst verwalten" })).toBeVisible();
+  expect(await granted.allTextContents()).toEqual(permissions);
   // Aufräumen: die Kopie ist niemandem zugeordnet und lässt sich löschen.
   await panel.getByRole("button", { name: "Rolle löschen" }).click();
   await expect(copy).toHaveCount(0);

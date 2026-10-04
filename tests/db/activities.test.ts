@@ -12,6 +12,7 @@ import {
   recordParticipation,
   updateActivity,
 } from "@/lib/activities";
+import { activityLeaderSettings, saveActivityLeaders } from "@/lib/activity-leaders";
 import { portalResidentDetail, type PortalActor } from "@/lib/portal";
 import { createPortalAccount, createPortalGrant } from "@/lib/portal-admin";
 import { apiContextFor, createResident, fixture, q } from "../support/db";
@@ -53,6 +54,17 @@ test("Alltag & Aktivierung: planen, wöchentlich wiederholen, Teilnahme, Absage,
   };
 
   assert.equal((await failure(createActivity(reader, base))).status, 403);
+  // Leitung nur aus der Zuteilung der Administration.
+  assert.match((await failure(createActivity(ctx, base))).message, /Leitung aus der Liste/);
+  const admin = withPermission(await apiContextFor(f, "leadA"), "administration.manage");
+  assert.equal((await failure(saveActivityLeaders(ctx, { leaderIds: [f.people.lea] }))).status, 403);
+  assert.match((await failure(saveActivityLeaders(admin, { leaderIds: ["fremd"] }))).message, /nicht \(mehr\) aktiv/);
+  const assigned = await saveActivityLeaders(admin, { leaderIds: [f.people.lea, f.people.lea] });
+  assert.deepEqual(
+    assigned.leaders.map((person) => person.name),
+    ["Lea Beispiel"],
+  );
+  assert.ok(assigned.staff.some((person) => person.name === "Anna Müller"));
   assert.match((await failure(createActivity(ctx, { ...base, title: " " }))).message, /bezeichnen/);
   assert.match((await failure(createActivity(ctx, { ...base, category: "Fernsehen" }))).message, /Kategorie/);
   assert.match((await failure(createActivity(ctx, { ...base, durationMinutes: 2 }))).message, /Dauer/);
@@ -87,6 +99,7 @@ test("Alltag & Aktivierung: planen, wöchentlich wiederholen, Teilnahme, Absage,
     ["Gottesdienst", "Singnachmittag"],
   );
   assert.ok(!week.activities.some((item) => item.title === "Kochgruppe B"));
+  assert.deepEqual(week.leaders, ["Lea Beispiel"]);
 
   // Teilnahme: erst ab Beginn; nur Personen des Bereichs; jede Änderung im Protokoll der Akte.
   assert.match(
@@ -137,6 +150,21 @@ test("Alltag & Aktivierung: planen, wöchentlich wiederholen, Teilnahme, Absage,
 
   // Bearbeiten und Absagen (mit Grund); abgesagte Angebote zählen nicht.
   await updateActivity(ctx, ids[2], { ...base, startsAt: at(14 * 24 + 1), location: "Garten" });
+  // Zuteilung aufgehoben: bestehende Angebote behalten ihre Leitung, eine andere Person ist nicht wählbar.
+  assert.equal((await failure(activityLeaderSettings(ctx))).status, 403);
+  await saveActivityLeaders(admin, { leaderIds: [] });
+  assert.deepEqual((await activityWeek(reader, zurichDay(at(-2)), f.units.a)).leaders, []);
+  await updateActivity(ctx, ids[2], { ...base, startsAt: at(14 * 24 + 1), location: "Garten", leader: "Lea Beispiel" });
+  assert.match(
+    (await failure(updateActivity(ctx, ids[2], { ...base, startsAt: at(14 * 24 + 1), leader: "Max Meier" }))).message,
+    /Leitung aus der Liste/,
+  );
+  await updateActivity(ctx, ids[2], { ...base, startsAt: at(14 * 24 + 1), location: "Garten", leader: "" });
+  const leaderAudit = await q<{ action: string }>(
+    `SELECT action FROM carecore_audit_log WHERE entity_type = 'setting' AND entity_id = $1 AND action = 'activity_leaders'`,
+    [admin.actor.organizationId],
+  );
+  assert.equal(leaderAudit.length, 2);
   assert.match((await failure(cancelActivity(ctx, ids[1], { reason: "" }))).message, /Grund/);
   await cancelActivity(ctx, ids[1], { reason: "Leitung erkrankt" });
   assert.equal((await failure(cancelActivity(ctx, ids[1], { reason: "nochmals" }))).status, 409);
@@ -151,7 +179,6 @@ test("Alltag & Aktivierung: planen, wöchentlich wiederholen, Teilnahme, Absage,
   assert.deepEqual(report.categories, ["Musik & Singen", "Spiritualität"]);
 
   // Portal: nur mit freigegebenem Bereich; teilgenommene Angebote ohne Bemerkung und kommende Angebote.
-  const admin = withPermission(await apiContextFor(f, "leadA"), "administration.manage");
   const { id: account } = await createPortalAccount(admin, {
     kind: "relative",
     displayName: "Petra Muster",

@@ -73,11 +73,14 @@ const draftOf = (activity: Activity | null, day: string, careUnitId: string): Dr
 function ActivityDialog({
   activity,
   initial,
+  leaders,
   onClose,
   onSaved,
 }: {
   activity: Activity | null;
   initial: Draft;
+  // Für die Leitung von Angeboten zugeteilte Mitarbeitende (Konfiguration der Administration).
+  leaders: string[];
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
@@ -202,7 +205,23 @@ function ActivityDialog({
       </label>
       <label>
         <span>Leitung (optional)</span>
-        <input maxLength={160} value={draft.leader} onChange={(event) => set("leader", event.target.value)} />
+        <CareOptionSelect
+          label="Leitung (optional)"
+          value={draft.leader}
+          onChange={(value) => set("leader", value)}
+          options={[
+            { value: "", label: "Keine Angabe" },
+            // Eine früher erfasste Leitung bleibt wählbar.
+            ...(draft.leader && !leaders.includes(draft.leader) ? [{ value: draft.leader, label: draft.leader }] : []),
+            ...leaders.map((name) => ({ value: name, label: name })),
+          ]}
+        />
+        {!leaders.length && (
+          <small className="activity-leader-hint">
+            Noch niemand für die Leitung von Angeboten zugeteilt. Die Administration legt das unter Leitung ›
+            Administration › Konfiguration fest.
+          </small>
+        )}
       </label>
       <label className="area-editor-wide">
         <span>Beschreibung (optional)</span>
@@ -497,6 +516,7 @@ function ActivitiesContent({ showToast }: { showToast: ShowToast }) {
         <ActivityDialog
           activity={editing.activity}
           initial={editing.draft}
+          leaders={week?.leaders ?? []}
           onClose={() => setEditing(null)}
           onSaved={done}
         />

@@ -530,3 +530,97 @@
 .organization-tree > button + .organization-root {
   margin-top: 12px;
 }
+/* Rolle erstellen/verwalten: Berechtigungen als Auswahlkarten mit Häkchen. */
+.area-editor-grid fieldset.role-permissions {
+  display: grid;
+  gap: 10px;
+}
+.role-permissions legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.role-permissions legend span {
+  padding: 2px 8px;
+  border-radius: 6px;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+.role-permissions > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.role-permission {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: white;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease;
+}
+.role-permission:hover {
+  border-color: #93c5fd;
+  background: var(--brand-soft);
+}
+.role-permission:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.18);
+  outline-offset: 2px;
+}
+.role-permission.active {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  box-shadow: inset 0 0 0 1px var(--brand);
+}
+.role-permission:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.role-permission-box {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid #b6c6d8;
+  border-radius: 6px;
+  background: white;
+}
+.role-permission.active .role-permission-box {
+  border-color: var(--brand);
+  background: var(--brand);
+}
+.role-permission-box svg {
+  width: 13px;
+  color: white;
+}
+.role-permission-text {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.role-permission-text strong {
+  font-size: 13px;
+}
+.role-permission-text small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+@media (max-width: 760px) {
+  .role-permissions > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

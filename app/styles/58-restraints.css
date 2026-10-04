@@ -2004,9 +2004,14 @@
   font-size: 12px;
   font-weight: 700;
 }
-.intake-room-hint {
+.intake-room-hint,
+.activity-leader-hint {
   color: var(--muted);
   font-size: 12px;
   font-weight: 400;
   line-height: 1.4;
+}
+/* Der Hinweis unter „Leitung“ streckt das Feld daneben nicht. */
+.area-editor-grid:has(.activity-leader-hint) > label {
+  align-content: start;
 }

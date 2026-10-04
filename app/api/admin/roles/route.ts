@@ -14,10 +14,7 @@ function fail(error: unknown) {
   if (message === "DATABASE_URL_NOT_CONFIGURED")
     return NextResponse.json({ error: "Datenbank ist nicht konfiguriert." }, { status: 503 });
   if (message === "INVALID_ROLE_INPUT")
-    return NextResponse.json(
-      { error: "Name und ein eindeutiger Rollen-Schlüssel sind erforderlich." },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Bitte einen Namen für die Rolle angeben." }, { status: 400 });
   if (message === "ROLE_NOT_FOUND")
     return NextResponse.json({ error: "Die Rolle wurde nicht gefunden." }, { status: 404 });
   if (message === "SYSTEM_ROLE_PROTECTED")
@@ -28,7 +25,10 @@ function fail(error: unknown) {
       { status: 400 },
     );
   if (message.includes("duplicate key"))
-    return NextResponse.json({ error: "Dieser Rollen-Schlüssel ist bereits vergeben." }, { status: 409 });
+    return NextResponse.json(
+      { error: "Diese Rolle gibt es bereits. Bitte einen anderen Namen wählen." },
+      { status: 409 },
+    );
   console.error("Admin roles request failed", error);
   return NextResponse.json({ error: "Rollenverwaltung konnte nicht aktualisiert werden." }, { status: 500 });
 }

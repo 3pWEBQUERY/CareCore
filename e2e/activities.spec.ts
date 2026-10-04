@@ -7,6 +7,19 @@ test("Alltag & Aktivierung: Angebot planen, Teilnahme erfassen, Übersicht", asy
   const errors = watchErrors(page);
   const title = `Singnachmittag E2E ${Date.now()}`;
 
+  // Die Administration teilt zu, wer Angebote leiten kann.
+  await page.goto("/c/leitung/administration/konfiguration");
+  const leadersCard = page.locator("section", { has: page.getByRole("heading", { name: "Leitung von Angeboten" }) });
+  await leadersCard.getByRole("button", { name: /Festlegen|Bearbeiten/ }).click();
+  const leadersDialog = page.getByRole("dialog", { name: "Leitung von Angeboten" });
+  const person = leadersDialog.getByRole("group", { name: "Mitarbeitende" }).getByRole("button").first();
+  const leader = ((await person.textContent()) ?? "").trim();
+  if ((await person.getAttribute("aria-pressed")) !== "true") await person.click();
+  await expect(person).toHaveAttribute("aria-pressed", "true");
+  await leadersDialog.getByRole("button", { name: "Speichern" }).click();
+  await expect(page.getByText("Leitung von Angeboten gespeichert")).toBeVisible();
+  await expect(leadersCard.locator(".admin-retention-row", { hasText: leader })).toBeVisible();
+
   await page.goto("/c/alltag");
   await expect(page.getByRole("heading", { name: "Angebote", level: 1 })).toBeVisible();
   await page.getByRole("button", { name: "Angebot planen" }).click();
@@ -17,11 +30,14 @@ test("Alltag & Aktivierung: Angebot planen, Teilnahme erfassen, Übersicht", asy
   // Heute früh: bereits begonnen, damit die Teilnahme erfasst werden kann.
   await dialog.getByLabel("Uhrzeit").fill("00:00");
   await dialog.getByLabel("Ort (optional)").fill("Aufenthaltsraum");
+  await dialog.getByRole("combobox", { name: "Leitung (optional)" }).click();
+  await page.getByRole("option", { name: leader, exact: true }).click();
   await dialog.getByRole("button", { name: "Speichern" }).click();
 
   const card = page.locator(".activity-card", { hasText: title });
   await expect(card).toContainText("Musik & Singen");
   await expect(card).toContainText("Aufenthaltsraum");
+  await expect(card).toContainText(leader);
   await card.getByRole("button", { name: "Teilnahme erfassen" }).click();
   const participation = page.getByRole("dialog", { name: "Teilnahme erfassen" });
   const first = participation.locator(".participation-list li").first();
