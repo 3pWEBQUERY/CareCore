@@ -203,14 +203,39 @@ export function CareDatePicker({
   const startView = () =>
     !value && openAtYear ? new Date(openAtYear, 0, 1) : new Date(`${value || max || todayIso()}T12:00:00`);
   const [viewMonth, setViewMonth] = useState(startView);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  // Der Kalender liegt über der Seite (Portal), damit Karten, Tabellen oder Dialoge ihn nicht abschneiden.
+  const place = useCallback(() => {
+    const rect = rootRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const width = Math.min(330, window.innerWidth - 36);
+    const below = window.innerHeight - rect.bottom;
+    const up = below < 380 && rect.top > below;
+    setOpenUp(up);
+    setPosition({
+      top: up ? rect.top - 7 : rect.bottom + 7,
+      left: Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)),
+    });
+  }, []);
   useEffect(() => {
     const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      if (!rootRef.current?.contains(event.target as Node) && !menuRef.current?.contains(event.target as Node))
+        setOpen(false);
     };
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, []);
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open, place]);
   const year = viewMonth.getFullYear();
   const month = viewMonth.getMonth();
   const firstDay = new Date(year, month, 1);
@@ -233,8 +258,7 @@ export function CareDatePicker({
   const toggle = () =>
     setOpen((current) => {
       if (!current) {
-        const rect = rootRef.current?.getBoundingClientRect();
-        setOpenUp(Boolean(rect && window.innerHeight - rect.bottom < 350 && rect.top > 350));
+        place();
         setViewMonth(startView());
         setMode(yearSelect && !value ? "years" : "days");
       } else setOpenUp(false);
@@ -270,133 +294,138 @@ export function CareDatePicker({
         </span>
         <ModuleIcon name="calendar" />
       </button>
-      {open && (
-        // Steht die Auswahl in einem <label>, leitet der Browser Klicks sonst an den Auslöser weiter (schliesst).
-        <div
-          className={`schedule-date-menu ${openUp ? "up" : ""}`}
-          role="dialog"
-          aria-label={`${label} auswählen`}
-          onClick={(event) => event.preventDefault()}
-        >
-          <div className="schedule-date-menu-header">
-            <button
-              type="button"
-              aria-label={mode === "days" ? "Vorheriger Monat" : `Vorherige ${stepLabel}`}
-              onClick={() => step(-1)}
-            >
-              <ModuleIcon name="chevron" className="previous" />
-            </button>
-            {yearSelect ? (
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          // Klicks im Kalender lösen keine Aktion im umgebenden <label> oder Formular aus.
+          <div
+            ref={menuRef}
+            className={`schedule-date-menu schedule-date-menu-portal ${openUp ? "up" : ""}`}
+            role="dialog"
+            aria-label={`${label} auswählen`}
+            style={position}
+            onClick={(event) => event.preventDefault()}
+          >
+            <div className="schedule-date-menu-header">
               <button
                 type="button"
-                className="schedule-date-period"
-                aria-label={mode === "days" ? `${monthLabel}: Jahr und Monat wählen` : "Jahr wählen"}
-                onClick={() => setMode(mode === "years" ? "days" : "years")}
+                aria-label={mode === "days" ? "Vorheriger Monat" : `Vorherige ${stepLabel}`}
+                onClick={() => step(-1)}
               >
-                {mode === "years" ? `${years[0]} – ${years[11]}` : mode === "months" ? String(year) : monthLabel}
+                <ModuleIcon name="chevron" className="previous" />
               </button>
-            ) : (
-              <strong>{monthLabel}</strong>
-            )}
-            <button
-              type="button"
-              aria-label={mode === "days" ? "Nächster Monat" : `Nächste ${stepLabel}`}
-              onClick={() => step(1)}
-            >
-              <ModuleIcon name="chevron" />
-            </button>
-          </div>
-          {mode === "years" ? (
-            <div className="schedule-date-grid schedule-date-choices" role="group" aria-label="Jahr">
-              {years.map((item) => (
+              {yearSelect ? (
                 <button
                   type="button"
-                  key={item}
-                  disabled={yearOutside(item)}
-                  className={value.startsWith(`${item}-`) ? "selected" : ""}
-                  onClick={() => {
-                    setViewMonth(new Date(item, month, 1));
-                    setMode("months");
-                  }}
+                  className="schedule-date-period"
+                  aria-label={mode === "days" ? `${monthLabel}: Jahr und Monat wählen` : "Jahr wählen"}
+                  onClick={() => setMode(mode === "years" ? "days" : "years")}
                 >
-                  {item}
+                  {mode === "years" ? `${years[0]} – ${years[11]}` : mode === "months" ? String(year) : monthLabel}
                 </button>
-              ))}
+              ) : (
+                <strong>{monthLabel}</strong>
+              )}
+              <button
+                type="button"
+                aria-label={mode === "days" ? "Nächster Monat" : `Nächste ${stepLabel}`}
+                onClick={() => step(1)}
+              >
+                <ModuleIcon name="chevron" />
+              </button>
             </div>
-          ) : mode === "months" ? (
-            <div className="schedule-date-grid schedule-date-choices" role="group" aria-label="Monat">
-              {Array.from({ length: 12 }, (_, index) => index).map((item) => (
-                <button
-                  type="button"
-                  key={item}
-                  disabled={monthOutside(item)}
-                  className={value.startsWith(iso(year, item, 1).slice(0, 8)) ? "selected" : ""}
-                  onClick={() => {
-                    setViewMonth(new Date(year, item, 1));
-                    setMode("days");
-                  }}
-                >
-                  {new Date(year, item, 1).toLocaleDateString("de-CH", { month: "short" })}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <>
-              <div className="schedule-date-weekdays">
-                {["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].map((day) => (
-                  <span key={day}>{day}</span>
+            {mode === "years" ? (
+              <div className="schedule-date-grid schedule-date-choices" role="group" aria-label="Jahr">
+                {years.map((item) => (
+                  <button
+                    type="button"
+                    key={item}
+                    disabled={yearOutside(item)}
+                    className={value.startsWith(`${item}-`) ? "selected" : ""}
+                    onClick={() => {
+                      setViewMonth(new Date(item, month, 1));
+                      setMode("months");
+                    }}
+                  >
+                    {item}
+                  </button>
                 ))}
               </div>
-              <div className="schedule-date-grid">
-                {days.map((day, index) =>
-                  day ? (
-                    <button
-                      type="button"
-                      key={day}
-                      disabled={outside(iso(year, month, day))}
-                      className={value === iso(year, month, day) ? "selected" : ""}
-                      onClick={() => selectDay(day)}
-                    >
-                      {day}
-                    </button>
-                  ) : (
-                    <span aria-hidden="true" key={`empty-${index}`} />
-                  ),
+            ) : mode === "months" ? (
+              <div className="schedule-date-grid schedule-date-choices" role="group" aria-label="Monat">
+                {Array.from({ length: 12 }, (_, index) => index).map((item) => (
+                  <button
+                    type="button"
+                    key={item}
+                    disabled={monthOutside(item)}
+                    className={value.startsWith(iso(year, item, 1).slice(0, 8)) ? "selected" : ""}
+                    onClick={() => {
+                      setViewMonth(new Date(year, item, 1));
+                      setMode("days");
+                    }}
+                  >
+                    {new Date(year, item, 1).toLocaleDateString("de-CH", { month: "short" })}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="schedule-date-weekdays">
+                  {["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].map((day) => (
+                    <span key={day}>{day}</span>
+                  ))}
+                </div>
+                <div className="schedule-date-grid">
+                  {days.map((day, index) =>
+                    day ? (
+                      <button
+                        type="button"
+                        key={day}
+                        disabled={outside(iso(year, month, day))}
+                        className={value === iso(year, month, day) ? "selected" : ""}
+                        onClick={() => selectDay(day)}
+                      >
+                        {day}
+                      </button>
+                    ) : (
+                      <span aria-hidden="true" key={`empty-${index}`} />
+                    ),
+                  )}
+                </div>
+              </>
+            )}
+            <div className="schedule-date-menu-footer">
+              <span>{value ? formatCareDate(value) : placeholder}</span>
+              <div className="schedule-date-menu-actions">
+                {clearable && value && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChange("");
+                      setOpen(false);
+                    }}
+                  >
+                    Leeren
+                  </button>
+                )}
+                {showToday && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const today = todayIso();
+                      setViewMonth(new Date(`${today}T12:00:00`));
+                      onChange(today);
+                      setOpen(false);
+                    }}
+                  >
+                    Heute
+                  </button>
                 )}
               </div>
-            </>
-          )}
-          <div className="schedule-date-menu-footer">
-            <span>{value ? formatCareDate(value) : placeholder}</span>
-            <div className="schedule-date-menu-actions">
-              {clearable && value && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onChange("");
-                    setOpen(false);
-                  }}
-                >
-                  Leeren
-                </button>
-              )}
-              {showToday && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const today = todayIso();
-                    setViewMonth(new Date(`${today}T12:00:00`));
-                    onChange(today);
-                    setOpen(false);
-                  }}
-                >
-                  Heute
-                </button>
-              )}
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
