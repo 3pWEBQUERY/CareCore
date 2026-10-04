@@ -8,6 +8,7 @@ import { organizationCountry } from "@/lib/organization-country";
 import { activeIsolations } from "@/lib/hygiene";
 import { readDiagnoses } from "@/lib/diagnoses";
 import { readBelongings } from "@/lib/belongings";
+import { TRANSFER_KINDS } from "@/lib/belongings-shared";
 import { isolationLabel, type IsolationKind } from "@/lib/hygiene-shared";
 import { activeRestraints } from "@/lib/restraints";
 import { restraintLabel, type RestraintKind } from "@/lib/restraints-shared";
@@ -23,7 +24,9 @@ export async function transferSheet(ctx: ApiContext, residentIdInput: unknown): 
   const restraints = await activeRestraints(ctx, residentId);
   const isolations = await activeIsolations(ctx, residentId);
   const diagnoses = (await readDiagnoses(ctx, residentId)).filter((item) => item.status === "current");
-  const belongings = (await readBelongings(ctx, residentId)).filter((item) => !item.removed);
+  const belongings = (await readBelongings(ctx, residentId)).filter(
+    (item) => !item.removed && TRANSFER_KINDS.includes(item.kind),
+  );
   const vaccinations = (await sql`
     SELECT DISTINCT ON (lower(target)) target, to_char(given_on, 'YYYY-MM-DD') AS given_on
     FROM carecore_vaccinations WHERE resident_id = ${residentId}

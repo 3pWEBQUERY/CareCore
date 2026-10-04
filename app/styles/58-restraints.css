@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Diagnosen, Impfungen, Hilfsmittel & Gegenstände, Einwilligungen, Geräte & Prüfungen, Kühlschrank-Temperatur, Fahrdienst, Einarbeitung, Rückmeldungen, Küchenliste, Tippflächen kleiner Links und Textknöpfe sowie die Hauptüberschrift der Druckansichten. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Diagnosen, Impfungen, Hilfsmittel & Gegenstände, Einwilligungen, Geräte & Prüfungen, Kühlschrank-Temperatur, Fahrdienst, Einarbeitung, Rückmeldungen, Inventarliste, Küchenliste, Tippflächen kleiner Links und Textknöpfe sowie die Hauptüberschrift der Druckansichten. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -1867,6 +1867,40 @@
   .feedback-toolbar > .death-checklist-action {
     margin-left: 0;
   }
+}
+/* Wäsche- und Inventarliste (A4 hoch): Gruppen je Art, Unterschriftsfelder am Ende. */
+.belongings-print {
+  justify-self: start;
+  text-decoration: none;
+}
+.inventory-sheet h2 {
+  margin: 5mm 0 2mm;
+  font-size: 13px;
+  font-weight: 700;
+}
+.inventory-sheet td.number,
+.inventory-sheet th.number {
+  width: 16mm;
+  text-align: right;
+}
+.inventory-sheet td small {
+  display: block;
+  color: #4b5563;
+}
+.inventory-signatures {
+  margin-top: 8mm;
+  font-size: 12px;
+  break-inside: avoid;
+}
+.inventory-signatures div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8mm;
+  margin-top: 14mm;
+}
+.inventory-signatures span {
+  padding-top: 2mm;
+  border-top: 1px solid #000;
 }
 /* Küchenliste (A4 quer): breiter als die Evakuierungsliste, Allergien hervorgehoben. */
 .kitchen-sheet {

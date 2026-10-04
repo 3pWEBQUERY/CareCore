@@ -15,14 +15,23 @@ type Draft = {
   id: string | null;
   kind: BelongingKind;
   name: string;
+  quantity: string;
   marking: string;
   location: string;
   note: string;
   updatedAt: string | null;
 };
 
-// Hilfsmittel und persönliche Gegenstände mit Kennzeichnung und Standort. Nicht mehr vorhandene bleiben mit Grund
-// im Verlauf.
+// Kurzbezeichnung der Art in der Liste (Hilfsmittel ohne Zusatz).
+const KIND_TAGS: Record<BelongingKind, string> = {
+  aid: "",
+  personal: "persönlich",
+  clothing: "Wäsche",
+  furniture: "Einrichtung",
+};
+
+// Hilfsmittel, persönliche Gegenstände, Kleidung bzw. Wäsche und Einrichtung mit Anzahl, Kennzeichnung und Standort;
+// daraus die Inventarliste beim Eintritt zum Unterschreiben. Nicht mehr vorhandene bleiben mit Grund im Verlauf.
 export function RecordBelongingsCard({
   residentId,
   residentName,
@@ -71,7 +80,16 @@ export function RecordBelongingsCard({
             aria-label="Hilfsmittel oder Gegenstand erfassen"
             onClick={() => {
               setError("");
-              setDraft({ id: null, kind: "aid", name: "", marking: "", location: "", note: "", updatedAt: null });
+              setDraft({
+                id: null,
+                kind: "aid",
+                name: "",
+                quantity: "1",
+                marking: "",
+                location: "",
+                note: "",
+                updatedAt: null,
+              });
             }}
           >
             <Plus aria-hidden="true" /> Erfassen
@@ -87,7 +105,8 @@ export function RecordBelongingsCard({
           <p className="record-export-note">Wird geladen …</p>
         ) : !data.belongings.length ? (
           <p className="record-export-note">
-            Noch nichts erfasst – z. B. Brille, Hörgerät oder Zahnprothese mit Kennzeichnung und Standort.
+            Noch nichts erfasst – z. B. Brille, Hörgerät, Kleidung mit Namensetikett oder eigene Möbel mit Kennzeichnung
+            und Standort.
           </p>
         ) : (
           <>
@@ -97,8 +116,8 @@ export function RecordBelongingsCard({
                   <li key={item.id}>
                     <div>
                       <strong>
-                        {item.name}
-                        {item.kind === "personal" && <span className="diagnosis-code">persönlich</span>}
+                        {item.quantity > 1 ? `${item.quantity} × ${item.name}` : item.name}
+                        {KIND_TAGS[item.kind] && <span className="diagnosis-code">{KIND_TAGS[item.kind]}</span>}
                       </strong>
                       <small>
                         {[
@@ -122,6 +141,7 @@ export function RecordBelongingsCard({
                               id: item.id,
                               kind: item.kind,
                               name: item.name,
+                              quantity: String(item.quantity),
                               marking: item.marking,
                               location: item.location,
                               note: item.note,
@@ -148,6 +168,16 @@ export function RecordBelongingsCard({
                   </li>
                 ))}
               </ul>
+            )}
+            {present.length > 0 && (
+              <a
+                className="death-checklist-action belongings-print"
+                href={`/c/bewohner/inventar?resident=${residentId}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Inventarliste drucken
+              </a>
             )}
             {removed.length > 0 && (
               <details className="diagnosis-resolved">
@@ -181,8 +211,14 @@ export function RecordBelongingsCard({
             const saved = await run(
               () =>
                 draft.id
-                  ? requestJson(`/api/belongings/${draft.id}`, { method: "PATCH", body: draft })
-                  : requestJson(`/api/residents/${residentId}/belongings`, { method: "POST", body: draft }),
+                  ? requestJson(`/api/belongings/${draft.id}`, {
+                      method: "PATCH",
+                      body: { ...draft, quantity: Number(draft.quantity) || 0 },
+                    })
+                  : requestJson(`/api/residents/${residentId}/belongings`, {
+                      method: "POST",
+                      body: { ...draft, quantity: Number(draft.quantity) || 0 },
+                    }),
               draft.id ? "Gegenstand gespeichert" : "Gegenstand erfasst",
             );
             if (saved) setDraft(null);
@@ -232,10 +268,19 @@ export function RecordBelongingsCard({
             </div>
           )}
           <label>
+            <span>Anzahl</span>
+            <input
+              inputMode="numeric"
+              required
+              value={draft.quantity}
+              onChange={(event) => setDraft({ ...draft, quantity: event.target.value.replace(/\D/g, "").slice(0, 3) })}
+            />
+          </label>
+          <label>
             <span>Kennzeichnung</span>
             <input
               maxLength={160}
-              placeholder="z. B. Name eingraviert, roter Punkt"
+              placeholder="z. B. Namensetikett, Name eingraviert, roter Punkt"
               value={draft.marking}
               onChange={(event) => setDraft({ ...draft, marking: event.target.value })}
             />
