@@ -2,6 +2,7 @@
 
 import { useTerms } from "@/app/components/care-context";
 import { useEffect, useState, type ChangeEvent } from "react";
+import { preparePhoto } from "@/lib/resident-photo-client";
 import type { ResidentRecordData } from "./resident-record-data";
 
 export function useRecordMasterData({
@@ -80,47 +81,9 @@ export function useRecordMasterData({
       onAction(`Dieses ${t.prefix}profil kann nicht gespeichert werden.`);
       return;
     }
-    if (
-      !file.type.startsWith("image/") ||
-      !["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"].includes(file.type)
-    ) {
-      onAction("Bitte ein JPEG-, PNG-, WebP- oder HEIC-Bild auswählen.");
-      event.currentTarget.value = "";
-      return;
-    }
-    if (file.size > 15 * 1024 * 1024) {
-      onAction("Das ausgewählte Bild darf höchstens 15 MB gross sein.");
-      event.currentTarget.value = "";
-      return;
-    }
     setResidentPhotoSaving(true);
     try {
-      const bitmap = await createImageBitmap(file);
-      const maxSide = 640;
-      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-      const context = canvas.getContext("2d");
-      if (!context) throw new Error("Bild konnte nicht verarbeitet werden.");
-      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-      bitmap.close();
-      let blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.86));
-      if (!blob) throw new Error("Bild konnte nicht verarbeitet werden.");
-      if (blob.size > 1024 * 1024) {
-        blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.68));
-      }
-      if (!blob || blob.size > 1024 * 1024)
-        throw new Error("Das Bild konnte nicht auf höchstens 1 MB verkleinert werden.");
-      const photoDataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () =>
-          typeof reader.result === "string"
-            ? resolve(reader.result)
-            : reject(new Error("Bild konnte nicht gelesen werden."));
-        reader.onerror = () => reject(new Error("Bild konnte nicht gelesen werden."));
-        reader.readAsDataURL(blob);
-      });
+      const photoDataUrl = await preparePhoto(file);
       const response = await fetch(`/api/residents/${resident.id}/photo`, {
         method: "PUT",
         headers: { "content-type": "application/json" },

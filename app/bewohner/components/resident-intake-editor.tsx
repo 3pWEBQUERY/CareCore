@@ -1,7 +1,10 @@
 "use client";
 
 import { useCountry, useTerms } from "@/app/components/care-context";
-import { useState } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
+import Image from "next/image";
+import { Camera } from "@phosphor-icons/react";
+import { PHOTO_ACCEPT, preparePhoto } from "@/lib/resident-photo-client";
 import { todayInZurich, useApiData } from "@/app/components/workspace-ui";
 import { useEscapeClose } from "@/app/components/use-escape-close";
 import { NOT_ASSESSED, careLevelOptions } from "@/lib/country";
@@ -46,11 +49,34 @@ function IntakeForm({ onClose, onSuccess }: Props) {
   const unitRooms = (options.data?.rooms ?? []).filter((item) => item.careUnitId === unitId);
   const nurse = options.data?.staff.find((item) => item.id === nurseId)?.name ?? NO_NURSE;
   const [note, setNote] = useState("");
+  // Optionales Bild der Person, im Browser verkleinert; wird mit der Aufnahme gespeichert.
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  const photoInput = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   useEscapeClose(() => !saving && onClose());
+  async function choosePhoto(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    setPhotoBusy(true);
+    setPhotoError("");
+    try {
+      setPhoto(await preparePhoto(file));
+    } catch (cause) {
+      setPhotoError(cause instanceof Error ? cause.message : "Bild konnte nicht verarbeitet werden.");
+    } finally {
+      setPhotoBusy(false);
+      if (photoInput.current) photoInput.current.value = "";
+    }
+  }
   async function submitIntake(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!birthDate) {
+      setError("Bitte das Geburtsdatum wählen.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -69,12 +95,13 @@ function IntakeForm({ onClose, onSuccess }: Props) {
           primaryNurseId: nurseId,
           status,
           note,
+          photoDataUrl: photo,
         }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Aufnahme fehlgeschlagen.");
       onClose();
-      onSuccess(`${firstName} ${lastName} wurde aufgenommen und ${unit} zugewiesen`);
+      onSuccess(`${firstName} ${lastName} wurde aufgenommen und ${unit} zugewiesen${photo ? " (mit Bild)" : ""}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Aufnahme fehlgeschlagen.");
     } finally {
@@ -82,6 +109,7 @@ function IntakeForm({ onClose, onSuccess }: Props) {
     }
   }
   const fullName = `${firstName} ${lastName}`.trim();
+  const initials = `${firstName.trim()[0] ?? ""}${lastName.trim()[0] ?? ""}`.toUpperCase();
   return (
     <div
       className="area-editor-overlay"
@@ -119,6 +147,78 @@ function IntakeForm({ onClose, onSuccess }: Props) {
             </span>
           </div>
           <div className="area-editor-grid">
+            <div className="area-editor-wide intake-photo">
+              <button
+                className="resident-avatar record-photo-trigger"
+                type="button"
+                aria-label={photo ? `${t.prefix}bild ändern` : `${t.prefix}bild hinzufügen`}
+                title={photo ? `${t.prefix}bild ändern` : `${t.prefix}bild hinzufügen`}
+                disabled={photoBusy || saving}
+                onClick={() => photoInput.current?.click()}
+              >
+                {photo ? (
+                  <Image
+                    src={photo}
+                    alt={`Bild von ${fullName || "der neuen Person"}`}
+                    width={64}
+                    height={64}
+                    unoptimized
+                  />
+                ) : (
+                  <span>{initials || <Icon name="residents" />}</span>
+                )}
+                <span className="record-photo-camera" aria-hidden="true">
+                  <Camera />
+                </span>
+              </button>
+              <div>
+                <strong>{t.prefix}bild</strong>
+                <small>
+                  {photoBusy
+                    ? "Bild wird vorbereitet …"
+                    : photo
+                      ? "Wird mit der Aufnahme gespeichert. In der Akte jederzeit änderbar."
+                      : "Optional · Foto aufnehmen oder Bild wählen (JPEG, PNG, WebP oder HEIC)."}
+                </small>
+                {photoError && (
+                  <small className="intake-photo-error" role="alert">
+                    {photoError}
+                  </small>
+                )}
+              </div>
+              <span className="intake-photo-actions">
+                <button
+                  type="button"
+                  className="death-checklist-action"
+                  disabled={photoBusy || saving}
+                  onClick={() => photoInput.current?.click()}
+                >
+                  {photo ? "Bild ändern" : "Bild hinzufügen"}
+                </button>
+                {photo && (
+                  <button
+                    type="button"
+                    className="death-checklist-action"
+                    disabled={saving}
+                    onClick={() => {
+                      setPhoto(null);
+                      setPhotoError("");
+                    }}
+                  >
+                    Entfernen
+                  </button>
+                )}
+              </span>
+              <input
+                ref={photoInput}
+                className="record-photo-input"
+                type="file"
+                accept={PHOTO_ACCEPT}
+                onChange={choosePhoto}
+                tabIndex={-1}
+                aria-hidden="true"
+              />
+            </div>
             <label>
               Vorname
               <input
@@ -139,13 +239,15 @@ function IntakeForm({ onClose, onSuccess }: Props) {
             </label>
             <label>
               Geburtsdatum
-              <input
-                type="date"
+              <CareDatePicker
+                label="Geburtsdatum"
                 value={birthDate}
+                onChange={setBirthDate}
                 max={admissionDate}
-                onChange={(event) => setBirthDate(event.target.value)}
-                aria-label="Geburtsdatum"
-                required
+                placeholder="Geburtsdatum wählen"
+                yearSelect
+                showToday={false}
+                openAtYear={Number(admissionDate.slice(0, 4)) - 85}
               />
             </label>
             <label>
@@ -244,7 +346,7 @@ function IntakeForm({ onClose, onSuccess }: Props) {
             <button className="secondary-button" type="button" onClick={onClose}>
               Abbrechen
             </button>
-            <button className="primary-button" type="submit" disabled={saving || !unitId}>
+            <button className="primary-button" type="submit" disabled={saving || photoBusy || !unitId}>
               <Icon name="check" /> {saving ? "Speichern…" : `${t.oneOblique} aufnehmen`}
             </button>
           </footer>
