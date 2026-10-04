@@ -57,6 +57,8 @@ export async function POST(request: Request) {
     const firstName = value("firstName", 100);
     const lastName = value("lastName", 100);
     const unitName = value("unit", 160);
+    // Zimmer aus der Liste des Wohnbereichs (legt die Administration unter Belegung an); per Name nur für Schnittstellen.
+    const roomIdInput = value("roomId", 40);
     const roomName = value("room", 80);
     const birthDate = value("birthDate", 10);
     const admissionDate = value("admissionDate", 10);
@@ -79,7 +81,7 @@ export async function POST(request: Request) {
       !firstName ||
       !lastName ||
       (!unitIdInput && !unitName) ||
-      !roomName ||
+      (!roomIdInput && !roomName) ||
       !/^\d{4}-\d{2}-\d{2}$/.test(birthDate) ||
       !/^\d{4}-\d{2}-\d{2}$/.test(admissionDate)
     )
@@ -87,8 +89,12 @@ export async function POST(request: Request) {
     if (birthDate > admissionDate)
       return NextResponse.json({ error: "Das Geburtsdatum liegt nach dem Eintritt." }, { status: 400 });
     const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if ((unitIdInput && !uuid.test(unitIdInput)) || (nurseIdInput && !uuid.test(nurseIdInput)))
-      return NextResponse.json({ error: "Wohnbereich oder Bezugspflege ist ungültig." }, { status: 400 });
+    if (
+      (unitIdInput && !uuid.test(unitIdInput)) ||
+      (nurseIdInput && !uuid.test(nurseIdInput)) ||
+      (roomIdInput && !uuid.test(roomIdInput))
+    )
+      return NextResponse.json({ error: "Wohnbereich, Zimmer oder Bezugspflege ist ungültig." }, { status: 400 });
     // Optional: Bild der Person direkt bei der Aufnahme (gleiche Prüfung wie in der Akte).
     const photo = body.photoDataUrl ? parsePhotoDataUrl(body.photoDataUrl) : null;
     if (photo && !photo.ok) return NextResponse.json({ error: photo.error }, { status: photo.status });
@@ -109,8 +115,24 @@ export async function POST(request: Request) {
       if (!owners[0]) return NextResponse.json({ error: "Die Bezugspflege ist nicht aktiv." }, { status: 400 });
       ownerId = String(owners[0].id);
     }
-    const rooms =
-      await sql`INSERT INTO carecore_rooms (id, care_unit_id, name, room_number) VALUES (${randomUUID()}, ${unitId}, ${roomName}, ${roomName.replace(/\D/g, "") || null}) ON CONFLICT (care_unit_id, name) DO UPDATE SET active = TRUE RETURNING id`;
+    const rooms = roomIdInput
+      ? await sql`
+          SELECT ro.id, ro.name, ro.beds,
+            (SELECT COUNT(*) FROM carecore_resident_stays st JOIN carecore_residents r ON r.id = st.resident_id
+              WHERE st.room_id = ro.id AND st.ended_at IS NULL AND r.status IN ('active', 'planned'))::int AS occupied
+          FROM carecore_rooms ro WHERE ro.care_unit_id = ${unitId} AND ro.active AND ro.id = ${roomIdInput} LIMIT 1`
+      : await sql`
+          SELECT ro.id, ro.name, ro.beds,
+            (SELECT COUNT(*) FROM carecore_resident_stays st JOIN carecore_residents r ON r.id = st.resident_id
+              WHERE st.room_id = ro.id AND st.ended_at IS NULL AND r.status IN ('active', 'planned'))::int AS occupied
+          FROM carecore_rooms ro WHERE ro.care_unit_id = ${unitId} AND ro.active AND ro.name = ${roomName} LIMIT 1`;
+    if (!rooms[0])
+      return NextResponse.json(
+        { error: "Das Zimmer gehört nicht zum Wohnbereich. Zimmer legt die Administration unter „Belegung“ an." },
+        { status: 400 },
+      );
+    if (Number(rooms[0].occupied) >= Number(rooms[0].beds))
+      return NextResponse.json({ error: `In ${String(rooms[0].name)} ist kein Bett mehr frei.` }, { status: 409 });
     const residentId = randomUUID();
     const photoKey = photo?.ok
       ? await storeMedia("resident-photos", actor.organizationId, randomUUID(), photo.image, photo.mimeType)
@@ -125,7 +147,7 @@ export async function POST(request: Request) {
     await sql`INSERT INTO carecore_resident_stays (id, resident_id, care_unit_id, room_id, started_at, created_by) VALUES (${randomUUID()}, ${residentId}, ${unitId}, ${rooms[0].id}, ${new Date(`${admissionDate}T12:00:00Z`).toISOString()}, ${actor.id})`;
     if (careLevel && careLevel !== NOT_ASSESSED)
       await sql`INSERT INTO carecore_care_plans (id, resident_id, owner_user_id, care_level, focus) VALUES (${randomUUID()}, ${residentId}, ${ownerId}, ${careLevel}, ${note || "Aufnahme und Pflegebedarf prüfen."})`;
-    await sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data) VALUES (${randomUUID()}, ${actor.organizationId}, ${actor.id}, ${auditOrigin(actor).sessionId}, ${auditOrigin(actor).userAgent}, 'resident', ${residentId}, 'admitted', ${JSON.stringify({ name: `${firstName} ${lastName}`, careUnitId: unitId, room: roomName, primaryNurseId: ownerId })}::jsonb)`;
+    await sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data) VALUES (${randomUUID()}, ${actor.organizationId}, ${actor.id}, ${auditOrigin(actor).sessionId}, ${auditOrigin(actor).userAgent}, 'resident', ${residentId}, 'admitted', ${JSON.stringify({ name: `${firstName} ${lastName}`, careUnitId: unitId, room: String(rooms[0].name), primaryNurseId: ownerId })}::jsonb)`;
     if (photo?.ok)
       await residentAudit(sql, actor, {
         residentId,

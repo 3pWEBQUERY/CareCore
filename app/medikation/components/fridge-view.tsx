@@ -15,6 +15,7 @@ import {
   type ShowToast,
 } from "@/app/components/workspace-ui";
 import { formatCelsius, fridgeRange, type Fridge, type FridgeOverview } from "@/lib/fridges-shared";
+import { CareDatePicker } from "@/app/components/care-form-controls";
 
 type FridgeDraft = {
   id: string | null;
@@ -349,12 +350,11 @@ export default function FridgeView({ showToast }: { showToast: ShowToast }) {
         >
           <label>
             <span>Datum</span>
-            <input
-              type="date"
-              required
-              max={todayInZurich()}
+            <CareDatePicker
+              label="Datum"
               value={reading.day}
-              onChange={(event) => setReading({ ...reading, day: event.target.value })}
+              max={todayInZurich()}
+              onChange={(value) => setReading({ ...reading, day: value })}
             />
           </label>
           <label>

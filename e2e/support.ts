@@ -1,4 +1,4 @@
-import { expect, type Page, type Request } from "@playwright/test";
+import { expect, type Locator, type Page, type Request } from "@playwright/test";
 import { E2E_ADMIN_PASSWORD } from "../playwright.config";
 
 export const DEMO_PASSWORD = "Dienstplan-Demo-2026";
@@ -35,6 +35,43 @@ export function watchErrors(page: Page, expected: RegExp[] = []) {
 // Feld in einem Dialog über seine Beschriftung.
 export const field = (page: Page, label: string | RegExp) =>
   page.locator(".editor-dialog label", { hasText: label }).locator("input, textarea").first();
+
+const MONTHS = [
+  "Januar",
+  "Februar",
+  "März",
+  "April",
+  "Mai",
+  "Juni",
+  "Juli",
+  "August",
+  "September",
+  "Oktober",
+  "November",
+  "Dezember",
+];
+
+// Datum in der eigenen Kalenderauswahl wählen (ISO „JJJJ-MM-TT“): öffnet sie, blättert zum Monat und klickt den Tag.
+export async function pickDate(scope: Page | Locator, label: string, date: string) {
+  const page = "page" in scope ? scope.page() : scope;
+  await scope.getByRole("button", { name: label, exact: true }).click();
+  const menu = page.getByRole("dialog", { name: `${label} auswählen` });
+  await expect(menu).toBeVisible();
+  // Bei Geburtsdaten beginnt die Auswahl mit den Jahren: zurück zur Monatsansicht.
+  if (await menu.getByRole("group", { name: "Jahr" }).isVisible()) await menu.locator(".schedule-date-period").click();
+  const [year, month, day] = date.split("-").map(Number);
+  const header = menu.locator(".schedule-date-menu-header strong, .schedule-date-menu-header .schedule-date-period");
+  const [shownMonth, shownYear] = (await header.innerText()).trim().split(" ");
+  const steps = (year - Number(shownYear)) * 12 + (month - 1 - MONTHS.indexOf(shownMonth));
+  for (let index = 0; index < Math.abs(steps); index++)
+    await menu.getByRole("button", { name: steps > 0 ? "Nächster Monat" : "Vorheriger Monat" }).click();
+  await expect(header).toHaveText(`${MONTHS[month - 1]} ${year}`);
+  await menu
+    .locator(".schedule-date-grid")
+    .getByRole("button", { name: String(day), exact: true })
+    .click();
+  await expect(menu).toBeHidden();
+}
 
 // Wie waitForLoadState("networkidle"), aber ohne die dauerhaft offene Echtzeit-Verbindung (/api/events): wartet, bis
 // 500 ms lang keine andere Anfrage mehr offen ist.

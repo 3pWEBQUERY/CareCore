@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CareDatePicker } from "@/app/components/care-form-controls";
 import { Plus, Trash } from "@phosphor-icons/react";
 import { EditorDialog, formatDate, requestJson, todayInZurich, useApiData } from "@/app/components/workspace-ui";
 import {
@@ -154,12 +155,11 @@ export function RecordVaccinationsCard({
         >
           <label>
             <span>Geimpft am</span>
-            <input
-              type="date"
-              required
-              max={todayInZurich()}
+            <CareDatePicker
+              label="Geimpft am"
               value={draft.givenOn}
-              onChange={(event) => setDraft({ ...draft, givenOn: event.target.value })}
+              max={todayInZurich()}
+              onChange={(value) => setDraft({ ...draft, givenOn: value })}
             />
           </label>
           <label>

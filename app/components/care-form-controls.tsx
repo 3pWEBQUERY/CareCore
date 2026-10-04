@@ -179,6 +179,8 @@ export function CareDatePicker({
   yearSelect = false,
   showToday = true,
   openAtYear,
+  disabled = false,
+  clearable = false,
 }: {
   label: string;
   value: string;
@@ -190,6 +192,10 @@ export function CareDatePicker({
   showToday?: boolean;
   // Ohne Datum: Jahr, bei dem die Auswahl beginnt (nur Anzeige, kein vorgeschlagener Wert).
   openAtYear?: number;
+  // Gesperrt (z. B. solange eine Voraussetzung fehlt).
+  disabled?: boolean;
+  // Freiwilliges Datum: „Leeren“ im Kalender entfernt es wieder.
+  clearable?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [openUp, setOpenUp] = useState(false);
@@ -256,6 +262,7 @@ export function CareDatePicker({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={label}
+        disabled={disabled}
         onClick={toggle}
       >
         <span className={value ? undefined : "schedule-date-placeholder"}>
@@ -361,19 +368,32 @@ export function CareDatePicker({
           )}
           <div className="schedule-date-menu-footer">
             <span>{value ? formatCareDate(value) : placeholder}</span>
-            {showToday && (
-              <button
-                type="button"
-                onClick={() => {
-                  const today = todayIso();
-                  setViewMonth(new Date(`${today}T12:00:00`));
-                  onChange(today);
-                  setOpen(false);
-                }}
-              >
-                Heute
-              </button>
-            )}
+            <div className="schedule-date-menu-actions">
+              {clearable && value && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange("");
+                    setOpen(false);
+                  }}
+                >
+                  Leeren
+                </button>
+              )}
+              {showToday && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const today = todayIso();
+                    setViewMonth(new Date(`${today}T12:00:00`));
+                    onChange(today);
+                    setOpen(false);
+                  }}
+                >
+                  Heute
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

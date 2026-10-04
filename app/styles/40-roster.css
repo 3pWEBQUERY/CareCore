@@ -1461,3 +1461,10 @@ tr.self .roster-name {
   justify-content: center;
   padding: 10px 18px 14px;
 }
+/* Kalenderauswahl in der Werkzeugleiste: gleiche Höhe wie die übrigen Filter. */
+.roster-month .schedule-date-trigger {
+  min-width: 140px;
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 12px;
+}

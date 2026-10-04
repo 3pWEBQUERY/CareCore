@@ -5,6 +5,7 @@ import { formatDate } from "@/lib/roster/time";
 import { COUNTRIES, holidaySource } from "@/lib/country";
 import { rosterRequest } from "./roster-api";
 import { act, type TabProps } from "./settings-tab-shared";
+import { CareDatePicker } from "@/app/components/care-form-controls";
 
 // --- Feiertage -----------------------------------------------------------------------------------
 
@@ -50,7 +51,7 @@ export function HolidaysTab({ data, reload, showToast }: TabProps) {
       <div className="roster-form-grid">
         <label>
           Datum
-          <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+          <CareDatePicker label="Datum" value={form.date} onChange={(value) => setForm({ ...form, date: value })} />
         </label>
         <label>
           Bezeichnung

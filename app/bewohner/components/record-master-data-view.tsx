@@ -3,8 +3,8 @@
 import { useCountry, useTerms, useWorkContext } from "@/app/components/care-context";
 import { useState } from "react";
 import { CalendarDots, Check, ClipboardText, PencilSimple, Plus, Trash, User } from "@phosphor-icons/react";
-import { formatDate, formatDateTime, requestJson } from "@/app/components/workspace-ui";
-import { CareOptionSelect } from "@/app/components/care-form-controls";
+import { formatDate, formatDateTime, requestJson, todayInZurich, useApiData } from "@/app/components/workspace-ui";
+import { CareDatePicker, CareOptionSelect } from "@/app/components/care-form-controls";
 import {
   LANGUAGES,
   MARITAL_STATUSES,
@@ -20,6 +20,7 @@ import { RecordVaccinationsCard } from "./record-vaccinations-card";
 import { RecordBelongingsCard } from "./record-belongings-card";
 import { RecordConsentsCard } from "./record-consents-card";
 import { RecordEndOfLifeCards } from "./record-end-of-life-cards";
+import type { InsurerList } from "@/lib/insurers-shared";
 import { ADVANCE_ANSWERS, ADVANCE_CARE_LABELS, type AdvanceAnswer } from "@/lib/advance-care-shared";
 
 const GENDERS: Record<string, string> = {
@@ -46,14 +47,34 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
     live,
     onAction,
     onGenderChanged,
+    onPhotoChanged: reloadResidents,
     setResidentGender,
   } = r;
   const summary = live.summary.data;
   const [draft, setDraft] = useState<MasterData | null>(null);
+  // Zimmer aus der Liste der Administration (Belegung); leer = unverändert.
+  const [roomId, setRoomId] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const values: Partial<MasterData> = (masterDataEditing ? draft : summary?.master) ?? {};
   const editable = masterDataEditing && Boolean(draft);
+  const roomOptions = useApiData<{
+    units: Array<{ id: string; name: string }>;
+    rooms: Array<{ id: string; name: string; careUnitId: string; free: number }>;
+  }>(editable ? "/api/residents/intake-options" : null);
+  const insurerList = useApiData<InsurerList>(editable ? "/api/insurers" : null);
+  const insurerOptions = (() => {
+    const list = insurerList.data?.insurers ?? [];
+    const current = values.insurer ?? "";
+    // Ein früher frei erfasster Wert, der nicht in der Liste steht, bleibt wählbar.
+    const kept =
+      current && !list.includes(current) ? [{ value: current, label: `${current} (bisheriger Eintrag)` }] : [];
+    return [{ value: "", label: "Keine Angabe" }, ...kept, ...list.map((name) => ({ value: name, label: name }))];
+  })();
+  const unitName = (id: string) => roomOptions.data?.units.find((unit) => unit.id === id)?.name ?? "";
+  const currentRoom = roomOptions.data?.rooms.find(
+    (room) => room.name === resident.room && unitName(room.careUnitId) === resident.unit,
+  );
   const set = <K extends keyof MasterData>(key: K, value: MasterData[K]) =>
     setDraft((current) => (current ? { ...current, [key]: value } : current));
   const field = (key: keyof MasterData) => ({
@@ -62,22 +83,49 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
     onChange: (event: { target: { value: string } }) => set(key, event.target.value as never),
   });
   const canWrite = summary?.canWrite ?? false;
+  // Datumsfelder mit der eigenen Kalenderauswahl; schreibgeschützt als formatiertes Datum.
+  const dateField = (
+    key: keyof MasterData,
+    label: string,
+    options: { yearSelect?: boolean; clearable?: boolean; disabled?: boolean; future?: boolean } = {},
+  ) => {
+    const value = (values[key] as string | null | undefined) ?? "";
+    return editable ? (
+      <CareDatePicker
+        label={label}
+        value={value}
+        onChange={(next) => set(key, next as never)}
+        max={options.future ? undefined : todayInZurich()}
+        showToday={!options.yearSelect}
+        yearSelect={options.yearSelect}
+        openAtYear={options.yearSelect ? Number(todayInZurich().slice(0, 4)) - 85 : undefined}
+        clearable={options.clearable}
+        disabled={options.disabled}
+      />
+    ) : (
+      <input readOnly value={value ? formatDate(value) : ""} />
+    );
+  };
 
   async function save() {
     if (!draft || !resident.id) return;
     setSaving(true);
     setError("");
     try {
+      const movedTo = roomId && roomId !== currentRoom?.id ? roomId : undefined;
       const next = await requestJson<RecordSummary>(`/api/residents/${resident.id}/record`, {
         method: "PATCH",
-        body: draft,
+        body: { ...draft, roomId: movedTo },
       });
+      // Zimmerwechsel: Liste und Aktenkopf zeigen das neue Zimmer.
+      if (movedTo) reloadResidents?.();
       live.summary.reload();
       live.care.reload();
       setResidentGender(next.master.gender);
       onGenderChanged?.(resident.id, next.master.gender);
       setMasterDataEditing(false);
-      onAction("Stammdaten gespeichert");
+      setRoomId("");
+      onAction(movedTo ? "Stammdaten gespeichert, Zimmer gewechselt" : "Stammdaten gespeichert");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Stammdaten konnten nicht gespeichert werden.");
     } finally {
@@ -100,6 +148,7 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
               type="button"
               onClick={() => {
                 setDraft(null);
+                setRoomId("");
                 setError("");
                 setMasterDataEditing(false);
               }}
@@ -116,6 +165,7 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
                 if (masterDataEditing) void save();
                 else if (summary) {
                   setDraft(summary.master);
+                  setRoomId("");
                   setMasterDataEditing(true);
                 }
               }}
@@ -202,11 +252,7 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
               </label>
               <label>
                 <span>Geburtsdatum</span>
-                {editable ? (
-                  <input type="date" {...field("dateOfBirth")} />
-                ) : (
-                  <input readOnly value={values.dateOfBirth ? formatDate(values.dateOfBirth) : ""} />
-                )}
+                {dateField("dateOfBirth", "Geburtsdatum", { yearSelect: true })}
               </label>
               <label>
                 <span>Geschlecht</span>
@@ -265,11 +311,42 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
             <div className="master-data-form-grid">
               <label>
                 <span>Wohnbereich</span>
-                <input value={resident.unit} readOnly title={`Wird über Verlegung im ${t.prefix}verlauf geändert`} />
+                <input
+                  value={
+                    editable && roomId
+                      ? unitName(roomOptions.data?.rooms.find((room) => room.id === roomId)?.careUnitId ?? "")
+                      : resident.unit
+                  }
+                  readOnly
+                  title="Ergibt sich aus dem Zimmer"
+                />
               </label>
               <label>
                 <span>Zimmer</span>
-                <input value={resident.room} readOnly title={`Wird über Verlegung im ${t.prefix}verlauf geändert`} />
+                {editable ? (
+                  <CareOptionSelect
+                    label="Zimmer"
+                    value={roomId || currentRoom?.id || ""}
+                    placeholder={roomOptions.data ? resident.room || "Zimmer wählen" : "Wird geladen …"}
+                    disabled={!roomOptions.data?.rooms.length}
+                    options={(roomOptions.data?.rooms ?? [])
+                      .map((room) => ({
+                        value: room.id,
+                        label: `${unitName(room.careUnitId)} · ${room.name}${
+                          room.id === currentRoom?.id
+                            ? " · bisheriges Zimmer"
+                            : room.free > 0
+                              ? ` · ${room.free} Bett${room.free === 1 ? "" : "en"} frei`
+                              : " · belegt"
+                        }`,
+                        disabled: room.id !== currentRoom?.id && room.free < 1,
+                      }))
+                      .sort((a, b) => a.label.localeCompare(b.label, "de-CH"))}
+                    onChange={setRoomId}
+                  />
+                ) : (
+                  <input value={resident.room} readOnly />
+                )}
               </label>
               <label>
                 <span>Pflegebedarf</span>
@@ -294,11 +371,7 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
               </label>
               <label>
                 <span>Eintrittsdatum</span>
-                {editable ? (
-                  <input type="date" {...field("admittedOn")} />
-                ) : (
-                  <input readOnly value={values.admittedOn ? formatDate(values.admittedOn) : ""} />
-                )}
+                {dateField("admittedOn", "Eintrittsdatum", { future: true })}
               </label>
               <label>
                 <span>Eintrittsgrund</span>
@@ -368,14 +441,10 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
               </label>
               <label>
                 <span>Entscheid vom</span>
-                {editable ? (
-                  <input type="date" disabled={!values.resuscitationStatus} {...field("resuscitationDecidedOn")} />
-                ) : (
-                  <input
-                    readOnly
-                    value={values.resuscitationDecidedOn ? formatDate(values.resuscitationDecidedOn) : ""}
-                  />
-                )}
+                {dateField("resuscitationDecidedOn", "Entscheid vom", {
+                  clearable: true,
+                  disabled: !values.resuscitationStatus,
+                })}
               </label>
             </div>
           </section>
@@ -450,11 +519,7 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
                 <>
                   <label>
                     <span>Verfasst am</span>
-                    {editable ? (
-                      <input type="date" {...field("advanceDirectiveOn")} />
-                    ) : (
-                      <input readOnly value={values.advanceDirectiveOn ? formatDate(values.advanceDirectiveOn) : ""} />
-                    )}
+                    {dateField("advanceDirectiveOn", "Verfasst am", { clearable: true })}
                   </label>
                   <label>
                     <span>Aufbewahrungsort</span>
@@ -490,22 +555,11 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
                 <>
                   <label>
                     <span>Errichtet am</span>
-                    {editable ? (
-                      <input type="date" {...field("careMandateOn")} />
-                    ) : (
-                      <input readOnly value={values.careMandateOn ? formatDate(values.careMandateOn) : ""} />
-                    )}
+                    {dateField("careMandateOn", "Errichtet am", { clearable: true })}
                   </label>
                   <label>
                     <span>{advanceLabels.careMandateEffective}</span>
-                    {editable ? (
-                      <input type="date" {...field("careMandateEffectiveOn")} />
-                    ) : (
-                      <input
-                        readOnly
-                        value={values.careMandateEffectiveOn ? formatDate(values.careMandateEffectiveOn) : ""}
-                      />
-                    )}
+                    {dateField("careMandateEffectiveOn", advanceLabels.careMandateEffective, { clearable: true })}
                   </label>
                 </>
               )}
@@ -646,7 +700,17 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
             <div className="master-data-form-grid single-column">
               <label>
                 <span>{country.insurance.insurerLabel}</span>
-                <input {...field("insurer")} />
+                {editable ? (
+                  <CareOptionSelect
+                    label={country.insurance.insurerLabel}
+                    value={values.insurer ?? ""}
+                    placeholder={insurerList.data ? "Keine Angabe" : "Wird geladen …"}
+                    options={insurerOptions}
+                    onChange={(value) => set("insurer", value || null)}
+                  />
+                ) : (
+                  <input {...field("insurer")} />
+                )}
               </label>
               <label>
                 <span>{country.insurance.numberLabel}</span>

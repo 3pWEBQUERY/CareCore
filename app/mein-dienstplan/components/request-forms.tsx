@@ -16,7 +16,7 @@ import {
   type Priority,
   type Violation,
 } from "@/lib/roster/types";
-import { CareOptionSelect } from "@/app/components/care-form-controls";
+import { CareDatePicker, CareOptionSelect } from "@/app/components/care-form-controls";
 
 // Formulare für Mitarbeitende: Wunschfrei, Abwesenheit, Dienstwunsch, Zeitkorrektur, Tausch.
 
@@ -69,21 +69,21 @@ export function TimeOffDialog({ today, onClose, onDone }: { today: string; onClo
     >
       <label>
         <span>Von</span>
-        <input
-          type="date"
-          min={today}
+        <CareDatePicker
+          label="Von"
           value={form.startDate}
-          onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-          required
+          min={today}
+          onChange={(value) => setForm({ ...form, startDate: value })}
         />
       </label>
       <label>
         <span>Bis (optional)</span>
-        <input
-          type="date"
-          min={form.startDate || today}
+        <CareDatePicker
+          clearable
+          label="Bis"
           value={form.endDate}
-          onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+          min={form.startDate || today}
+          onChange={(value) => setForm({ ...form, endDate: value })}
         />
       </label>
       <label>
@@ -163,20 +163,16 @@ export function AbsenceDialog({ today, onClose, onDone }: { today: string; onClo
       </label>
       <label>
         <span>Von</span>
-        <input
-          type="date"
-          value={form.startsOn}
-          onChange={(e) => setForm({ ...form, startsOn: e.target.value })}
-          required
-        />
+        <CareDatePicker label="Von" value={form.startsOn} onChange={(value) => setForm({ ...form, startsOn: value })} />
       </label>
       <label>
         <span>Bis (optional)</span>
-        <input
-          type="date"
-          min={form.startsOn}
+        <CareDatePicker
+          clearable
+          label="Bis"
           value={form.endsOn}
-          onChange={(e) => setForm({ ...form, endsOn: e.target.value })}
+          min={form.startsOn}
+          onChange={(value) => setForm({ ...form, endsOn: value })}
         />
       </label>
       <label className="area-editor-wide">
@@ -307,15 +303,21 @@ export function PreferenceDialog({
       )}
       <label>
         <span>Gültig ab (optional)</span>
-        <input type="date" value={form.validFrom} onChange={(e) => setForm({ ...form, validFrom: e.target.value })} />
+        <CareDatePicker
+          clearable
+          label="Gültig ab"
+          value={form.validFrom}
+          onChange={(value) => setForm({ ...form, validFrom: value })}
+        />
       </label>
       <label>
         <span>Gültig bis (optional)</span>
-        <input
-          type="date"
-          min={form.validFrom}
+        <CareDatePicker
+          clearable
+          label="Gültig bis"
           value={form.validUntil}
-          onChange={(e) => setForm({ ...form, validUntil: e.target.value })}
+          min={form.validFrom}
+          onChange={(value) => setForm({ ...form, validUntil: value })}
         />
       </label>
       <label className="area-editor-wide">

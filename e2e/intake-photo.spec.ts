@@ -18,6 +18,16 @@ test("Bewohner aufnehmen: Bild direkt hinzufügen, Vorschau, gespeichert in der 
   await login(page, ADMIN);
   const errors = watchErrors(page);
   const lastName = `Bild${Date.now().toString().slice(-5)}`;
+  // Zimmer legt die Administration je Wohnbereich an; die Aufnahme wählt nur aus dieser Liste.
+  const intake = (await (await page.request.get("/api/residents/intake-options")).json()) as {
+    units: Array<{ id: string }>;
+    primaryCareUnitId: string | null;
+  };
+  const roomName = `Zimmer ${lastName}`;
+  const room = await page.request.post("/api/occupancy/rooms", {
+    data: { careUnitId: intake.primaryCareUnitId ?? intake.units[0].id, name: roomName, beds: 1 },
+  });
+  expect(room.status()).toBe(201);
   await page.goto("/c/bewohner");
   await page
     .getByRole("button", { name: /aufnehmen$/ })
@@ -68,7 +78,8 @@ test("Bewohner aufnehmen: Bild direkt hinzufügen, Vorschau, gespeichert in der 
   await picker.getByRole("button", { name: "12", exact: true }).click();
   await expect(picker).toHaveCount(0);
   await expect(dialog.getByRole("button", { name: "Geburtsdatum", exact: true })).toContainText("12.04.1938");
-  await dialog.getByLabel("Zimmer").fill("Zimmer 118");
+  await dialog.getByRole("combobox", { name: "Zimmer" }).click();
+  await page.getByRole("option", { name: `${roomName} · 1 Bett frei` }).click();
   await dialog.getByRole("button", { name: /aufnehmen$/ }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.locator(".toast")).toContainText(`Erika ${lastName} wurde aufgenommen`);

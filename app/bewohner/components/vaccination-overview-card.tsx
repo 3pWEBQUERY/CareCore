@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatDate, useApiData } from "@/app/components/workspace-ui";
 import type { VaccinationOverview } from "@/lib/vaccinations-shared";
+import { CareDatePicker } from "@/app/components/care-form-controls";
 
 // Impfstatus je Wohnbereich (Isolation & Ausbruch): wer gegen die gewählte Impfung geimpft ist, auf Wunsch nur seit
 // einem gewählten Datum. Nur was dokumentiert ist; keine Empfehlung.
@@ -48,7 +49,12 @@ export function VaccinationOverviewCard({ unitId }: { unitId: string }) {
             </div>
             <label>
               <span>Geimpft seit (freiwillig)</span>
-              <input type="date" value={since} onChange={(event) => setSince(event.target.value)} />
+              <CareDatePicker
+                clearable
+                label="Geimpft seit (freiwillig)"
+                value={since}
+                onChange={(value) => setSince(value)}
+              />
             </label>
           </div>
           {units.map((unit) => {

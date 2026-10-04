@@ -13,6 +13,7 @@ import {
 } from "@/app/components/workspace-ui";
 import { DEVICE_CHECK_RESULTS, type Device, type DeviceCheckResult, type DeviceOverview } from "@/lib/devices-shared";
 import { LeadershipHeading, LeadershipKpis } from "../../components/leadership-page-parts";
+import { CareDatePicker } from "@/app/components/care-form-controls";
 
 type DeviceDraft = {
   id: string | null;
@@ -316,10 +317,11 @@ function DevicesContent({ showToast }: { showToast: ShowToast }) {
           </label>
           <label>
             <span>Nächste Prüfung</span>
-            <input
-              type="date"
+            <CareDatePicker
+              clearable
+              label="Nächste Prüfung"
               value={draft.nextDueOn}
-              onChange={(event) => setDraft({ ...draft, nextDueOn: event.target.value })}
+              onChange={(value) => setDraft({ ...draft, nextDueOn: value })}
             />
           </label>
           <label className="area-editor-wide">
@@ -358,13 +360,12 @@ function DevicesContent({ showToast }: { showToast: ShowToast }) {
         >
           <label>
             <span>Geprüft am</span>
-            <input
-              type="date"
-              required
-              max={todayInZurich()}
+            <CareDatePicker
+              label="Geprüft am"
               value={check.checkedOn}
-              onChange={(event) => {
-                const checkedOn = event.target.value;
+              max={todayInZurich()}
+              onChange={(value) => {
+                const checkedOn = value;
                 setCheck({
                   ...check,
                   checkedOn,
@@ -416,10 +417,11 @@ function DevicesContent({ showToast }: { showToast: ShowToast }) {
           )}
           <label>
             <span>Nächste Prüfung</span>
-            <input
-              type="date"
+            <CareDatePicker
+              clearable
+              label="Nächste Prüfung"
               value={check.nextDueOn}
-              onChange={(event) => setCheck({ ...check, nextDueOn: event.target.value })}
+              onChange={(value) => setCheck({ ...check, nextDueOn: value })}
             />
           </label>
         </EditorDialog>
