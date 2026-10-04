@@ -5,6 +5,7 @@ import { useState } from "react";
 import { CalendarDots, Check, ClipboardText, PencilSimple, Plus, Trash, User } from "@phosphor-icons/react";
 import { formatDate, formatDateTime, requestJson, todayInZurich, useApiData } from "@/app/components/workspace-ui";
 import { CareDatePicker, CareOptionSelect } from "@/app/components/care-form-controls";
+import { announceResuscitationChange } from "@/app/components/resuscitation-badge";
 import {
   LANGUAGES,
   MARITAL_STATUSES,
@@ -122,6 +123,7 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
       // Zimmerwechsel: Liste und Aktenkopf zeigen das neue Zimmer.
       if (movedTo) reloadResidents?.();
       live.summary.reload();
+      announceResuscitationChange();
       live.care.reload();
       setResidentGender(next.master.gender);
       onGenderChanged?.(resident.id, next.master.gender);

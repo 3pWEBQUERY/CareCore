@@ -145,7 +145,14 @@ export type DashboardTask = {
   overdue: boolean;
 };
 
-export type DashboardResident = { initials: string; name: string; room: string; risk: string; critical?: boolean };
+export type DashboardResident = {
+  id?: string;
+  initials: string;
+  name: string;
+  room: string;
+  risk: string;
+  critical?: boolean;
+};
 
 export type DashboardNote = {
   id: string;

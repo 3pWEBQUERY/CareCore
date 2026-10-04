@@ -38,6 +38,7 @@ export function useDashboardTasks({
         };
         const residentData = (await residentsResponse.json()) as {
           residents: Array<{
+            id: string;
             first_name: string;
             last_name: string;
             room: string;
@@ -69,6 +70,7 @@ export function useDashboardTasks({
               (item) => item.status === "active" && (!primaryCareUnitName || item.care_unit === primaryCareUnitName),
             )
             .map((item) => ({
+              id: item.id,
               initials: `${item.first_name[0] ?? ""}${item.last_name[0] ?? ""}`,
               name: `${item.first_name} ${item.last_name}`,
               room: item.room || "Zimmer offen",

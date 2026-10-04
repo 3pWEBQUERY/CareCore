@@ -6,6 +6,7 @@ import { setCareResident, useCareUnit, useTerms, useWorkContext } from "@/app/co
 import { ModuleIcon, type ModuleIconName } from "@/app/components/module-icon";
 import { useApiData } from "@/app/components/workspace-ui";
 import type { WorkItem, WorkItemKind, Worklist } from "@/lib/worklist";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 const KIND_ICONS: Record<WorkItemKind, ModuleIconName> = {
   medication: "med",
@@ -100,7 +101,9 @@ export function DashboardWorklistCard() {
                 {resident.initials}
               </span>
               <span>
-                <strong>{resident.name}</strong>
+                <strong>
+                  {resident.name} <ResuscitationBadge residentId={resident.id} />
+                </strong>
                 <small>{[resident.room, resident.careUnit].filter(Boolean).join(" · ")}</small>
               </span>
             </button>

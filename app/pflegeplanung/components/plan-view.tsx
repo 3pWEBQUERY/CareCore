@@ -18,6 +18,7 @@ import GoalCard from "./goal-card";
 import { usePlanningDialogs } from "./use-planning-dialogs";
 import { useCareResident, useHeaderResident, useTerms } from "@/app/components/care-context";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 export type PlanningOverview = {
   residents: PlanningResident[];
@@ -133,7 +134,9 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
                   <span className="resident-avatar">{resident.initials}</span>
                   <div>
                     <p className="eyebrow">Pflegeplan · seit {formatDate(plan.startsOn)}</p>
-                    <h2>{resident.name}</h2>
+                    <h2>
+                      {resident.name} <ResuscitationBadge residentId={resident.id} />
+                    </h2>
                     <span>{[resident.room, resident.careUnit, plan.careLevel].filter(Boolean).join(" · ")}</span>
                   </div>
                 </div>

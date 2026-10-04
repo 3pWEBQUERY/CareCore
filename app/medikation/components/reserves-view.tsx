@@ -26,6 +26,7 @@ import HeaderResidentHint from "@/app/components/header-resident-hint";
 import { WitnessFields, emptyWitness } from "./btm-witness";
 import { ReceiptDialog } from "./stock-dialogs";
 import { MovementJournal } from "./stock-view";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 function nextAllowedAt(order: MedOrder) {
   if (!order.lastAdministeredAt || !order.minIntervalHours) return null;
@@ -115,7 +116,9 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
                   <span className="resident-avatar">{resident.initials}</span>
                   <div>
                     <p className="eyebrow">Bedarfsmedikation</p>
-                    <h2>{resident.name}</h2>
+                    <h2>
+                      {resident.name} <ResuscitationBadge residentId={resident.id} />
+                    </h2>
                     <span>{[resident.room, resident.careUnit].filter(Boolean).join(" · ")}</span>
                   </div>
                 </div>

@@ -29,6 +29,7 @@ import {
 } from "@/app/components/workspace-ui";
 import { WitnessFields, emptyWitness } from "./btm-witness";
 import type { ResidentsPayload } from "./plan-view";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 const statusTone: Record<RoundDose["status"], string> = {
   scheduled: "info",
@@ -182,7 +183,9 @@ export default function RoundView({ showToast }: { showToast: ShowToast }) {
               <article className={`med-round-row ${dose.status === "scheduled" ? "" : "gegeben"}`} key={keyOf(dose)}>
                 <span className="resident-avatar">{dose.initials}</span>
                 <div className="med-round-person">
-                  <strong>{dose.residentName}</strong>
+                  <strong>
+                    {dose.residentName} <ResuscitationBadge residentId={dose.residentId} />
+                  </strong>
                   <small>{[dose.room, dose.careUnit].filter(Boolean).join(" · ")}</small>
                   {hasAllergy && <small className="med-allergy-text">Allergie: {dose.allergies}</small>}
                 </div>

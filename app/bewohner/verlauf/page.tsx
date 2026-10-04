@@ -16,6 +16,7 @@ import {
 import { StayDialog, type StayDialogMode } from "./stay-dialog";
 import { useCareResident, useTerms } from "@/app/components/care-context";
 import type { Terms } from "@/lib/terminology";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 const ALL_UNITS = "Gesamtes Haus";
 const isArchived = (resident: HistoryResident) => resident.status === "Ausgetreten" || resident.status === "Verstorben";
@@ -243,7 +244,9 @@ export default function ResidentHistoryPage() {
                   >
                     <span className={`resident-avatar ${avatarTone(resident)}`}>{resident.initials}</span>
                     <span className="house-resident-person">
-                      <strong>{resident.name}</strong>
+                      <strong>
+                        {resident.name} <ResuscitationBadge residentId={resident.id} />
+                      </strong>
                       <small>
                         {resident.room ? (isArchived(resident) ? `Ehem. ${resident.room}` : resident.room) : "–"}
                       </small>

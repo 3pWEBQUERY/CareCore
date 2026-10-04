@@ -22,6 +22,7 @@ import { EntryDialog, WoundDialog, type WoundsPayload } from "./wound-dialogs";
 import WoundPhotos from "./wound-photos";
 import { FILTERS, Dialog, statusText, nextCareLabel, overdueSince } from "./overview-utils";
 import { WoundTimeline } from "./wound-timeline";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 export default function OverviewView({ showToast }: { showToast: ShowToast }) {
   const t = useTerms();
@@ -221,7 +222,9 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
                 >
                   <span className={`resident-avatar ${tone === "critical" ? "critical" : ""}`}>{wound.initials}</span>
                   <span className="wound-case-main">
-                    <strong>{wound.residentName}</strong>
+                    <strong>
+                      {wound.residentName} <ResuscitationBadge residentId={wound.residentId} />
+                    </strong>
                     <small>{[wound.room, wound.bodyLocation].filter(Boolean).join(" · ")}</small>
                     <span>
                       {wound.woundType ?? wound.diagnosis ?? "Wunde"}

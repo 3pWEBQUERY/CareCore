@@ -23,6 +23,7 @@ import { useHeaderResident, useTerms } from "@/app/components/care-context";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
 import type { InteractionFinding } from "@/lib/medication-interactions-shared";
 import { InteractionNotice } from "./interaction-notice";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 export type ResidentsPayload = {
   residents: MedResident[];
@@ -112,7 +113,9 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
                   <span className="resident-avatar">{resident.initials}</span>
                   <div>
                     <p className="eyebrow">Aktueller Plan</p>
-                    <h2>{resident.name}</h2>
+                    <h2>
+                      {resident.name} <ResuscitationBadge residentId={resident.id} />
+                    </h2>
                     <span>{[resident.room, resident.careUnit].filter(Boolean).join(" · ")}</span>
                   </div>
                 </div>

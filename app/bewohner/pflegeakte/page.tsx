@@ -10,6 +10,7 @@ import { RECORD_TONES, type CareRecordDetail, type CareRecordsOverview } from "@
 import { CareRecordEditor } from "./care-record-editor";
 import { useCareResident, useHeaderResident, useTerms } from "@/app/components/care-context";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 const categoryIcons: Record<string, ModuleIconName> = {
   Mobilität: "pulse",
@@ -131,7 +132,9 @@ export default function CareRecordsPage() {
                     <span className="resident-avatar">{selected.initials}</span>
                     <div>
                       <p className="eyebrow">Ausgewählte Pflegeakte</p>
-                      <h2>{selected.name}</h2>
+                      <h2>
+                        {selected.name} <ResuscitationBadge residentId={selected.id} />
+                      </h2>
                       <span>
                         {[selected.room, selected.careUnit, plan?.careLevel ?? selected.careLevel]
                           .filter(Boolean)

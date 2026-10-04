@@ -15,6 +15,7 @@ import type { DueItem } from "@/lib/assessments";
 import { initials } from "@/lib/medication-shared";
 import AssessmentDialog from "./assessment-dialog";
 import { Overview, kindLabel, kindTone, DUE_FILTERS } from "./assessment-view-utils";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 export function DueView({ showToast }: { showToast: ShowToast }) {
   const t = useTerms();
@@ -77,7 +78,9 @@ export function DueView({ showToast }: { showToast: ShowToast }) {
             <article key={`${item.residentId}-${item.code}-${item.kind}`}>
               <span className="resident-avatar">{initials(item.residentName)}</span>
               <span>
-                <strong>{item.residentName}</strong>
+                <strong>
+                  {item.residentName} <ResuscitationBadge residentId={item.residentId} />
+                </strong>
                 <small>{item.room}</small>
               </span>
               <span>

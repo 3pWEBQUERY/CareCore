@@ -5,6 +5,7 @@ import { useState } from "react";
 import { setCareResident, useTerms } from "@/app/components/care-context";
 import { CareDatePicker, CareOptionSelect } from "@/app/components/care-form-controls";
 import ModulePageShell from "@/app/components/module-page-shell";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 import {
   EditorDialog,
   EmptyState,
@@ -498,6 +499,7 @@ function UnitCard({
                 <span key={person.id} className={person.status}>
                   {person.name}
                   {person.status === "planned" && " (Eintritt geplant)"}
+                  <ResuscitationBadge residentId={person.id} />
                   {person.status === "transferred" && " (verlegt)"}
                 </span>
               ))}

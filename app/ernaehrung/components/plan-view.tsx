@@ -22,6 +22,7 @@ import DayPanel from "./day-panel";
 import { PlanDialog } from "./nutrition-dialogs";
 import { useHeaderResident, useTerms } from "@/app/components/care-context";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 export type NutritionOverview = {
   date: string;
@@ -123,7 +124,9 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
                     <p className="eyebrow">
                       {plan ? `Ernährungsplan · Stand ${formatDateTime(plan.updatedAt)}` : "Kein Ernährungsplan"}
                     </p>
-                    <h2>{resident.name}</h2>
+                    <h2>
+                      {resident.name} <ResuscitationBadge residentId={resident.id} />
+                    </h2>
                     <span>{[resident.room, resident.careUnit].filter(Boolean).join(" · ")}</span>
                   </div>
                 </div>

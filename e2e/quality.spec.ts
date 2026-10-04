@@ -66,7 +66,13 @@ test("Kennzahlen Bewohner: Übersicht je Bewohner, Filter und Sprung in die Akte
   await critical.click();
   await expect(rows).toHaveCount(criticalCount);
   await all.click();
-  const name = (await rows.first().locator(".resident-insights-person strong").textContent()) ?? "";
+  // Nur der Name, ohne die REA-Kennzeichnung daneben.
+  const name = (
+    await rows
+      .first()
+      .locator(".resident-insights-person strong")
+      .evaluate((element) => element.firstChild?.textContent ?? "")
+  ).trim();
   await rows.first().click();
   await expect(page).toHaveURL(/\/c\/bewohner\?resident=/);
   await expect(page.locator(".resident-record-layer")).toContainText(name);
