@@ -18,6 +18,7 @@ import {
   uploadChatFile,
 } from "@/lib/messenger";
 import { readableFile } from "@/lib/file-access";
+import { liveSnapshot } from "@/lib/live-events";
 import type { CarecoreActor } from "@/lib/server-data";
 import { apiContextFor, fixture, q } from "../support/db";
 
@@ -136,7 +137,13 @@ test("Messenger: Antworten, Dateien, Bearbeiten, Löschen, Anheften und gelesen"
   // Bearbeiten und löschen nur eigene Nachrichten; gelöschte zeigen keinen Inhalt mehr.
   assert.equal(await status(editMessage(max, first, "geändert")), 403);
   await editMessage(anna, first, "Wer übernimmt Zimmer 14?");
+  // Echtzeit: Anheften, Reaktionen und Löschen ändern den Stand für alle Mitglieder.
+  const before = (await liveSnapshot(anna)).messages;
   await pinMessage(max, first, true);
+  const pinned = (await liveSnapshot(anna)).messages;
+  assert.notEqual(pinned, before);
+  await toggleReaction(max, first, "✅");
+  assert.notEqual((await liveSnapshot(anna)).messages, pinned);
   await deleteMessage(max, reply);
   const after = (await chatPayload(anna, group)).conversation!.messages;
   const edited = after.find((message) => message.id === first)!;
