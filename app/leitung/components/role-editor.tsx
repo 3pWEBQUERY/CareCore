@@ -3,8 +3,56 @@
 import { useCountry, useTerms } from "@/app/components/care-context";
 import { useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
+import { EditorDialog } from "@/app/components/workspace-ui";
 import type { ManagedRole } from "@/lib/admin-users";
-import { permissions, permissionLabel, Overlay } from "./admin-user-parts";
+import { permissionHints, permissionLabel, permissions } from "./admin-user-parts";
+
+// Interne Kennung einer neuen Rolle aus dem Namen (nicht sichtbar); der Zusatz hält sie eindeutig.
+function roleKey(name: string) {
+  const base = name
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .normalize("NFD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 30);
+  return `${base || "rolle"}-${Date.now().toString(36).slice(-6)}`;
+}
+
+function Choice({
+  active,
+  disabled,
+  title,
+  hint,
+  onClick,
+}: {
+  active: boolean;
+  disabled?: boolean;
+  title: string;
+  hint: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`role-permission ${active ? "active" : ""}`}
+      aria-pressed={active}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      <span className="role-permission-box" aria-hidden="true">
+        {active && <ModuleIcon name="check" />}
+      </span>
+      <span className="role-permission-text">
+        <strong>{title}</strong>
+        <small>{hint}</small>
+      </span>
+    </button>
+  );
+}
 
 export function RoleEditor({
   role,
@@ -18,7 +66,6 @@ export function RoleEditor({
   const t = useTerms();
   const country = useCountry();
   const [name, setName] = useState(role?.name ?? ""),
-    [key, setKey] = useState(role?.key ?? ""),
     [description, setDescription] = useState(role?.description ?? ""),
     [selected, setSelected] = useState<string[]>(role?.permissions ?? []),
     [needsQualification, setNeedsQualification] = useState(role?.medicationRequiresQualification ?? false),
@@ -31,6 +78,7 @@ export function RoleEditor({
     setSelected((items) => (items.includes(v) ? items.filter((x) => x !== v) : [...items, v]));
   async function request(method: "POST" | "PATCH" | "DELETE") {
     setSaving(true);
+    setError("");
     try {
       const r = await fetch("/api/admin/roles", {
         method,
@@ -48,7 +96,7 @@ export function RoleEditor({
                 }
               : {
                   name,
-                  key,
+                  key: roleKey(name),
                   description,
                   permissions: selected,
                   medicationRequiresQualification: needsQualification,
@@ -69,125 +117,106 @@ export function RoleEditor({
               : "Rolle erstellt",
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Rolle konnte nicht gespeichert werden.");
+      setError(e instanceof Error && e.message ? e.message : "Rolle konnte nicht gespeichert werden.");
     } finally {
       setSaving(false);
     }
   }
+  const medication =
+    (selected.includes("medication.manage") || selected.includes("medication.administer")) &&
+    editing?.key !== "admin" &&
+    editing?.key !== "leitung";
   return (
-    <Overlay
+    <EditorDialog
+      id="role"
+      eyebrow="Administration · Rollen & Berechtigungen"
       title={editing ? `${editing.name} verwalten` : copyOf ? `${copyOf.name} kopieren` : "Rolle erstellen"}
+      description={
+        copyOf
+          ? `Die Kopie übernimmt die Berechtigungen von „${copyOf.name}“ und gehört nur dieser Einrichtung.`
+          : editing?.systemRole
+            ? "Systemrolle: Name und Berechtigungen lassen sich anpassen, die Rolle selbst bleibt bestehen."
+            : "Eigene Rollen der Einrichtung lassen sich entfernen, solange sie niemandem zugeordnet sind."
+      }
       onClose={onClose}
-    >
-      <div className="role-editor">
-        <form
-          className="user-editor-content"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void request(editing ? "PATCH" : "POST");
-          }}
-        >
-          <div className="user-editor-section-heading">
-            <p className="eyebrow">Rollenverwaltung</p>
-            <h3>{editing ? "Rolle bearbeiten" : copyOf ? "Kopie als eigene Rolle" : "Neue Rolle"}</h3>
-            <p>
-              {copyOf
-                ? `Die Kopie übernimmt die Berechtigungen von „${copyOf.name}“ und gehört nur dieser Einrichtung.`
-                : "Systemrollen sind geschützt. Eigene Rollen können entfernt werden, wenn sie nicht zugeordnet sind."}
-            </p>
-          </div>
-          <div className="user-editor-fields">
-            <label>
-              Name
-              <input required value={name} onChange={(e) => setName(e.target.value)} />
-            </label>
-            <label>
-              Rollen-Schlüssel
-              <input
-                required
-                disabled={Boolean(editing)}
-                value={key}
-                onChange={(e) => setKey(e.target.value.toLowerCase().replace(/[^a-z0-9:_-]/g, ""))}
-              />
-            </label>
-            <label className="user-editor-password-field">
-              Beschreibung
-              <input value={description} onChange={(e) => setDescription(e.target.value)} />
-            </label>
-          </div>
-          <fieldset className="user-editor-role">
-            <legend>Berechtigungen</legend>
-            <div>
-              {permissions.map((p) => (
-                <button
-                  type="button"
-                  key={p}
-                  className={selected.includes(p) ? "active" : ""}
-                  // Die Leitung verabreicht Medikamente immer.
-                  disabled={editing?.key === "leitung" && p === "medication.administer"}
-                  onClick={() => toggle(p)}
-                >
-                  <strong>{permissionLabel(p, t)}</strong>
-                  <small>{p}</small>
-                  {selected.includes(p) && <ModuleIcon name="check" />}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-          {(selected.includes("medication.manage") || selected.includes("medication.administer")) &&
-            editing?.key !== "admin" &&
-            editing?.key !== "leitung" && (
-              <fieldset className="user-editor-role">
-                <legend>Medikation</legend>
-                <div>
-                  <button
-                    type="button"
-                    className={needsQualification ? "active" : ""}
-                    aria-pressed={needsQualification}
-                    onClick={() => setNeedsQualification((value) => !value)}
-                  >
-                    <strong>Nur mit Qualifikation</strong>
-                    <small>
-                      Medikation nur für Personen mit berechtigender Qualifikation (z. B. {country.medicationExamples})
-                    </small>
-                    {needsQualification && <ModuleIcon name="check" />}
-                  </button>
-                </div>
-              </fieldset>
-            )}
-          {error && <p className="user-editor-error">{error}</p>}
-          <footer className="user-editor-footer">
-            {editing && !editing.systemRole && (
+      onSubmit={() => request(editing ? "PATCH" : "POST")}
+      saving={saving}
+      error={error}
+      submitLabel="Rolle speichern"
+      extraActions={
+        editing ? (
+          <>
+            {!editing.systemRole && (
               <button
-                className="danger-button"
+                className="appointment-danger-button"
                 type="button"
                 disabled={saving || editing.userCount > 0}
+                title={editing.userCount > 0 ? "Die Rolle ist noch Mitarbeitenden zugeordnet." : undefined}
                 onClick={() => void request("DELETE")}
               >
                 Rolle löschen
               </button>
             )}
-            {editing && (
-              <button
-                className="secondary-button"
-                type="button"
-                disabled={saving}
-                onClick={() => {
-                  setCopyOf(editing);
-                  setName(`${editing.name} (Kopie)`.slice(0, 100));
-                  setKey(`${editing.key}-kopie`.slice(0, 40));
-                  setError("");
-                }}
-              >
-                Rolle kopieren
-              </button>
-            )}
-            <button className="primary-button" disabled={saving}>
-              Rolle speichern
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={saving}
+              onClick={() => {
+                setCopyOf(editing);
+                setName(`${editing.name} (Kopie)`.slice(0, 100));
+                setError("");
+              }}
+            >
+              Rolle kopieren
             </button>
-          </footer>
-        </form>
-      </div>
-    </Overlay>
+          </>
+        ) : undefined
+      }
+    >
+      <label>
+        <span>Name</span>
+        <input required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} />
+      </label>
+      <label>
+        <span>Beschreibung (optional)</span>
+        <input
+          maxLength={500}
+          value={description}
+          placeholder="z. B. Pflege im Nachtdienst"
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </label>
+      <fieldset className="area-editor-wide role-permissions">
+        <legend>
+          Berechtigungen <span>{selected.length ? `${selected.length} gewählt` : "keine gewählt"}</span>
+        </legend>
+        <div role="group" aria-label="Berechtigungen">
+          {permissions.map((p) => (
+            <Choice
+              key={p}
+              active={selected.includes(p)}
+              // Die Leitung verabreicht Medikamente immer.
+              disabled={editing?.key === "leitung" && p === "medication.administer"}
+              title={permissionLabel(p, t)}
+              hint={permissionHints[p] ?? ""}
+              onClick={() => toggle(p)}
+            />
+          ))}
+        </div>
+      </fieldset>
+      {medication && (
+        <fieldset className="area-editor-wide role-permissions">
+          <legend>Medikation</legend>
+          <div>
+            <Choice
+              active={needsQualification}
+              title="Nur mit Qualifikation"
+              hint={`Medikation nur für Personen mit berechtigender Qualifikation (z. B. ${country.medicationExamples})`}
+              onClick={() => setNeedsQualification((value) => !value)}
+            />
+          </div>
+        </fieldset>
+      )}
+    </EditorDialog>
   );
 }

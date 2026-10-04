@@ -53,6 +53,22 @@ export const labels: Record<string, string> = {
   "ai.use": "KI-Assistenz",
 };
 
+// Was ein Recht erlaubt, in Alltagssprache (statt technischer Schlüssel).
+export const permissionHints: Record<string, string> = {
+  "residents.read": "Akten, Verlauf und Übersichten ansehen",
+  "residents.write": "Aufnahme, Stammdaten und Akten bearbeiten",
+  "documentation.write": "Pflegedokumentation, Angebote und Protokolle erfassen",
+  "medication.administer": "Medikamente in der Runde abgeben und dokumentieren",
+  "medication.manage": "Verordnungen, Bestände und Bestellungen verwalten",
+  "schedule.manage": "Dienstplan erstellen und veröffentlichen",
+  "team.manage": "Mitarbeitende, Einarbeitung und Team führen",
+  "quality.manage": "Qualität, Ereignisse und Rückmeldungen bearbeiten",
+  "insights.read": "Kennzahlen und Auswertungen ansehen",
+  "administration.manage": "Einstellungen, Rollen und Zugänge verwalten",
+  "rai.manage": "RAI-Erfassungen durchführen und abschliessen",
+  "ai.use": "Vorschläge der KI-Assistenz nutzen",
+};
+
 export function EmployeeFields(p: {
   name: string;
   setName: (v: string) => void;
@@ -205,7 +221,7 @@ export function Overlay({ title, onClose, children }: { title: string; onClose: 
           <div>
             <p className="eyebrow">CareCore Admin · Zugriffsverwaltung</p>
             <h2>{title}</h2>
-            <p>Änderungen werden nachvollziehbar in Neon gespeichert.</p>
+            <p>Änderungen werden nachvollziehbar im Änderungsprotokoll gespeichert.</p>
           </div>
           <button className="profile-panel-close" type="button" onClick={onClose}>
             <ModuleIcon name="close" />

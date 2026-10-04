@@ -21,6 +21,7 @@ import { SsoCard } from "./sso-card";
 import { InteractionsCard } from "./interactions-card";
 import { CountryCard } from "./country-card";
 import { InsurersCard } from "./insurers-card";
+import { ActivityLeadersCard } from "./activity-leaders-card";
 import type { CountryCode } from "@/lib/country";
 
 export type ConfigurationData = {
@@ -360,6 +361,7 @@ export function ConfigurationView({
         <DeathChecklistCard showToast={showToast} />
         <ConsentTopicsCard showToast={showToast} />
         <InsurersCard showToast={showToast} />
+        <ActivityLeadersCard showToast={showToast} />
         <ApiKeysCard showToast={showToast} />
         <WebhooksCard showToast={showToast} />
         <SsoCard showToast={showToast} />

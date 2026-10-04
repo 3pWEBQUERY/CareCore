@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ApiError, assertUuid, auditStatement, iso, text, type ApiContext, type Row } from "@/lib/api-context";
 import { residentAudit } from "@/lib/resident-audit";
+import { activityLeaders } from "@/lib/activity-leaders";
 import { hasPermission } from "@/lib/server-data";
 import { parseMonth } from "@/lib/services-shared";
 import {
@@ -92,6 +93,7 @@ export async function activityWeek(
     careUnitId,
     canWrite: hasPermission(ctx.actor, "documentation.write"),
     activities: rows.map(activity),
+    leaders: (await activityLeaders(ctx)).map((person) => person.name),
   };
 }
 
@@ -157,10 +159,18 @@ function activityInput(body: Record<string, unknown>) {
   };
 }
 
+// Leitung nur aus den zugeteilten Personen; ein früher erfasster Wert bleibt gültig, solange er unverändert ist.
+async function assertLeader(ctx: ApiContext, leader: string, previous: string | null) {
+  if (!leader || leader === previous) return;
+  if (!(await activityLeaders(ctx)).some((person) => person.name === leader))
+    throw new ApiError("Bitte die Leitung aus der Liste wählen. Die Zuteilung legt die Administration fest.");
+}
+
 // Angebot planen, auf Wunsch wöchentlich wiederholt (höchstens zwölf Wochen).
 export async function createActivity(ctx: ApiContext, body: Record<string, unknown>) {
   assertWrite(ctx);
   const input = activityInput(body);
+  await assertLeader(ctx, input.leader, null);
   const careUnitId = await assertCareUnit(ctx, body.careUnitId);
   const weeks = body.repeatWeeks === undefined || body.repeatWeeks === null ? 1 : Number(body.repeatWeeks);
   if (!Number.isInteger(weeks) || weeks < 1 || weeks > MAX_REPEAT_WEEKS)
@@ -192,6 +202,7 @@ export async function updateActivity(ctx: ApiContext, idInput: unknown, body: Re
   const before = await loadActivity(ctx, idInput);
   if (before.cancelled_at) throw new ApiError("Das Angebot ist abgesagt.", 409);
   const input = activityInput(body);
+  await assertLeader(ctx, input.leader, String(before.leader ?? ""));
   const careUnitId = await assertCareUnit(ctx, body.careUnitId);
   await ctx.sql.transaction([
     ctx.sql`
