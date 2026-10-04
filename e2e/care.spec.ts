@@ -207,7 +207,8 @@ test("RAI-Erfassung: alle Bereiche einschätzen (auch per Tastatur) und abschlie
   await expect(page.getByText("Entwurf · 100%")).toBeVisible();
   await page.getByRole("button", { name: /Erfassung abschliessen/ }).click();
 
-  await expect(page.getByText("Noch nicht gespeichert")).toHaveCount(0);
+  // Erst nach der Bestätigung weiter – sonst bricht der Seitenwechsel das Speichern ab.
+  await expect(page.getByText("interRAI-Erfassung für Peter Aebischer abgeschlossen")).toBeVisible();
   await page.goto("/c/rai");
   await expect(page.getByRole("button", { name: /Peter Aebischer.*Zimmer 101/ })).toContainText("Aktuell");
   expect(errors).toEqual([]);
