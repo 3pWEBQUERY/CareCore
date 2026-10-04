@@ -5,6 +5,7 @@ import { EditorDialog, requestJson } from "@/app/components/workspace-ui";
 import { DOCUMENT_CATEGORIES, DOCUMENT_TYPES, type LibraryDocument } from "@/lib/documents-shared";
 import { ScheduleDatePicker, ScheduleSelect } from "@/app/betrieb/components/operations-ui";
 import { addDays, postForm } from "./documents-utils";
+import DocumentFileField from "@/app/bewohner/components/document-file-field";
 
 export function VersionDialog({
   doc,
@@ -28,6 +29,10 @@ export function VersionDialog({
       description={`Version ${doc.versionNo + 1} ersetzt die aktuelle Version ${doc.versionNo}; frühere Versionen bleiben abrufbar.${doc.kind === "standard" && doc.requiresAck ? " Alle müssen die neue Version erneut bestätigen." : ""}`}
       onClose={onClose}
       onSubmit={async () => {
+        if (!file) {
+          setError("Bitte eine Datei auswählen.");
+          return;
+        }
         setSaving(true);
         setError("");
         try {
@@ -49,15 +54,16 @@ export function VersionDialog({
       error={error}
       submitLabel={draft ? "Als Entwurf speichern" : "Version veröffentlichen"}
     >
-      <label className="area-editor-wide">
-        <span>Datei</span>
-        <input
-          type="file"
-          required
-          accept={DOCUMENT_TYPES.join(",")}
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-        />
-      </label>
+      <DocumentFileField
+        label="Datei"
+        types={DOCUMENT_TYPES}
+        prompt="Neue Fassung auswählen"
+        hint="oder hierher ziehen · PDF, Word, Excel, PowerPoint, Text oder Bild · höchstens 4 MB"
+        typeError="Bitte ein PDF, ein Office-Dokument, eine Textdatei oder ein Bild auswählen."
+        file={file}
+        onChange={setFile}
+        onError={setError}
+      />
       <label className="area-editor-wide">
         <span>Was hat sich geändert?</span>
         <textarea rows={3} maxLength={1000} required value={note} onChange={(event) => setNote(event.target.value)} />

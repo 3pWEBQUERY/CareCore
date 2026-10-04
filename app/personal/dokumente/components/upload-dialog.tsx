@@ -5,6 +5,7 @@ import { EditorDialog } from "@/app/components/workspace-ui";
 import { DOCUMENT_CATEGORIES, DOCUMENT_TYPES, type DocumentsPayload } from "@/lib/documents-shared";
 import { ScheduleDatePicker, ScheduleSelect } from "@/app/betrieb/components/operations-ui";
 import { addDays, postForm } from "./documents-utils";
+import DocumentFileField from "@/app/bewohner/components/document-file-field";
 
 export function UploadDialog({
   data,
@@ -37,6 +38,10 @@ export function UploadDialog({
       }
       onClose={onClose}
       onSubmit={async () => {
+        if (!file) {
+          setError("Bitte eine Datei auswählen.");
+          return;
+        }
         setSaving(true);
         setError("");
         try {
@@ -65,19 +70,19 @@ export function UploadDialog({
       error={error}
       submitLabel={draft ? "Als Entwurf speichern" : standards ? "Freigeben & veröffentlichen" : "Hochladen"}
     >
-      <label className="area-editor-wide">
-        <span>Datei</span>
-        <input
-          type="file"
-          required
-          accept={DOCUMENT_TYPES.join(",")}
-          onChange={(event) => {
-            const next = event.target.files?.[0] ?? null;
-            setFile(next);
-            if (next && !title) setTitle(next.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " "));
-          }}
-        />
-      </label>
+      <DocumentFileField
+        label="Datei"
+        types={DOCUMENT_TYPES}
+        prompt="Datei auswählen"
+        hint="oder hierher ziehen · PDF, Word, Excel, PowerPoint, Text oder Bild · höchstens 4 MB"
+        typeError="Bitte ein PDF, ein Office-Dokument, eine Textdatei oder ein Bild auswählen."
+        file={file}
+        onChange={(next) => {
+          setFile(next);
+          if (next && !title) setTitle(next.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " "));
+        }}
+        onError={setError}
+      />
       <label className="area-editor-wide">
         <span>Titel</span>
         <input value={title} maxLength={220} required onChange={(event) => setTitle(event.target.value)} />
@@ -107,7 +112,7 @@ export function UploadDialog({
         </label>
       )}
       {standards && (
-        <fieldset className="duty-assignment-options">
+        <fieldset className="duty-assignment-options document-ack-options">
           <legend>Kenntnisnahme</legend>
           <div className="area-service-options">
             <label className={requiresAck ? "selected" : ""}>
