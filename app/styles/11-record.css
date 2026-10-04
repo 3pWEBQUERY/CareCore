@@ -88,9 +88,13 @@
 .record-photo-trigger > img {
   width: 100%;
   height: 100%;
+  max-width: none;
+  /* Hoch- und Querformat rund zuschneiden: quadratisch erzwingen, Bildmitte (Gesicht eher oben). */
+  aspect-ratio: 1 / 1;
   display: block;
   border-radius: 50%;
   object-fit: cover;
+  object-position: center 30%;
 }
 .record-photo-camera {
   position: absolute;

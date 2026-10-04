@@ -1923,6 +1923,16 @@
   font-size: 18px;
   cursor: pointer;
 }
+/* Bild fest quadratisch und rund zugeschnitten (Hoch- und Querformat), unabhängig von allgemeinen Bildregeln. */
+.intake-photo .record-photo-trigger > img {
+  width: 64px;
+  height: 64px;
+  max-width: none;
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 30%;
+}
 .intake-photo .record-photo-trigger:focus-visible {
   outline: 3px solid #bfdbfe;
   outline-offset: 3px;
