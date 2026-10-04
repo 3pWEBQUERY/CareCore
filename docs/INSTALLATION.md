@@ -47,7 +47,8 @@ Unter **Variables** › **Raw Editor** einfügen:
 
 Unter **Settings** (Railway übernimmt diese Werte nicht aus einer Datei im Repository):
 
-- Build: `npm run build`, Start: `npm run start`.
+- Build: `npm run build`, Start: `node node_modules/next/dist/bin/next start` (direkt, ohne npm: beim Ersetzen eines
+  Deployments beendet Railway den alten Container mit SIGTERM, und npm meldet das sonst als „npm error … SIGTERM“).
 - **Pre-Deploy Command**: `node database/migrate.mjs` (legt das Schema an und bringt es bei jedem Deploy auf den
   neuesten Stand).
 - **Healthcheck Path**: `/api/health`, Timeout 120 s; **Restart Policy**: On Failure, 5 Versuche.
