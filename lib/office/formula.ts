@@ -383,6 +383,8 @@ export type Resolver = {
   rows?: (sheet: string | undefined) => number;
   today?: () => number;
   now?: () => number;
+  // Die Zelle, deren Formel gerade berechnet wird (für ZEILE() und SPALTE() ohne Bezug).
+  self?: { col: number; row: number };
 };
 
 const isGrid = (value: Arg): value is Grid => Array.isArray(value);
@@ -498,7 +500,7 @@ const round = (value: number, digits: number, mode: "half" | "up" | "down") => {
 
 type Impl = (args: Arg[], resolver: Resolver) => Value;
 
-function numeric(fn: (...values: number[]) => number | CellError, arity: [number, number]): Impl {
+function numeric(fn: (...values: number[]) => Value, arity: [number, number]): Impl {
   return (args) => {
     if (args.length < arity[0] || args.length > arity[1]) return fail("#VALUE!");
     const values: number[] = [];
@@ -677,6 +679,829 @@ const FUNCTIONS: Record<string, Impl> = {
   },
 };
 
+// ---------- Weitere Funktionen (wie Excel) ----------
+
+const numberArg = (arg: Arg | undefined, fallback?: number): number | CellError =>
+  arg === undefined ? (fallback ?? fail("#VALUE!")) : toNumber(scalar(arg));
+const textArg = (arg: Arg | undefined, fallback = ""): string | CellError => {
+  if (arg === undefined) return fallback;
+  const value = scalar(arg);
+  return isError(value) ? value : toText(value);
+};
+const toGrid = (arg: Arg): Grid => (isGrid(arg) ? arg : [[arg]]);
+// Eine Zeile oder Spalte als Liste (für VERGLEICH, XVERWEIS & Co.).
+const vector = (arg: Arg): Value[] | null =>
+  !isGrid(arg)
+    ? [arg]
+    : arg.length === 1
+      ? arg[0]
+      : arg.every((line) => line.length === 1)
+        ? arg.map((line) => line[0])
+        : null;
+const wildcard = (pattern: string) =>
+  new RegExp(
+    `^${pattern.replace(/~([*?~])|([.+^${}()|[\]\\])|(\*)|(\?)/g, (_, escaped, special, star, question) =>
+      escaped ? `\\${escaped}` : special ? `\\${special}` : star ? ".*" : question ? "." : "",
+    )}$`,
+    "i",
+  );
+// Genaue Übereinstimmung beim Nachschlagen (Text ohne Gross-/Kleinschreibung, optional mit * und ?).
+function matcher(key: Value, wildcards: boolean): (value: Value) => boolean {
+  if (wildcards && typeof key === "string" && /[*?]/.test(key)) {
+    const pattern = wildcard(key);
+    return (value) => typeof value === "string" && pattern.test(value);
+  }
+  return (value) => value !== null && !isError(value) && typeof value === typeof key && compare(value, key) === 0;
+}
+// Position in einer Liste: 0 = genau, 1 = grösster Wert ≤ Suchwert (aufsteigend), -1 = kleinster Wert ≥ Suchwert.
+function position(list: Value[], key: Value, mode: number, wildcards = true): number {
+  if (mode === 0) return list.findIndex(matcher(key, wildcards));
+  let found = -1;
+  for (let index = 0; index < list.length; index += 1) {
+    const value = list[index];
+    if (value === null || isError(value) || typeof value !== typeof key) continue;
+    const result = compare(value, key);
+    if (mode > 0 ? result <= 0 : result >= 0) found = index;
+    else break;
+  }
+  return found;
+}
+
+function multiConditional(args: Arg[], mode: "sum" | "count" | "average" | "max" | "min"): Value {
+  const target = mode === "count" ? null : args[0];
+  const pairs = mode === "count" ? args : args.slice(1);
+  if (pairs.length < 2 || pairs.length % 2 || (target !== null && !isGrid(target))) return fail("#VALUE!");
+  const ranges: Grid[] = [];
+  const tests: ((value: Value) => boolean)[] = [];
+  for (let index = 0; index < pairs.length; index += 2) {
+    const range = pairs[index];
+    const raw = scalar(pairs[index + 1]);
+    if (!isGrid(range)) return fail("#VALUE!");
+    if (isError(raw)) return raw;
+    ranges.push(range);
+    tests.push(criterion(raw));
+  }
+  const shape = target ?? ranges[0];
+  const width = shape[0]?.length ?? 0;
+  if (ranges.some((range) => range.length !== shape.length || (range[0]?.length ?? 0) !== width))
+    return fail("#VALUE!");
+  let count = 0;
+  const hits: number[] = [];
+  shape.forEach((line, r) =>
+    line.forEach((value, c) => {
+      if (!tests.every((test, k) => test(ranges[k][r][c]))) return;
+      count += 1;
+      if (target !== null && typeof value === "number") hits.push(value);
+    }),
+  );
+  if (mode === "count") return count;
+  if (mode === "sum") return hits.reduce((a, b) => a + b, 0);
+  if (mode === "average") return hits.length ? hits.reduce((a, b) => a + b, 0) / hits.length : fail("#DIV/0!");
+  if (!hits.length) return 0;
+  return mode === "max" ? Math.max(...hits) : Math.min(...hits);
+}
+
+function deviation(values: number[], sample: boolean): number | CellError {
+  if (values.length < (sample ? 2 : 1)) return fail("#DIV/0!");
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  return values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (values.length - (sample ? 1 : 0));
+}
+const precise = (value: number) => Number(value.toPrecision(15));
+
+// Wochentag 0 = Sonntag … 6 = Samstag.
+const dayOfWeek = (serial: number) => new Date(EPOCH + Math.floor(serial) * DAY).getUTCDay();
+const lastDayOfMonth = (year: number, month: number) => serialDate(dateSerial(year, month + 1, 0)).day;
+function addMonths(serial: number, months: number) {
+  const { year, month, day } = serialDate(serial);
+  const target = month + Math.trunc(months);
+  return dateSerial(year, target, Math.min(day, lastDayOfMonth(year, target)));
+}
+// Erster Wochentag je Typ von WOCHENTAG/KALENDERWOCHE (0 = Sonntag).
+const WEEK_START: Record<number, number> = { 1: 0, 2: 1, 11: 1, 12: 2, 13: 3, 14: 4, 15: 5, 16: 6, 17: 0 };
+function isoWeek(serial: number) {
+  const day = Math.floor(serial);
+  const thursday = day - ((dayOfWeek(day) + 6) % 7) + 3;
+  const year = serialDate(thursday).year;
+  return Math.floor((thursday - dateSerial(year, 1, 1)) / 7) + 1;
+}
+const isWorkday = (serial: number, holidays: Set<number>) => {
+  const day = dayOfWeek(serial);
+  return day !== 0 && day !== 6 && !holidays.has(Math.floor(serial));
+};
+function holidayList(arg: Arg | undefined): Set<number> | CellError {
+  const set = new Set<number>();
+  if (arg === undefined) return set;
+  for (const value of toGrid(arg).flat()) {
+    if (isError(value)) return value;
+    if (value === null || value === "") continue;
+    const number = toNumber(value);
+    if (isError(number)) return number;
+    set.add(Math.floor(number));
+  }
+  return set;
+}
+const secondsOf = (serial: number) => Math.round((serial - Math.floor(serial)) * 86_400) % 86_400;
+
+const WEEKDAY_NAMES = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+const MONTH_NAMES = [
+  "Januar",
+  "Februar",
+  "März",
+  "April",
+  "Mai",
+  "Juni",
+  "Juli",
+  "August",
+  "September",
+  "Oktober",
+  "November",
+  "Dezember",
+];
+
+// Formatcode von TEXT(): Abschnitte „positiv;negativ;null;Text“, Zahlen (0, #, Tausender- und Dezimalzeichen,
+// %), Datum und Zeit (TT/DD, MM, MMM, MMMM, JJJJ/YYYY, hh, mm, ss), Text in Anführungszeichen.
+type CodePart = { lit: string } | { pat: string };
+function codeParts(section: string): CodePart[] {
+  const parts: CodePart[] = [];
+  const literal = (text: string) => {
+    const last = parts[parts.length - 1];
+    if (last && "lit" in last) last.lit += text;
+    else parts.push({ lit: text });
+  };
+  for (let i = 0; i < section.length; i += 1) {
+    const char = section[i];
+    if (char === '"') {
+      const close = section.indexOf('"', i + 1);
+      literal(section.slice(i + 1, close < 0 ? undefined : close));
+      i = close < 0 ? section.length : close;
+    } else if (char === "\\") {
+      literal(section[i + 1] ?? "");
+      i += 1;
+    } else if ("0#?".includes(char) || (".,".includes(char) && /[0#?]/.test(section[i + 1] ?? ""))) {
+      let pattern = "";
+      while (i < section.length && /[0#?.,'’]/.test(section[i])) pattern += section[i++];
+      // Ein Trennzeichen am Ende („0.“) gehört nicht mehr zur Zahl.
+      const trailing = /[.,'’]+$/.exec(pattern)?.[0] ?? "";
+      parts.push({ pat: pattern.slice(0, pattern.length - trailing.length) });
+      if (trailing) literal(trailing);
+      i -= 1;
+    } else literal(char);
+  }
+  return parts;
+}
+function formatNumberPattern(value: number, pattern: string) {
+  const separators = [...pattern].filter((char) => ".,'’".includes(char));
+  let decimal = "";
+  let thousands = "";
+  const marks = [...new Set(separators.filter((char) => char === "." || char === ","))];
+  if (separators.some((char) => char === "'" || char === "’")) {
+    thousands = separators.find((char) => char === "'" || char === "’")!;
+    decimal = marks[0] ?? "";
+  } else if (marks.length === 2) {
+    decimal = pattern.lastIndexOf(".") > pattern.lastIndexOf(",") ? "." : ",";
+    thousands = decimal === "." ? "," : ".";
+  } else if (marks.length === 1) {
+    const mark = marks[0];
+    const tail = pattern.slice(pattern.lastIndexOf(mark) + 1);
+    // „#,##0“ gruppiert Tausender, „0,00“ trennt Dezimalstellen.
+    if ((pattern[pattern.indexOf(mark) - 1] === "#" && tail.length === 3) || separators.length > 1) thousands = mark;
+    else decimal = mark;
+  }
+  const decimalAt = decimal ? pattern.lastIndexOf(decimal) : -1;
+  const intPattern = (decimalAt < 0 ? pattern : pattern.slice(0, decimalAt)).replace(/[.,'’]/g, "");
+  const decPattern = decimalAt < 0 ? "" : pattern.slice(decimalAt + 1).replace(/[.,'’]/g, "");
+  const places = decPattern.length;
+  const minPlaces = decPattern.replace(/[#?]+$/, "").length;
+  const fixed = Math.abs(value).toFixed(places);
+  let [whole, fraction = ""] = fixed.split(".");
+  while (fraction.length > minPlaces && fraction.endsWith("0")) fraction = fraction.slice(0, -1);
+  const minWhole = intPattern.replace(/^[#?]+/, "").length;
+  if (whole === "0" && minWhole === 0) whole = "";
+  whole = whole.padStart(minWhole, "0");
+  if (thousands) whole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, thousands);
+  return whole + (fraction || (places && minPlaces) ? `${decimal}${fraction}` : "");
+}
+function formatDatePart(serial: number, section: string) {
+  type Piece = { kind: "lit"; text: string } | { kind: "y" | "d" | "m" | "h" | "s"; size: number };
+  const pieces: Piece[] = [];
+  for (let i = 0; i < section.length;) {
+    const rest = section.slice(i);
+    const char = rest[0];
+    if (char === '"') {
+      const close = section.indexOf('"', i + 1);
+      pieces.push({ kind: "lit", text: section.slice(i + 1, close < 0 ? undefined : close) });
+      i = close < 0 ? section.length : close + 1;
+      continue;
+    }
+    if (char === "\\") {
+      pieces.push({ kind: "lit", text: rest[1] ?? "" });
+      i += 2;
+      continue;
+    }
+    const run = /^([JjYy]+|[TtDd]+|[Mm]+|[Hh]+|[Ss]+)/.exec(rest);
+    if (run) {
+      const letter = run[1][0].toLowerCase();
+      const kind =
+        letter === "j" || letter === "y" ? "y" : letter === "t" || letter === "d" ? "d" : (letter as "m" | "h" | "s");
+      pieces.push({ kind, size: run[1].length });
+      i += run[1].length;
+      continue;
+    }
+    pieces.push({ kind: "lit", text: char });
+    i += 1;
+  }
+  const date = serialDate(serial);
+  const seconds = secondsOf(serial);
+  const units = pieces.filter((piece) => piece.kind !== "lit");
+  return pieces
+    .map((piece) => {
+      if (piece.kind === "lit") return piece.text;
+      const at = units.indexOf(piece);
+      const minute =
+        piece.kind === "m" && piece.size <= 2 && (units[at - 1]?.kind === "h" || units[at + 1]?.kind === "s");
+      switch (piece.kind) {
+        case "y":
+          return piece.size <= 2 ? String(date.year % 100).padStart(2, "0") : String(date.year);
+        case "d":
+          if (piece.size >= 4) return WEEKDAY_NAMES[dayOfWeek(serial)];
+          if (piece.size === 3) return WEEKDAY_NAMES[dayOfWeek(serial)].slice(0, 2);
+          return String(date.day).padStart(piece.size, "0");
+        case "m":
+          if (minute) return String(Math.floor(seconds / 60) % 60).padStart(piece.size, "0");
+          if (piece.size >= 4) return MONTH_NAMES[date.month - 1];
+          if (piece.size === 3) return MONTH_NAMES[date.month - 1].slice(0, 3);
+          return String(date.month).padStart(piece.size, "0");
+        case "h":
+          return String(Math.floor(seconds / 3600)).padStart(Math.min(2, piece.size), "0");
+        case "s":
+          return String(seconds % 60).padStart(Math.min(2, piece.size), "0");
+      }
+    })
+    .join("");
+}
+export function formatWithCode(value: Value, code: string): string | CellError {
+  if (isError(value)) return value;
+  const sections: string[] = [];
+  let current = "";
+  let quoted = false;
+  for (const char of code) {
+    if (char === '"') quoted = !quoted;
+    if (char === ";" && !quoted) {
+      sections.push(current);
+      current = "";
+    } else current += char;
+  }
+  sections.push(current);
+  let number = typeof value === "number" ? value : null;
+  if (typeof value === "string") {
+    const parsed = parseInput(value);
+    if (parsed.type === "number") number = parsed.value;
+  }
+  if (number === null) {
+    const text = toText(value);
+    const section = sections[3] ?? sections.find((item) => item.includes("@"));
+    if (!section) return text;
+    return codeParts(section)
+      .map((part) => ("lit" in part ? part.lit : part.pat))
+      .join("")
+      .replace(/@/g, text);
+  }
+  let section = sections[0];
+  let sign = number < 0 ? "-" : "";
+  if (number < 0 && sections[1] !== undefined) {
+    section = sections[1];
+    sign = "";
+  } else if (number === 0 && sections[2] !== undefined) section = sections[2];
+  const unquoted = section.replace(/"[^"]*"/g, "").replace(/\\./g, "");
+  if (!/[0#?]/.test(unquoted) && /[JjYyTtDdMmHhSs]/.test(unquoted)) return formatDatePart(Math.abs(number), section);
+  const parts = codeParts(section);
+  const percents = parts.reduce((sum, part) => sum + ("lit" in part ? (part.lit.match(/%/g) ?? []).length : 0), 0);
+  const scaled = Math.abs(number) * 100 ** percents;
+  let used = false;
+  const body = parts
+    .map((part) => {
+      if ("lit" in part) return part.lit;
+      if (used) return "";
+      used = true;
+      return formatNumberPattern(scaled, part.pat);
+    })
+    .join("");
+  return used && /[1-9]/.test(body) ? sign + body : body;
+}
+
+Object.assign(FUNCTIONS, {
+  SUMIFS: (args) => multiConditional(args, "sum"),
+  COUNTIFS: (args) => multiConditional(args, "count"),
+  AVERAGEIFS: (args) => multiConditional(args, "average"),
+  MAXIFS: (args) => multiConditional(args, "max"),
+  MINIFS: (args) => multiConditional(args, "min"),
+  IFNA: (args) => {
+    if (args.length !== 2) return fail("#VALUE!");
+    const value = scalar(args[0]);
+    return isError(value) && value.error === "#N/A" ? scalar(args[1]) : value;
+  },
+  IFS: (args) => {
+    if (args.length < 2 || args.length % 2) return fail("#VALUE!");
+    for (let index = 0; index < args.length; index += 2) {
+      const test = truthy(scalar(args[index]));
+      if (isError(test)) return test;
+      if (test) return scalar(args[index + 1]);
+    }
+    return fail("#N/A");
+  },
+  SWITCH: (args) => {
+    if (args.length < 3) return fail("#VALUE!");
+    const value = scalar(args[0]);
+    if (isError(value)) return value;
+    const pairs = args.slice(1);
+    for (let index = 0; index + 1 < pairs.length; index += 2) {
+      const candidate = scalar(pairs[index]);
+      if (isError(candidate)) return candidate;
+      if (typeof candidate === typeof value && compare(candidate, value) === 0) return scalar(pairs[index + 1]);
+    }
+    return pairs.length % 2 ? scalar(pairs[pairs.length - 1]) : fail("#N/A");
+  },
+  CHOOSE: (args) => {
+    const index = numberArg(args[0]);
+    if (isError(index)) return index;
+    const choice = Math.trunc(index);
+    return choice < 1 || choice >= args.length ? fail("#VALUE!") : scalar(args[choice]);
+  },
+  XOR: (args) => {
+    const values = flat(args).filter((value) => value !== null);
+    if (!values.length) return fail("#VALUE!");
+    let count = 0;
+    for (const value of values) {
+      const test = truthy(value);
+      if (isError(test)) return test;
+      if (test) count += 1;
+    }
+    return count % 2 === 1;
+  },
+  NA: (args) => (args.length ? fail("#VALUE!") : fail("#N/A")),
+  MATCH: (args) => {
+    if (args.length < 2 || args.length > 3) return fail("#VALUE!");
+    const key = scalar(args[0]);
+    if (isError(key)) return key;
+    const list = vector(args[1]);
+    if (!list) return fail("#N/A");
+    const mode = numberArg(args[2], 1);
+    if (isError(mode)) return mode;
+    const found = position(list, key, Math.sign(Math.trunc(mode)));
+    return found < 0 ? fail("#N/A") : found + 1;
+  },
+  INDEX: (args) => {
+    if (args.length < 2 || args.length > 3) return fail("#VALUE!");
+    const grid = toGrid(args[0]);
+    const first = numberArg(args[1]);
+    if (isError(first)) return first;
+    const second = numberArg(args[2], 0);
+    if (isError(second)) return second;
+    let row = Math.trunc(first);
+    let col = Math.trunc(second);
+    // Bei einer einzelnen Zeile meint die erste Zahl die Spalte (wie Excel).
+    if (args.length === 2 && grid.length === 1) [row, col] = [1, row];
+    if (row === 0 && grid.length === 1) row = 1;
+    if (col === 0 && (grid[0]?.length ?? 0) === 1) col = 1;
+    if (row < 1 || col < 1 || row > grid.length || col > (grid[0]?.length ?? 0)) return fail("#REF!");
+    return grid[row - 1][col - 1];
+  },
+  XLOOKUP: (args) => {
+    if (args.length < 3 || args.length > 6) return fail("#VALUE!");
+    const key = scalar(args[0]);
+    if (isError(key)) return key;
+    const list = vector(args[1]);
+    const results = toGrid(args[2]);
+    if (!list) return fail("#VALUE!");
+    const mode = numberArg(args[4], 0);
+    const direction = numberArg(args[5], 1);
+    if (isError(mode)) return mode;
+    if (isError(direction)) return direction;
+    const indexes = list.map((_, index) => index);
+    if (direction < 0) indexes.reverse();
+    let found = -1;
+    if (mode === 0 || mode === 2) {
+      const test = matcher(key, mode === 2);
+      found = indexes.find((index) => test(list[index])) ?? -1;
+    } else {
+      // Genau oder nächstkleiner (-1) bzw. nächstgrösser (1), unabhängig von der Sortierung.
+      let best: Value = null;
+      for (const index of indexes) {
+        const value = list[index];
+        if (value === null || isError(value) || typeof value !== typeof key) continue;
+        const result = compare(value, key);
+        if (result === 0) {
+          found = index;
+          break;
+        }
+        if (
+          (mode < 0 ? result < 0 : result > 0) &&
+          (best === null || (mode < 0 ? compare(value, best) > 0 : compare(value, best) < 0))
+        ) {
+          best = value;
+          found = index;
+        }
+      }
+    }
+    if (found < 0) return args[3] !== undefined ? scalar(args[3]) : fail("#N/A");
+    if (results.length === list.length) return results[found][0];
+    return results.length === 1 && (results[0]?.length ?? 0) === list.length ? results[0][found] : fail("#VALUE!");
+  },
+  HLOOKUP: (args, resolver) => {
+    if (args.length < 3 || args.length > 4 || !isGrid(args[1])) return fail("#VALUE!");
+    const table = args[1];
+    const transposed: Grid = (table[0] ?? []).map((_, c) => table.map((line) => line[c]));
+    return FUNCTIONS.VLOOKUP([args[0], transposed, ...args.slice(2)], resolver);
+  },
+  LARGE: (args) => {
+    if (args.length !== 2) return fail("#VALUE!");
+    const values = numbers([args[0]]);
+    const k = numberArg(args[1]);
+    if (isError(values)) return values;
+    if (isError(k)) return k;
+    const sorted = [...values].sort((a, b) => b - a);
+    const at = Math.ceil(k);
+    return at < 1 || at > sorted.length ? fail("#NUM!") : sorted[at - 1];
+  },
+  SMALL: (args) => {
+    if (args.length !== 2) return fail("#VALUE!");
+    const values = numbers([args[0]]);
+    const k = numberArg(args[1]);
+    if (isError(values)) return values;
+    if (isError(k)) return k;
+    const sorted = [...values].sort((a, b) => a - b);
+    const at = Math.ceil(k);
+    return at < 1 || at > sorted.length ? fail("#NUM!") : sorted[at - 1];
+  },
+  RANK: (args) => {
+    if (args.length < 2 || args.length > 3 || !isGrid(args[1])) return fail("#VALUE!");
+    const value = numberArg(args[0]);
+    const order = numberArg(args[2], 0);
+    const values = numbers([args[1]]);
+    if (isError(value)) return value;
+    if (isError(order)) return order;
+    if (isError(values)) return values;
+    if (!values.includes(value)) return fail("#N/A");
+    return 1 + values.filter((other) => (order ? other < value : other > value)).length;
+  },
+  MODE: aggregate((values) => {
+    const counts = new Map<number, number>();
+    let best: number | null = null;
+    for (const value of values) {
+      const count = (counts.get(value) ?? 0) + 1;
+      counts.set(value, count);
+      if (count > 1 && (best === null || count > counts.get(best)!)) best = value;
+    }
+    return best ?? fail("#N/A");
+  }),
+  STDEV: aggregate((values) => {
+    const variance = deviation(values, true);
+    return isError(variance) ? variance : Math.sqrt(variance);
+  }),
+  "STDEV.P": aggregate((values) => {
+    const variance = deviation(values, false);
+    return isError(variance) ? variance : Math.sqrt(variance);
+  }),
+  VAR: aggregate((values) => deviation(values, true)),
+  "VAR.P": aggregate((values) => deviation(values, false)),
+  SUMPRODUCT: (args) => {
+    if (!args.length) return fail("#VALUE!");
+    const grids = args.map(toGrid);
+    const height = grids[0].length;
+    const width = grids[0][0]?.length ?? 0;
+    if (grids.some((grid) => grid.length !== height || (grid[0]?.length ?? 0) !== width)) return fail("#VALUE!");
+    let sum = 0;
+    for (let r = 0; r < height; r += 1)
+      for (let c = 0; c < width; c += 1) {
+        let product = 1;
+        for (const grid of grids) {
+          const value = grid[r][c];
+          if (isError(value)) return value;
+          product *= typeof value === "number" ? value : 0;
+        }
+        sum += product;
+      }
+    return sum;
+  },
+  SUMSQ: aggregate((values) => values.reduce((sum, value) => sum + value * value, 0)),
+  CEILING: numeric(
+    (value, step = 1) => {
+      if (step === 0) return 0;
+      if (value > 0 && step < 0) return fail("#NUM!");
+      return precise(Math.ceil(precise(value / step)) * step);
+    },
+    [1, 2],
+  ),
+  FLOOR: numeric(
+    (value, step = 1) => {
+      if (step === 0) return value === 0 ? 0 : fail("#DIV/0!");
+      if (value > 0 && step < 0) return fail("#NUM!");
+      return precise(Math.floor(precise(value / step)) * step);
+    },
+    [1, 2],
+  ),
+  MROUND: numeric(
+    (value, step) => {
+      if (step === 0) return 0;
+      if (Math.sign(value) * Math.sign(step) < 0) return fail("#NUM!");
+      return precise(round(value / step, 0, "half") * step);
+    },
+    [2, 2],
+  ),
+  TRUNC: numeric((value, digits = 0) => round(value, Math.trunc(digits), "down"), [1, 2]),
+  EVEN: numeric((value) => Math.sign(value) * Math.ceil(Math.abs(value) / 2) * 2, [1, 1]),
+  ODD: numeric(
+    (value) => {
+      const up = Math.ceil(Math.abs(value));
+      return Math.sign(value || 1) * (up % 2 ? up : up + 1);
+    },
+    [1, 1],
+  ),
+  SIGN: numeric((value) => Math.sign(value), [1, 1]),
+  PI: numeric(() => Math.PI, [0, 0]),
+  EXP: numeric((value) => Math.exp(value), [1, 1]),
+  LN: numeric((value) => (value <= 0 ? fail("#NUM!") : Math.log(value)), [1, 1]),
+  LOG10: numeric((value) => (value <= 0 ? fail("#NUM!") : Math.log10(value)), [1, 1]),
+  LOG: numeric(
+    (value, base = 10) =>
+      value <= 0 || base <= 0 || base === 1 ? fail("#NUM!") : precise(Math.log(value) / Math.log(base)),
+    [1, 2],
+  ),
+  QUOTIENT: numeric((value, divisor) => (divisor === 0 ? fail("#DIV/0!") : Math.trunc(value / divisor)), [2, 2]),
+  GCD: aggregate((values) => {
+    if (values.some((value) => value < 0)) return fail("#NUM!");
+    const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
+    return values.map(Math.trunc).reduce(gcd, 0);
+  }),
+  LCM: aggregate((values) => {
+    if (values.some((value) => value < 0)) return fail("#NUM!");
+    const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
+    return values.map(Math.trunc).reduce((a, b) => (a === 0 || b === 0 ? 0 : (a * b) / gcd(a, b)), 1);
+  }),
+  SIN: numeric((value) => Math.sin(value), [1, 1]),
+  COS: numeric((value) => Math.cos(value), [1, 1]),
+  TAN: numeric((value) => Math.tan(value), [1, 1]),
+  RADIANS: numeric((value) => (value * Math.PI) / 180, [1, 1]),
+  DEGREES: numeric((value) => (value * 180) / Math.PI, [1, 1]),
+  RAND: numeric(() => Math.random(), [0, 0]),
+  RANDBETWEEN: numeric(
+    (low, high) => {
+      const min = Math.ceil(low);
+      const max = Math.floor(high);
+      return min > max ? fail("#NUM!") : min + Math.floor(Math.random() * (max - min + 1));
+    },
+    [2, 2],
+  ),
+  SUBSTITUTE: (args) => {
+    if (args.length < 3 || args.length > 4) return fail("#VALUE!");
+    const [text, from, to] = [textArg(args[0]), textArg(args[1]), textArg(args[2])];
+    if (isError(text)) return text;
+    if (isError(from)) return from;
+    if (isError(to)) return to;
+    if (!from) return text;
+    if (args[3] === undefined) return text.split(from).join(to);
+    const instance = numberArg(args[3]);
+    if (isError(instance)) return instance;
+    if (instance < 1) return fail("#VALUE!");
+    let at = -1;
+    for (let count = 0; count < Math.trunc(instance); count += 1) {
+      at = text.indexOf(from, at + 1);
+      if (at < 0) return text;
+    }
+    return text.slice(0, at) + to + text.slice(at + from.length);
+  },
+  REPLACE: (args) => {
+    if (args.length !== 4) return fail("#VALUE!");
+    const text = textArg(args[0]);
+    const start = numberArg(args[1]);
+    const count = numberArg(args[2]);
+    const insert = textArg(args[3]);
+    if (isError(text)) return text;
+    if (isError(start)) return start;
+    if (isError(count)) return count;
+    if (isError(insert)) return insert;
+    if (start < 1 || count < 0) return fail("#VALUE!");
+    return text.slice(0, Math.trunc(start) - 1) + insert + text.slice(Math.trunc(start) - 1 + Math.trunc(count));
+  },
+  FIND: (args) => {
+    if (args.length < 2 || args.length > 3) return fail("#VALUE!");
+    const find = textArg(args[0]);
+    const within = textArg(args[1]);
+    const start = numberArg(args[2], 1);
+    if (isError(find)) return find;
+    if (isError(within)) return within;
+    if (isError(start)) return start;
+    if (start < 1 || start > within.length + 1) return fail("#VALUE!");
+    const at = within.indexOf(find, Math.trunc(start) - 1);
+    return at < 0 ? fail("#VALUE!") : at + 1;
+  },
+  SEARCH: (args) => {
+    if (args.length < 2 || args.length > 3) return fail("#VALUE!");
+    const find = textArg(args[0]);
+    const within = textArg(args[1]);
+    const start = numberArg(args[2], 1);
+    if (isError(find)) return find;
+    if (isError(within)) return within;
+    if (isError(start)) return start;
+    if (start < 1 || start > within.length + 1) return fail("#VALUE!");
+    const source = wildcard(find).source.slice(1, -1);
+    const match = new RegExp(source, "i").exec(within.slice(Math.trunc(start) - 1));
+    return match ? match.index + Math.trunc(start) : fail("#VALUE!");
+  },
+  TEXTJOIN: (args) => {
+    if (args.length < 3) return fail("#VALUE!");
+    const separator = textArg(args[0]);
+    const skip = truthy(scalar(args[1]));
+    if (isError(separator)) return separator;
+    if (isError(skip)) return skip;
+    const values = flat(args.slice(2));
+    const problem = values.find(isError);
+    if (problem) return problem;
+    return values
+      .map(toText)
+      .filter((text) => !skip || text !== "")
+      .join(separator);
+  },
+  VALUE: (args) => {
+    if (args.length !== 1) return fail("#VALUE!");
+    const value = scalar(args[0]);
+    if (isError(value) || typeof value === "number") return value;
+    const parsed = parseInput(toText(value).trim());
+    return parsed.type === "number" ? parsed.value : parsed.type === "empty" ? 0 : fail("#VALUE!");
+  },
+  PROPER: textual(
+    (text) =>
+      text
+        .toLocaleLowerCase("de-CH")
+        .replace(
+          /(^|[^\p{L}])(\p{L})/gu,
+          (_, before: string, letter: string) => before + letter.toLocaleUpperCase("de-CH"),
+        ),
+    [1, 1],
+  ),
+  REPT: textual(
+    (text, count) => (count < 0 || text.length * count > 32_767 ? fail("#VALUE!") : text.repeat(Math.trunc(count))),
+    [2, 2],
+  ),
+  EXACT: (args) => {
+    if (args.length !== 2) return fail("#VALUE!");
+    const a = textArg(args[0]);
+    const b = textArg(args[1]);
+    if (isError(a)) return a;
+    if (isError(b)) return b;
+    return a === b;
+  },
+  TEXT: (args) => {
+    if (args.length !== 2) return fail("#VALUE!");
+    const value = scalar(args[0]);
+    const code = textArg(args[1]);
+    if (isError(code)) return code;
+    return formatWithCode(value, code);
+  },
+  CHAR: numeric((code) => (code < 1 || code > 255 ? fail("#VALUE!") : String.fromCharCode(Math.trunc(code))), [1, 1]),
+  CODE: textual((text) => (text ? text.charCodeAt(0) : fail("#VALUE!")), [1, 1]),
+  CLEAN: textual((text) => text.replace(/[\u0000-\u001f]/g, ""), [1, 1]),
+  WEEKDAY: (args) => {
+    if (args.length < 1 || args.length > 2) return fail("#VALUE!");
+    const serial = numberArg(args[0]);
+    const type = numberArg(args[1], 1);
+    if (isError(serial)) return serial;
+    if (isError(type)) return type;
+    const kind = Math.trunc(type);
+    const start = kind === 3 ? 1 : WEEK_START[kind];
+    if (start === undefined) return fail("#NUM!");
+    const result = ((dayOfWeek(serial) - start + 7) % 7) + 1;
+    return kind === 3 ? result - 1 : result;
+  },
+  WEEKNUM: (args) => {
+    if (args.length < 1 || args.length > 2) return fail("#VALUE!");
+    const serial = numberArg(args[0]);
+    const type = numberArg(args[1], 1);
+    if (isError(serial)) return serial;
+    if (isError(type)) return type;
+    if (Math.trunc(type) === 21) return isoWeek(serial);
+    const start = WEEK_START[Math.trunc(type)];
+    if (start === undefined || Math.trunc(type) === 3) return fail("#NUM!");
+    const january = dateSerial(serialDate(serial).year, 1, 1);
+    const offset = (dayOfWeek(january) - start + 7) % 7;
+    return Math.floor((Math.floor(serial) - january + offset) / 7) + 1;
+  },
+  ISOWEEKNUM: numeric((serial) => isoWeek(serial), [1, 1]),
+  DAYS: numeric((end, start) => Math.floor(end) - Math.floor(start), [2, 2]),
+  EDATE: numeric((start, months) => addMonths(start, months), [2, 2]),
+  EOMONTH: numeric(
+    (start, months) => {
+      const { year, month } = serialDate(start);
+      return dateSerial(year, month + Math.trunc(months) + 1, 0);
+    },
+    [2, 2],
+  ),
+  NETWORKDAYS: (args) => {
+    if (args.length < 2 || args.length > 3) return fail("#VALUE!");
+    const start = numberArg(args[0]);
+    const end = numberArg(args[1]);
+    const holidays = holidayList(args[2]);
+    if (isError(start)) return start;
+    if (isError(end)) return end;
+    if (isError(holidays)) return holidays;
+    const [from, to] = [Math.floor(Math.min(start, end)), Math.floor(Math.max(start, end))];
+    if (to - from > 200_000) return fail("#NUM!");
+    let count = 0;
+    for (let day = from; day <= to; day += 1) if (isWorkday(day, holidays)) count += 1;
+    return start > end ? -count : count;
+  },
+  WORKDAY: (args) => {
+    if (args.length < 2 || args.length > 3) return fail("#VALUE!");
+    const start = numberArg(args[0]);
+    const days = numberArg(args[1]);
+    const holidays = holidayList(args[2]);
+    if (isError(start)) return start;
+    if (isError(days)) return days;
+    if (isError(holidays)) return holidays;
+    let remaining = Math.trunc(days);
+    if (Math.abs(remaining) > 100_000) return fail("#NUM!");
+    let day = Math.floor(start);
+    const step = Math.sign(remaining);
+    while (remaining !== 0) {
+      day += step;
+      if (isWorkday(day, holidays)) remaining -= step;
+    }
+    return day;
+  },
+  HOUR: numeric((serial) => Math.floor(secondsOf(serial) / 3600), [1, 1]),
+  MINUTE: numeric((serial) => Math.floor(secondsOf(serial) / 60) % 60, [1, 1]),
+  SECOND: numeric((serial) => secondsOf(serial) % 60, [1, 1]),
+  TIME: numeric(
+    (hours, minutes, seconds) => {
+      const total = Math.trunc(hours) * 3600 + Math.trunc(minutes) * 60 + Math.trunc(seconds);
+      return total < 0 ? fail("#NUM!") : (total % 86_400) / 86_400;
+    },
+    [3, 3],
+  ),
+  DATEVALUE: (args) => {
+    const text = textArg(args[0]);
+    if (isError(text)) return text;
+    const parsed = parseInput(text.trim());
+    return args.length === 1 && parsed.type === "number" && (parsed.format === "date" || parsed.format === "datetime")
+      ? Math.floor(parsed.value)
+      : fail("#VALUE!");
+  },
+  TIMEVALUE: (args) => {
+    const text = textArg(args[0]);
+    if (isError(text)) return text;
+    const parsed = parseInput(text.trim());
+    return args.length === 1 && parsed.type === "number" && (parsed.format === "time" || parsed.format === "datetime")
+      ? parsed.value - Math.floor(parsed.value)
+      : fail("#VALUE!");
+  },
+  DATEDIF: (args) => {
+    if (args.length !== 3) return fail("#VALUE!");
+    const startValue = numberArg(args[0]);
+    const endValue = numberArg(args[1]);
+    const unit = textArg(args[2]);
+    if (isError(startValue)) return startValue;
+    if (isError(endValue)) return endValue;
+    if (isError(unit)) return unit;
+    const [start, end] = [Math.floor(startValue), Math.floor(endValue)];
+    if (start > end) return fail("#NUM!");
+    const a = serialDate(start);
+    const b = serialDate(end);
+    const months = (b.year - a.year) * 12 + (b.month - a.month) - (b.day < a.day ? 1 : 0);
+    switch (unit.toUpperCase()) {
+      case "D":
+        return end - start;
+      case "M":
+        return months;
+      case "Y":
+        return Math.floor(months / 12);
+      case "YM":
+        return months % 12;
+      case "MD":
+        return b.day >= a.day ? b.day - a.day : lastDayOfMonth(b.year, b.month - 1) - a.day + b.day;
+      case "YD": {
+        let shifted = dateSerial(b.year, a.month, Math.min(a.day, lastDayOfMonth(b.year, a.month)));
+        if (shifted > end)
+          shifted = dateSerial(b.year - 1, a.month, Math.min(a.day, lastDayOfMonth(b.year - 1, a.month)));
+        return end - shifted;
+      }
+      default:
+        return fail("#NUM!");
+    }
+  },
+  ISEVEN: numeric((value) => Math.trunc(value) % 2 === 0, [1, 1]),
+  ISODD: numeric((value) => Math.abs(Math.trunc(value)) % 2 === 1, [1, 1]),
+  ISLOGICAL: (args) => args.length === 1 && typeof scalar(args[0]) === "boolean",
+  ISNONTEXT: (args) => args.length === 1 && typeof scalar(args[0]) !== "string",
+  ISNA: (args) => {
+    const value = args.length === 1 ? scalar(args[0]) : null;
+    return isError(value) && value.error === "#N/A";
+  },
+  ISERR: (args) => {
+    const value = args.length === 1 ? scalar(args[0]) : null;
+    return isError(value) && value.error !== "#N/A";
+  },
+} satisfies Record<string, Impl>);
+
 // Deutsche Namen (wie im deutschen Excel) → interne englische Namen; beide Schreibweisen funktionieren.
 const GERMAN: Record<string, string> = {
   SUMME: "SUM",
@@ -720,12 +1545,112 @@ const GERMAN: Record<string, string> = {
   ISTTEXT: "ISTEXT",
   ISTFEHLER: "ISERROR",
   SVERWEIS: "VLOOKUP",
+  SUMMEWENNS: "SUMIFS",
+  ZÄHLENWENNS: "COUNTIFS",
+  MITTELWERTWENNS: "AVERAGEIFS",
+  MAXWENNS: "MAXIFS",
+  MINWENNS: "MINIFS",
+  WENNNV: "IFNA",
+  WENNS: "IFS",
+  ERSTERWERT: "SWITCH",
+  WAHL: "CHOOSE",
+  XODER: "XOR",
+  NV: "NA",
+  VERGLEICH: "MATCH",
+  XVERWEIS: "XLOOKUP",
+  WVERWEIS: "HLOOKUP",
+  ZEILE: "ROW",
+  SPALTE: "COLUMN",
+  ZEILEN: "ROWS",
+  SPALTEN: "COLUMNS",
+  KGRÖSSTE: "LARGE",
+  KKLEINSTE: "SMALL",
+  RANG: "RANK",
+  "RANG.GLEICH": "RANK",
+  MODALWERT: "MODE",
+  "MODUS.EINF": "MODE",
+  STABW: "STDEV",
+  "STABW.S": "STDEV",
+  "STABW.N": "STDEV.P",
+  VARIANZ: "VAR",
+  "VAR.S": "VAR",
+  SUMMENPRODUKT: "SUMPRODUCT",
+  QUADRATESUMME: "SUMSQ",
+  OBERGRENZE: "CEILING",
+  UNTERGRENZE: "FLOOR",
+  VRUNDEN: "MROUND",
+  KÜRZEN: "TRUNC",
+  GERADE: "EVEN",
+  UNGERADE: "ODD",
+  VORZEICHEN: "SIGN",
+  GGT: "GCD",
+  KGV: "LCM",
+  BOGENMASS: "RADIANS",
+  GRAD: "DEGREES",
+  ZUFALLSZAHL: "RAND",
+  ZUFALLSBEREICH: "RANDBETWEEN",
+  WECHSELN: "SUBSTITUTE",
+  ERSETZEN: "REPLACE",
+  FINDEN: "FIND",
+  SUCHEN: "SEARCH",
+  TEXTVERKETTEN: "TEXTJOIN",
+  WERT: "VALUE",
+  GROSS2: "PROPER",
+  WIEDERHOLEN: "REPT",
+  IDENTISCH: "EXACT",
+  ZEICHEN: "CHAR",
+  SÄUBERN: "CLEAN",
+  WOCHENTAG: "WEEKDAY",
+  KALENDERWOCHE: "WEEKNUM",
+  ISOKALENDERWOCHE: "ISOWEEKNUM",
+  TAGE: "DAYS",
+  EDATUM: "EDATE",
+  MONATSENDE: "EOMONTH",
+  NETTOARBEITSTAGE: "NETWORKDAYS",
+  ARBEITSTAG: "WORKDAY",
+  STUNDE: "HOUR",
+  SEKUNDE: "SECOND",
+  ZEIT: "TIME",
+  DATWERT: "DATEVALUE",
+  ZEITWERT: "TIMEVALUE",
+  ISTGERADE: "ISEVEN",
+  ISTUNGERADE: "ISODD",
+  ISTLOG: "ISLOGICAL",
+  ISTKTEXT: "ISNONTEXT",
+  ISTNV: "ISNA",
+  ISTFEHL: "ISERR",
 };
-const ENGLISH_ALIASES: Record<string, string> = { CONCATENATE: "CONCAT", "_XLFN.CONCAT": "CONCAT" };
-const canonical = (name: string) => GERMAN[name] ?? ENGLISH_ALIASES[name] ?? name;
+const ENGLISH_ALIASES: Record<string, string> = {
+  CONCATENATE: "CONCAT",
+  "RANK.EQ": "RANK",
+  "MODE.SNGL": "MODE",
+  "STDEV.S": "STDEV",
+  "VAR.S": "VAR",
+};
+// Neuere Excel-Funktionen stehen in der Datei mit Vorsilbe „_xlfn.“ („_xlfn.XLOOKUP“).
+const canonical = (name: string) => {
+  const bare = name.replace(/^_XLFN\.(_XLWS\.)?/, "");
+  return GERMAN[bare] ?? ENGLISH_ALIASES[bare] ?? bare;
+};
+const XLFN = new Set([
+  "CONCAT",
+  "TEXTJOIN",
+  "IFS",
+  "IFNA",
+  "SWITCH",
+  "XOR",
+  "MAXIFS",
+  "MINIFS",
+  "XLOOKUP",
+  "DAYS",
+  "ISOWEEKNUM",
+  "STDEV.P",
+  "VAR.P",
+]);
+// Nur die üblichen deutschen Namen zurückübersetzen (nicht die Nebenformen).
 const GERMAN_OF = Object.fromEntries(
   Object.entries(GERMAN)
-    .filter(([german]) => german !== "TEXTKETTE")
+    .filter(([german]) => !["TEXTKETTE", "RANG.GLEICH", "MODUS.EINF", "STABW.S", "VAR.S"].includes(german))
     .map(([german, english]) => [english, german]),
 );
 
@@ -783,6 +1708,119 @@ export const FUNCTION_HELP: { name: string; syntax: string; text: string }[] = [
   { name: "ISTZAHL", syntax: "ISTZAHL(Wert)", text: "WAHR bei einer Zahl" },
   { name: "ISTTEXT", syntax: "ISTTEXT(Wert)", text: "WAHR bei Text" },
   { name: "ISTFEHLER", syntax: "ISTFEHLER(Wert)", text: "WAHR bei einem Fehlerwert" },
+  {
+    name: "SUMMEWENNS",
+    syntax: "SUMMEWENNS(Summenbereich; Bereich1; Kriterium1; …)",
+    text: "Summe mit mehreren Bedingungen",
+  },
+  { name: "ZÄHLENWENNS", syntax: "ZÄHLENWENNS(Bereich1; Kriterium1; …)", text: "Zählt mit mehreren Bedingungen" },
+  {
+    name: "MITTELWERTWENNS",
+    syntax: "MITTELWERTWENNS(Mittelwertbereich; Bereich1; Kriterium1; …)",
+    text: "Durchschnitt mit mehreren Bedingungen",
+  },
+  { name: "MAXWENNS", syntax: "MAXWENNS(Maxbereich; Bereich1; Kriterium1; …)", text: "Grösster Wert mit Bedingungen" },
+  { name: "MINWENNS", syntax: "MINWENNS(Minbereich; Bereich1; Kriterium1; …)", text: "Kleinster Wert mit Bedingungen" },
+  { name: "WENNS", syntax: "WENNS(Prüfung1; Wert1; Prüfung2; Wert2; …)", text: "Erste zutreffende Bedingung" },
+  { name: "WENNNV", syntax: "WENNNV(Wert; Ersatz)", text: "Ersatzwert, wenn nichts gefunden wurde" },
+  {
+    name: "ERSTERWERT",
+    syntax: "ERSTERWERT(Ausdruck; Wert1; Ergebnis1; …; [Sonst])",
+    text: "Ergebnis zum passenden Wert",
+  },
+  { name: "WAHL", syntax: "WAHL(Index; Wert1; Wert2; …)", text: "Wählt einen Wert aus der Liste" },
+  { name: "XODER", syntax: "XODER(Wahrheitswert1; …)", text: "WAHR bei ungerader Anzahl zutreffender Werte" },
+  { name: "NV", syntax: "NV()", text: "Fehlerwert „nicht vorhanden“" },
+  { name: "VERGLEICH", syntax: "VERGLEICH(Suchwert; Bereich; [Vergleichstyp])", text: "Position eines Wertes" },
+  { name: "INDEX", syntax: "INDEX(Bereich; Zeile; [Spalte])", text: "Wert an einer Position" },
+  {
+    name: "XVERWEIS",
+    syntax: "XVERWEIS(Suchwert; Suchbereich; Ergebnisbereich; [Wenn_nicht_gefunden]; [Vergleichsmodus]; [Suchmodus])",
+    text: "Wert nachschlagen (flexibel)",
+  },
+  {
+    name: "WVERWEIS",
+    syntax: "WVERWEIS(Suchwert; Bereich; Zeile; [Bereich_Verweis])",
+    text: "Wert in einer Tabelle waagrecht nachschlagen",
+  },
+  { name: "ZEILE", syntax: "ZEILE([Bezug])", text: "Zeilennummer" },
+  { name: "SPALTE", syntax: "SPALTE([Bezug])", text: "Spaltennummer" },
+  { name: "ZEILEN", syntax: "ZEILEN(Bereich)", text: "Anzahl Zeilen eines Bereichs" },
+  { name: "SPALTEN", syntax: "SPALTEN(Bereich)", text: "Anzahl Spalten eines Bereichs" },
+  { name: "KGRÖSSTE", syntax: "KGRÖSSTE(Bereich; k)", text: "k-grösster Wert" },
+  { name: "KKLEINSTE", syntax: "KKLEINSTE(Bereich; k)", text: "k-kleinster Wert" },
+  { name: "RANG", syntax: "RANG(Zahl; Bezug; [Reihenfolge])", text: "Rang einer Zahl in einer Liste" },
+  { name: "MODALWERT", syntax: "MODALWERT(Zahl1; …)", text: "Häufigster Wert" },
+  { name: "STABW", syntax: "STABW(Zahl1; …)", text: "Standardabweichung (Stichprobe)" },
+  { name: "STABW.N", syntax: "STABW.N(Zahl1; …)", text: "Standardabweichung (Grundgesamtheit)" },
+  { name: "VARIANZ", syntax: "VARIANZ(Zahl1; …)", text: "Varianz (Stichprobe)" },
+  { name: "VAR.P", syntax: "VAR.P(Zahl1; …)", text: "Varianz (Grundgesamtheit)" },
+  { name: "SUMMENPRODUKT", syntax: "SUMMENPRODUKT(Bereich1; Bereich2; …)", text: "Summe der Produkte" },
+  { name: "QUADRATESUMME", syntax: "QUADRATESUMME(Zahl1; …)", text: "Summe der Quadrate" },
+  { name: "OBERGRENZE", syntax: "OBERGRENZE(Zahl; [Schritt])", text: "Auf ein Vielfaches aufrunden" },
+  { name: "UNTERGRENZE", syntax: "UNTERGRENZE(Zahl; [Schritt])", text: "Auf ein Vielfaches abrunden" },
+  { name: "VRUNDEN", syntax: "VRUNDEN(Zahl; Vielfaches)", text: "Auf ein Vielfaches runden" },
+  { name: "KÜRZEN", syntax: "KÜRZEN(Zahl; [Stellen])", text: "Nachkommastellen abschneiden" },
+  { name: "GERADE", syntax: "GERADE(Zahl)", text: "Auf gerade Zahl aufrunden" },
+  { name: "UNGERADE", syntax: "UNGERADE(Zahl)", text: "Auf ungerade Zahl aufrunden" },
+  { name: "VORZEICHEN", syntax: "VORZEICHEN(Zahl)", text: "1, 0 oder -1" },
+  { name: "QUOTIENT", syntax: "QUOTIENT(Zahl; Divisor)", text: "Ganzzahliger Anteil einer Division" },
+  { name: "GGT", syntax: "GGT(Zahl1; …)", text: "Grösster gemeinsamer Teiler" },
+  { name: "KGV", syntax: "KGV(Zahl1; …)", text: "Kleinstes gemeinsames Vielfaches" },
+  { name: "PI", syntax: "PI()", text: "Kreiszahl" },
+  { name: "EXP", syntax: "EXP(Zahl)", text: "e hoch Zahl" },
+  { name: "LN", syntax: "LN(Zahl)", text: "Natürlicher Logarithmus" },
+  { name: "LOG", syntax: "LOG(Zahl; [Basis])", text: "Logarithmus" },
+  { name: "LOG10", syntax: "LOG10(Zahl)", text: "Logarithmus zur Basis 10" },
+  { name: "SIN", syntax: "SIN(Zahl)", text: "Sinus (Bogenmass)" },
+  { name: "COS", syntax: "COS(Zahl)", text: "Kosinus (Bogenmass)" },
+  { name: "TAN", syntax: "TAN(Zahl)", text: "Tangens (Bogenmass)" },
+  { name: "BOGENMASS", syntax: "BOGENMASS(Winkel)", text: "Grad in Bogenmass" },
+  { name: "GRAD", syntax: "GRAD(Winkel)", text: "Bogenmass in Grad" },
+  { name: "ZUFALLSZAHL", syntax: "ZUFALLSZAHL()", text: "Zufallszahl zwischen 0 und 1" },
+  { name: "ZUFALLSBEREICH", syntax: "ZUFALLSBEREICH(Untere; Obere)", text: "Ganze Zufallszahl im Bereich" },
+  { name: "WECHSELN", syntax: "WECHSELN(Text; Alt; Neu; [Vorkommen])", text: "Text ersetzen" },
+  { name: "ERSETZEN", syntax: "ERSETZEN(Text; Start; Anzahl; Neu)", text: "Zeichen an einer Stelle ersetzen" },
+  { name: "FINDEN", syntax: "FINDEN(Suchtext; Text; [Start])", text: "Position (Gross-/Kleinschreibung beachten)" },
+  { name: "SUCHEN", syntax: "SUCHEN(Suchtext; Text; [Start])", text: "Position (auch mit * und ?)" },
+  {
+    name: "TEXTVERKETTEN",
+    syntax: "TEXTVERKETTEN(Trennzeichen; Leere_ignorieren; Text1; …)",
+    text: "Texte mit Trennzeichen verbinden",
+  },
+  { name: "TEXT", syntax: "TEXT(Wert; Format)", text: "Zahl oder Datum als Text, z. B. „TT.MM.JJJJ“" },
+  { name: "WERT", syntax: "WERT(Text)", text: "Text in eine Zahl umwandeln" },
+  { name: "GROSS2", syntax: "GROSS2(Text)", text: "Wortanfänge gross" },
+  { name: "WIEDERHOLEN", syntax: "WIEDERHOLEN(Text; Anzahl)", text: "Text wiederholen" },
+  { name: "IDENTISCH", syntax: "IDENTISCH(Text1; Text2)", text: "Texte genau gleich?" },
+  { name: "ZEICHEN", syntax: "ZEICHEN(Zahl)", text: "Zeichen zu einem Code" },
+  { name: "CODE", syntax: "CODE(Text)", text: "Code des ersten Zeichens" },
+  { name: "SÄUBERN", syntax: "SÄUBERN(Text)", text: "Steuerzeichen entfernen" },
+  { name: "WOCHENTAG", syntax: "WOCHENTAG(Datum; [Typ])", text: "Wochentag als Zahl (Typ 2: Montag = 1)" },
+  { name: "KALENDERWOCHE", syntax: "KALENDERWOCHE(Datum; [Typ])", text: "Kalenderwoche (Typ 21: nach ISO)" },
+  { name: "ISOKALENDERWOCHE", syntax: "ISOKALENDERWOCHE(Datum)", text: "Kalenderwoche nach ISO" },
+  { name: "TAGE", syntax: "TAGE(Enddatum; Startdatum)", text: "Tage zwischen zwei Daten" },
+  { name: "EDATUM", syntax: "EDATUM(Datum; Monate)", text: "Datum Monate später oder früher" },
+  { name: "MONATSENDE", syntax: "MONATSENDE(Datum; Monate)", text: "Letzter Tag des Monats" },
+  {
+    name: "NETTOARBEITSTAGE",
+    syntax: "NETTOARBEITSTAGE(Start; Ende; [Freie_Tage])",
+    text: "Arbeitstage (Mo–Fr) zwischen zwei Daten",
+  },
+  { name: "ARBEITSTAG", syntax: "ARBEITSTAG(Start; Tage; [Freie_Tage])", text: "Datum nach Arbeitstagen" },
+  { name: "STUNDE", syntax: "STUNDE(Zeit)", text: "Stunde einer Uhrzeit" },
+  { name: "MINUTE", syntax: "MINUTE(Zeit)", text: "Minute einer Uhrzeit" },
+  { name: "SEKUNDE", syntax: "SEKUNDE(Zeit)", text: "Sekunde einer Uhrzeit" },
+  { name: "ZEIT", syntax: "ZEIT(Stunde; Minute; Sekunde)", text: "Uhrzeit aus Teilen" },
+  { name: "DATWERT", syntax: "DATWERT(Text)", text: "Text in ein Datum umwandeln" },
+  { name: "ZEITWERT", syntax: "ZEITWERT(Text)", text: "Text in eine Uhrzeit umwandeln" },
+  { name: "DATEDIF", syntax: "DATEDIF(Start; Ende; Einheit)", text: "Abstand in „Y“, „M“, „D“, „YM“, „MD“, „YD“" },
+  { name: "ISTGERADE", syntax: "ISTGERADE(Zahl)", text: "WAHR bei gerader Zahl" },
+  { name: "ISTUNGERADE", syntax: "ISTUNGERADE(Zahl)", text: "WAHR bei ungerader Zahl" },
+  { name: "ISTLOG", syntax: "ISTLOG(Wert)", text: "WAHR bei einem Wahrheitswert" },
+  { name: "ISTKTEXT", syntax: "ISTKTEXT(Wert)", text: "WAHR, wenn kein Text" },
+  { name: "ISTNV", syntax: "ISTNV(Wert)", text: "WAHR beim Fehler „nicht vorhanden“" },
+  { name: "ISTFEHL", syntax: "ISTFEHL(Wert)", text: "WAHR bei Fehlern ausser „nicht vorhanden“" },
 ];
 
 export function evaluate(expr: Expr, resolver: Resolver): Value {
@@ -853,6 +1891,25 @@ function evaluateArg(expr: Expr, resolver: Resolver): Arg {
     }
     case "call": {
       const name = canonical(expr.name);
+      // ZEILE/SPALTE/ZEILEN/SPALTEN brauchen den Bezug selbst, nicht dessen Werte.
+      if (name === "ROW" || name === "COLUMN" || name === "ROWS" || name === "COLUMNS") {
+        const target = expr.args[0];
+        if (expr.args.length > 1) return fail("#VALUE!");
+        if (!target) {
+          if (!resolver.self || name === "ROWS" || name === "COLUMNS") return fail("#VALUE!");
+          return (name === "ROW" ? resolver.self.row : resolver.self.col) + 1;
+        }
+        const area =
+          target.k === "ref"
+            ? { c1: target.col, r1: target.row, c2: target.col, r2: target.row }
+            : target.k === "range"
+              ? target.area
+              : null;
+        if (!area) return fail("#VALUE!");
+        if (name === "ROW") return area.r1 + 1;
+        if (name === "COLUMN") return area.c1 + 1;
+        return name === "ROWS" ? area.r2 - area.r1 + 1 : area.c2 - area.c1 + 1;
+      }
       const impl = FUNCTIONS[name];
       if (!impl) return fail("#NAME?");
       // WENN und WENNFEHLER rechnen nur den gewählten Zweig (wie Excel).
@@ -920,7 +1977,7 @@ export function toExcelFormula(source: string) {
       source,
       (name) => {
         const english = canonical(name);
-        return english === "CONCAT" ? "_xlfn.CONCAT" : english;
+        return XLFN.has(english) ? `_xlfn.${english}` : english;
       },
       true,
     );

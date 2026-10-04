@@ -9,6 +9,7 @@ import {
   shiftFormula,
   type Area,
 } from "./formula";
+import { shiftArea, shiftRangeText } from "./sheet-features";
 import { newId, type CellStyle, type Sheet, type SheetCell, type SheetModel } from "./model";
 
 export type Pos = { col: number; row: number };
@@ -83,12 +84,13 @@ export function setValues(sheet: Sheet, entries: { pos: Pos; cell: SheetCell | n
   return { ...sheet, cells, rowCount: Math.min(10_000, maxRow), colCount: Math.min(200, maxCol) };
 }
 
-export function clearArea(sheet: Sheet, area: Area, what: "content" | "all"): Sheet {
+export function clearArea(sheet: Sheet, area: Area, what: "content" | "formats" | "all"): Sheet {
   const cells = { ...sheet.cells };
   for (const key of Object.keys(cells)) {
     const ref = parseCellKey(key);
     if (!ref || !inArea(area, ref.col, ref.row)) continue;
     if (what === "all") delete cells[key];
+    else if (what === "formats") putCell(cells, key, { v: cells[key].v });
     else putCell(cells, key, { v: "", s: cells[key].s });
   }
   return { ...sheet, cells };
@@ -162,29 +164,46 @@ export function insertDelete(
     return out;
   };
   const merges = mergesOf(sheet).flatMap((area) => {
-    const lo = axis === "row" ? area.r1 : area.c1;
-    const hi = axis === "row" ? area.r2 : area.c2;
-    let a = lo;
-    let b = hi;
-    if (count > 0) {
-      if (lo >= index) a += count;
-      if (hi >= index) b += count;
-    } else {
-      const last = index + removed - 1;
-      if (lo >= index && hi <= last) return [];
-      a = lo > last ? lo - removed : lo >= index ? index : lo;
-      b = hi > last ? hi - removed : hi >= index ? index - 1 : hi;
-    }
-    const next = axis === "row" ? { ...area, r1: a, r2: b } : { ...area, c1: a, c2: b };
-    if (next.c1 === next.c2 && next.r1 === next.r2) return [];
+    const next = shiftArea(area, axis, index, count);
+    if (!next || (next.c1 === next.c2 && next.r1 === next.r2)) return [];
     return [`${cellKey(next.c1, next.r1)}:${cellKey(next.c2, next.r2)}`];
   });
+  const shiftRange = (range: string) => shiftRangeText(range, axis, index, count);
+  const indexes = (list: number[]) => list.map(move).filter((value): value is number => value !== null);
+  let filter = sheet.filter;
+  if (filter) {
+    const range = shiftRange(filter.range);
+    if (!range) filter = null;
+    else {
+      const hidden: Record<string, string[]> = {};
+      for (const [col, values] of Object.entries(filter.hidden)) {
+        const moved = axis === "col" ? move(Number(col)) : Number(col);
+        if (moved !== null) hidden[String(moved)] = values;
+      }
+      filter = { range, hidden };
+    }
+  }
   const updated: Sheet = {
     ...sheet,
     cells,
     cols: axis === "col" ? sizes(sheet.cols) : sheet.cols,
     rows: axis === "row" ? sizes(sheet.rows) : sheet.rows,
     merges,
+    hiddenRows: axis === "row" ? indexes(sheet.hiddenRows) : sheet.hiddenRows,
+    hiddenCols: axis === "col" ? indexes(sheet.hiddenCols) : sheet.hiddenCols,
+    filter,
+    validations: sheet.validations.flatMap((item) => {
+      const range = shiftRange(item.range);
+      return range ? [{ ...item, range }] : [];
+    }),
+    rules: sheet.rules.flatMap((rule) => {
+      const range = shiftRange(rule.range);
+      return range ? [{ ...rule, range }] : [];
+    }),
+    charts: sheet.charts.flatMap((chart) => {
+      const range = shiftRange(chart.range);
+      return range ? [{ ...chart, range }] : [];
+    }),
     rowCount: axis === "row" ? Math.max(1, Math.min(10_000, sheet.rowCount + count)) : sheet.rowCount,
     colCount: axis === "col" ? Math.max(1, Math.min(200, sheet.colCount + count)) : sheet.colCount,
   };

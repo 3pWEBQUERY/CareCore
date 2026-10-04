@@ -88,9 +88,38 @@ export type CellStyle = {
   fmt?: NumberFormat;
   dec?: number;
   size?: number;
+  // Rahmen: „border“ = alle Seiten; bt/bb/bl/br = einzelne Seiten; Stärke und Farbe gelten für alle Seiten.
   border?: boolean;
+  bt?: boolean;
+  bb?: boolean;
+  bl?: boolean;
+  br?: boolean;
+  bw?: BorderWeight;
+  bc?: string;
+  font?: string;
+  indent?: number;
 };
+export type BorderWeight = "thin" | "medium" | "thick";
 export type SheetCell = { v: string; s?: CellStyle };
+
+// Bedingte Formatierung (wie „Regeln zum Hervorheben von Zellen“ in Excel).
+export type RuleOp =
+  "gt" | "lt" | "ge" | "le" | "eq" | "ne" | "between" | "contains" | "empty" | "notEmpty" | "duplicate";
+export type RuleStyle = { fill?: string; color?: string; b?: boolean };
+export type SheetRule = { id: string; range: string; op: RuleOp; value: string; value2: string; style: RuleStyle };
+export type ChartType = "column" | "bar" | "line" | "pie";
+export type SheetChart = {
+  id: string;
+  type: ChartType;
+  range: string;
+  title: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+export type SheetFilter = { range: string; hidden: Record<string, string[]> };
+export type PrintSetup = { orientation: "portrait" | "landscape"; fit: boolean; gridlines: boolean };
 export type Sheet = {
   id: string;
   name: string;
@@ -101,11 +130,21 @@ export type Sheet = {
   freeze: { rows: number; cols: number };
   rowCount: number;
   colCount: number;
+  hiddenRows: number[];
+  hiddenCols: number[];
+  filter: SheetFilter | null;
+  validations: { range: string; values: string[] }[];
+  rules: SheetRule[];
+  charts: SheetChart[];
+  print: PrintSetup;
+  showGrid: boolean;
 };
 export type SheetModel = { kind: "sheet"; sheets: Sheet[] };
 
 export const DEFAULT_COL_WIDTH = 100;
 export const DEFAULT_ROW_HEIGHT = 24;
+
+export const FONT_NAMES = ["Calibri", "Arial", "Cambria", "Georgia", "Times New Roman", "Verdana", "Courier New"];
 
 export const NUMBER_FORMATS: { value: NumberFormat; label: string }[] = [
   { value: "general", label: "Standard" },
@@ -217,6 +256,7 @@ export function evaluateWorkbook(model: SheetModel, options: { today?: () => num
             return compute(target, cellKey(col, row));
           },
           today: options.today,
+          self: parseCellKey(key) ?? undefined,
           rows: (sheet) => {
             const target = sheet === undefined ? index : byName.get(sheet.toLocaleLowerCase("de-CH"));
             return target === undefined ? 0 : usedRows(target);
@@ -452,6 +492,15 @@ export function newSheet(name: string, rowCount = 100, colCount = 26): Sheet {
     freeze: { rows: 0, cols: 0 },
     rowCount,
     colCount,
+    hiddenRows: [],
+    hiddenCols: [],
+    filter: null,
+    validations: [],
+    rules: [],
+    charts: [],
+    // Wie bisher gedruckt: quer, mit Gitternetz, auf Seitenbreite.
+    print: { orientation: "landscape", fit: true, gridlines: true },
+    showGrid: true,
   };
 }
 
@@ -765,7 +814,12 @@ function cleanStyle(input: unknown): CellStyle | undefined {
   if (!input || typeof input !== "object") return undefined;
   const raw = input as Record<string, unknown>;
   const style: CellStyle = {};
-  for (const flag of ["b", "i", "u", "s", "wrap", "border"] as const) if (raw[flag] === true) style[flag] = true;
+  for (const flag of ["b", "i", "u", "s", "wrap", "border", "bt", "bb", "bl", "br"] as const)
+    if (raw[flag] === true) style[flag] = true;
+  if (raw.bw === "thin" || raw.bw === "medium" || raw.bw === "thick") style.bw = raw.bw;
+  if (typeof raw.bc === "string" && COLOR.test(raw.bc)) style.bc = raw.bc;
+  if (typeof raw.font === "string" && FONT_NAMES.includes(raw.font)) style.font = raw.font;
+  if (typeof raw.indent === "number" && raw.indent >= 1 && raw.indent <= 10) style.indent = Math.trunc(raw.indent);
   if (typeof raw.color === "string" && COLOR.test(raw.color)) style.color = raw.color;
   if (typeof raw.fill === "string" && COLOR.test(raw.fill)) style.fill = raw.fill;
   if (raw.align === "left" || raw.align === "center" || raw.align === "right") style.align = raw.align;
@@ -775,6 +829,17 @@ function cleanStyle(input: unknown): CellStyle | undefined {
   if (typeof raw.size === "number" && raw.size >= 6 && raw.size <= 72) style.size = Math.trunc(raw.size);
   return Object.keys(style).length ? style : undefined;
 }
+
+const RANGE = /^[A-Z]{1,3}\d+(:[A-Z]{1,3}\d+)?$/;
+const RULE_OPS = new Set(["gt", "lt", "ge", "le", "eq", "ne", "between", "contains", "empty", "notEmpty", "duplicate"]);
+const CHART_TYPES = new Set(["column", "bar", "line", "pie"]);
+const indexList = (input: unknown, limit: number) =>
+  Array.isArray(input)
+    ? [...new Set(input.filter((item): item is number => Number.isInteger(item) && item >= 0 && item < limit))].sort(
+        (a, b) => a - b,
+      )
+    : [];
+const clip = (input: unknown, max: number) => (typeof input === "string" ? input.slice(0, max) : "");
 
 const clampInt = (value: unknown, min: number, max: number, fallback: number) =>
   typeof value === "number" && Number.isFinite(value) ? Math.min(max, Math.max(min, Math.trunc(value))) : fallback;
@@ -817,6 +882,78 @@ function cleanSheet(input: unknown, index: number): Sheet | null {
       .slice(0, 2000);
   const freeze = raw.freeze && typeof raw.freeze === "object" ? (raw.freeze as Record<string, unknown>) : {};
   sheet.freeze = { rows: clampInt(freeze.rows, 0, 50, 0), cols: clampInt(freeze.cols, 0, 20, 0) };
+  sheet.hiddenRows = indexList(raw.hiddenRows, sheet.rowCount);
+  sheet.hiddenCols = indexList(raw.hiddenCols, sheet.colCount);
+  const filter = raw.filter && typeof raw.filter === "object" ? (raw.filter as Record<string, unknown>) : null;
+  if (filter && typeof filter.range === "string" && RANGE.test(filter.range)) {
+    const hidden: Record<string, string[]> = {};
+    const source = filter.hidden && typeof filter.hidden === "object" ? (filter.hidden as Record<string, unknown>) : {};
+    for (const [col, values] of Object.entries(source))
+      if (/^\d{1,3}$/.test(col) && Array.isArray(values))
+        hidden[col] = values
+          .filter((item): item is string => typeof item === "string")
+          .slice(0, 2000)
+          .map((item) => item.slice(0, 500));
+    sheet.filter = { range: filter.range, hidden };
+  }
+  if (Array.isArray(raw.validations))
+    sheet.validations = raw.validations.slice(0, 200).flatMap((item) => {
+      const entry = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
+      const values = Array.isArray(entry.values)
+        ? entry.values
+            .filter((value): value is string => typeof value === "string" && value.trim() !== "")
+            .slice(0, 200)
+            .map((value) => value.slice(0, 200))
+        : [];
+      return typeof entry.range === "string" && RANGE.test(entry.range) && values.length
+        ? [{ range: entry.range, values }]
+        : [];
+    });
+  if (Array.isArray(raw.rules))
+    sheet.rules = raw.rules.slice(0, 100).flatMap((item): SheetRule[] => {
+      const entry = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
+      if (typeof entry.range !== "string" || !RANGE.test(entry.range) || !RULE_OPS.has(String(entry.op))) return [];
+      const style = entry.style && typeof entry.style === "object" ? (entry.style as Record<string, unknown>) : {};
+      return [
+        {
+          id: typeof entry.id === "string" && entry.id.length <= 40 ? entry.id : newId(),
+          range: entry.range,
+          op: entry.op as RuleOp,
+          value: clip(entry.value, 500),
+          value2: clip(entry.value2, 500),
+          style: {
+            ...(typeof style.fill === "string" && COLOR.test(style.fill) ? { fill: style.fill } : {}),
+            ...(typeof style.color === "string" && COLOR.test(style.color) ? { color: style.color } : {}),
+            ...(style.b === true ? { b: true } : {}),
+          },
+        },
+      ];
+    });
+  if (Array.isArray(raw.charts))
+    sheet.charts = raw.charts.slice(0, 20).flatMap((item): SheetChart[] => {
+      const entry = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
+      if (typeof entry.range !== "string" || !RANGE.test(entry.range) || !CHART_TYPES.has(String(entry.type)))
+        return [];
+      return [
+        {
+          id: typeof entry.id === "string" && entry.id.length <= 40 ? entry.id : newId(),
+          type: entry.type as ChartType,
+          range: entry.range,
+          title: clip(entry.title, 200),
+          x: clampInt(entry.x, 0, 100_000, 40),
+          y: clampInt(entry.y, 0, 400_000, 40),
+          w: clampInt(entry.w, 160, 2000, 480),
+          h: clampInt(entry.h, 120, 1500, 300),
+        },
+      ];
+    });
+  const print = raw.print && typeof raw.print === "object" ? (raw.print as Record<string, unknown>) : {};
+  sheet.print = {
+    orientation: print.orientation === "portrait" ? "portrait" : "landscape",
+    fit: print.fit !== false,
+    gridlines: print.gridlines !== false,
+  };
+  sheet.showGrid = raw.showGrid !== false;
   return sheet;
 }
 

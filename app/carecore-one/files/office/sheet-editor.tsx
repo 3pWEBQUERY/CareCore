@@ -3,27 +3,42 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal, flushSync } from "react-dom";
 import {
+  AlignBottom,
+  AlignCenterVertical,
+  AlignTop,
   ArrowUUpLeft,
   ArrowUUpRight,
   ArrowsMerge,
+  CaretDown,
+  ChartBar,
   Columns,
   DownloadSimple,
   Eraser,
+  Funnel,
   Function as FunctionIcon,
+  GridFour,
+  Highlighter,
+  ListChecks,
+  MagnifyingGlass,
+  PaintBrush,
   PaintBucket,
   Plus,
+  Printer,
   Rows,
   Sigma,
   Snowflake,
   SortAscending,
   SortDescending,
   SquareHalf,
+  Swatches,
   TextAUnderline,
   TextAlignCenter,
   TextAlignLeft,
   TextAlignRight,
   TextB,
+  TextIndent,
   TextItalic,
+  TextOutdent,
   TextStrikethrough,
   TextUnderline,
   ArrowUDownLeft as WrapText,
@@ -36,24 +51,53 @@ import {
   columnName,
   formulaProblem,
   isError,
+  parseArea,
+  parseInput,
   type Area,
   type Value,
 } from "@/lib/office/formula";
 import {
   DEFAULT_COL_WIDTH,
   DEFAULT_ROW_HEIGHT,
+  FONT_NAMES,
   NUMBER_FORMATS,
   decimalsOf,
   evaluateWorkbook,
   formatValue,
   newSheet,
   usedRange,
+  newId,
+  type BorderWeight,
   type CellStyle,
   type NumberFormat,
+  type RuleStyle,
   type Sheet,
   type SheetCell,
+  type SheetChart,
   type SheetModel,
 } from "@/lib/office/model";
+import {
+  BORDER_WIDTH,
+  CELL_STYLES,
+  DEFAULT_BORDER_COLOR,
+  allowedByValidation,
+  applyBorder,
+  chartData,
+  currentRegion,
+  cycleReference,
+  distinctValues,
+  edgesAt,
+  filteredRows,
+  findAll,
+  replaceIn,
+  ruleStyler,
+  seriesValue,
+  validationAt,
+  withCellStyle,
+  type BorderPreset,
+  type Edges,
+  type FindOptions,
+} from "@/lib/office/sheet-features";
 import {
   areaOf,
   clearArea,
@@ -75,17 +119,49 @@ import {
   type Range,
 } from "@/lib/office/sheet-ops";
 import type { EditorProps } from "./editor-props";
-import { ColorPicker, MenuList, ToolButton, ToolGroup, ToolPopover, ToolSeparator, type MenuItem } from "./office-ui";
+import {
+  ColorPicker,
+  MenuList,
+  PALETTE,
+  ToolButton,
+  ToolGroup,
+  ToolPopover,
+  ToolSeparator,
+  type MenuItem,
+} from "./office-ui";
+import { ChartDialog, ChartSvg, FilterMenu, FindBar, RulesDialog, ValidationDialog } from "./sheet-panels";
 
 const HEADER_H = 26;
 const ROWHEAD_W = 48;
 const OVERSCAN = 12;
 const HISTORY = 100;
+const ZOOMS = [50, 75, 100, 125, 150, 200];
+const pad2 = (value: number) => String(value).padStart(2, "0");
 
 type Editing = { pos: Pos; value: string; mode: "enter" | "edit"; source: "cell" | "bar" };
-type Clip = { text: string; area: Area; sheet: number; cells: (SheetCell | undefined)[][]; cut: boolean };
+type Clip = {
+  text: string;
+  area: Area;
+  sheet: number;
+  cells: (SheetCell | undefined)[][];
+  values: Value[][];
+  cut: boolean;
+};
 type Menu = { x: number; y: number; kind: "cell" | "tab"; sheet?: number } | null;
 type Drag = { kind: "select" | "rows" | "cols" | "fill" | "point"; start: Pos } | null;
+type Dialog = { kind: "rules" } | { kind: "validation" } | { kind: "chart"; chart: SheetChart | null } | null;
+type Find = { replace: boolean; hits: Pos[]; index: number; query: string; options: FindOptions } | null;
+
+// Rahmenlinien als innere Schatten (sie verschieben das Raster nicht).
+function edgeShadow(edges: Edges | null) {
+  if (!edges) return undefined;
+  const parts: string[] = [];
+  if (edges.top) parts.push(`inset 0 ${edges.top.width}px 0 ${edges.top.color}`);
+  if (edges.bottom) parts.push(`inset 0 -${edges.bottom.width}px 0 ${edges.bottom.color}`);
+  if (edges.left) parts.push(`inset ${edges.left.width}px 0 0 ${edges.left.color}`);
+  if (edges.right) parts.push(`inset -${edges.right.width}px 0 0 ${edges.right.color}`);
+  return parts.join(", ");
+}
 
 const sameArea = (a: Area, b: Area) => a.c1 === b.c1 && a.r1 === b.r1 && a.c2 === b.c2 && a.r2 === b.r2;
 const OPERATOR_END = /[=(;,+\-*/^&<>:]$/;
@@ -144,8 +220,19 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
   const [notice, setNotice] = useState("");
   const [printing, setPrinting] = useState(false);
   const [suggestIndex, setSuggestIndex] = useState(0);
+  const [zoom, setZoom] = useState(100);
+  const [hasClip, setHasClip] = useState(false);
+  const [dialog, setDialog] = useState<Dialog>(null);
+  const [find, setFind] = useState<Find>(null);
+  const [painter, setPainter] = useState<(CellStyle | undefined)[][] | null>(null);
+  const [filterMenu, setFilterMenu] = useState<{ col: number; x: number; y: number } | null>(null);
+  const [listMenu, setListMenu] = useState<{ x: number; y: number; values: string[] } | null>(null);
+  const [selectedChart, setSelectedChart] = useState<string | null>(null);
+  const [chartDrag, setChartDrag] = useState<{ id: string; x: number; y: number; w: number; h: number } | null>(null);
+  const [borderWeight, setBorderWeight] = useState<BorderWeight>("thin");
+  const [borderColor, setBorderColor] = useState<string>(DEFAULT_BORDER_COLOR);
   const gridRef = useRef<HTMLDivElement>(null);
-  const barRef = useRef<HTMLInputElement>(null);
+  const barRef = useRef<HTMLTextAreaElement>(null);
   const drag = useRef<Drag>(null);
   const clip = useRef<Clip | null>(null);
   const pasteHandled = useRef(true);
@@ -163,6 +250,15 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
     (col: number, row: number) => evaluator.value(active, cellKey(col, row)),
     [evaluator, active],
   );
+  // Angezeigter Text einer Zelle (für Filter, Suchen und Diagrammbeschriftungen).
+  const textAt = useCallback(
+    (col: number, row: number) => formatValue(valueAt(col, row), sheet.cells[cellKey(col, row)]?.s),
+    [valueAt, sheet],
+  );
+  const filterArea = useMemo(() => (sheet.filter ? parseArea(sheet.filter.range) : null), [sheet.filter]);
+  const hiddenRowSet = useMemo(() => new Set([...sheet.hiddenRows, ...filteredRows(sheet, textAt)]), [sheet, textAt]);
+  const hiddenColSet = useMemo(() => new Set(sheet.hiddenCols), [sheet.hiddenCols]);
+  const ruleStyle = useMemo(() => ruleStyler(sheet, valueAt), [sheet, valueAt]);
 
   // Verlauf als Ref (sicher bei schnellen Wiederholungen) und als Zustand (für die Knöpfe).
   const historyRef = useRef<{ undo: SheetModel[]; redo: SheetModel[] }>({ undo: [], redo: [] });
@@ -210,16 +306,24 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
   const colWidths = useMemo(
     () =>
       Array.from({ length: sheet.colCount }, (_, col) =>
-        resize?.kind === "col" && resize.index === col ? resize.size : (sheet.cols[String(col)] ?? DEFAULT_COL_WIDTH),
+        hiddenColSet.has(col)
+          ? 0
+          : resize?.kind === "col" && resize.index === col
+            ? resize.size
+            : (sheet.cols[String(col)] ?? DEFAULT_COL_WIDTH),
       ),
-    [sheet, resize],
+    [sheet, resize, hiddenColSet],
   );
   const rowHeights = useMemo(
     () =>
       Array.from({ length: sheet.rowCount }, (_, row) =>
-        resize?.kind === "row" && resize.index === row ? resize.size : (sheet.rows[String(row)] ?? DEFAULT_ROW_HEIGHT),
+        hiddenRowSet.has(row)
+          ? 0
+          : resize?.kind === "row" && resize.index === row
+            ? resize.size
+            : (sheet.rows[String(row)] ?? DEFAULT_ROW_HEIGHT),
       ),
-    [sheet, resize],
+    [sheet, resize, hiddenRowSet],
   );
   const colLefts = useMemo(() => {
     const out = [0];
@@ -237,21 +341,24 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
   const frozenWidth = colLefts[freezeCols];
 
   // Sichtbare Zeilen (nur diese werden gezeichnet – auch grosse Tabellen bleiben flüssig).
-  let first = Math.max(freezeRows, lowerBound(rowTops, scroll.top + frozenHeight) - OVERSCAN);
-  const last = Math.min(sheet.rowCount - 1, lowerBound(rowTops, scroll.top + scroll.height) + OVERSCAN);
+  const scale = zoom / 100;
+  let first = Math.max(freezeRows, lowerBound(rowTops, scroll.top / scale + frozenHeight) - OVERSCAN);
+  const last = Math.min(sheet.rowCount - 1, lowerBound(rowTops, (scroll.top + scroll.height) / scale) + OVERSCAN);
   for (const merge of merges) if (merge.r1 < first && merge.r2 >= first && merge.r1 >= freezeRows) first = merge.r1;
 
   const mergeAt = useMemo(() => {
     const origin = new Map<string, Area>();
     const covered = new Set<string>();
     for (const merge of merges) {
+      // Verbund mit ausgeblendeter erster Zelle: Zellen einzeln zeigen.
+      if (hiddenRowSet.has(merge.r1) || hiddenColSet.has(merge.c1)) continue;
       origin.set(cellKey(merge.c1, merge.r1), merge);
       for (let row = merge.r1; row <= merge.r2; row += 1)
         for (let col = merge.c1; col <= merge.c2; col += 1)
           if (row !== merge.r1 || col !== merge.c1) covered.add(cellKey(col, row));
     }
     return { origin, covered };
-  }, [merges]);
+  }, [merges, hiddenRowSet, hiddenColSet]);
 
   // ---------- Auswahl ----------
   const select = useCallback(
@@ -270,21 +377,22 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
     const grid = gridRef.current;
     if (!grid) return;
     const { col, row } = range.focus;
+    const z = zoom / 100;
     if (row >= freezeRows) {
-      const top = rowTops[row] - frozenHeight;
-      const bottom = rowTops[row + 1] - frozenHeight;
-      const view = grid.clientHeight - HEADER_H - frozenHeight;
+      const top = (rowTops[row] - frozenHeight) * z;
+      const bottom = (rowTops[row + 1] - frozenHeight) * z;
+      const view = grid.clientHeight - (HEADER_H + frozenHeight) * z;
       if (top < grid.scrollTop) grid.scrollTop = top;
       else if (bottom > grid.scrollTop + view) grid.scrollTop = bottom - view;
     }
     if (col >= freezeCols) {
-      const left = colLefts[col] - frozenWidth;
-      const right = colLefts[col + 1] - frozenWidth;
-      const view = grid.clientWidth - ROWHEAD_W - frozenWidth;
+      const left = (colLefts[col] - frozenWidth) * z;
+      const right = (colLefts[col + 1] - frozenWidth) * z;
+      const view = grid.clientWidth - (ROWHEAD_W + frozenWidth) * z;
       if (left < grid.scrollLeft) grid.scrollLeft = left;
       else if (right > grid.scrollLeft + view) grid.scrollLeft = right - view;
     }
-  }, [range.focus, rowTops, colLefts, freezeRows, freezeCols, frozenHeight, frozenWidth]);
+  }, [range.focus, rowTops, colLefts, freezeRows, freezeCols, frozenHeight, frozenWidth, zoom]);
 
   useEffect(() => {
     const grid = gridRef.current;
@@ -342,7 +450,7 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
       setPoint(null);
     });
     if (source === "cell") {
-      const input = gridRef.current?.querySelector<HTMLInputElement>(".sheet-cell-editor");
+      const input = gridRef.current?.querySelector<HTMLTextAreaElement>(".sheet-cell-editor");
       input?.focus({ preventScroll: true });
       input?.setSelectionRange(input.value.length, input.value.length);
     }
@@ -351,7 +459,7 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
   function commitEdit(move?: { dc: number; dr: number }, options: { keepFocus?: boolean } = {}) {
     const editing = editingRef.current;
     if (!editing) return true;
-    const raw = editing.value;
+    let raw = editing.value;
     if (raw.startsWith("=") && raw.length > 1) {
       const problem = formulaProblem(raw.slice(1));
       if (problem) {
@@ -359,8 +467,29 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
         return false;
       }
     }
+    // Auswahlliste: nur erlaubte Werte (Schreibweise wie in der Liste).
+    const rule = validationAt(modelRef.current.sheets[active], editing.pos.col, editing.pos.row);
+    if (rule && !raw.startsWith("=")) {
+      const allowed = allowedByValidation(rule.values, raw);
+      if (allowed === false) {
+        setFormulaError(
+          `„${raw}“ ist hier nicht erlaubt. Erlaubt: ${rule.values.slice(0, 12).join(", ")}${rule.values.length > 12 ? " …" : ""}.`,
+        );
+        return false;
+      }
+      if (allowed !== true) raw = allowed;
+    }
     if (raw !== (modelRef.current.sheets[active].cells[cellKey(editing.pos.col, editing.pos.row)]?.v ?? ""))
-      commitSheet((current) => setValue(current, editing.pos, raw));
+      commitSheet((current) => {
+        const next = setValue(current, editing.pos, raw);
+        // Zeilenumbruch in der Eingabe (Alt+Enter): Zeilenumbruch der Zelle einschalten.
+        if (!raw.includes("\n")) return next;
+        return styleArea(
+          next,
+          { c1: editing.pos.col, r1: editing.pos.row, c2: editing.pos.col, r2: editing.pos.row },
+          (style) => ({ ...style, wrap: true }),
+        );
+      });
     setEditing(null);
     setFormulaError("");
     setPoint(null);
@@ -384,12 +513,31 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
   // Das Eingabefeld der Zelle erhält immer den Fokus (Schreibmarke am Ende).
   useEffect(() => {
     if (editing?.source !== "cell") return;
-    const input = gridRef.current?.querySelector<HTMLInputElement>(".sheet-cell-editor");
+    const input = gridRef.current?.querySelector<HTMLTextAreaElement>(".sheet-cell-editor");
     if (input && document.activeElement !== input) {
       input.focus({ preventScroll: true });
       input.setSelectionRange(input.value.length, input.value.length);
     }
   }, [editing?.source, editing?.pos.col, editing?.pos.row]);
+
+  // Text an der Schreibmarke des aktiven Eingabefelds einfügen (Datum, Uhrzeit, Zeilenumbruch).
+  function insertAtCaret(target: HTMLTextAreaElement, text: string) {
+    const current = editingRef.current;
+    if (!current) return;
+    const start = target.selectionStart ?? current.value.length;
+    const end = target.selectionEnd ?? start;
+    const value = current.value.slice(0, start) + text + current.value.slice(end);
+    setEditing({ ...current, value, mode: "edit" });
+    requestAnimationFrame(() => target.setSelectionRange(start + text.length, start + text.length));
+  }
+  const todayText = () => {
+    const now = new Date();
+    return `${pad2(now.getDate())}.${pad2(now.getMonth() + 1)}.${now.getFullYear()}`;
+  };
+  const timeText = () => {
+    const now = new Date();
+    return `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+  };
 
   function cancelEdit() {
     setEditing(null);
@@ -413,7 +561,7 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
     requestAnimationFrame(() =>
       (editing.source === "bar"
         ? barRef.current
-        : gridRef.current?.querySelector<HTMLInputElement>(".sheet-cell-editor")
+        : gridRef.current?.querySelector<HTMLTextAreaElement>(".sheet-cell-editor")
       )?.focus(),
     );
   }
@@ -441,7 +589,7 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
     if (readOnly) return;
     commitSheet((current) => styleArea(current, area, change));
   }
-  const toggle = (flag: "b" | "i" | "u" | "s" | "wrap" | "border") => {
+  const toggle = (flag: "b" | "i" | "u" | "s" | "wrap") => {
     const on = !activeStyle[flag];
     applyStyle((style) => ({ ...style, [flag]: on }));
   };
@@ -523,9 +671,214 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
     commitSheet((current) => sortArea(current, region, range.anchor.col, direction, (col, row) => valueAt(col, row)));
     setNotice(direction === 1 ? "Aufsteigend sortiert" : "Absteigend sortiert");
   }
-  function clear(what: "content" | "all") {
+  function clear(what: "content" | "formats" | "all") {
     if (readOnly) return;
     commitSheet((current) => clearArea(current, area, what));
+  }
+  function setBorder(preset: BorderPreset, weight = borderWeight, color = borderColor) {
+    if (readOnly) return;
+    commitSheet((current) => {
+      const cells = { ...current.cells };
+      for (let row = area.r1; row <= area.r2; row += 1)
+        for (let col = area.c1; col <= area.c2; col += 1) {
+          const key = cellKey(col, row);
+          const style = applyBorder({ ...(cells[key]?.s ?? {}) }, preset, area, col, row, weight, color);
+          for (const name of Object.keys(style) as (keyof CellStyle)[])
+            if (style[name] === undefined || style[name] === false) delete style[name];
+          const value = cells[key]?.v ?? "";
+          if (!value && !Object.keys(style).length) delete cells[key];
+          else cells[key] = Object.keys(style).length ? { v: value, s: style } : { v: value };
+        }
+      return { ...current, cells };
+    });
+  }
+  function changeIndent(delta: number) {
+    applyStyle((style) => {
+      const indent = Math.max(0, Math.min(10, (style.indent ?? 0) + delta));
+      return { ...style, indent: indent || undefined, align: indent ? (style.align ?? "left") : style.align };
+    });
+  }
+  function startPainter() {
+    if (painter) return setPainter(null);
+    const pattern: (CellStyle | undefined)[][] = [];
+    for (let row = area.r1; row <= Math.min(area.r2, area.r1 + 199); row += 1) {
+      const line: (CellStyle | undefined)[] = [];
+      for (let col = area.c1; col <= Math.min(area.c2, area.c1 + 49); col += 1) line.push(styleAt({ col, row }));
+      pattern.push(line);
+    }
+    setPainter(pattern);
+    setNotice("Format übertragen: Zielzellen markieren");
+  }
+  function paintFormats(target: Area) {
+    const pattern = painter;
+    setPainter(null);
+    if (!pattern || readOnly) return;
+    const height = pattern.length;
+    const width = pattern[0]?.length ?? 1;
+    // Einzelne Zielzelle: so gross wie die Vorlage.
+    const region =
+      target.c1 === target.c2 && target.r1 === target.r2
+        ? { ...target, c2: target.c1 + width - 1, r2: target.r1 + height - 1 }
+        : target;
+    commitSheet((current) => {
+      const cells = { ...current.cells };
+      for (let row = region.r1; row <= region.r2; row += 1)
+        for (let col = region.c1; col <= region.c2; col += 1) {
+          const key = cellKey(col, row);
+          const style = pattern[(row - region.r1) % height][(col - region.c1) % width];
+          const value = cells[key]?.v ?? "";
+          if (!value && !style) delete cells[key];
+          else cells[key] = style ? { v: value, s: style } : { v: value };
+        }
+      return { ...current, cells };
+    });
+  }
+  function hide(axis: "row" | "col", hidden: boolean) {
+    if (readOnly) return;
+    commitSheet((current) => {
+      const list = new Set(axis === "row" ? current.hiddenRows : current.hiddenCols);
+      const [from, to] = axis === "row" ? [area.r1, area.r2] : [area.c1, area.c2];
+      for (let index = from; index <= to; index += 1) {
+        if (hidden) list.add(index);
+        else list.delete(index);
+      }
+      const total = axis === "row" ? current.rowCount : current.colCount;
+      if (list.size >= total) return current;
+      const sorted = [...list].sort((a, b) => a - b);
+      return axis === "row" ? { ...current, hiddenRows: sorted } : { ...current, hiddenCols: sorted };
+    });
+  }
+  function toggleFilter() {
+    if (readOnly) return;
+    if (sheet.filter) {
+      commitSheet((current) => ({ ...current, filter: null }));
+      return setNotice("Filter entfernt");
+    }
+    const region =
+      area.r1 === area.r2 && area.c1 === area.c2 ? currentRegion(sheet, range.focus.col, range.focus.row) : area;
+    if (region.r2 <= region.r1) return setNotice("Für einen Filter bitte eine Tabelle mit Überschriften markieren");
+    commitSheet((current) => ({ ...current, filter: { range: areaName(region), hidden: {} } }));
+    setNotice("Filter eingeschaltet – Pfeile in der Überschrift");
+  }
+  function sortFilterColumn(col: number, direction: 1 | -1) {
+    if (!filterArea) return;
+    const region = { ...filterArea, r1: filterArea.r1 + 1 };
+    commitSheet((current) => sortArea(current, region, col, direction, (c, r) => valueAt(c, r)));
+  }
+  function addChart() {
+    const region =
+      area.r1 === area.r2 && area.c1 === area.c2 ? currentRegion(sheet, range.focus.col, range.focus.row) : area;
+    setDialog({ kind: "chart", chart: null });
+    setRange({ anchor: { col: region.c1, row: region.r1 }, focus: { col: region.c2, row: region.r2 } });
+  }
+  function saveChart(chart: SheetChart | null, values: { type: SheetChart["type"]; range: string; title: string }) {
+    if (chart) {
+      commitSheet((current) => ({
+        ...current,
+        charts: current.charts.map((item) => (item.id === chart.id ? { ...item, ...values } : item)),
+      }));
+      return;
+    }
+    const grid = gridRef.current;
+    const scaleNow = zoom / 100;
+    const target = parseArea(values.range);
+    // Neben den Daten platzieren (wie Excel), sonst im sichtbaren Bereich.
+    const x = target ? colLefts[Math.min(sheet.colCount, target.c2 + 1)] + 16 : (grid?.scrollLeft ?? 0) / scaleNow + 40;
+    const y = target ? rowTops[target.r1] : (grid?.scrollTop ?? 0) / scaleNow + 40;
+    const created: SheetChart = { id: newId(), ...values, x: Math.round(x), y: Math.round(y), w: 480, h: 300 };
+    commitSheet((current) => ({ ...current, charts: [...current.charts, created] }));
+    setSelectedChart(created.id);
+  }
+  function deleteChart(id: string) {
+    commitSheet((current) => ({ ...current, charts: current.charts.filter((item) => item.id !== id) }));
+    setSelectedChart(null);
+    focusGrid();
+  }
+  function startChartDrag(event: React.MouseEvent, chart: SheetChart, mode: "move" | "resize") {
+    if (event.button !== 0 || readOnly) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setSelectedChart(chart.id);
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const z = zoom / 100;
+    let next = { id: chart.id, x: chart.x, y: chart.y, w: chart.w, h: chart.h };
+    const onMove = (moveEvent: MouseEvent) => {
+      const dx = (moveEvent.clientX - startX) / z;
+      const dy = (moveEvent.clientY - startY) / z;
+      next =
+        mode === "move"
+          ? { ...next, x: Math.max(0, Math.round(chart.x + dx)), y: Math.max(0, Math.round(chart.y + dy)) }
+          : { ...next, w: Math.max(160, Math.round(chart.w + dx)), h: Math.max(120, Math.round(chart.h + dy)) };
+      setChartDrag(next);
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      setChartDrag(null);
+      if (next.x !== chart.x || next.y !== chart.y || next.w !== chart.w || next.h !== chart.h)
+        commitSheet((current) => ({
+          ...current,
+          charts: current.charts.map((item) => (item.id === chart.id ? { ...item, ...next } : item)),
+        }));
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }
+
+  // ---------- Suchen und Ersetzen ----------
+  function openFind(replace: boolean) {
+    if (editing && !commitEdit()) return;
+    setFind((current) => ({
+      replace,
+      hits: current?.hits ?? [],
+      index: current?.index ?? 0,
+      query: current?.query ?? "",
+      options: current?.options ?? { matchCase: false, wholeCell: false },
+    }));
+  }
+  function runSearch(query: string, options: FindOptions) {
+    const hits = findAll(sheet, query, options, textAt);
+    const from = hits.findIndex(
+      (hit) => hit.row > range.focus.row || (hit.row === range.focus.row && hit.col >= range.focus.col),
+    );
+    const index = from < 0 ? 0 : from;
+    setFind((current) => (current ? { ...current, hits, index, query, options } : current));
+    if (hits[index]) select(hits[index]);
+  }
+  function nextHit(direction: 1 | -1) {
+    if (!find?.hits.length) return;
+    const index = (find.index + direction + find.hits.length) % find.hits.length;
+    setFind({ ...find, index });
+    select(find.hits[index]);
+  }
+  function replaceHits(replacement: string, all: boolean) {
+    if (!find?.hits.length || readOnly) return;
+    const targets = all ? find.hits : [find.hits[find.index]];
+    const entries: { pos: Pos; cell: SheetCell | null }[] = [];
+    for (const pos of targets) {
+      const cell = sheet.cells[cellKey(pos.col, pos.row)];
+      if (!cell) continue;
+      const next = replaceIn(cell.v, find.query, replacement, find.options);
+      if (next !== cell.v) entries.push({ pos, cell: { ...cell, v: next } });
+    }
+    if (!entries.length) return setNotice("Nur in Formeln gefunden – dort bitte direkt ändern");
+    commitSheet((current) => setValues(current, entries));
+    setNotice(entries.length === 1 ? "1 Zelle ersetzt" : `${entries.length} Zellen ersetzt`);
+    const hits = findAll(
+      {
+        ...sheet,
+        cells: {
+          ...sheet.cells,
+          ...Object.fromEntries(entries.map((entry) => [cellKey(entry.pos.col, entry.pos.row), entry.cell!])),
+        },
+      },
+      find.query,
+      find.options,
+      textAt,
+    );
+    setFind({ ...find, hits, index: Math.min(find.index, Math.max(0, hits.length - 1)) });
+    if (hits.length && !all) select(hits[Math.min(find.index, hits.length - 1)]);
   }
   function autoFit(col: number) {
     const canvas = document.createElement("canvas");
@@ -558,12 +911,19 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
   function copy(cut: boolean, data?: DataTransfer | null) {
     const text = selectionText(area);
     const cells: (SheetCell | undefined)[][] = [];
+    const values: Value[][] = [];
     for (let row = area.r1; row <= area.r2; row += 1) {
       const line: (SheetCell | undefined)[] = [];
-      for (let col = area.c1; col <= area.c2; col += 1) line.push(sheet.cells[cellKey(col, row)]);
+      const valueLine: Value[] = [];
+      for (let col = area.c1; col <= area.c2; col += 1) {
+        line.push(sheet.cells[cellKey(col, row)]);
+        valueLine.push(valueAt(col, row));
+      }
       cells.push(line);
+      values.push(valueLine);
     }
-    clip.current = { text, area, sheet: active, cells, cut };
+    clip.current = { text, area, sheet: active, cells, values, cut };
+    setHasClip(true);
     if (data) data.setData("text/plain", text);
     else void navigator.clipboard?.writeText(text).catch(() => undefined);
     setNotice(cut ? "Ausgeschnitten – an der Zielzelle einfügen" : "Kopiert");
@@ -599,7 +959,10 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
           );
       next = replaceSheet(next, active, setValues(next.sheets[active], entries));
       commit(next);
-      if (internal.cut) clip.current = null;
+      if (internal.cut) {
+        clip.current = null;
+        setHasClip(false);
+      }
       select(target, { col: target.col + width * tilesX - 1, row: target.row + height * tilesY - 1 });
       return;
     }
@@ -617,6 +980,50 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
       col: target.col + Math.max(...rows.map((line) => line.length)) - 1,
       row: target.row + rows.length - 1,
     });
+  }
+
+  // Inhalte einfügen: nur Werte (Formeln als Ergebnis) oder nur Formate.
+  function pasteSpecial(mode: "values" | "formats") {
+    const internal = clip.current;
+    if (readOnly || !internal) return;
+    const target = { col: area.c1, row: area.r1 };
+    const entries: { pos: Pos; cell: SheetCell | null }[] = [];
+    internal.cells.forEach((line, r) =>
+      line.forEach((cell, c) => {
+        const pos = { col: target.col + c, row: target.row + r };
+        const current = sheet.cells[cellKey(pos.col, pos.row)];
+        if (mode === "formats") {
+          entries.push({ pos, cell: { v: current?.v ?? "", ...(cell?.s ? { s: cell.s } : {}) } });
+          return;
+        }
+        const value = internal.values[r][c];
+        const v =
+          value === null || isError(value)
+            ? ""
+            : typeof value === "number"
+              ? String(value)
+              : typeof value === "boolean"
+                ? value
+                  ? "WAHR"
+                  : "FALSCH"
+                : /^[=']/.test(value) || parseInput(value).type !== "text"
+                  ? `'${value}`
+                  : value;
+        // Zahlenformat der Quelle mitnehmen, damit ein Datum ein Datum bleibt.
+        const fmt =
+          cell?.s?.fmt && !current?.s?.fmt
+            ? { fmt: cell.s.fmt, ...(cell.s.dec !== undefined ? { dec: cell.s.dec } : {}) }
+            : {};
+        const style = { ...(current?.s ?? {}), ...fmt };
+        entries.push({ pos, cell: { v, ...(Object.keys(style).length ? { s: style } : {}) } });
+      }),
+    );
+    commitSheet((current) => setValues(current, entries));
+    select(target, {
+      col: target.col + (internal.cells[0]?.length ?? 1) - 1,
+      row: target.row + internal.cells.length - 1,
+    });
+    setNotice(mode === "values" ? "Werte eingefügt" : "Formate eingefügt");
   }
 
   // ---------- Ausfüllen ----------
@@ -652,14 +1059,29 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
         const seed = seeds[((offset % span) + span) % span];
         const pos = vertical ? { col: line, row: index } : { col: index, row: line };
         const cell = sheet.cells[cellKey(seed.col, seed.row)];
+        // Reihen wie Wochentage, Monate oder „Woche 1“ fortsetzen.
+        const series = step === null ? seriesValue(seeds.map(rawAt), offset) : null;
         if (step !== null) {
           const value = numbers[0]! + step * offset;
           entries.push({ pos, cell: { v: String(Number(value.toPrecision(15))), ...(cell?.s ? { s: cell.s } : {}) } });
-        } else entries.push({ pos, cell: shiftedCell(cell, pos.col - seed.col, pos.row - seed.row) });
+        } else if (series !== null) entries.push({ pos, cell: { v: series, ...(cell?.s ? { s: cell.s } : {}) } });
+        else entries.push({ pos, cell: shiftedCell(cell, pos.col - seed.col, pos.row - seed.row) });
       }
     }
     commitSheet((current) => setValues(current, entries));
     select({ col: target.c1, row: target.r1 }, { col: target.c2, row: target.r2 });
+  }
+  // Doppelklick auf das Ausfüllkästchen: bis zum Ende der Daten in der Nachbarspalte ausfüllen.
+  function fillDown() {
+    if (readOnly) return;
+    const filled = (col: number, row: number) => col >= 0 && col < sheet.colCount && rawAt({ col, row }) !== "";
+    let last = area.r2;
+    for (const col of [area.c1 - 1, area.c2 + 1]) {
+      let row = area.r2;
+      while (row + 1 < sheet.rowCount && filled(col, row + 1)) row += 1;
+      last = Math.max(last, row);
+    }
+    if (last > area.r2) fill(area, { ...area, r2: last });
   }
   function fillAreaFor(pos: Pos): Area {
     const down = pos.row - area.r2;
@@ -688,6 +1110,7 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
           return null;
         });
       }
+      if (current?.kind === "select" && painter) paintFormats(area);
     };
     window.addEventListener("mouseup", up);
     return () => window.removeEventListener("mouseup", up);
@@ -707,6 +1130,7 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
     }
     event.preventDefault();
     focusGrid();
+    setSelectedChart(null);
     if (event.shiftKey) select(range.anchor, pos);
     else select(pos);
     drag.current = { kind: "select", start: pos };
@@ -767,6 +1191,11 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
         if (startFilled ? !filled(col + dc, row + dr) : filled(col, row)) break;
       }
     }
+    // Ausgeblendete Zeilen und Spalten überspringen.
+    const rowStep = dr < 0 ? -1 : 1;
+    const colStep = dc < 0 ? -1 : 1;
+    while (hiddenRowSet.has(row) && row + rowStep >= 0 && row + rowStep < sheet.rowCount) row += rowStep;
+    while (hiddenColSet.has(col) && col + colStep >= 0 && col + colStep < sheet.colCount) col += colStep;
     // Über verbundene Zellen hinwegspringen.
     const merge = merges.find((item) => inArea(item, col, row) && !inArea(item, from.col, from.row));
     if (merge && !extend) {
@@ -805,6 +1234,35 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
     }
     const mod = event.metaKey || event.ctrlKey;
     const key = event.key;
+    if (key === "Escape" && painter) {
+      event.preventDefault();
+      return setPainter(null);
+    }
+    if (selectedChart && (key === "Delete" || key === "Backspace")) {
+      event.preventDefault();
+      if (!readOnly) deleteChart(selectedChart);
+      return;
+    }
+    if (mod && (key.toLowerCase() === "f" || key.toLowerCase() === "h")) {
+      event.preventDefault();
+      return openFind(key.toLowerCase() === "h" && !readOnly);
+    }
+    if (mod && event.shiftKey && key.toLowerCase() === "l") {
+      event.preventDefault();
+      return toggleFilter();
+    }
+    if (mod && (key === ";" || key === ".")) {
+      event.preventDefault();
+      return startEdit("enter", todayText());
+    }
+    if (mod && key === ":") {
+      event.preventDefault();
+      return startEdit("enter", timeText());
+    }
+    if (event.altKey && key === "ArrowDown") {
+      event.preventDefault();
+      return openListMenu();
+    }
     if (mod && key.toLowerCase() === "z") {
       event.preventDefault();
       return event.shiftKey ? redo() : undo();
@@ -880,8 +1338,31 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
     }
   }
 
-  function onEditorKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+  function onEditorKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (!editing) return;
+    const mod = event.metaKey || event.ctrlKey;
+    if (event.key === "Enter" && event.altKey) {
+      event.preventDefault();
+      return insertAtCaret(event.currentTarget, "\n");
+    }
+    if (event.key === "F4" && editing.value.startsWith("=")) {
+      event.preventDefault();
+      const target = event.currentTarget;
+      const cycled = cycleReference(editing.value, target.selectionStart ?? editing.value.length);
+      if (!cycled) return;
+      setEditing({ ...editing, value: cycled.text, mode: "edit" });
+      setPoint(null);
+      requestAnimationFrame(() => target.setSelectionRange(cycled.caret, cycled.caret));
+      return;
+    }
+    if (mod && (event.key === ";" || event.key === ".")) {
+      event.preventDefault();
+      return insertAtCaret(event.currentTarget, todayText());
+    }
+    if (mod && event.key === ":") {
+      event.preventDefault();
+      return insertAtCaret(event.currentTarget, timeText());
+    }
     if (suggestions.length && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
       event.preventDefault();
       setSuggestIndex(
@@ -917,6 +1398,23 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
       };
       commitEdit({ dc: delta[event.key][0], dr: delta[event.key][1] });
     }
+  }
+
+  // Auswahlliste der aktiven Zelle öffnen (Pfeil neben der Zelle oder Alt+Pfeil nach unten).
+  function openListMenu(anchor?: DOMRect) {
+    const rule = validationAt(sheet, range.focus.col, range.focus.row);
+    if (!rule || readOnly) return;
+    const rect =
+      anchor ??
+      gridRef.current?.querySelector<HTMLElement>("td.focus")?.getBoundingClientRect() ??
+      new DOMRect(200, 200, 0, 0);
+    setListMenu({ x: rect.left, y: rect.bottom + 2, values: rule.values });
+  }
+  function chooseFromList(value: string) {
+    setListMenu(null);
+    const pos = range.focus;
+    commitSheet((current) => setValue(current, pos, value));
+    focusGrid();
   }
 
   // ---------- Blätter ----------
@@ -1019,24 +1517,45 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
   })();
 
   // ---------- Zellen ----------
-  const cellStyle = (style: CellStyle | undefined, value: Value): CSSProperties => ({
-    fontWeight: style?.b ? 700 : undefined,
+  const cellStyle = (style: CellStyle | undefined, value: Value, rule?: RuleStyle): CSSProperties => ({
+    fontWeight: style?.b || rule?.b ? 700 : undefined,
     fontStyle: style?.i ? "italic" : undefined,
     textDecoration:
       [style?.u ? "underline" : "", style?.s ? "line-through" : ""].filter(Boolean).join(" ") || undefined,
-    color: isError(value) ? "var(--critical)" : style?.color,
-    background: style?.fill,
+    color: isError(value) ? "var(--critical)" : (rule?.color ?? style?.color),
+    background: rule?.fill ?? style?.fill,
     textAlign:
       style?.align ??
       (typeof value === "number" ? "right" : typeof value === "boolean" || isError(value) ? "center" : "left"),
     verticalAlign: style?.valign === "top" ? "top" : style?.valign === "middle" ? "middle" : "bottom",
     whiteSpace: style?.wrap ? "pre-wrap" : "pre",
     fontSize: style?.size ? `${(style.size * 4) / 3}px` : undefined,
+    fontFamily: style?.font ? `"${style.font}", Calibri, Carlito, Arial, sans-serif` : undefined,
+    paddingLeft: style?.indent && style.align !== "right" ? 6 + style.indent * 9 : undefined,
+    paddingRight: style?.indent && style.align === "right" ? 6 + style.indent * 9 : undefined,
   });
 
   const fillArea = fillTarget;
-  const columns = Array.from({ length: sheet.colCount }, (_, col) => col);
+  const columns = Array.from({ length: sheet.colCount }, (_, col) => col).filter((col) => !hiddenColSet.has(col));
   const showFillHandle = !readOnly && !editing;
+  const visibleBetween = (from: number, to: number, hidden: Set<number>) => {
+    let count = 0;
+    for (let index = from; index <= to; index += 1) if (!hidden.has(index)) count += 1;
+    return Math.max(1, count);
+  };
+  // Rahmen einer (verbundenen) Zelle: oben/links von der ersten, unten/rechts von der letzten Zeile/Spalte.
+  const edgesFor = (col: number, row: number, merge?: Area): Edges | null => {
+    const own = edgesAt(sheet, col, row);
+    if (!merge) return own;
+    const edges = {
+      top: own?.top ?? null,
+      left: own?.left ?? null,
+      bottom: edgesAt(sheet, col, merge.r2)?.bottom ?? null,
+      right: edgesAt(sheet, merge.c2, row)?.right ?? null,
+    };
+    return edges.top || edges.left || edges.bottom || edges.right ? edges : null;
+  };
+  const focusValidation = !readOnly && !editing ? validationAt(sheet, range.focus.col, range.focus.row) : null;
   const renderRow = (row: number, frozenTop?: number) => {
     const frozen = frozenTop !== undefined;
     const stickyTop: CSSProperties = frozen ? { position: "sticky", top: frozenTop } : {};
@@ -1051,24 +1570,28 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
       const isEditing = editing && editing.pos.col === col && editing.pos.row === row && editing.source === "cell";
       const frozenCol = col < freezeCols;
       const bottomRight = (merge ? merge.r2 : row) === area.r2 && (merge ? merge.c2 : col) === area.c2;
+      const edges = edgeShadow(edgesFor(col, row, merge));
+      const filterHead = filterArea && row === filterArea.r1 && col >= filterArea.c1 && col <= filterArea.c2;
+      const filtered = filterHead && (sheet.filter?.hidden[String(col)]?.length ?? 0) > 0;
       const classes = [
         selected ? "selected" : "",
         focus ? "focus" : "",
-        cell?.s?.border ? "bordered" : "",
         frozenCol ? "frozen-col" : "",
         col === freezeCols - 1 ? "freeze-edge-col" : "",
         row === freezeRows - 1 ? "freeze-edge-row" : "",
         fillArea && inArea(fillArea, col, row) && !inArea(area, col, row) ? "fill-preview" : "",
         isError(value) ? "error" : "",
+        filterHead ? "filter-head" : "",
       ];
       return (
         <td
           key={key}
-          colSpan={merge ? merge.c2 - merge.c1 + 1 : undefined}
-          rowSpan={merge ? merge.r2 - merge.r1 + 1 : undefined}
+          colSpan={merge ? visibleBetween(merge.c1, merge.c2, hiddenColSet) : undefined}
+          rowSpan={merge ? visibleBetween(merge.r1, merge.r2, hiddenRowSet) : undefined}
           className={classes.filter(Boolean).join(" ")}
           style={{
-            ...cellStyle(cell?.s, value),
+            ...cellStyle(cell?.s, value, ruleStyle(col, row)),
+            ...(edges ? ({ "--cell-border": edges } as CSSProperties) : {}),
             ...(frozen ? { ...stickyTop, zIndex: 3 } : {}),
             ...(frozenCol ? { position: "sticky", left: ROWHEAD_W + colLefts[col], zIndex: frozen ? 4 : 2 } : {}),
           }}
@@ -1083,10 +1606,11 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
           }}
         >
           {isEditing ? (
-            <input
+            <textarea
               className="sheet-cell-editor"
               aria-label={`Zelle ${key} bearbeiten`}
               autoFocus
+              rows={Math.max(1, editing.value.split("\n").length)}
               value={editing.value}
               spellCheck={false}
               onChange={(event) => {
@@ -1105,13 +1629,52 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
           ) : (
             <span className="sheet-cell-text">{formatValue(value, cell?.s)}</span>
           )}
-          {showFillHandle && bottomRight && !fillArea && (
+          {filterHead && (
+            <button
+              type="button"
+              className={`sheet-filter-button ${filtered ? "active" : ""}`}
+              aria-label={`Filter ${columnName(col)}`}
+              data-tip={filtered ? "Gefiltert – Filter ändern" : "Filtern und sortieren"}
+              onMouseDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (editing && !commitEdit()) return;
+                const rect = event.currentTarget.getBoundingClientRect();
+                setFilterMenu({ col, x: rect.left, y: rect.bottom + 4 });
+              }}
+            >
+              {filtered ? <Funnel weight="fill" aria-hidden="true" /> : <CaretDown aria-hidden="true" />}
+            </button>
+          )}
+          {focus && focusValidation && (
+            <button
+              type="button"
+              className="sheet-list-button"
+              aria-label="Auswahlliste öffnen"
+              data-tip="Wert auswählen"
+              data-shortcut="Alt+↓"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                openListMenu(event.currentTarget.getBoundingClientRect());
+              }}
+            >
+              <CaretDown aria-hidden="true" />
+            </button>
+          )}
+          {showFillHandle && bottomRight && (
             <span
               className="sheet-fill-handle"
               aria-hidden="true"
               onMouseDown={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
+                // Doppelklick: bis zum Ende der Daten in der Nachbarspalte ausfüllen.
+                if (event.detail >= 2) {
+                  drag.current = null;
+                  setFillTarget(null);
+                  return fillDown();
+                }
                 beginDrag({ kind: "fill", start: range.focus });
                 setFillTarget(area);
               }}
@@ -1124,7 +1687,7 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
       <tr key={row} className={frozen ? "sheet-frozen-row" : undefined} style={{ height: rowHeights[row] }}>
         <th
           scope="row"
-          className={`sheet-rowhead ${row >= area.r1 && row <= area.r2 ? "selected" : ""}`}
+          className={`sheet-rowhead ${row >= area.r1 && row <= area.r2 ? "selected" : ""} ${row > 0 && hiddenRowSet.has(row - 1) ? "after-hidden" : ""}`}
           style={frozen ? { ...stickyTop, zIndex: 6 } : undefined}
           onMouseDown={(event) => {
             if (event.button !== 0) return;
@@ -1156,9 +1719,11 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
     );
   };
 
-  const frozenRowsRendered = Array.from({ length: freezeRows }, (_, row) => row);
+  const frozenRowsRendered = Array.from({ length: freezeRows }, (_, row) => row).filter(
+    (row) => !hiddenRowSet.has(row),
+  );
   const bodyRows: number[] = [];
-  for (let row = first; row <= last; row += 1) bodyRows.push(row);
+  for (let row = first; row <= last; row += 1) if (!hiddenRowSet.has(row)) bodyRows.push(row);
   const totalWidth = ROWHEAD_W + colLefts[sheet.colCount];
   const focusRaw = editing ? editing.value : rawAt(range.focus);
   const refLabel = sameArea(area, {
@@ -1186,6 +1751,8 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
           .catch(() => setNotice("Einfügen bitte mit Ctrl+V"));
       },
     },
+    { label: "Nur Werte einfügen", disabled: readOnly || !hasClip, onSelect: () => pasteSpecial("values") },
+    { label: "Nur Formate einfügen", disabled: readOnly || !hasClip, onSelect: () => pasteSpecial("formats") },
     "separator",
     { label: "Zeilen oberhalb einfügen", disabled: readOnly, onSelect: () => insert("row", true) },
     { label: "Zeilen unterhalb einfügen", disabled: readOnly, onSelect: () => insert("row", false) },
@@ -1205,9 +1772,16 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
       onSelect: () => remove("col"),
     },
     { label: "Inhalte löschen", hint: "Entf", disabled: readOnly, onSelect: () => clear("content") },
+    { label: "Formate löschen", disabled: readOnly, onSelect: () => clear("formats") },
+    "separator",
+    { label: "Zeilen ausblenden", disabled: readOnly, onSelect: () => hide("row", true) },
+    { label: "Zeilen einblenden", disabled: readOnly || !sheet.hiddenRows.length, onSelect: () => hide("row", false) },
+    { label: "Spalten ausblenden", disabled: readOnly, onSelect: () => hide("col", true) },
+    { label: "Spalten einblenden", disabled: readOnly || !sheet.hiddenCols.length, onSelect: () => hide("col", false) },
     "separator",
     { label: "Aufsteigend sortieren (A–Z)", disabled: readOnly, onSelect: () => sort(1) },
     { label: "Absteigend sortieren (Z–A)", disabled: readOnly, onSelect: () => sort(-1) },
+    { label: "Auswahlliste …", disabled: readOnly, onSelect: () => setDialog({ kind: "validation" }) },
   ];
 
   return (
@@ -1229,9 +1803,32 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
               disabled={!history.redo.length}
               onClick={redo}
             />
+            <ToolButton
+              label={painter ? "Format übertragen beenden" : "Format übertragen"}
+              icon={<PaintBrush />}
+              active={Boolean(painter)}
+              onClick={startPainter}
+            />
           </ToolGroup>
           <ToolSeparator />
           <ToolGroup label="Schrift">
+            <ToolPopover
+              label="Schriftart"
+              className="office-font-picker"
+              trigger={<span className="office-select-text">{activeStyle.font ?? "Calibri"}</span>}
+            >
+              {(close) => (
+                <MenuList
+                  close={close}
+                  items={FONT_NAMES.map((font) => ({
+                    label: font,
+                    active: (activeStyle.font ?? "Calibri") === font,
+                    style: { fontFamily: `"${font}", sans-serif` },
+                    onSelect: () => applyStyle((style) => ({ ...style, font: font === "Calibri" ? undefined : font })),
+                  }))}
+                />
+              )}
+            </ToolPopover>
             <ToolPopover
               label="Schriftgrösse"
               className="office-size-picker"
@@ -1289,12 +1886,63 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
               noneLabel="Keine Füllung"
               onPick={(color) => applyStyle((style) => ({ ...style, fill: color ?? undefined }))}
             />
-            <ToolButton
-              label="Rahmen"
-              icon={<SquareHalf />}
-              active={Boolean(activeStyle.border)}
-              onClick={() => toggle("border")}
-            />
+            <ToolPopover label="Rahmen" trigger={<SquareHalf />}>
+              {(close) => (
+                <div className="sheet-border-menu">
+                  <MenuList
+                    close={close}
+                    items={[
+                      { label: "Alle Rahmenlinien", onSelect: () => setBorder("all") },
+                      { label: "Rahmenlinien aussen", onSelect: () => setBorder("outside") },
+                      { label: "Innere Rahmenlinien", onSelect: () => setBorder("inside") },
+                      { label: "Dicke Rahmenlinie aussen", onSelect: () => setBorder("thickOutside") },
+                      "separator",
+                      { label: "Rahmenlinie oben", onSelect: () => setBorder("top") },
+                      { label: "Rahmenlinie unten", onSelect: () => setBorder("bottom") },
+                      { label: "Rahmenlinie links", onSelect: () => setBorder("left") },
+                      { label: "Rahmenlinie rechts", onSelect: () => setBorder("right") },
+                      "separator",
+                      { label: "Kein Rahmen", danger: true, onSelect: () => setBorder("none") },
+                    ]}
+                  />
+                  <span className="office-menu-separator" />
+                  <p className="sheet-menu-label">Linienstärke</p>
+                  <div className="sheet-border-weights" role="radiogroup" aria-label="Linienstärke">
+                    {(["thin", "medium", "thick"] as BorderWeight[]).map((weight) => (
+                      <button
+                        key={weight}
+                        type="button"
+                        role="radio"
+                        aria-checked={borderWeight === weight}
+                        aria-label={weight === "thin" ? "Dünn" : weight === "medium" ? "Mittel" : "Dick"}
+                        data-tip={weight === "thin" ? "Dünn" : weight === "medium" ? "Mittel" : "Dick"}
+                        className={borderWeight === weight ? "active" : ""}
+                        onClick={() => setBorderWeight(weight)}
+                      >
+                        <i style={{ height: BORDER_WIDTH[weight], background: borderColor }} />
+                      </button>
+                    ))}
+                  </div>
+                  <p className="sheet-menu-label">Linienfarbe</p>
+                  <div className="office-palette-row" role="radiogroup" aria-label="Linienfarbe">
+                    {[DEFAULT_BORDER_COLOR, ...PALETTE[0].filter((color) => color !== "#5b6b6d").slice(0, 9)].map(
+                      (color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          role="radio"
+                          aria-checked={borderColor === color}
+                          aria-label={color === DEFAULT_BORDER_COLOR ? "Standardfarbe" : `Farbe ${color}`}
+                          className={borderColor === color ? "active" : ""}
+                          style={{ background: color }}
+                          onClick={() => setBorderColor(color)}
+                        />
+                      ),
+                    )}
+                  </div>
+                </div>
+              )}
+            </ToolPopover>
           </ToolGroup>
           <ToolSeparator />
           <ToolGroup label="Ausrichtung">
@@ -1320,6 +1968,33 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
                 applyStyle((style) => ({ ...style, align: style.align === "right" ? undefined : "right" }))
               }
             />
+            <ToolButton
+              label="Oben ausrichten"
+              icon={<AlignTop />}
+              active={activeStyle.valign === "top"}
+              onClick={() => applyStyle((style) => ({ ...style, valign: style.valign === "top" ? undefined : "top" }))}
+            />
+            <ToolButton
+              label="Vertikal zentrieren"
+              icon={<AlignCenterVertical />}
+              active={activeStyle.valign === "middle"}
+              onClick={() =>
+                applyStyle((style) => ({ ...style, valign: style.valign === "middle" ? undefined : "middle" }))
+              }
+            />
+            <ToolButton
+              label="Unten ausrichten"
+              icon={<AlignBottom />}
+              active={!activeStyle.valign || activeStyle.valign === "bottom"}
+              onClick={() => applyStyle((style) => ({ ...style, valign: undefined }))}
+            />
+            <ToolButton
+              label="Einzug verkleinern"
+              icon={<TextOutdent />}
+              disabled={!activeStyle.indent}
+              onClick={() => changeIndent(-1)}
+            />
+            <ToolButton label="Einzug vergrössern" icon={<TextIndent />} onClick={() => changeIndent(1)} />
             <ToolButton
               label="Zeilenumbruch"
               icon={<WrapText />}
@@ -1363,12 +2038,76 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
             </ToolPopover>
             <ToolButton label="Weniger Dezimalstellen" text=",0" onClick={() => changeDecimals(-1)} />
             <ToolButton label="Mehr Dezimalstellen" text=",00" onClick={() => changeDecimals(1)} />
+            <ToolPopover label="Zellenformatvorlagen" trigger={<Swatches />}>
+              {(close) => (
+                <div className="sheet-cell-styles" role="menu">
+                  {CELL_STYLES.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      role="menuitem"
+                      style={{
+                        background: item.style.fill,
+                        color: item.style.color,
+                        fontWeight: item.style.b ? 700 : 500,
+                        boxShadow: edgeShadow(
+                          item.style.border || item.style.bb || item.style.bt
+                            ? {
+                                top:
+                                  item.style.border || item.style.bt
+                                    ? { width: 1, color: item.style.bc ?? DEFAULT_BORDER_COLOR }
+                                    : null,
+                                bottom:
+                                  item.style.border || item.style.bb
+                                    ? {
+                                        width: BORDER_WIDTH[item.style.bw ?? "thin"],
+                                        color: item.style.bc ?? DEFAULT_BORDER_COLOR,
+                                      }
+                                    : null,
+                                left: item.style.border
+                                  ? { width: 1, color: item.style.bc ?? DEFAULT_BORDER_COLOR }
+                                  : null,
+                                right: item.style.border
+                                  ? { width: 1, color: item.style.bc ?? DEFAULT_BORDER_COLOR }
+                                  : null,
+                              }
+                            : null,
+                        ),
+                      }}
+                      onClick={() => {
+                        close();
+                        applyStyle((style) => withCellStyle(style, item.style));
+                      }}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </ToolPopover>
+          </ToolGroup>
+          <ToolSeparator />
+          <ToolGroup label="Daten">
+            <ToolButton label="Aufsteigend sortieren" icon={<SortAscending />} onClick={() => sort(1)} />
+            <ToolButton label="Absteigend sortieren" icon={<SortDescending />} onClick={() => sort(-1)} />
+            <ToolButton
+              label={sheet.filter ? "Filter entfernen" : "Filter"}
+              shortcut="Ctrl+Shift+L"
+              icon={<Funnel />}
+              active={Boolean(sheet.filter)}
+              onClick={toggleFilter}
+            />
+            <ToolButton label="Auswahlliste" icon={<ListChecks />} onClick={() => setDialog({ kind: "validation" })} />
+            <ToolButton
+              label="Bedingte Formatierung"
+              icon={<Highlighter />}
+              onClick={() => setDialog({ kind: "rules" })}
+            />
+            <ToolButton label="Diagramm einfügen" icon={<ChartBar />} onClick={addChart} />
           </ToolGroup>
           <ToolSeparator />
           <ToolGroup label="Bearbeiten">
             <ToolButton label="Summe (AutoSumme)" icon={<Sigma />} onClick={autoSum} />
-            <ToolButton label="Aufsteigend sortieren" icon={<SortAscending />} onClick={() => sort(1)} />
-            <ToolButton label="Absteigend sortieren" icon={<SortDescending />} onClick={() => sort(-1)} />
             <ToolPopover label="Zeilen und Spalten" trigger={<Rows />}>
               {(close) => (
                 <MenuList
@@ -1381,6 +2120,24 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
                     "separator",
                     { label: "Zeilen löschen", danger: true, onSelect: () => remove("row") },
                     { label: "Spalten löschen", danger: true, onSelect: () => remove("col") },
+                    "separator",
+                    { label: "Zeilen ausblenden", onSelect: () => hide("row", true) },
+                    {
+                      label: "Zeilen einblenden",
+                      disabled: !sheet.hiddenRows.length,
+                      onSelect: () => hide("row", false),
+                    },
+                    { label: "Spalten ausblenden", onSelect: () => hide("col", true) },
+                    {
+                      label: "Spalten einblenden",
+                      disabled: !sheet.hiddenCols.length,
+                      onSelect: () => hide("col", false),
+                    },
+                    {
+                      label: "Alle einblenden",
+                      disabled: !sheet.hiddenRows.length && !sheet.hiddenCols.length,
+                      onSelect: () => commitSheet((current) => ({ ...current, hiddenRows: [], hiddenCols: [] })),
+                    },
                     "separator",
                     { label: "Spaltenbreite anpassen", onSelect: () => autoFit(range.focus.col) },
                   ]}
@@ -1416,7 +2173,81 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
                 />
               )}
             </ToolPopover>
-            <ToolButton label="Inhalte und Formate löschen" icon={<Eraser />} onClick={() => clear("all")} />
+            <ToolPopover label="Löschen" trigger={<Eraser />}>
+              {(close) => (
+                <MenuList
+                  close={close}
+                  items={[
+                    { label: "Alles löschen", danger: true, onSelect: () => clear("all") },
+                    { label: "Formate löschen", onSelect: () => clear("formats") },
+                    { label: "Inhalte löschen", hint: "Entf", onSelect: () => clear("content") },
+                  ]}
+                />
+              )}
+            </ToolPopover>
+            <ToolButton
+              label="Suchen und Ersetzen"
+              shortcut="Ctrl+F"
+              icon={<MagnifyingGlass />}
+              onClick={() => openFind(false)}
+            />
+          </ToolGroup>
+          <ToolSeparator />
+          <ToolGroup label="Ansicht">
+            <ToolButton
+              label="Gitternetzlinien"
+              icon={<GridFour />}
+              active={sheet.showGrid}
+              onClick={() => commitSheet((current) => ({ ...current, showGrid: !current.showGrid }))}
+            />
+            <ToolPopover label="Seite einrichten" trigger={<Printer />}>
+              {(close) => (
+                <MenuList
+                  close={close}
+                  items={[
+                    {
+                      label: "Hochformat",
+                      active: sheet.print.orientation === "portrait",
+                      onSelect: () =>
+                        commitSheet((current) => ({
+                          ...current,
+                          print: { ...current.print, orientation: "portrait" },
+                        })),
+                    },
+                    {
+                      label: "Querformat",
+                      active: sheet.print.orientation === "landscape",
+                      onSelect: () =>
+                        commitSheet((current) => ({
+                          ...current,
+                          print: { ...current.print, orientation: "landscape" },
+                        })),
+                    },
+                    "separator",
+                    {
+                      label: "Auf Seitenbreite anpassen",
+                      active: sheet.print.fit,
+                      onSelect: () =>
+                        commitSheet((current) => ({
+                          ...current,
+                          print: { ...current.print, fit: !current.print.fit },
+                        })),
+                    },
+                    {
+                      label: "Gitternetz drucken",
+                      active: sheet.print.gridlines,
+                      onSelect: () =>
+                        commitSheet((current) => ({
+                          ...current,
+                          print: { ...current.print, gridlines: !current.print.gridlines },
+                        })),
+                    },
+                    "separator",
+                    { label: "Drucken …", hint: "Ctrl+P", onSelect: () => window.setTimeout(() => window.print(), 50) },
+                  ]}
+                />
+              )}
+            </ToolPopover>
           </ToolGroup>
           <ToolSeparator />
           <ToolButton label="Blatt als CSV herunterladen" icon={<DownloadSimple />} text="CSV" onClick={downloadCsv} />
@@ -1428,8 +2259,9 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
         </span>
         <FunctionIcon className="sheet-fx" aria-hidden="true" />
         <div className="sheet-formula-field">
-          <input
+          <textarea
             ref={barRef}
+            rows={1}
             aria-label="Inhalt der Zelle"
             value={focusRaw}
             readOnly={readOnly}
@@ -1478,6 +2310,22 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
           )}
         </div>
       </div>
+      {find && (
+        <FindBar
+          replace={find.replace && !readOnly}
+          count={find.hits.length}
+          current={find.index}
+          onSearch={runSearch}
+          onNext={nextHit}
+          onReplace={(replacement) => replaceHits(replacement, false)}
+          onReplaceAll={(replacement) => replaceHits(replacement, true)}
+          onToggleReplace={() => setFind({ ...find, replace: !find.replace })}
+          onClose={() => {
+            setFind(null);
+            focusGrid();
+          }}
+        />
+      )}
       {formulaError && (
         <p className="office-inline-error" role="alert">
           {formulaError}
@@ -1510,78 +2358,128 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
           paste(event.clipboardData.getData("text/plain") || clip.current?.text || "");
         }}
       >
-        <table className="sheet-table" style={{ width: totalWidth }}>
-          <colgroup>
-            <col style={{ width: ROWHEAD_W }} />
-            {colWidths.map((width, col) => (
-              <col key={col} style={{ width }} />
-            ))}
-          </colgroup>
-          <thead>
-            <tr style={{ height: HEADER_H }}>
-              <th
-                className="sheet-corner"
-                aria-label="Alles auswählen"
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                  select({ col: 0, row: 0 }, { col: sheet.colCount - 1, row: sheet.rowCount - 1 });
-                  focusGrid();
-                }}
-              />
-              {colWidths.map((_, col) => (
-                <th
-                  key={col}
-                  scope="col"
-                  className={`sheet-colhead ${col >= area.c1 && col <= area.c2 ? "selected" : ""}`}
-                  style={col < freezeCols ? { left: ROWHEAD_W + colLefts[col], zIndex: 8 } : undefined}
-                  onMouseDown={(event) => {
-                    if (event.button !== 0) return;
-                    event.preventDefault();
-                    if (editing && !commitEdit()) return;
-                    focusGrid();
-                    if (event.shiftKey) select({ col: range.anchor.col, row: 0 }, { col, row: sheet.rowCount - 1 });
-                    else select({ col, row: 0 }, { col, row: sheet.rowCount - 1 });
-                    drag.current = { kind: "cols", start: { col, row: 0 } };
-                  }}
-                  onMouseEnter={() => onCellMouseEnter({ col, row: 0 })}
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    if (!(col >= area.c1 && col <= area.c2)) select({ col, row: 0 }, { col, row: sheet.rowCount - 1 });
-                    setMenu({ x: event.clientX, y: event.clientY, kind: "cell" });
-                  }}
-                >
-                  {columnName(col)}
-                  {!readOnly && (
-                    <span
-                      className="sheet-col-resize"
-                      aria-hidden="true"
-                      onMouseDown={(event) => startResize(event, "col", col)}
-                      onDoubleClick={() => autoFit(col)}
-                    />
-                  )}
-                </th>
+        <div className="sheet-zoom" style={{ zoom: scale, width: totalWidth }}>
+          <table
+            className={`sheet-table ${sheet.showGrid ? "" : "no-grid"} ${painter ? "painting" : ""}`}
+            style={{ width: totalWidth }}
+          >
+            <colgroup>
+              <col style={{ width: ROWHEAD_W }} />
+              {columns.map((col) => (
+                <col key={col} style={{ width: colWidths[col] }} />
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {frozenRowsRendered.map((row) => (
-              <RowSlot key={row} render={renderRow} row={row} frozenTop={HEADER_H + rowTops[row]} />
-            ))}
-            {first > freezeRows && (
-              <tr aria-hidden="true" style={{ height: rowTops[first] - rowTops[freezeRows] }}>
-                <td colSpan={sheet.colCount + 1} className="sheet-spacer" />
+            </colgroup>
+            <thead>
+              <tr style={{ height: HEADER_H }}>
+                <th
+                  className="sheet-corner"
+                  aria-label="Alles auswählen"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    select({ col: 0, row: 0 }, { col: sheet.colCount - 1, row: sheet.rowCount - 1 });
+                    focusGrid();
+                  }}
+                />
+                {columns.map((col) => (
+                  <th
+                    key={col}
+                    scope="col"
+                    className={`sheet-colhead ${col >= area.c1 && col <= area.c2 ? "selected" : ""} ${col > 0 && hiddenColSet.has(col - 1) ? "after-hidden" : ""}`}
+                    style={col < freezeCols ? { left: ROWHEAD_W + colLefts[col], zIndex: 8 } : undefined}
+                    onMouseDown={(event) => {
+                      if (event.button !== 0) return;
+                      event.preventDefault();
+                      if (editing && !commitEdit()) return;
+                      focusGrid();
+                      if (event.shiftKey) select({ col: range.anchor.col, row: 0 }, { col, row: sheet.rowCount - 1 });
+                      else select({ col, row: 0 }, { col, row: sheet.rowCount - 1 });
+                      drag.current = { kind: "cols", start: { col, row: 0 } };
+                    }}
+                    onMouseEnter={() => onCellMouseEnter({ col, row: 0 })}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      if (!(col >= area.c1 && col <= area.c2))
+                        select({ col, row: 0 }, { col, row: sheet.rowCount - 1 });
+                      setMenu({ x: event.clientX, y: event.clientY, kind: "cell" });
+                    }}
+                  >
+                    {columnName(col)}
+                    {!readOnly && (
+                      <span
+                        className="sheet-col-resize"
+                        aria-hidden="true"
+                        onMouseDown={(event) => startResize(event, "col", col)}
+                        onDoubleClick={() => autoFit(col)}
+                      />
+                    )}
+                  </th>
+                ))}
               </tr>
-            )}
-            {bodyRows.map((row) => (
-              <RowSlot key={row} render={renderRow} row={row} />
-            ))}
-            {last < sheet.rowCount - 1 && (
-              <tr aria-hidden="true" style={{ height: rowTops[sheet.rowCount] - rowTops[last + 1] }}>
-                <td colSpan={sheet.colCount + 1} className="sheet-spacer" />
-              </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {frozenRowsRendered.map((row) => (
+                <RowSlot key={row} render={renderRow} row={row} frozenTop={HEADER_H + rowTops[row]} />
+              ))}
+              {first > freezeRows && (
+                <tr aria-hidden="true" style={{ height: rowTops[first] - rowTops[freezeRows] }}>
+                  <td colSpan={columns.length + 1} className="sheet-spacer" />
+                </tr>
+              )}
+              {bodyRows.map((row) => (
+                <RowSlot key={row} render={renderRow} row={row} />
+              ))}
+              {last < sheet.rowCount - 1 && (
+                <tr aria-hidden="true" style={{ height: rowTops[sheet.rowCount] - rowTops[last + 1] }}>
+                  <td colSpan={columns.length + 1} className="sheet-spacer" />
+                </tr>
+              )}
+            </tbody>
+          </table>
+          {sheet.charts.map((chart) => {
+            const box = chartDrag?.id === chart.id ? { ...chart, ...chartDrag } : chart;
+            const chartArea = parseArea(chart.range);
+            const selectedNow = selectedChart === chart.id;
+            return (
+              <div
+                key={chart.id}
+                className={`sheet-chart ${selectedNow ? "selected" : ""}`}
+                style={{ left: ROWHEAD_W + box.x, top: HEADER_H + box.y, width: box.w, height: box.h }}
+                role="figure"
+                aria-label={chart.title ? `Diagramm ${chart.title}` : "Diagramm"}
+                onMouseDown={(event) => startChartDrag(event, chart, "move")}
+                onClick={() => setSelectedChart(chart.id)}
+                onDoubleClick={() => !readOnly && setDialog({ kind: "chart", chart })}
+              >
+                {chartArea && (
+                  <ChartSvg
+                    data={chartData(chartArea, valueAt, textAt)}
+                    type={chart.type}
+                    title={chart.title}
+                    width={box.w}
+                    height={box.h}
+                  />
+                )}
+                {selectedNow && !readOnly && (
+                  <>
+                    <div className="sheet-chart-tools" onMouseDown={(event) => event.stopPropagation()}>
+                      <button type="button" onClick={() => setDialog({ kind: "chart", chart })}>
+                        Bearbeiten
+                      </button>
+                      <button type="button" className="danger" onClick={() => deleteChart(chart.id)}>
+                        Löschen
+                      </button>
+                    </div>
+                    <span
+                      className="sheet-chart-resize"
+                      aria-hidden="true"
+                      onMouseDown={(event) => startChartDrag(event, chart, "resize")}
+                    />
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
         {!readOnly && (
           <div className="sheet-more" style={{ width: totalWidth }}>
             <button
@@ -1665,6 +2563,13 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
           </span>
         )}
         <span className="sheet-stats" aria-live="polite">
+          {sheet.filter && filterArea && (
+            <span>
+              {[...hiddenRowSet].filter((row) => row > filterArea.r1 && row <= filterArea.r2).length > 0
+                ? `Gefiltert: ${filterArea.r2 - filterArea.r1 - [...hiddenRowSet].filter((row) => row > filterArea.r1 && row <= filterArea.r2).length} von ${filterArea.r2 - filterArea.r1} Zeilen`
+                : "Filter aktiv"}
+            </span>
+          )}
           {stats && stats.filled > 0 && (
             <>
               {stats.numbers > 0 && (
@@ -1679,6 +2584,19 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
               <span>Anzahl: {stats.filled}</span>
             </>
           )}
+        </span>
+        <span className="office-zoom" role="group" aria-label="Zoom">
+          {ZOOMS.map((value) => (
+            <button
+              key={value}
+              type="button"
+              className={zoom === value ? "active" : ""}
+              aria-pressed={zoom === value}
+              onClick={() => setZoom(value)}
+            >
+              {value}%
+            </button>
+          ))}
         </span>
       </footer>
       {menu &&
@@ -1739,12 +2657,104 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
           document.body,
         )}
       {menu && <div className="office-context-backdrop" onMouseDown={() => setMenu(null)} />}
+      {listMenu &&
+        createPortal(
+          <div
+            className="office-context sheet-list-menu"
+            style={{
+              top: Math.min(listMenu.y, window.innerHeight - 320),
+              left: Math.min(listMenu.x, window.innerWidth - 260),
+            }}
+          >
+            <MenuList
+              close={() => setListMenu(null)}
+              items={listMenu.values.map((value) => ({
+                label: value,
+                active: rawAt(range.focus) === value,
+                onSelect: () => chooseFromList(value),
+              }))}
+            />
+          </div>,
+          document.body,
+        )}
+      {listMenu && <div className="office-context-backdrop" onMouseDown={() => setListMenu(null)} />}
+      {filterMenu && filterArea && (
+        <FilterMenu
+          key={filterMenu.col}
+          anchor={filterMenu}
+          values={distinctValues(sheet, filterMenu.col, textAt)}
+          hidden={sheet.filter?.hidden[String(filterMenu.col)] ?? []}
+          onClose={() => setFilterMenu(null)}
+          onSort={(direction) => {
+            setFilterMenu(null);
+            sortFilterColumn(filterMenu.col, direction);
+          }}
+          onApply={(hidden) => {
+            setFilterMenu(null);
+            commitSheet((current) => {
+              if (!current.filter) return current;
+              const next = { ...current.filter.hidden };
+              if (hidden.length) next[String(filterMenu.col)] = hidden;
+              else delete next[String(filterMenu.col)];
+              return { ...current, filter: { ...current.filter, hidden: next } };
+            });
+          }}
+        />
+      )}
+      {dialog?.kind === "rules" && (
+        <RulesDialog
+          rules={sheet.rules}
+          selection={area}
+          onClose={() => setDialog(null)}
+          onSave={(rules) => commitSheet((current) => ({ ...current, rules }))}
+        />
+      )}
+      {dialog?.kind === "validation" && (
+        <ValidationDialog
+          selection={area}
+          current={validationAt(sheet, range.focus.col, range.focus.row)}
+          onClose={() => setDialog(null)}
+          onSave={(rangeText, values) =>
+            commitSheet((current) => {
+              const target = parseArea(rangeText)!;
+              // Überschneidende Listen ersetzen.
+              const rest = current.validations.filter((item) => {
+                const other = parseArea(item.range);
+                return !other || !overlaps(other, target);
+              });
+              return { ...current, validations: [...rest, { range: rangeText, values }] };
+            })
+          }
+          onRemove={(rangeText) =>
+            commitSheet((current) => ({
+              ...current,
+              validations: current.validations.filter((item) => item.range !== rangeText),
+            }))
+          }
+        />
+      )}
+      {dialog?.kind === "chart" && (
+        <ChartDialog
+          chart={dialog.chart}
+          selection={area}
+          onClose={() => setDialog(null)}
+          onSave={(values) => saveChart(dialog.chart, values)}
+        />
+      )}
       {notice && (
         <div className="office-toast" role="status">
           {notice}
         </div>
       )}
-      {printing && <SheetPrint model={model} active={active} valueOf={(col, row) => valueAt(col, row)} />}
+      {printing && (
+        <SheetPrint
+          sheet={sheet}
+          hiddenRows={hiddenRowSet}
+          valueOf={(col, row) => valueAt(col, row)}
+          textOf={textAt}
+          ruleStyle={ruleStyle}
+        />
+      )}
     </div>
   );
 }
@@ -1763,64 +2773,103 @@ function RowSlot({
 }
 
 function SheetPrint({
-  model,
-  active,
+  sheet,
+  hiddenRows,
   valueOf,
+  textOf,
+  ruleStyle,
 }: {
-  model: SheetModel;
-  active: number;
+  sheet: Sheet;
+  hiddenRows: Set<number>;
   valueOf: (col: number, row: number) => Value;
+  textOf: (col: number, row: number) => string;
+  ruleStyle: (col: number, row: number) => RuleStyle | undefined;
 }) {
-  const sheet = model.sheets[active];
   const used = usedRange(sheet);
   const merges = mergesOf(sheet);
+  const hiddenCols = new Set(sheet.hiddenCols);
   const covered = new Set<string>();
   for (const merge of merges)
     for (let row = merge.r1; row <= merge.r2; row += 1)
       for (let col = merge.c1; col <= merge.c2; col += 1)
         if (row !== merge.r1 || col !== merge.c1) covered.add(cellKey(col, row));
+  const visibleCols = Array.from({ length: used.cols }, (_, col) => col).filter((col) => !hiddenCols.has(col));
+  const line = (edge: { width: number; color: string } | null) =>
+    edge ? `${Math.max(1, edge.width)}px solid ${edge.color}` : undefined;
   const rows = [];
   for (let row = 0; row < used.rows; row += 1) {
+    if (hiddenRows.has(row)) continue;
     const cells = [];
-    for (let col = 0; col < used.cols; col += 1) {
+    for (const col of visibleCols) {
       const key = cellKey(col, row);
       if (covered.has(key)) continue;
       const merge = merges.find((item) => item.c1 === col && item.r1 === row);
       const cell = sheet.cells[key];
       const value = valueOf(col, row);
+      const style = cell?.s;
+      const rule = ruleStyle(col, row);
+      const edges = edgesAt(sheet, col, row);
       cells.push(
         <td
           key={key}
           colSpan={merge ? merge.c2 - merge.c1 + 1 : undefined}
           rowSpan={merge ? merge.r2 - merge.r1 + 1 : undefined}
-          className={cell?.s?.border ? "bordered" : ""}
           style={{
-            fontWeight: cell?.s?.b ? 700 : undefined,
-            fontStyle: cell?.s?.i ? "italic" : undefined,
-            color: cell?.s?.color,
-            background: cell?.s?.fill,
-            textAlign: cell?.s?.align ?? (typeof value === "number" ? "right" : "left"),
-            whiteSpace: cell?.s?.wrap ? "pre-wrap" : "pre",
+            fontWeight: style?.b || rule?.b ? 700 : undefined,
+            fontStyle: style?.i ? "italic" : undefined,
+            textDecoration:
+              [style?.u ? "underline" : "", style?.s ? "line-through" : ""].filter(Boolean).join(" ") || undefined,
+            color: rule?.color ?? style?.color,
+            background: rule?.fill ?? style?.fill,
+            textAlign: style?.align ?? (typeof value === "number" ? "right" : "left"),
+            verticalAlign: style?.valign === "top" ? "top" : style?.valign === "middle" ? "middle" : "bottom",
+            whiteSpace: style?.wrap ? "pre-wrap" : "pre",
+            fontSize: style?.size ? `${style.size}pt` : undefined,
+            fontFamily: style?.font ? `"${style.font}", Calibri, Carlito, Arial, sans-serif` : undefined,
+            paddingLeft: style?.indent ? 5 + style.indent * 8 : undefined,
+            borderTop: line(edges?.top ?? null),
+            borderBottom: line(edges?.bottom ?? null),
+            borderLeft: line(edges?.left ?? null),
+            borderRight: line(edges?.right ?? null),
           }}
         >
-          {formatValue(value, cell?.s)}
+          {formatValue(value, style)}
         </td>,
       );
     }
-    rows.push(<tr key={row}>{cells}</tr>);
+    rows.push(
+      <tr key={row} style={{ height: sheet.rows[String(row)] ?? undefined }}>
+        {cells}
+      </tr>,
+    );
   }
+  const { orientation, fit, gridlines } = sheet.print;
   return (
-    <div className="office-print-only sheet-print">
+    <div className={`office-print-only sheet-print ${gridlines ? "gridlines" : ""} ${fit ? "fit" : ""}`}>
       <h1>{sheet.name}</h1>
       <table>
         <colgroup>
-          {Array.from({ length: used.cols }, (_, col) => (
+          {visibleCols.map((col) => (
             <col key={col} style={{ width: sheet.cols[String(col)] ?? DEFAULT_COL_WIDTH }} />
           ))}
         </colgroup>
         <tbody>{rows}</tbody>
       </table>
-      <style>{"@media print { @page { size: A4 landscape; margin: 12mm; } }"}</style>
+      {sheet.charts.map((chart) => {
+        const area = parseArea(chart.range);
+        return area ? (
+          <div key={chart.id} className="sheet-print-chart">
+            <ChartSvg
+              data={chartData(area, valueOf, textOf)}
+              type={chart.type}
+              title={chart.title}
+              width={chart.w}
+              height={chart.h}
+            />
+          </div>
+        ) : null;
+      })}
+      <style>{`@media print { @page { size: A4 ${orientation}; margin: 12mm; } }`}</style>
     </div>
   );
 }

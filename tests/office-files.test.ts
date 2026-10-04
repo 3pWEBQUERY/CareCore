@@ -221,6 +221,96 @@ test("Excel: Werte, Formeln (englisch in der Datei), Formate, Blätter, Spaltenb
   assert.equal(backOther.cells.A1.v, "=Lager!B3+1");
 });
 
+test("Excel: Rahmen, Ausrichtung, Filter, Regeln, Auswahllisten, Diagramme und Druck in der .xlsx-Datei", () => {
+  const sheet = newSheet("Pflege Daten");
+  const rows = [
+    ["Name", "Bereich", "Stunden"],
+    ["Anna", "Pflege", "8"],
+    ["Ben", "Küche", "6"],
+    ["Cem", "Pflege", "4"],
+    ["Dora", "Pflege", "10"],
+  ];
+  rows.forEach((line, r) => line.forEach((v, c) => (sheet.cells[`${"ABC"[c]}${r + 1}`] = { v })));
+  sheet.cells.A1.s = { b: true, valign: "middle", bb: true, bw: "thick", bc: "#4472c4", font: "Arial" };
+  sheet.cells.C2.s = { indent: 2, align: "left", bt: true, bl: true, valign: "top" };
+  sheet.hiddenCols = [5];
+  sheet.hiddenRows = [8];
+  sheet.filter = { range: "A1:C5", hidden: { "1": ["Küche"] } };
+  sheet.validations = [{ range: "B2:B20", values: ["Pflege", "Küche", "Technik"] }];
+  sheet.rules = [
+    { id: "a", range: "C2:C5", op: "gt", value: "5", value2: "", style: { fill: "#ffc7ce", color: "#9c0006" } },
+    { id: "b", range: "A2:A5", op: "contains", value: "an", value2: "", style: { b: true } },
+    { id: "c", range: "B2:B5", op: "duplicate", value: "", value2: "", style: { fill: "#ffeb9c" } },
+    { id: "d", range: "C2:C5", op: "between", value: "1", value2: "5", style: { color: "#006100" } },
+  ];
+  sheet.charts = [
+    { id: "x", type: "column", range: "A1:C5", title: "Stunden", x: 420, y: 30, w: 480, h: 300 },
+    { id: "y", type: "pie", range: "A1:C5", title: "", x: 420, y: 360, w: 400, h: 280 },
+  ];
+  sheet.print = { orientation: "landscape", fit: true, gridlines: true };
+  sheet.showGrid = false;
+  const model: SheetModel = { kind: "sheet", sheets: [sheet] };
+  const bytes = buildXlsx(model, meta);
+  const files = readZip(bytes);
+  assert.ok(files.has("xl/charts/chart1.xml") && files.has("xl/charts/chart2.xml"));
+  assert.ok(files.has("xl/drawings/drawing1.xml"));
+  const chart = xml(bytes, "xl/charts/chart1.xml");
+  assert.equal(findAll(chart, "ser").length, 1, "Textspalten sind keine Datenreihe");
+  assert.equal(textOf(findAll(findAll(chart, "val")[0], "f")[0]), "'Pflege Daten'!$C$2:$C$5");
+  const page = xml(bytes, "xl/worksheets/sheet1.xml");
+  assert.equal(findAll(page, "autoFilter")[0].attrs.ref, "A1:C5");
+  assert.deepEqual(
+    findAll(findAll(page, "filterColumn")[0], "filter").map((node) => node.attrs.val),
+    ["Pflege"],
+  );
+  const row = (r: number) => findAll(page, "row").find((node) => node.attrs.r === String(r));
+  assert.equal(row(3)?.attrs.hidden, "1", "gefilterte Zeile ist ausgeblendet");
+  assert.equal(row(9)?.attrs.hidden, "1");
+  assert.equal(findAll(page, "col").find((node) => node.attrs.min === "6")?.attrs.hidden, "1");
+  assert.equal(findAll(page, "cfRule").length, 4);
+  assert.equal(findAll(page, "sheetView")[0].attrs.showGridLines, "0");
+  assert.equal(findAll(page, "pageSetup")[0].attrs.orientation, "landscape");
+  assert.match(files.get("xl/styles.xml")!.toString(), /<bottom style="thick"><color rgb="FF4472C4"\/>/);
+  assert.match(files.get("xl/styles.xml")!.toString(), /indent="2"/);
+  assert.match(files.get("xl/workbook.xml")!.toString(), /_xlnm\._FilterDatabase/);
+  assert.deepEqual(readXlsx(bytes).model, cleanModel("sheet", model));
+
+  const back = readXlsx(foreign(bytes)).model.sheets[0];
+  assert.deepEqual(back.cells.A1.s, sheet.cells.A1.s);
+  assert.deepEqual(back.cells.C2.s, sheet.cells.C2.s);
+  assert.deepEqual(back.hiddenCols, [5]);
+  assert.deepEqual(back.hiddenRows, [8]);
+  assert.deepEqual(back.filter, sheet.filter);
+  assert.deepEqual(back.validations, sheet.validations);
+  assert.deepEqual(
+    back.rules.map(({ op, range, value, value2, style }) => ({ op, range, value, value2, style })),
+    sheet.rules.map(({ op, range, value, value2, style }) => ({ op, range, value, value2, style })),
+  );
+  assert.deepEqual(back.print, sheet.print);
+  assert.equal(back.showGrid, false);
+});
+
+test("Tabelle: Einfügen und Löschen verschiebt Filter, Regeln, Auswahllisten und ausgeblendete Zeilen", () => {
+  const sheet = newSheet("Daten");
+  sheet.hiddenRows = [2, 6];
+  sheet.filter = { range: "A2:C8", hidden: { "2": ["x"] } };
+  sheet.validations = [{ range: "B3:B9", values: ["Ja", "Nein"] }];
+  sheet.rules = [{ id: "a", range: "C3:C4", op: "empty", value: "", value2: "", style: { b: true } }];
+  sheet.charts = [{ id: "c", type: "line", range: "A2:C8", title: "", x: 0, y: 0, w: 300, h: 200 }];
+  const inserted = insertDelete({ kind: "sheet", sheets: [sheet] }, 0, "row", 1, 2).sheets[0];
+  assert.deepEqual(inserted.hiddenRows, [4, 8]);
+  assert.equal(inserted.filter?.range, "A4:C10");
+  assert.equal(inserted.validations[0].range, "B5:B11");
+  assert.equal(inserted.rules[0].range, "C5:C6");
+  assert.equal(inserted.charts[0].range, "A4:C10");
+  const columns = insertDelete({ kind: "sheet", sheets: [sheet] }, 0, "col", 0, -1).sheets[0];
+  assert.deepEqual(columns.filter, { range: "A2:B8", hidden: { "1": ["x"] } });
+  assert.equal(columns.validations[0].range, "A3:A9");
+  const removed = insertDelete({ kind: "sheet", sheets: [sheet] }, 0, "row", 2, -2).sheets[0];
+  assert.equal(removed.rules.length, 0, "Regel auf gelöschten Zeilen fällt weg");
+  assert.deepEqual(removed.hiddenRows, [4]);
+});
+
 test("PowerPoint: Folien, Layouts, Design, Bild und Notizen in der .pptx-Datei", () => {
   const title = newSlide("title", "Schulung", [], "Hygiene");
   const content = newSlide("content", "Inhalte", ["Hände", "Flächen"]);
