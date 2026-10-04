@@ -123,7 +123,10 @@ test("Wundübersicht folgt dem Bewohner aus der Kopfzeile – und umgekehrt", as
 
   // Klick auf eine Wunde wählt auch den Bewohner in der Kopfzeile.
   const row = page.locator(".wound-case-row").first();
-  const rowName = (await row.locator(".wound-case-main strong").innerText()).trim();
+  // Nur der Name, ohne die REA-Kennzeichnung daneben.
+  const rowName = (
+    await row.locator(".wound-case-main strong").evaluate((element) => element.firstChild?.textContent ?? "")
+  ).trim();
   await row.click();
   await expect(header).toHaveText(rowName);
   await expect(sidebarName).toHaveText(rowName);
@@ -150,12 +153,25 @@ test("Pflegeplan anlegen, Ziel formulieren und evaluieren", async ({ page }) => 
 
   await page.getByRole("button", { name: "Pflegeziel hinzufügen" }).first().click();
   await field(page, "Pflegeproblem").fill("Gangunsicherheit nach Sturz");
-  await field(page, "Ressourcen").fill("Motiviert, nutzt Rollator");
+  // Ressourcen als Mehrfachauswahl: zwei aus der Liste, eine eigene Ergänzung.
+  await dialog.getByRole("combobox", { name: "Ressourcen" }).click();
+  const resources = page.getByRole("listbox", { name: "Ressourcen" });
+  await resources.getByRole("option", { name: "Motiviert", exact: true }).click();
+  await resources.getByRole("option", { name: "Nutzt Rollator", exact: true }).click();
+  await expect(resources.getByRole("option", { name: "Motiviert", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await page.getByLabel("Eigene Ressource ergänzen").fill("Gute Kooperation");
+  await page.getByRole("button", { name: "Hinzufügen", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(dialog.getByRole("list", { name: "Ressourcen: ausgewählt" }).locator("li")).toHaveCount(3);
   await field(page, /^Ziel$/).fill("Geht mit Rollator 20 m im Korridor ohne Sturz");
   await dialog.getByRole("button", { name: "Ziel hinzufügen" }).click();
   await expect(dialog).toHaveCount(0);
   const goal = page.locator("article", { hasText: "Geht mit Rollator 20 m im Korridor ohne Sturz" }).first();
   await expect(goal).toBeVisible();
+  await expect(goal).toContainText("Motiviert, Nutzt Rollator, Gute Kooperation");
 
   await goal.getByRole("button", { name: "Evaluieren" }).click();
   await field(page, "Begründung").fill("Geht 15 m mit Begleitung, Sicherheit nimmt zu");

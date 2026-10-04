@@ -922,3 +922,108 @@
   min-height: 38px;
   font-size: 10px;
 }
+/* Mehrfachauswahl (CareMultiSelect) */
+.care-multi-menu {
+  display: grid;
+  gap: 6px;
+  max-height: min(420px, calc(100dvh - 24px));
+}
+.care-multi-menu [role="listbox"] {
+  display: grid;
+  gap: 3px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.care-multi-menu [role="option"] {
+  justify-content: flex-start;
+}
+.care-multi-box {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid #b6c6d8;
+  border-radius: 6px;
+  background: white;
+}
+.care-multi-menu [role="option"].selected .care-multi-box {
+  border-color: var(--brand);
+  background: var(--brand);
+}
+.care-multi-menu [role="option"] .care-multi-box svg {
+  width: 12px;
+  color: white;
+  opacity: 1;
+}
+.care-multi-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.care-multi-custom {
+  display: flex;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #e3eaf2;
+}
+.care-multi-custom input {
+  min-width: 0;
+  flex: 1;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+}
+.care-multi-menu .care-multi-add {
+  flex: none;
+  justify-content: center;
+  padding: 0 12px;
+  border: 1px solid #bfdbfe;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+  font-weight: 700;
+}
+.care-multi-menu .care-multi-add:disabled {
+  border-color: var(--line);
+  background: #f8fafc;
+}
+.care-multi-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.care-multi-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 0 4px 0 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+  font-size: 12px;
+  font-weight: 650;
+}
+.care-multi-chips button {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: var(--brand-dark);
+  background: transparent;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.care-multi-chips button:hover {
+  background: white;
+}

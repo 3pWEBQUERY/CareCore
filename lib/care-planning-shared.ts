@@ -152,3 +152,28 @@ export type EvaluationStats = {
     date: string;
   }>;
 };
+
+// Häufige Ressourcen zur Auswahl im Pflegeziel; eigene Ergänzungen sind möglich. Gespeichert als kommagetrennter Text.
+export const CARE_RESOURCES = [
+  "Motiviert",
+  "Kooperativ",
+  "Zeitlich und örtlich orientiert",
+  "Kann Bedürfnisse äussern",
+  "Kann Schmerzen mitteilen",
+  "Gehfähig mit Hilfsmittel",
+  "Nutzt Rollator",
+  "Bewegt Rollstuhl selbstständig",
+  "Isst selbstständig",
+  "Trinkt selbstständig",
+  "Wäscht sich teilweise selbstständig",
+  "Kleidet sich teilweise selbstständig",
+  "Sieht und hört gut (mit Hilfsmitteln)",
+  "Unterstützung durch Angehörige",
+  "Pflegt soziale Kontakte",
+  "Freude an Aktivitäten",
+];
+export const splitResources = (text: string | null | undefined) =>
+  (text ?? "")
+    .split(/\s*[,;\n]\s*/)
+    .map((item) => item.trim())
+    .filter(Boolean);

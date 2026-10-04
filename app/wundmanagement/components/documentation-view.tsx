@@ -87,7 +87,7 @@ export default function DocumentationView({ showToast }: { showToast: ShowToast 
         ]}
       />
       {feed.error && <LoadError message={feed.error} onRetry={feed.reload} />}
-      <div className="wound-doc-layout">
+      <div className={`wound-doc-layout ${selected ? "" : "single"}`}>
         <section className="card wound-doc-directory" aria-labelledby="wound-doc-list-title">
           <div className="wound-doc-toolbar">
             <div>
