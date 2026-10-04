@@ -14,6 +14,7 @@ import {
   type FolderNode,
   type NewDocumentKind,
 } from "@/lib/files-shared";
+import { OFFICE_TEMPLATES, OFFICE_TYPES, type OfficeKind, type OfficeTemplate } from "@/lib/office/model";
 import { call, fileUrl, loadTree, download } from "./explorer-api";
 import { FileIcon, FolderIcon } from "./file-icon";
 
@@ -96,7 +97,7 @@ export function NewDocumentDialog({
     <EditorDialog
       id="files-document"
       eyebrow="Ablage · Neu"
-      title="Neues Dokument"
+      title="Neue einfache Datei"
       description="Entsteht im geöffneten Ordner und lässt sich gleich hier bearbeiten. Jede Speicherung bleibt als Version erhalten."
       onClose={onClose}
       saving={saving}
@@ -140,6 +141,147 @@ export function NewDocumentDialog({
           maxLength={200}
           value={name}
           placeholder={`z. B. ${kind === "list" ? "Inventar Wäsche" : kind === "note" ? "Protokoll Teamsitzung" : "Merkblatt Besuchszeiten"}`}
+          onChange={(event) => setName(event.target.value)}
+        />
+      </label>
+    </EditorDialog>
+  );
+}
+
+// Kleine Vorschau einer Vorlage (gezeichnet, keine Bilder): Seite, Tabelle oder Folie.
+function TemplatePreview({ template }: { template: OfficeTemplate }) {
+  if (template.kind === "sheet") {
+    const header = template.id !== "sheet-blank";
+    return (
+      <span className={`files-template-preview sheet ${template.id}`} aria-hidden="true">
+        {Array.from({ length: 6 }, (_, row) => (
+          <span key={row} className={row === 0 && header ? "head" : ""}>
+            {Array.from({ length: 4 }, (_, col) => (
+              <i
+                key={col}
+                className={header && row > 0 && col === 3 && template.id !== "sheet-attendance" ? "formula" : ""}
+              />
+            ))}
+          </span>
+        ))}
+      </span>
+    );
+  }
+  if (template.kind === "deck") {
+    return (
+      <span className={`files-template-preview deck ${template.id}`} aria-hidden="true">
+        <b />
+        <em />
+        <small />
+      </span>
+    );
+  }
+  const lines: Record<string, string[]> = {
+    "document-blank": [],
+    "document-minutes": ["h1", "table", "h2", "p", "h2", "li", "li", "h2", "table"],
+    "document-leaflet": ["h1 center", "p center short", "rule", "h2", "p", "h2", "li", "li"],
+    "document-letter": ["gap", "gap", "p right short", "p short", "gap", "p", "p", "p short"],
+    "document-checklist": ["h1", "p short", "h2", "check", "check", "h2", "check", "check"],
+  };
+  return (
+    <span className={`files-template-preview doc ${template.id}`} aria-hidden="true">
+      {(lines[template.id] ?? []).map((line, index) => (
+        <i key={index} className={line} />
+      ))}
+    </span>
+  );
+}
+
+// „Neu“ → Dokument, Tabelle oder Präsentation: Vorlage wählen, Namen geben, im Editor öffnen.
+export function NewOfficeDialog({
+  initialKind,
+  onSubmit,
+  onClose,
+}: {
+  initialKind: OfficeKind;
+  onSubmit: (template: OfficeTemplate, name: string) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [kind, setKind] = useState<OfficeKind>(initialKind);
+  const [templateId, setTemplateId] = useState(`${initialKind}-blank`);
+  const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const templates = OFFICE_TEMPLATES.filter((item) => item.kind === kind);
+  const template = OFFICE_TEMPLATES.find((item) => item.id === templateId) ?? templates[0];
+  return (
+    <EditorDialog
+      id="files-office"
+      eyebrow="Ablage · Neu"
+      title={
+        kind === "document"
+          ? "Neues Dokument (Word)"
+          : kind === "sheet"
+            ? "Neue Tabelle (Excel)"
+            : "Neue Präsentation (PowerPoint)"
+      }
+      description="Entsteht im geöffneten Ordner als echte Office-Datei und öffnet sich gleich im Editor. Änderungen werden automatisch gespeichert."
+      onClose={onClose}
+      saving={saving}
+      error={error}
+      submitLabel="Erstellen und öffnen"
+      onSubmit={async () => {
+        setSaving(true);
+        setError("");
+        try {
+          await onSubmit(template, name.trim());
+        } catch (cause) {
+          setError(errorText(cause));
+          setSaving(false);
+        }
+      }}
+    >
+      <div className="area-editor-wide files-office-kinds" role="tablist" aria-label="Art">
+        {(Object.keys(OFFICE_TYPES) as OfficeKind[]).map((item) => (
+          <button
+            key={item}
+            type="button"
+            role="tab"
+            aria-selected={kind === item}
+            className={kind === item ? "active" : ""}
+            onClick={() => {
+              setKind(item);
+              setTemplateId(`${item}-blank`);
+            }}
+          >
+            <FileIcon file={{ name: `x.${OFFICE_TYPES[item].extension}`, mimeType: OFFICE_TYPES[item].mimeType }} />
+            <span>
+              <strong>{OFFICE_TYPES[item].label}</strong>
+              <small>.{OFFICE_TYPES[item].extension}</small>
+            </span>
+          </button>
+        ))}
+      </div>
+      <fieldset className="area-editor-wide files-templates">
+        <legend>Vorlage</legend>
+        <div role="radiogroup" aria-label="Vorlage">
+          {templates.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="radio"
+              aria-checked={template.id === item.id}
+              className={template.id === item.id ? "active" : ""}
+              onClick={() => setTemplateId(item.id)}
+            >
+              <TemplatePreview template={item} />
+              <strong>{item.label}</strong>
+              <small>{item.description}</small>
+            </button>
+          ))}
+        </div>
+      </fieldset>
+      <label className="area-editor-wide">
+        <span>Name</span>
+        <input
+          maxLength={200}
+          value={name}
+          placeholder={template.name}
           onChange={(event) => setName(event.target.value)}
         />
       </label>

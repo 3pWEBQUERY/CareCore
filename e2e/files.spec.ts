@@ -29,10 +29,10 @@ test("Ablage: Ordner, Hochladen, Bearbeiten mit Versionen, Verschieben, Papierko
   await conflict.getByRole("button", { name: "Ersetzen" }).click();
   await expect(page.locator(".files-table tr", { hasText: "Plan.txt" }).locator(".files-version")).toHaveText("V2");
 
-  // Neues Textdokument anlegen und bearbeiten.
+  // Neue einfache Textdatei anlegen und bearbeiten.
   await page.getByRole("button", { name: "Neu" }).click();
-  await page.getByRole("menuitem", { name: "Textdokument" }).click();
-  const documentDialog = page.getByRole("dialog", { name: "Neues Dokument" });
+  await page.getByRole("menuitem", { name: "Einfacher Text" }).click();
+  const documentDialog = page.getByRole("dialog", { name: "Neue einfache Datei" });
   await documentDialog.getByLabel("Name").fill("Merkblatt");
   await documentDialog.getByRole("button", { name: "Erstellen und öffnen" }).click();
   const editor = page.getByRole("dialog", { name: "Merkblatt.txt" });

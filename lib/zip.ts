@@ -1,4 +1,4 @@
-import { crc32, deflateRawSync } from "node:zlib";
+import { crc32, deflateRawSync, inflateRawSync } from "node:zlib";
 
 // ZIP-Archiv (PKZIP, Deflate) für den Download mehrerer Dateien oder ganzer Ordner aus der Ablage.
 // Dateinamen in UTF-8 (Bit 11), Pfade mit „/“; Zeitstempel im DOS-Format (lokale Zeit genügt für Downloads).
@@ -71,4 +71,42 @@ export function uniquePath(path: string, taken: Set<string>) {
   }
   taken.add(candidate.toLowerCase());
   return candidate;
+}
+
+// ZIP-Archiv lesen (Office-Dateien sind ZIP-Pakete): Einträge über das zentrale Verzeichnis, Deflate oder unverpackt.
+// Begrenzt die entpackte Grösse, damit eine präparierte Datei den Server nicht überlastet.
+export function readZip(buffer: Buffer, maxBytes = 64 * 1024 * 1024) {
+  const entries = new Map<string, Buffer>();
+  let end = -1;
+  for (let at = buffer.length - 22; at >= Math.max(0, buffer.length - 22 - 65_535); at -= 1)
+    if (buffer.readUInt32LE(at) === 0x06054b50) {
+      end = at;
+      break;
+    }
+  if (end < 0) throw new Error("Kein ZIP-Archiv.");
+  const count = buffer.readUInt16LE(end + 10);
+  let at = buffer.readUInt32LE(end + 16);
+  let total = 0;
+  for (let index = 0; index < count; index += 1) {
+    if (buffer.readUInt32LE(at) !== 0x02014b50) throw new Error("ZIP-Verzeichnis beschädigt.");
+    const method = buffer.readUInt16LE(at + 10);
+    const packedSize = buffer.readUInt32LE(at + 20);
+    const size = buffer.readUInt32LE(at + 24);
+    const nameLength = buffer.readUInt16LE(at + 28);
+    const extraLength = buffer.readUInt16LE(at + 30);
+    const commentLength = buffer.readUInt16LE(at + 32);
+    const offset = buffer.readUInt32LE(at + 42);
+    const name = buffer.subarray(at + 46, at + 46 + nameLength).toString("utf8");
+    at += 46 + nameLength + extraLength + commentLength;
+    if (name.endsWith("/")) continue;
+    total += size;
+    if (total > maxBytes) throw new Error("ZIP-Archiv zu gross.");
+    const localName = buffer.readUInt16LE(offset + 26);
+    const localExtra = buffer.readUInt16LE(offset + 28);
+    const start = offset + 30 + localName + localExtra;
+    const data = buffer.subarray(start, start + packedSize);
+    if (method === 0) entries.set(name, Buffer.from(data));
+    else if (method === 8) entries.set(name, inflateRawSync(data, { maxOutputLength: Math.max(1, size) }));
+  }
+  return entries;
 }

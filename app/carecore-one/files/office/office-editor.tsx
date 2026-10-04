@@ -1,0 +1,406 @@
+"use client";
+
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  ArrowLeft,
+  CloudCheck,
+  CloudArrowUp,
+  DownloadSimple,
+  FloppyDisk,
+  Printer,
+  Warning,
+} from "@phosphor-icons/react";
+import type { ExplorerFile, FileScope } from "@/lib/files-shared";
+import {
+  OFFICE_TYPES,
+  type DeckModel,
+  type DocumentModel,
+  type OfficeKind,
+  type OfficeModel,
+  type SheetModel,
+} from "@/lib/office/model";
+import { RequestError, call, download, fileUrl } from "../explorer-api";
+import { FileIcon } from "../file-icon";
+import type { EditorProps } from "./editor-props";
+
+// Vollbild-Editor für Dokument, Tabelle und Präsentation: lädt die Datei, speichert automatisch (ohne für jeden
+// Zwischenstand eine Version anzulegen), „Speichern“ legt eine Version an. Gleichzeitige Änderungen anderer werden
+// erkannt; dann lässt sich die eigene Fassung als Kopie sichern.
+const DocEditor = dynamic(() => import("./doc-editor"), { ssr: false, loading: () => <EditorLoading /> });
+const SheetEditor = dynamic(() => import("./sheet-editor"), { ssr: false, loading: () => <EditorLoading /> });
+const DeckEditor = dynamic(() => import("./deck-editor"), { ssr: false, loading: () => <EditorLoading /> });
+
+const AUTOSAVE_MS = 1500;
+
+function EditorLoading() {
+  return <p className="office-loading">Editor wird geladen …</p>;
+}
+
+type Loaded = {
+  kind: OfficeKind;
+  model: OfficeModel;
+  revision: number;
+  canEdit: boolean;
+  imported: boolean;
+  file: ExplorerFile;
+};
+type Status = "saved" | "dirty" | "saving" | "error" | "conflict";
+
+const time = () => new Intl.DateTimeFormat("de-CH", { timeStyle: "short" }).format(new Date());
+
+export default function OfficeEditor({
+  file,
+  scope,
+  onClose,
+  onCopied,
+}: {
+  file: ExplorerFile;
+  scope: FileScope;
+  onClose: (changed: boolean) => void;
+  onCopied: (copy: ExplorerFile) => void;
+}) {
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [loadError, setLoadError] = useState("");
+  const [status, setStatusState] = useState<Status>("saved");
+  const statusRef = useRef<Status>("saved");
+  const setStatus = useCallback((next: Status) => {
+    statusRef.current = next;
+    setStatusState(next);
+  }, []);
+  const [message, setMessage] = useState("");
+  const [savedAt, setSavedAt] = useState("");
+  const [notice, setNotice] = useState("");
+  const [name, setName] = useState(file.name);
+  const model = useRef<OfficeModel | null>(null);
+  const revision = useRef(0);
+  const dirty = useRef(false);
+  const saving = useRef<Promise<void> | null>(null);
+  const timer = useRef<number | null>(null);
+  const changed = useRef(false);
+  const forceVersion = useRef(false);
+
+  useEffect(() => {
+    call<Loaded>(`/api/cloud/files/${file.id}?office=1`)
+      .then((result) => {
+        model.current = result.model;
+        revision.current = result.revision;
+        // Aus Word, Excel oder PowerPoint: die erste Speicherung behält das Original als Version.
+        forceVersion.current = result.imported;
+        setLoaded(result);
+      })
+      .catch((cause) =>
+        setLoadError(cause instanceof Error ? cause.message : "Die Datei konnte nicht geöffnet werden."),
+      );
+  }, [file.id]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const id = window.setTimeout(() => setNotice(""), 3200);
+    return () => window.clearTimeout(id);
+  }, [notice]);
+
+  const save = useCallback(
+    async (manual: boolean): Promise<void> => {
+      if (timer.current) {
+        window.clearTimeout(timer.current);
+        timer.current = null;
+      }
+      if (saving.current) {
+        await saving.current;
+        if (!dirty.current && !manual) return;
+      }
+      if (!model.current || (!dirty.current && !manual)) return;
+      const snapshot = model.current;
+      dirty.current = false;
+      setStatus("saving");
+      const task = (async () => {
+        try {
+          const result = await call<{ file: ExplorerFile; revision: number }>(`/api/cloud/files/${file.id}`, {
+            method: "PUT",
+            json: { model: snapshot, revision: revision.current, auto: !manual && !forceVersion.current },
+          });
+          revision.current = result.revision;
+          forceVersion.current = false;
+          changed.current = true;
+          setSavedAt(time());
+          setMessage("");
+          if (manual) setNotice(`Version ${result.file.versionNo} gespeichert`);
+          setStatus(dirty.current ? "dirty" : "saved");
+        } catch (cause) {
+          dirty.current = true;
+          if (cause instanceof RequestError && cause.status === 409) {
+            setStatus("conflict");
+            setMessage(cause.message);
+          } else {
+            setStatus("error");
+            setMessage(cause instanceof Error ? cause.message : "Speichern fehlgeschlagen.");
+          }
+        }
+      })();
+      saving.current = task;
+      await task;
+      saving.current = null;
+    },
+    [file.id, setStatus],
+  );
+
+  const onChange = useCallback(
+    (next: OfficeModel) => {
+      model.current = next;
+      dirty.current = true;
+      if (statusRef.current === "conflict") return;
+      setStatus("dirty");
+      if (timer.current) window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => {
+        timer.current = null;
+        if (statusRef.current !== "conflict") void save(false);
+      }, AUTOSAVE_MS);
+    },
+    [save, setStatus],
+  );
+
+  // Fenster schliessen mit ungespeicherten Änderungen: Browser fragt nach.
+  useEffect(() => {
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (dirty.current || saving.current) event.preventDefault();
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
+  // Seite unter dem Editor nicht mitscrollen; beim Drucken nur den Inhalt.
+  useEffect(() => {
+    document.body.classList.add("office-open");
+    return () => document.body.classList.remove("office-open");
+  }, []);
+
+  async function close() {
+    if (status !== "conflict" && (dirty.current || saving.current)) await save(false);
+    if (dirty.current && status !== "conflict") return;
+    onClose(changed.current);
+  }
+
+  async function rename(next: string) {
+    const clean = next.trim();
+    if (!clean || clean === name) return setName(name);
+    const extension = `.${OFFICE_TYPES[loaded?.kind ?? "document"].extension}`;
+    const full = clean.toLowerCase().endsWith(extension) ? clean : `${clean}${extension}`;
+    try {
+      const result = await call<{ file: ExplorerFile }>(`/api/cloud/files/${file.id}`, {
+        method: "PATCH",
+        json: { name: full },
+      });
+      setName(result.file.name);
+      changed.current = true;
+      setNotice("Umbenannt");
+    } catch (cause) {
+      setName(name);
+      setMessage(cause instanceof Error ? cause.message : "Umbenennen fehlgeschlagen.");
+    }
+  }
+
+  async function saveCopy() {
+    if (!loaded || !model.current) return;
+    const dot = name.lastIndexOf(".");
+    try {
+      const result = await call<{ file: ExplorerFile }>("/api/cloud/files", {
+        method: "POST",
+        json: {
+          action: "document",
+          office: loaded.kind,
+          model: model.current,
+          scope,
+          folderId: file.folderId,
+          name: `${dot > 0 ? name.slice(0, dot) : name} (meine Fassung ${time().replace(":", ".")})`,
+        },
+      });
+      dirty.current = false;
+      changed.current = true;
+      onCopied(result.file);
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : "Die Kopie konnte nicht gespeichert werden.");
+    }
+  }
+
+  async function downloadFile() {
+    if (dirty.current || saving.current) await save(false);
+    download(fileUrl(file.id));
+  }
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        if (loaded?.canEdit && status !== "conflict") void save(true);
+      }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "p") {
+        event.preventDefault();
+        window.print();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [loaded, save, status]);
+
+  const kind = loaded?.kind;
+  const editorProps: Omit<EditorProps<OfficeModel>, "model"> = {
+    onChange,
+    readOnly: !loaded?.canEdit || status === "conflict",
+    title: name.replace(/\.[^.]+$/, ""),
+  };
+  const statusText =
+    status === "saving"
+      ? "Wird gespeichert …"
+      : status === "dirty"
+        ? "Änderungen werden gespeichert …"
+        : status === "error"
+          ? "Nicht gespeichert"
+          : status === "conflict"
+            ? "Von anderer Person geändert"
+            : savedAt
+              ? `Gespeichert um ${savedAt}`
+              : "Alle Änderungen gespeichert";
+
+  return createPortal(
+    <div className={`office-shell kind-${kind ?? "loading"}`} role="dialog" aria-modal="true" aria-label={name}>
+      <header className="office-titlebar">
+        <button
+          type="button"
+          className="office-back"
+          aria-label="Zurück zur Ablage"
+          title="Zurück zur Ablage"
+          onClick={() => void close()}
+        >
+          <ArrowLeft aria-hidden="true" />
+          <span>Ablage</span>
+        </button>
+        <FileIcon file={{ name, mimeType: file.mimeType }} />
+        <div className="office-title">
+          {loaded?.canEdit ? (
+            <input
+              aria-label="Dateiname"
+              value={name}
+              maxLength={200}
+              onChange={(event) => setName(event.target.value)}
+              onBlur={(event) => void rename(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") event.currentTarget.blur();
+                if (event.key === "Escape") {
+                  setName(file.name);
+                  event.currentTarget.blur();
+                }
+              }}
+            />
+          ) : (
+            <strong>{name}</strong>
+          )}
+          <span className={`office-status status-${status}`} role="status" aria-live="polite">
+            {status === "saved" ? (
+              <CloudCheck aria-hidden="true" />
+            ) : status === "saving" || status === "dirty" ? (
+              <CloudArrowUp aria-hidden="true" />
+            ) : (
+              <Warning aria-hidden="true" />
+            )}
+            {loaded && !loaded.canEdit ? "Nur lesen" : statusText}
+          </span>
+        </div>
+        <div className="office-actions">
+          {loaded?.canEdit && (
+            <button
+              type="button"
+              className="office-action"
+              aria-label="Version speichern"
+              disabled={status === "conflict"}
+              onClick={() => void save(true)}
+              title="Als neue Version speichern (Ctrl+S)"
+            >
+              <FloppyDisk aria-hidden="true" />
+              <span>Version speichern</span>
+            </button>
+          )}
+          <button
+            type="button"
+            className="office-action"
+            aria-label="Drucken oder als PDF sichern"
+            disabled={!loaded}
+            onClick={() => window.print()}
+            title="Drucken oder als PDF sichern (Ctrl+P)"
+          >
+            <Printer aria-hidden="true" />
+            <span>Drucken / PDF</span>
+          </button>
+          <button
+            type="button"
+            className="office-action"
+            aria-label="Herunterladen"
+            title="Herunterladen"
+            disabled={!loaded}
+            onClick={() => void downloadFile()}
+          >
+            <DownloadSimple aria-hidden="true" />
+            <span>Herunterladen</span>
+          </button>
+        </div>
+      </header>
+      {(status === "conflict" || status === "error" || message) && (
+        <div className={`office-banner ${status === "conflict" ? "critical" : "attention"}`} role="alert">
+          <Warning aria-hidden="true" />
+          <span>{message || "Speichern fehlgeschlagen."}</span>
+          {status === "conflict" ? (
+            <>
+              <button type="button" onClick={() => void saveCopy()}>
+                Meine Fassung als Kopie sichern
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  dirty.current = false;
+                  onClose(true);
+                }}
+              >
+                Verwerfen und schliessen
+              </button>
+            </>
+          ) : status === "error" ? (
+            <button type="button" onClick={() => void save(false)}>
+              Erneut versuchen
+            </button>
+          ) : null}
+        </div>
+      )}
+      {loaded?.imported && loaded.canEdit && (
+        <div className="office-banner info" role="note">
+          <span>
+            Diese Datei stammt aus einem anderen Programm. Text, Tabellen und Bilder lassen sich hier bearbeiten;
+            besondere Elemente wie Diagramme, Textfelder oder Makros werden beim Speichern nicht übernommen. Das
+            Original bleibt als Version erhalten.
+          </span>
+        </div>
+      )}
+      <div className="office-body">
+        {loadError ? (
+          <p className="office-loading error" role="alert">
+            {loadError}
+          </p>
+        ) : !loaded ? (
+          <EditorLoading />
+        ) : kind === "document" ? (
+          <DocEditor {...editorProps} model={loaded.model as DocumentModel} />
+        ) : kind === "sheet" ? (
+          <SheetEditor {...editorProps} model={loaded.model as SheetModel} />
+        ) : (
+          <DeckEditor {...editorProps} model={loaded.model as DeckModel} />
+        )}
+      </div>
+      {notice && (
+        <div className="office-toast" role="status">
+          {notice}
+        </div>
+      )}
+    </div>,
+    document.body,
+  );
+}

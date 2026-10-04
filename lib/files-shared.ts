@@ -62,9 +62,10 @@ export const FILE_MAX_BYTES = 4 * 1024 * 1024;
 export const TEXT_EDIT_MAX_BYTES = 512 * 1024;
 export const TRASH_DAYS = 30;
 
-// Neue Dateien direkt in der Ablage: Textdokument, Notiz (Markdown) und Liste (CSV, z. B. für Excel).
+// Einfache Dateien direkt in der Ablage: reiner Text, Notiz (Markdown) und Liste (CSV). Dokumente, Tabellen und
+// Präsentationen im Office-Format: lib/office/model.ts.
 export const NEW_DOCUMENTS = {
-  text: { label: "Textdokument", extension: "txt", mimeType: "text/plain" },
+  text: { label: "Einfacher Text", extension: "txt", mimeType: "text/plain" },
   note: { label: "Notiz", extension: "md", mimeType: "text/markdown" },
   list: { label: "Liste (CSV)", extension: "csv", mimeType: "text/csv" },
 } as const;

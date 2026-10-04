@@ -22,6 +22,20 @@ import {
   type NewDocumentKind,
 } from "@/lib/files-shared";
 import { createZip, uniquePath, type ZipEntry } from "@/lib/zip";
+import { buildDocx, readDocx } from "@/lib/office/docx";
+import { buildPptx, readPptx } from "@/lib/office/pptx";
+import { buildXlsx, readXlsx } from "@/lib/office/xlsx";
+import {
+  OFFICE_TEMPLATES,
+  OFFICE_TYPES,
+  cleanModel,
+  officeKindOf,
+  templateModel,
+  type DeckModel,
+  type DocumentModel,
+  type OfficeModel,
+  type SheetModel,
+} from "@/lib/office/model";
 
 // Ablage von CareCore One, aufgebaut wie der Dateibereich eines Teams:
 // - „Meine Dateien“ (purpose 'cloud', nur für die Person) und „Gemeinsame Ablage“ (purpose 'shared', ganzes Haus)
@@ -427,45 +441,75 @@ async function storeContent(actor: CarecoreActor, key: string, bytes: Buffer, ty
 }
 
 // Bisherige Fassung als Version ablegen und neuen Inhalt speichern (gleiche Datei, Version + 1).
+// Automatisches Speichern derselben Person innerhalb von zehn Minuten („coalesce“) ersetzt den Inhalt ohne neue
+// Version – sonst entstünde bei jedem Tastendruck-Stopp eine Version. Der Zähler „revision“ steigt bei jeder
+// Speicherung und schützt vor dem Überschreiben fremder Änderungen.
+const COALESCE_MINUTES = 10;
+
 async function writeVersion(
   actor: CarecoreActor,
   fileId: string,
   bytes: Buffer,
   type: string,
-  expectedVersion?: number,
+  check: { versionNo?: number; revision?: number; coalesce?: boolean } = {},
 ) {
   const sql = carecoreDb();
   const rows = (await sql`
-    SELECT name, mime_type, size_bytes, content_base64, storage_key, version_no, updated_by, uploaded_by, updated_at
+    SELECT version_no, revision, updated_by, storage_key,
+      updated_at > NOW() - make_interval(mins => ${COALESCE_MINUTES}) AS recent
     FROM carecore_cloud_files WHERE id = ${fileId}`) as Row[];
   const current = rows[0];
   if (!current) throw new ApiError("Datei nicht gefunden.", 404);
   const version = Number(current.version_no);
-  if (expectedVersion !== undefined && expectedVersion !== version)
-    throw new ApiError(
+  const revision = Number(current.revision ?? 0);
+  const conflict = () =>
+    new ApiError(
       "Die Datei wurde inzwischen von jemand anderem geändert. Bitte neu öffnen und die Änderung erneut vornehmen.",
       409,
     );
+  if (check.versionNo !== undefined && check.versionNo !== version) throw conflict();
+  if (check.revision !== undefined && check.revision !== revision) throw conflict();
+  if (check.coalesce && current.updated_by === actor.id && current.recent === true) {
+    const content = await storeContent(actor, `${fileId}.v${version}.r${revision + 1}`, bytes, type);
+    const changed = (await sql`
+      UPDATE carecore_cloud_files SET content_base64 = ${content.base64}, storage_key = ${content.storageKey},
+        size_bytes = ${bytes.length}, mime_type = ${type}, revision = ${revision + 1}, updated_at = NOW()
+      WHERE id = ${fileId} AND revision = ${revision}
+      RETURNING id`) as Row[];
+    if (!changed[0]) {
+      await removeMedia([content.storageKey]);
+      throw conflict();
+    }
+    // Die ersetzte Fassung ist keine Version: ihren Speicher freigeben, sofern nichts anderes darauf zeigt.
+    if (current.storage_key && current.storage_key !== content.storageKey) {
+      const used = (await sql`
+        SELECT 1 FROM carecore_cloud_file_versions WHERE storage_key = ${current.storage_key}
+        UNION ALL SELECT 1 FROM carecore_cloud_files WHERE storage_key = ${current.storage_key} LIMIT 1`) as Row[];
+      if (!used[0]) await removeMedia([current.storage_key]);
+    }
+    return { versionNo: version, revision: revision + 1, archived: false };
+  }
   const next = version + 1;
   const content = await storeContent(actor, `${fileId}.v${next}`, bytes, type);
-  // Nur wenn die Datei noch die erwartete Version hat (gleichzeitiges Speichern verliert sonst nichts unbemerkt).
+  // Nur wenn die Datei noch die erwartete Fassung hat (gleichzeitiges Speichern verliert sonst nichts unbemerkt).
   const changed = (await sql.transaction([
     sql`
       INSERT INTO carecore_cloud_file_versions (id, file_id, version_no, name, mime_type, size_bytes, content_base64, storage_key, uploaded_by, created_at)
       SELECT ${randomUUID()}, id, version_no, name, mime_type, size_bytes, content_base64, storage_key,
         COALESCE(updated_by, uploaded_by), updated_at
-      FROM carecore_cloud_files WHERE id = ${fileId} AND version_no = ${version}`,
+      FROM carecore_cloud_files WHERE id = ${fileId} AND version_no = ${version} AND revision = ${revision}`,
     sql`
       UPDATE carecore_cloud_files SET content_base64 = ${content.base64}, storage_key = ${content.storageKey},
-        size_bytes = ${bytes.length}, mime_type = ${type}, version_no = ${next}, updated_by = ${actor.id}, updated_at = NOW()
-      WHERE id = ${fileId} AND version_no = ${version}
+        size_bytes = ${bytes.length}, mime_type = ${type}, version_no = ${next}, revision = ${revision + 1},
+        updated_by = ${actor.id}, updated_at = NOW()
+      WHERE id = ${fileId} AND version_no = ${version} AND revision = ${revision}
       RETURNING id`,
   ])) as Row[][];
   if (!changed[1]?.[0]) {
     await removeMedia([content.storageKey]);
     throw new ApiError("Die Datei wurde gleichzeitig geändert. Bitte erneut versuchen.", 409);
   }
-  return next;
+  return { versionNo: next, revision: revision + 1, archived: true };
 }
 
 export type UploadResult = { file: ExplorerFile } | { conflict: { id: string; name: string } };
@@ -494,7 +538,7 @@ export async function uploadFile(actor: CarecoreActor, form: FormData): Promise<
   if (existing && mode !== "replace" && mode !== "keep") return { conflict: { id: existing.id, name: existing.name } };
   if (existing && mode === "replace") {
     assertEditFile(index, existing);
-    const version = await writeVersion(actor, existing.id, bytes, type);
+    const { versionNo: version } = await writeVersion(actor, existing.id, bytes, type);
     await audit(actor, scope, "shared_file", existing.id, "versioned", { name, version });
     const reloaded = await loadScope(actor, scope);
     return { file: reloaded.toFile(reloaded.file(existing.id)) };
@@ -511,20 +555,35 @@ export async function uploadFile(actor: CarecoreActor, form: FormData): Promise<
   return { file: reloaded.toFile(reloaded.file(id)) };
 }
 
-// Neues Textdokument, Notiz oder Liste direkt in der Ablage (danach im Editor bearbeitbar).
+// Neues Dokument direkt in der Ablage: Word-Dokument, Excel-Tabelle oder PowerPoint-Präsentation aus einer Vorlage
+// ({ template }), als Kopie eines geöffneten Dokuments ({ office, model }) oder eine einfache Textdatei, Notiz oder
+// Liste ({ kind }). Danach öffnet es sich im Editor.
 export async function createDocument(actor: CarecoreActor, body: Record<string, unknown>) {
   const scope = scopeOf(body.scope);
+  const template = OFFICE_TEMPLATES.find((item) => item.id === body.template);
+  const office = body.office === "document" || body.office === "sheet" || body.office === "deck" ? body.office : null;
   const kind = (String(body.kind) in NEW_DOCUMENTS ? String(body.kind) : "text") as NewDocumentKind;
-  const spec = NEW_DOCUMENTS[kind];
+  const spec = template ? OFFICE_TYPES[template.kind] : office ? OFFICE_TYPES[office] : NEW_DOCUMENTS[kind];
   const index = await loadScope(actor, scope);
   const folderId = folderIdOf(body.folderId);
   if (folderId) index.folder(folderId);
-  let name = cleanName(body.name, 200) || spec.label;
+  const given = cleanName(body.name, 200);
+  let name = given || (template ? template.name : spec.label);
+  if (office && !body.model) throw new ApiError("Inhalt fehlt.");
   if (extensionOf(name) !== spec.extension) name = `${name}.${spec.extension}`;
-  if (index.siblingsNames(folderId).some((item) => item.toLocaleLowerCase("de-CH") === name.toLocaleLowerCase("de-CH")))
+  const taken = index.siblingsNames(folderId);
+  // Ohne eigenen Namen wie in Office: „Protokoll Teamsitzung (2).docx“; ein gewählter Name muss frei sein.
+  if (!given || office) name = nextFreeName(name, taken);
+  else if (taken.some((item) => item.toLocaleLowerCase("de-CH") === name.toLocaleLowerCase("de-CH")))
     throw new ApiError("Eine Datei mit diesem Namen gibt es hier bereits.", 409);
   const id = randomUUID();
-  const bytes = Buffer.from(typeof body.content === "string" ? body.content.slice(0, TEXT_EDIT_MAX_BYTES) : "", "utf8");
+  const bytes = template
+    ? buildOffice(templateModel(template.id), name, String(actor.display_name ?? ""))
+    : office
+      ? buildOffice(cleanModel(office, body.model), name, String(actor.display_name ?? ""))
+      : Buffer.from(typeof body.content === "string" ? body.content.slice(0, TEXT_EDIT_MAX_BYTES) : "", "utf8");
+  if (bytes.length > FILE_MAX_BYTES)
+    throw new ApiError("Die Datei würde grösser als 4 MB. Bitte Bilder verkleinern oder entfernen.", 413);
   const content = await storeContent(actor, id, bytes, spec.mimeType);
   await carecoreDb()`
     INSERT INTO carecore_cloud_files (id, organization_id, name, mime_type, size_bytes, content_base64, storage_key, uploaded_by, updated_by, purpose, folder_id)
@@ -533,6 +592,77 @@ export async function createDocument(actor: CarecoreActor, body: Record<string, 
   await audit(actor, scope, "shared_file", id, "uploaded", { name, folder: index.pathOf(folderId) });
   const reloaded = await loadScope(actor, scope);
   return reloaded.toFile(reloaded.file(id));
+}
+
+function buildOffice(model: OfficeModel, name: string, author: string) {
+  const meta = { title: name.replace(/\.[^.]+$/, ""), author };
+  if (model.kind === "document") return buildDocx(model, meta);
+  if (model.kind === "sheet") return buildXlsx(model, meta);
+  return buildPptx(model, meta);
+}
+
+// Dokument, Tabelle oder Präsentation zum Bearbeiten öffnen (auch Dateien aus Word, Excel oder PowerPoint).
+export async function readOffice(actor: CarecoreActor, fileId: string) {
+  const { index, file } = await locateFile(actor, fileId);
+  if (file.deletedAt) throw new ApiError("Die Datei liegt im Papierkorb.", 409);
+  const kind = officeKindOf(file.name);
+  if (!kind) throw new ApiError("Diese Datei lässt sich nicht als Dokument, Tabelle oder Präsentation öffnen.");
+  const rows = (await carecoreDb()`
+    SELECT content_base64, storage_key, revision FROM carecore_cloud_files WHERE id = ${fileId}`) as Row[];
+  const bytes = await mediaContent(rows[0]?.storage_key, rows[0]?.content_base64);
+  if (!bytes) throw new ApiError("Der Inhalt der Datei ist nicht verfügbar.", 404);
+  let read: { model: OfficeModel; imported: boolean };
+  try {
+    read = kind === "document" ? readDocx(bytes) : kind === "sheet" ? readXlsx(bytes) : readPptx(bytes);
+  } catch {
+    throw new ApiError("Die Datei ist beschädigt oder kein gültiges Office-Dokument und lässt sich nicht öffnen.", 422);
+  }
+  return {
+    file: index.toFile(file),
+    kind,
+    model: read.model,
+    imported: read.imported,
+    revision: Number(rows[0]?.revision ?? 0),
+    canEdit: index.canEditFile(file),
+  };
+}
+
+// Speichern aus dem Editor: schreibt eine echte .docx/.xlsx/.pptx-Datei. Automatisches Speichern („auto“) fasst
+// Änderungen derselben Person zusammen; „Speichern“ von Hand legt immer eine Version an.
+export async function saveOffice(actor: CarecoreActor, fileId: string, body: Record<string, unknown>) {
+  const { index, file, scope } = await locateFile(actor, fileId);
+  assertEditFile(index, file);
+  if (file.deletedAt) throw new ApiError("Die Datei liegt im Papierkorb.", 409);
+  const kind = officeKindOf(file.name);
+  if (!kind) throw new ApiError("Diese Datei ist kein Dokument, keine Tabelle und keine Präsentation.");
+  const revision = Number(body.revision);
+  if (!Number.isInteger(revision)) throw new ApiError("Stand der Datei fehlt. Bitte neu öffnen.");
+  const model = cleanModel(kind, body.model);
+  const bytes =
+    kind === "document"
+      ? buildDocx(model as DocumentModel, {
+          title: file.name.replace(/\.[^.]+$/, ""),
+          author: String(actor.display_name ?? ""),
+        })
+      : kind === "sheet"
+        ? buildXlsx(model as SheetModel, {
+            title: file.name.replace(/\.[^.]+$/, ""),
+            author: String(actor.display_name ?? ""),
+          })
+        : buildPptx(model as DeckModel, {
+            title: file.name.replace(/\.[^.]+$/, ""),
+            author: String(actor.display_name ?? ""),
+          });
+  if (bytes.length > FILE_MAX_BYTES)
+    throw new ApiError("Die Datei würde grösser als 4 MB. Bitte Bilder verkleinern oder entfernen.", 413);
+  const result = await writeVersion(actor, fileId, bytes, OFFICE_TYPES[kind].mimeType, {
+    revision,
+    coalesce: body.auto === true,
+  });
+  if (result.archived)
+    await audit(actor, scope, "shared_file", fileId, "versioned", { name: file.name, version: result.versionNo });
+  const reloaded = await loadScope(actor, scope);
+  return { file: reloaded.toFile(reloaded.file(fileId)), revision: result.revision };
 }
 
 // Text zum Bearbeiten (UTF-8) mit aktueller Version für die Kontrolle beim Speichern.
@@ -558,7 +688,9 @@ export async function saveText(actor: CarecoreActor, fileId: string, body: Recor
   if (typeof body.content !== "string") throw new ApiError("Inhalt fehlt.");
   const bytes = Buffer.from(body.content, "utf8");
   if (bytes.length > TEXT_EDIT_MAX_BYTES) throw new ApiError("Der Text ist zu lang (höchstens 512 KB).", 413);
-  const version = await writeVersion(actor, fileId, bytes, file.mimeType || "text/plain", Number(body.versionNo));
+  const { versionNo: version } = await writeVersion(actor, fileId, bytes, file.mimeType || "text/plain", {
+    versionNo: Number(body.versionNo),
+  });
   await audit(actor, scope, "shared_file", fileId, "versioned", { name: file.name, version });
   const reloaded = await loadScope(actor, scope);
   return reloaded.toFile(reloaded.file(fileId));
@@ -709,7 +841,7 @@ export async function restoreVersion(actor: CarecoreActor, fileId: string, versi
     WHERE id = ${versionId} AND file_id = ${fileId}`) as Row[];
   const content = rows[0] ? await mediaContent(rows[0].storage_key, rows[0].content_base64) : null;
   if (!rows[0] || !content) throw new ApiError("Version nicht gefunden.", 404);
-  const version = await writeVersion(actor, fileId, content, String(rows[0].mime_type));
+  const { versionNo: version } = await writeVersion(actor, fileId, content, String(rows[0].mime_type));
   await audit(actor, scope, "shared_file", fileId, "version_restored", {
     name: file.name,
     from: Number(rows[0].version_no),
