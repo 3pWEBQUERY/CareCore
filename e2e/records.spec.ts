@@ -114,7 +114,10 @@ test("Reanimationsstatus: in den Stammdaten erfassen, im Aktenkopf und im Überl
   // Der absichtlich unvollständige Speicherversuch wird mit 400 abgewiesen.
   const errors = watchErrors(page, [/^400 PATCH \/api\/residents\/[^/]+\/record$/]);
   await page.goto("/c/bewohner");
-  await page.locator(".resident-list-row").nth(1).click();
+  const row = page.locator(".resident-list-row").nth(1);
+  // REA-Status direkt auf der Karte im Verzeichnis, ohne die Akte zu öffnen.
+  await expect(row.locator(".rea-badge")).toBeVisible();
+  await row.click();
   const badge = page.locator(".record-resuscitation");
   await expect(badge).toBeVisible();
   await page.locator(".resident-record-tabs button", { hasText: "Stammdaten" }).click();
@@ -130,6 +133,11 @@ test("Reanimationsstatus: in den Stammdaten erfassen, im Aktenkopf und im Überl
   await expect(page.getByRole("button", { name: "Stammdaten bearbeiten" })).toBeVisible();
   await expect(badge).toHaveText("REA: Nein");
   await expect(badge).toHaveClass(/critical/);
+  // Nach dem Speichern zeigen alle Karten den neuen Stand.
+  await page.goto("/c/bewohner");
+  await expect(
+    page.locator(".resident-list-row").nth(1).getByRole("img", { name: "Keine Reanimation (DNR)" }),
+  ).toHaveText("REA Nein");
 
   const href = await page.locator(".record-transfer-link").getAttribute("href");
   await page.goto(href ?? "");

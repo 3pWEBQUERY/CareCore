@@ -26,6 +26,7 @@ import {
   type ResidentOption,
 } from "./entry-parts";
 import { useCareResident, useResidentNavigation, useTerms } from "@/app/components/care-context";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 export type DocumentationView = "quick" | "history";
 type EntriesPayload = { entries: DocEntry[]; canWrite: boolean };
@@ -170,7 +171,9 @@ function QuickView({ showToast }: { showToast: ShowToast }) {
               {(stats.data?.withoutEntry ?? []).map((resident) => (
                 <li key={resident.id}>
                   <button type="button" onClick={() => changeDraft({ ...effective, residentId: resident.id })}>
-                    <strong>{resident.name}</strong>
+                    <strong>
+                      {resident.name} <ResuscitationBadge residentId={resident.id} />
+                    </strong>
                     <small>
                       {resident.room ? `${resident.room} · ` : ""}
                       {resident.lastAt ? `zuletzt ${formatDateTime(resident.lastAt)}` : "noch nie dokumentiert"}

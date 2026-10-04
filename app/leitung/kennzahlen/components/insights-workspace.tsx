@@ -18,6 +18,7 @@ import {
   type WorkforceInsights,
 } from "@/lib/insights-shared";
 import { LeadershipHeading, LeadershipKpis, initialsOf, type Kpi } from "../../components/leadership-page-parts";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 export type InsightsView = "care" | "residents" | "leadership" | "workforce";
 
@@ -187,7 +188,9 @@ function ResidentsView({ data }: { data: ResidentInsights }) {
               {resident.initials}
             </span>
             <span className="resident-insights-person">
-              <strong>{resident.name}</strong>
+              <strong>
+                {resident.name} <ResuscitationBadge residentId={resident.id} />
+              </strong>
               <small>{[resident.room, resident.careUnit].filter(Boolean).join(" · ")}</small>
             </span>
             <span className="resident-insights-cell">

@@ -19,6 +19,7 @@ import { WoundTimeline } from "./wound-timeline";
 import { nextCareLabel } from "./overview-utils";
 import { EntryDialog, type WoundsPayload } from "./wound-dialogs";
 import { useNow } from "@/app/components/use-now";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 type FeedEntry = WoundEntry & {
   residentId: string;
@@ -145,7 +146,9 @@ export default function DocumentationView({ showToast }: { showToast: ShowToast 
                   {initials(entry.residentName)}
                 </span>
                 <span className="wound-doc-resident">
-                  <strong>{entry.residentName}</strong>
+                  <strong>
+                    {entry.residentName} <ResuscitationBadge residentId={entry.residentId} />
+                  </strong>
                   <small>{entry.bodyLocation}</small>
                   <span>
                     {entry.woundType ?? "Wunde"}

@@ -27,6 +27,7 @@ import TrendChart from "./trend-chart";
 import { History, FILTERS, WEEK, ClinicalNote, MeasurementList } from "./overview-parts";
 import { useCareResident, useTerms, useVitalMetrics } from "@/app/components/care-context";
 import { useNow } from "@/app/components/use-now";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 export type VitalsOverview = {
   residents: VitalResident[];
@@ -201,7 +202,9 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
               >
                 <span className="resident-avatar">{resident.initials}</span>
                 <span className="vitals-person">
-                  <strong>{resident.name}</strong>
+                  <strong>
+                    {resident.name} <ResuscitationBadge residentId={resident.id} />
+                  </strong>
                   <small>{[resident.room, resident.careUnit].filter(Boolean).join(" · ")}</small>
                   <em>{resident.lastMeasuredAt ? formatDateTime(resident.lastMeasuredAt) : "Noch keine Messung"}</em>
                 </span>
@@ -242,7 +245,9 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
                   <span className="resident-avatar">{selected.initials}</span>
                   <div>
                     <p className="eyebrow">Ausgewählter {t.one}</p>
-                    <h2>{selected.name}</h2>
+                    <h2>
+                      {selected.name} <ResuscitationBadge residentId={selected.id} />
+                    </h2>
                     <span>{[selected.room, selected.careUnit].filter(Boolean).join(" · ")}</span>
                   </div>
                 </div>

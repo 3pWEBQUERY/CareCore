@@ -19,6 +19,7 @@ import type { AssessmentResult } from "@/lib/assessments";
 import AssessmentDialog from "./assessment-dialog";
 import { Overview, ALL, RISK_FILTERS, toneFor } from "./assessment-view-utils";
 import { HistoryPanel } from "./assessment-history-panel";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 export function OverviewView({ showToast }: { showToast: ShowToast }) {
   const t = useTerms();
@@ -124,7 +125,9 @@ export function OverviewView({ showToast }: { showToast: ShowToast }) {
               <article key={result.id}>
                 <span className="resident-avatar">{resident?.initials ?? "?"}</span>
                 <span>
-                  <strong>{resident?.name ?? "Unbekannt"}</strong>
+                  <strong>
+                    {resident?.name ?? "Unbekannt"} <ResuscitationBadge residentId={result.residentId} />
+                  </strong>
                   <small>{resident?.room}</small>
                 </span>
                 <span>

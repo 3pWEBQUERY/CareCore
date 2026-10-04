@@ -7,6 +7,7 @@ import { ModuleIcon } from "@/app/components/module-icon";
 import { LoadError, formatDate } from "@/app/components/workspace-ui";
 import { RAI_STATE, type RaiResidentRow } from "@/lib/rai-shared";
 import type { RaiData } from "./rai-data";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 const FILTERS = ["Alle", "Fällig", "In Bearbeitung", "Aktuell"];
 
@@ -135,7 +136,9 @@ export function OverviewView({ rai }: { rai: RaiData }) {
               >
                 <span className="resident-avatar">{resident.initials}</span>
                 <span>
-                  <strong>{resident.name}</strong>
+                  <strong>
+                    {resident.name} <ResuscitationBadge residentId={resident.id} />
+                  </strong>
                   <small>
                     {resident.room} · {resident.unit}
                   </small>

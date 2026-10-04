@@ -3,6 +3,7 @@
 import { countOf } from "@/lib/terminology";
 import { Icon } from "./dashboard-shared";
 import type { DashboardState } from "./use-dashboard";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 export function HomeNews({ r }: { r: DashboardState }) {
   const { router, residentNews, newsScope, newsLoading, newsError } = r;
@@ -49,6 +50,7 @@ export function HomeNews({ r }: { r: DashboardState }) {
                 <div className="home-news-person">
                   <strong>
                     {resident.first_name} {resident.last_name}
+                    <ResuscitationBadge residentId={resident.id} />
                   </strong>
                   <small>
                     {resident.room} · {resident.care_unit_name || "ohne Wohnbereich"}

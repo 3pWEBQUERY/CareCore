@@ -2,6 +2,7 @@
 
 import { useTerms } from "@/app/components/care-context";
 import { countOf } from "@/lib/terminology";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 import { Icon, residentStatusFilters, ResidentAvatar } from "./residents-utils";
 import type { ResidentsPageState } from "./use-residents-page";
 
@@ -134,7 +135,10 @@ export function ResidentDirectory({ r }: { r: ResidentsPageState }) {
             <span className="resident-person" role="cell">
               <ResidentAvatar resident={resident} />
               <span>
-                <strong>{resident.name}</strong>
+                <span className="rea-name">
+                  <strong>{resident.name}</strong>
+                  <ResuscitationBadge residentId={resident.id} />
+                </span>
                 <small>{resident.room}</small>
               </span>
             </span>

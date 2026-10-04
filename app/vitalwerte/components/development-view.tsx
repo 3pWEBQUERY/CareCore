@@ -18,6 +18,7 @@ import { abnormalValues, type VitalsOverview } from "./overview-view";
 import TrendChart from "./trend-chart";
 import { useCareResident, useHeaderResident, useTerms, useVitalMetrics } from "@/app/components/care-context";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 type History = { measurements: VitalMeasurement[]; threshold: EffectiveThreshold };
 const RANGES = [
@@ -156,7 +157,9 @@ export default function DevelopmentView() {
                 >
                   <span className={`resident-avatar ${statusTone[item.status]}`}>{item.resident.initials}</span>
                   <span>
-                    <strong>{item.resident.name}</strong>
+                    <strong>
+                      {item.resident.name} <ResuscitationBadge residentId={item.resident.id} />
+                    </strong>
                     <small>
                       {item.metric} {formatVital(item.metric, item.value, item.secondary)} · {statusLabels[item.status]}{" "}
                       · {formatDateTime(item.measuredAt)}

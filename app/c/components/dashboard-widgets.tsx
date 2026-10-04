@@ -3,6 +3,7 @@
 import { type CSSProperties } from "react";
 import { Icon, Timeline } from "./dashboard-shared";
 import type { DashboardState } from "./use-dashboard";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 export function DashboardSummaryStrip({ r }: { r: DashboardState }) {
   const { tasks, assignedResidents } = r;
@@ -178,7 +179,9 @@ export function DashboardResidentsCard({ r }: { r: DashboardState }) {
           >
             <span className={`resident-avatar ${resident.critical ? "critical" : ""}`}>{resident.initials}</span>
             <span>
-              <strong>{resident.name}</strong>
+              <strong>
+                {resident.name} <ResuscitationBadge residentId={resident.id} />
+              </strong>
               <p>
                 {resident.room} · <span className="risk-label">{resident.risk}</span>
               </p>

@@ -25,6 +25,7 @@ import {
 import DayPanel from "./day-panel";
 import { residentFluidStatus, type NutritionOverview } from "./plan-view";
 import { useCareResident, useTerms } from "@/app/components/care-context";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 const ALL_UNITS = "Gesamtes Haus";
 
@@ -126,7 +127,9 @@ export default function FluidsView({ showToast }: { showToast: ShowToast }) {
                   <span className="fluids-resident">
                     <span className="resident-avatar">{resident.initials}</span>
                     <span>
-                      <strong>{resident.name}</strong>
+                      <strong>
+                        {resident.name} <ResuscitationBadge residentId={resident.id} />
+                      </strong>
                       <small>{[resident.room, resident.careUnit].filter(Boolean).join(" · ")}</small>
                       {resident.trends.length > 0 && (
                         <small className="status-text critical" title={resident.trends.map((t) => t.text).join("\n")}>
@@ -173,7 +176,9 @@ export default function FluidsView({ showToast }: { showToast: ShowToast }) {
               <section className="card nutrition-selected">
                 <span className="resident-avatar">{selected.initials}</span>
                 <span>
-                  <strong>{selected.name}</strong>
+                  <strong>
+                    {selected.name} <ResuscitationBadge residentId={selected.id} />
+                  </strong>
                   <small>
                     {detail.data.plan
                       ? [detail.data.plan.diet, detail.data.plan.texture, detail.data.plan.assistance]

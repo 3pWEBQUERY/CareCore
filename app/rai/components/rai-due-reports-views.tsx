@@ -8,6 +8,7 @@ import { LoadError, todayInZurich } from "@/app/components/workspace-ui";
 import { RAI_STATE } from "@/lib/rai-shared";
 import type { RaiData } from "./rai-data";
 import { nextLabel, useOpenAssessment } from "./rai-overview-view";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 const inDays = (days: number) => {
   const date = new Date(`${todayInZurich()}T12:00:00Z`);
@@ -84,7 +85,9 @@ export function DueView({ rai }: { rai: RaiData }) {
             <span className="resident-person">
               <span className="resident-avatar">{item.initials}</span>
               <span>
-                <strong>{item.name}</strong>
+                <strong>
+                  {item.name} <ResuscitationBadge residentId={item.id} />
+                </strong>
                 <small>
                   {item.room} · {item.unit}
                 </small>
@@ -188,7 +191,9 @@ export function ReportsView({ rai }: { rai: RaiData }) {
                 <span className="resident-person">
                   <span className="resident-avatar">{row.initials}</span>
                   <span>
-                    <strong>{row.name}</strong>
+                    <strong>
+                      {row.name} <ResuscitationBadge residentId={row.id} />
+                    </strong>
                     <small>
                       {row.room} · {row.unit}
                     </small>

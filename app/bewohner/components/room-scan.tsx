@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import ModulePageShell from "@/app/components/module-page-shell";
 import { setCareResident, useTerms } from "@/app/components/care-context";
 import { EmptyState, LoadError, PageHeading, useApiData } from "@/app/components/workspace-ui";
+import { ResuscitationBadge } from "@/app/components/resuscitation-badge";
 
 type RoomResidents = {
   room: { id: string; name: string; careUnit: string };
@@ -47,6 +48,7 @@ function RoomScanContent() {
                 <Link href={`/c/bewohner?resident=${resident.id}`} onClick={() => setCareResident(resident.id)}>
                   {resident.name}
                 </Link>
+                <ResuscitationBadge residentId={resident.id} />
                 {resident.status === "transferred" && <small>verlegt</small>}
               </li>
             ))}
