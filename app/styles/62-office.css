@@ -2019,3 +2019,50 @@ body.office-open {
     -webkit-print-color-adjust: exact;
   }
 }
+
+/* Tooltips (Ablage und Office): dunkle Sprechblase mit Tastenkürzel. */
+.care-tooltip {
+  position: fixed;
+  z-index: 1400;
+  max-width: 280px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  border-radius: 6px;
+  color: white;
+  background: #102a43;
+  box-shadow: 0 8px 22px rgba(15, 42, 67, 0.28);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-2px);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+.care-tooltip.above {
+  transform: translateY(2px);
+}
+.care-tooltip.visible {
+  opacity: 1;
+  transform: none;
+}
+.care-tooltip kbd {
+  padding: 1px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  color: #dbe7ff;
+  background: rgba(255, 255, 255, 0.08);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+@media print {
+  .care-tooltip {
+    display: none;
+  }
+}

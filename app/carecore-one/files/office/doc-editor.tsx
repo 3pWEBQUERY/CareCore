@@ -48,6 +48,7 @@ import {
 } from "@phosphor-icons/react";
 import { DEFAULT_PAGE, MARGINS_MM, type DocNode, type DocumentModel, type PageSetup } from "@/lib/office/model";
 import type { EditorProps } from "./editor-props";
+import { alignText, toggleList } from "./text-commands";
 import { ColorPicker, MenuList, ToolButton, ToolGroup, ToolPopover, ToolSeparator, imageToDataUrl } from "./office-ui";
 
 // Seitenumbruch wie in Word (Ctrl+Enter); erscheint im Editor als gestrichelte Linie.
@@ -401,14 +402,19 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
     [],
   );
 
+  // Stabile Einstellungen: sonst übernimmt der Editor sie bei jedem Zeichnen neu und hebt die Markierung auf.
+  const editorProps = useMemo(
+    () => ({
+      attributes: { class: "office-prose", "aria-label": `Dokument ${title}`, spellcheck: "true", lang: "de-CH" },
+    }),
+    [title],
+  );
   const editor = useEditor({
     extensions,
     content: model.content,
     editable: !readOnly,
     immediatelyRender: false,
-    editorProps: {
-      attributes: { class: "office-prose", "aria-label": `Dokument ${title}`, spellcheck: "true", lang: "de-CH" },
-    },
+    editorProps,
     onFocus: () => {
       touched.current = true;
     },
@@ -627,7 +633,7 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
               label="Linksbündig"
               icon={<TextAlignLeft />}
               active={state.align === "left"}
-              onClick={() => chain().setTextAlign("left").run()}
+              onClick={() => alignText(editor, "left")}
             />
             <ToolButton
               label="Zentriert"
@@ -651,19 +657,19 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
               label="Aufzählung"
               icon={<ListBullets />}
               active={state.bullet}
-              onClick={() => chain().toggleBulletList().run()}
+              onClick={() => toggleList(editor, "bulletList", "listItem")}
             />
             <ToolButton
               label="Nummerierung"
               icon={<ListNumbers />}
               active={state.ordered}
-              onClick={() => chain().toggleOrderedList().run()}
+              onClick={() => toggleList(editor, "orderedList", "listItem")}
             />
             <ToolButton
               label="Aufgabenliste zum Abhaken"
               icon={<ListChecks />}
               active={state.task}
-              onClick={() => chain().toggleTaskList().run()}
+              onClick={() => toggleList(editor, "taskList", "taskItem")}
             />
             <ToolButton
               label="Einzug verkleinern"

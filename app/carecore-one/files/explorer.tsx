@@ -50,6 +50,7 @@ import {
 import { OFFICE_TYPES, officeKindOf, type OfficeKind } from "@/lib/office/model";
 import { call, download, fileUrl, loadTree, uploadOne, zipUrl, type UploadOutcome } from "./explorer-api";
 import OfficeEditor from "./office/office-editor";
+import { TooltipLayer } from "./office/tooltip-layer";
 import {
   ConfirmDialog,
   ConflictDialog,
@@ -767,7 +768,12 @@ export default function FileExplorer({ scope }: { scope: FileScope }) {
                     )}
                     <span className="files-selection">
                       {chosen.length} ausgewählt
-                      <button type="button" aria-label="Auswahl aufheben" onClick={() => setSelected(new Set())}>
+                      <button
+                        type="button"
+                        aria-label="Auswahl aufheben"
+                        data-tip="Auswahl aufheben"
+                        onClick={() => setSelected(new Set())}
+                      >
                         <X aria-hidden="true" />
                       </button>
                     </span>
@@ -903,6 +909,7 @@ export default function FileExplorer({ scope }: { scope: FileScope }) {
                         type="button"
                         aria-pressed={layout === mode}
                         aria-label={mode === "list" ? "Liste" : "Kacheln"}
+                        data-tip={mode === "list" ? "Als Liste anzeigen" : "Als Kacheln anzeigen"}
                         title={mode === "list" ? "Liste" : "Kacheln"}
                         onClick={() => {
                           setLayout(mode);
@@ -1130,7 +1137,7 @@ export default function FileExplorer({ scope }: { scope: FileScope }) {
                                     {entry.name}
                                   </button>
                                   {item.type === "file" && item.file.versionNo > 1 && (
-                                    <em className="files-version" title="Version">
+                                    <em className="files-version" data-tip="Aktuelle Version">
                                       V{item.file.versionNo}
                                     </em>
                                   )}
@@ -1154,6 +1161,7 @@ export default function FileExplorer({ scope }: { scope: FileScope }) {
                                   type="button"
                                   className="files-row-menu"
                                   aria-label={`Aktionen für ${entry.name}`}
+                                  data-tip="Weitere Aktionen"
                                   onClick={(event) => {
                                     event.stopPropagation();
                                     if (!selected.has(key)) select(item);
@@ -1241,7 +1249,7 @@ export default function FileExplorer({ scope }: { scope: FileScope }) {
                                           type="button"
                                           className="icon-button"
                                           aria-label={`Version ${version.versionNo} herunterladen`}
-                                          title="Herunterladen"
+                                          data-tip="Diese Version herunterladen"
                                           onClick={() =>
                                             download(`/api/cloud/files/${single.file.id}?version=${version.id}`)
                                           }
@@ -1253,7 +1261,7 @@ export default function FileExplorer({ scope }: { scope: FileScope }) {
                                             type="button"
                                             className="icon-button"
                                             aria-label={`Version ${version.versionNo} wiederherstellen`}
-                                            title="Wiederherstellen"
+                                            data-tip="Diese Version wiederherstellen"
                                             onClick={() =>
                                               void run(
                                                 () =>
@@ -1379,6 +1387,7 @@ export default function FileExplorer({ scope }: { scope: FileScope }) {
               }}
             />
           )}
+          {dialog?.kind !== "office" && <TooltipLayer />}
           {dialog?.kind === "gallery" && (
             <NewOfficeDialog
               initialKind={dialog.office}

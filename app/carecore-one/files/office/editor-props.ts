@@ -4,4 +4,6 @@ export type EditorProps<T> = {
   onChange: (model: T) => void;
   readOnly: boolean;
   title: string;
+  // Vom Editor gesetzt: übernimmt eine noch offene Eingabe (vor Speichern, Herunterladen, Schliessen).
+  flushRef?: { current: (() => boolean) | null };
 };

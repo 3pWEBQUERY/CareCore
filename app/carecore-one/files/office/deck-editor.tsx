@@ -54,6 +54,7 @@ import {
   type SlideLayout,
 } from "@/lib/office/model";
 import type { EditorProps } from "./editor-props";
+import { alignText, toggleList } from "./text-commands";
 import { ColorPicker, MenuList, ToolButton, ToolGroup, ToolPopover, ToolSeparator, imageToDataUrl } from "./office-ui";
 
 // Masse in Prozent der Folie, Schriftgrössen relativ zur Folienbreite (Folie 960 pt breit wie in PowerPoint).
@@ -211,12 +212,16 @@ function BodyEditor({
     ],
     [placeholder],
   );
+  const editorProps = useMemo(
+    () => ({ attributes: { class: "deck-prose", "aria-label": placeholder } }),
+    [placeholder],
+  );
   const editor = useEditor({
     extensions,
     content: value,
     editable: !readOnly,
     immediatelyRender: false,
-    editorProps: { attributes: { class: "deck-prose", "aria-label": placeholder } },
+    editorProps,
     onUpdate: ({ editor: current }) => emit.current(current.getJSON() as DocNode),
     onFocus: ({ editor: current }) => focus.current(current),
   });
@@ -610,14 +615,14 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
               icon={<ListBullets />}
               disabled={!text}
               active={state?.bullet}
-              onClick={() => text?.().toggleBulletList().run()}
+              onClick={() => focused && toggleList(focused, "bulletList", "listItem")}
             />
             <ToolButton
               label="Nummerierung"
               icon={<ListNumbers />}
               disabled={!text}
               active={state?.ordered}
-              onClick={() => text?.().toggleOrderedList().run()}
+              onClick={() => focused && toggleList(focused, "orderedList", "listItem")}
             />
             <ToolButton
               label="Einzug verkleinern"
@@ -636,7 +641,7 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
               icon={<TextAlignLeft />}
               disabled={!text}
               active={state?.align === "left"}
-              onClick={() => text?.().setTextAlign("left").run()}
+              onClick={() => focused && alignText(focused, "left")}
             />
             <ToolButton
               label="Zentriert"
@@ -774,7 +779,7 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
                     <button
                       type="button"
                       aria-label="Folie nach oben"
-                      title="Nach oben"
+                      data-tip="Folie nach oben"
                       disabled={position === 0}
                       onClick={() => moveSlide(position, position - 1)}
                     >
@@ -783,7 +788,7 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
                     <button
                       type="button"
                       aria-label="Folie nach unten"
-                      title="Nach unten"
+                      data-tip="Folie nach unten"
                       disabled={position === model.slides.length - 1}
                       onClick={() => moveSlide(position, position + 1)}
                     >

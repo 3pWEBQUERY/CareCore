@@ -79,3 +79,46 @@ test("Ablage: Dokument, Tabelle und Präsentation anlegen, bearbeiten und automa
 
   expect(errors).toEqual([]);
 });
+
+// Tabelle: eingegebener Text bleibt stehen – auch beim Klick ausserhalb, auf „Fett“ oder beim Schliessen;
+// Knöpfe zeigen einen eigenen Tooltip; Umbenennen im Titel.
+test("Tabelle: Eingaben gehen nie verloren, Tooltips und Umbenennen", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  const stamp = Date.now();
+  await page.goto("/c/carecore-one/ablage");
+  await page.getByRole("button", { name: "Neu" }).click();
+  await page.getByRole("menuitem", { name: /Tabelle/ }).click();
+  const gallery = page.getByRole("dialog", { name: "Neue Tabelle (Excel)" });
+  await gallery.getByLabel("Name").fill(`Eingaben ${stamp}`);
+  await gallery.getByRole("button", { name: "Erstellen und öffnen" }).click();
+  const cell = (row: number, col: number) => page.locator(".sheet-table tbody tr").nth(row).locator("td").nth(col);
+  await cell(0, 0).click();
+  await page.keyboard.type("Handschuhe Nitril");
+  await cell(3, 2).click();
+  await expect(cell(0, 0)).toHaveText("Handschuhe Nitril");
+  await cell(1, 0).click();
+  await page.keyboard.type("Ausserhalb");
+  await page.getByLabel("Dateiname").click();
+  await expect(cell(1, 0)).toHaveText("Ausserhalb");
+  await cell(2, 0).click();
+  await page.keyboard.type("Fett");
+  await page.getByRole("button", { name: "Fett", exact: true }).click();
+  await page.keyboard.press("Enter");
+  await expect(cell(2, 0)).toHaveText("Fett");
+  await page.getByRole("button", { name: "Kursiv", exact: true }).hover();
+  await expect(page.locator(".care-tooltip.visible")).toContainText("Kursiv");
+  await expect(page.locator(".care-tooltip.visible kbd")).toHaveText("Ctrl+I");
+  const name = page.getByLabel("Dateiname");
+  await name.fill(`Eingaben neu ${stamp}`);
+  await name.press("Enter");
+  await expect(name).toHaveValue(`Eingaben neu ${stamp}.xlsx`);
+  await cell(4, 0).click();
+  await page.keyboard.type("Beim Schliessen");
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  await page.getByText(`Eingaben neu ${stamp}.xlsx`, { exact: true }).dblclick();
+  await expect(cell(4, 0)).toHaveText("Beim Schliessen");
+  await expect(cell(0, 0)).toHaveText("Handschuhe Nitril");
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  expect(errors).toEqual([]);
+});
