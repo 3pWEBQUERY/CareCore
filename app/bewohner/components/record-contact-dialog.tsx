@@ -6,6 +6,7 @@ import { ADVANCE_CARE_LABELS, REPRESENTATIVE_ROLE_KEYS, isRepresentativeRole } f
 import { Check, X } from "@phosphor-icons/react";
 import { useEscapeClose } from "@/app/components/use-escape-close";
 import type { ResidentRecordState } from "./use-resident-record";
+import { CONTACT_RELATIONSHIPS } from "@/lib/resident-record-shared";
 
 export function ContactEditorDialog({ r }: { r: ResidentRecordState }) {
   const t = useTerms();
@@ -50,14 +51,24 @@ export function ContactEditorDialog({ r }: { r: ResidentRecordState }) {
             </label>
             <label>
               <span>Beziehung</span>
-              <input
+              <CareOptionSelect
+                label="Beziehung"
                 value={contactEditor.draft.relationship}
-                onChange={(event) =>
+                placeholder="Beziehung wählen"
+                onChange={(value) =>
                   setContactEditor((current) =>
-                    current ? { ...current, draft: { ...current.draft, relationship: event.target.value } } : current,
+                    current ? { ...current, draft: { ...current.draft, relationship: value } } : current,
                   )
                 }
-                placeholder="z. B. Tochter, Nachbar"
+                options={[
+                  { value: "", label: "Nicht angegeben" },
+                  // Ein früher frei erfasster Wert bleibt wählbar.
+                  ...(contactEditor.draft.relationship &&
+                  !CONTACT_RELATIONSHIPS.includes(contactEditor.draft.relationship)
+                    ? [{ value: contactEditor.draft.relationship, label: contactEditor.draft.relationship }]
+                    : []),
+                  ...CONTACT_RELATIONSHIPS.map((item) => ({ value: item, label: item })),
+                ]}
               />
             </label>
             <label>

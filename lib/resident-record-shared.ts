@@ -23,6 +23,33 @@ export const RELIGIONS: Record<"CH" | "DE" | "AT", string[]> = {
   DE: ["Römisch-katholisch", "Evangelisch", "Altkatholisch", ...SHARED_RELIGIONS],
   AT: ["Römisch-katholisch", "Evangelisch A.B.", "Evangelisch H.B.", "Altkatholisch", ...SHARED_RELIGIONS],
 };
+// Beziehung einer Kontaktperson zur betreuten Person (Auswahl; ein früher frei erfasster Wert bleibt erhalten).
+export const CONTACT_RELATIONSHIPS = [
+  "Ehefrau",
+  "Ehemann",
+  "Lebenspartnerin",
+  "Lebenspartner",
+  "Tochter",
+  "Sohn",
+  "Schwiegertochter",
+  "Schwiegersohn",
+  "Enkelin",
+  "Enkel",
+  "Schwester",
+  "Bruder",
+  "Mutter",
+  "Vater",
+  "Nichte",
+  "Neffe",
+  "Weitere Angehörige",
+  "Freundin",
+  "Freund",
+  "Nachbarin",
+  "Nachbar",
+  "Beistand / gesetzliche Vertretung",
+  "Hausärztin / Hausarzt",
+  "Andere Bezugsperson",
+];
 export const LANGUAGES: Record<string, string> = {
   "de-CH": "Deutsch",
   "fr-CH": "Französisch",

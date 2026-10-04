@@ -258,24 +258,6 @@
   .resident-state {
     font-size: 11.5px;
   }
-  .house-resident-focus-body > p {
-    font-size: 12px;
-  }
-  .house-resident-focus-body dl > div {
-    font-size: 11.5px;
-  }
-  .archive-privacy-note strong {
-    font-size: 11.5px;
-  }
-  .archive-privacy-note small {
-    font-size: 11px;
-  }
-  .house-status-overview strong {
-    font-size: 12px;
-  }
-  .house-status-overview small {
-    font-size: 11px;
-  }
   .care-record-filters button {
     font-size: 11.5px;
   }
@@ -322,18 +304,6 @@
     font-size: 11.5px;
   }
   .wound-doc-tasks time {
-    font-size: 11.5px;
-  }
-  .house-timeline li.empty {
-    font-size: 12px;
-  }
-  .house-timeline strong {
-    font-size: 12px;
-  }
-  .house-timeline small {
-    font-size: 11.5px;
-  }
-  .house-timeline p {
     font-size: 11.5px;
   }
   .record-kicker {
