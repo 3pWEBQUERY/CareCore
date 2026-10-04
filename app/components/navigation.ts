@@ -212,10 +212,11 @@ export const navigation: NavGroup[] = [
         id: "staff",
         label: "Mitarbeitende",
         icon: "team",
-        children: ["Mitarbeitende", "Aufgaben", "Profile & Rollen"],
+        children: ["Mitarbeitende", "Aufgaben", "Einarbeitung", "Profile & Rollen"],
         childPermissions: {
           Mitarbeitende: "team.manage",
           Aufgaben: "team.manage",
+          Einarbeitung: "team.manage",
           "Profile & Rollen": "administration.manage",
         },
       },
@@ -345,6 +346,7 @@ const routes: Record<string, Record<string, string>> = {
   staff: {
     Mitarbeitende: "/leitung/teamleitung/mitarbeiter",
     Aufgaben: "/leitung/teamleitung/aufgaben",
+    Einarbeitung: "/leitung/teamleitung/einarbeitung",
     "Profile & Rollen": "/leitung/administration/mitarbeiter",
   },
   admin: {
