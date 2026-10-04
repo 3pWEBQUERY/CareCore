@@ -12,7 +12,7 @@ test("Ablage: Ordner, Hochladen, Bearbeiten mit Versionen, Verschieben, Papierko
   await expect(page.getByRole("heading", { name: "Gemeinsame Ablage", level: 1 })).toBeVisible();
 
   // Neuer Ordner über „Neu“.
-  await page.getByRole("button", { name: "Neu" }).click();
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
   await page.getByRole("menuitem", { name: "Ordner" }).click();
   const nameDialog = page.getByRole("dialog", { name: "Neuer Ordner" });
   await nameDialog.getByLabel("Name").fill(folder);
@@ -30,7 +30,7 @@ test("Ablage: Ordner, Hochladen, Bearbeiten mit Versionen, Verschieben, Papierko
   await expect(page.locator(".files-table tr", { hasText: "Plan.txt" }).locator(".files-version")).toHaveText("V2");
 
   // Neue einfache Textdatei anlegen und bearbeiten.
-  await page.getByRole("button", { name: "Neu" }).click();
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
   await page.getByRole("menuitem", { name: "Einfacher Text" }).click();
   const documentDialog = page.getByRole("dialog", { name: "Neue einfache Datei" });
   await documentDialog.getByLabel("Name").fill("Merkblatt");

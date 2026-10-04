@@ -34,7 +34,8 @@ export function ToolButton({
       className={`office-tool ${active ? "active" : ""} ${text ? "with-text" : ""} ${className ?? ""}`}
       aria-label={label}
       aria-pressed={active === undefined ? undefined : active}
-      title={shortcut ? `${label} (${shortcut})` : label}
+      data-tip={label}
+      data-shortcut={shortcut}
       disabled={disabled}
       onMouseDown={keepFocus}
       onClick={onClick}
@@ -123,7 +124,7 @@ export function ToolPopover({
         type="button"
         className={`office-tool with-caret ${open ? "open" : ""} ${className ?? ""}`}
         aria-label={label}
-        title={title ?? label}
+        data-tip={open ? undefined : (title ?? label)}
         aria-haspopup="true"
         aria-expanded={open}
         disabled={disabled}
@@ -260,7 +261,7 @@ export function ColorPicker({
                   className={current?.toLowerCase() === color ? "active" : ""}
                   style={{ background: color }}
                   aria-label={colorName(color, rowIndex)}
-                  title={colorName(color, rowIndex)}
+                  data-tip={colorName(color, rowIndex)}
                   onClick={() => {
                     onPick(color);
                     close();

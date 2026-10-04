@@ -23,6 +23,7 @@ import {
 } from "@/lib/office/model";
 import { RequestError, call, download, fileUrl } from "../explorer-api";
 import { FileIcon } from "../file-icon";
+import { TooltipLayer } from "./tooltip-layer";
 import type { EditorProps } from "./editor-props";
 
 // Vollbild-Editor für Dokument, Tabelle und Präsentation: lädt die Datei, speichert automatisch (ohne für jeden
@@ -73,6 +74,8 @@ export default function OfficeEditor({
   const [savedAt, setSavedAt] = useState("");
   const [notice, setNotice] = useState("");
   const [name, setName] = useState(file.name);
+  // Zuletzt gespeicherter Name (das Eingabefeld zeigt schon während des Tippens den neuen).
+  const savedName = useRef(file.name);
   const model = useRef<OfficeModel | null>(null);
   const revision = useRef(0);
   const dirty = useRef(false);
@@ -80,6 +83,8 @@ export default function OfficeEditor({
   const timer = useRef<number | null>(null);
   const changed = useRef(false);
   const forceVersion = useRef(false);
+  // Offene Eingabe im Editor (z. B. Zelle der Tabelle) vor jedem Speichern übernehmen.
+  const flushRef = useRef<(() => boolean) | null>(null);
 
   useEffect(() => {
     call<Loaded>(`/api/cloud/files/${file.id}?office=1`)
@@ -103,6 +108,7 @@ export default function OfficeEditor({
 
   const save = useCallback(
     async (manual: boolean): Promise<void> => {
+      flushRef.current?.();
       if (timer.current) {
         window.clearTimeout(timer.current);
         timer.current = null;
@@ -177,6 +183,7 @@ export default function OfficeEditor({
   }, []);
 
   async function close() {
+    flushRef.current?.();
     if (status !== "conflict" && (dirty.current || saving.current)) await save(false);
     if (dirty.current && status !== "conflict") return;
     onClose(changed.current);
@@ -184,24 +191,27 @@ export default function OfficeEditor({
 
   async function rename(next: string) {
     const clean = next.trim();
-    if (!clean || clean === name) return setName(name);
+    if (!clean || clean === savedName.current) return setName(savedName.current);
     const extension = `.${OFFICE_TYPES[loaded?.kind ?? "document"].extension}`;
     const full = clean.toLowerCase().endsWith(extension) ? clean : `${clean}${extension}`;
+    if (full === savedName.current) return setName(full);
     try {
       const result = await call<{ file: ExplorerFile }>(`/api/cloud/files/${file.id}`, {
         method: "PATCH",
         json: { name: full },
       });
+      savedName.current = result.file.name;
       setName(result.file.name);
       changed.current = true;
       setNotice("Umbenannt");
     } catch (cause) {
-      setName(name);
+      setName(savedName.current);
       setMessage(cause instanceof Error ? cause.message : "Umbenennen fehlgeschlagen.");
     }
   }
 
   async function saveCopy() {
+    flushRef.current?.();
     if (!loaded || !model.current) return;
     const dot = name.lastIndexOf(".");
     try {
@@ -225,6 +235,7 @@ export default function OfficeEditor({
   }
 
   async function downloadFile() {
+    flushRef.current?.();
     if (dirty.current || saving.current) await save(false);
     download(fileUrl(file.id));
   }
@@ -247,6 +258,7 @@ export default function OfficeEditor({
   const kind = loaded?.kind;
   const editorProps: Omit<EditorProps<OfficeModel>, "model"> = {
     onChange,
+    flushRef,
     readOnly: !loaded?.canEdit || status === "conflict",
     title: name.replace(/\.[^.]+$/, ""),
   };
@@ -270,7 +282,7 @@ export default function OfficeEditor({
           type="button"
           className="office-back"
           aria-label="Zurück zur Ablage"
-          title="Zurück zur Ablage"
+          data-tip="Zurück zur Ablage"
           onClick={() => void close()}
         >
           <ArrowLeft aria-hidden="true" />
@@ -288,7 +300,7 @@ export default function OfficeEditor({
               onKeyDown={(event) => {
                 if (event.key === "Enter") event.currentTarget.blur();
                 if (event.key === "Escape") {
-                  setName(file.name);
+                  setName(savedName.current);
                   event.currentTarget.blur();
                 }
               }}
@@ -315,7 +327,8 @@ export default function OfficeEditor({
               aria-label="Version speichern"
               disabled={status === "conflict"}
               onClick={() => void save(true)}
-              title="Als neue Version speichern (Ctrl+S)"
+              data-tip="Als neue Version speichern"
+              data-shortcut="Ctrl+S"
             >
               <FloppyDisk aria-hidden="true" />
               <span>Version speichern</span>
@@ -326,8 +339,12 @@ export default function OfficeEditor({
             className="office-action"
             aria-label="Drucken oder als PDF sichern"
             disabled={!loaded}
-            onClick={() => window.print()}
-            title="Drucken oder als PDF sichern (Ctrl+P)"
+            onClick={() => {
+              flushRef.current?.();
+              window.print();
+            }}
+            data-tip="Drucken oder als PDF sichern"
+            data-shortcut="Ctrl+P"
           >
             <Printer aria-hidden="true" />
             <span>Drucken / PDF</span>
@@ -336,7 +353,7 @@ export default function OfficeEditor({
             type="button"
             className="office-action"
             aria-label="Herunterladen"
-            title="Herunterladen"
+            data-tip="Als Office-Datei herunterladen"
             disabled={!loaded}
             onClick={() => void downloadFile()}
           >
@@ -395,6 +412,7 @@ export default function OfficeEditor({
           <DeckEditor {...editorProps} model={loaded.model as DeckModel} />
         )}
       </div>
+      <TooltipLayer />
       {notice && (
         <div className="office-toast" role="status">
           {notice}

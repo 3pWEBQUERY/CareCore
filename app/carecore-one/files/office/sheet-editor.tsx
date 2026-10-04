@@ -121,12 +121,18 @@ function formulaContext(value: string) {
   return { typing, inside: stack[stack.length - 1] ?? null };
 }
 
-export default function SheetEditor({ model: initial, onChange, readOnly, title }: EditorProps<SheetModel>) {
+export default function SheetEditor({ model: initial, onChange, readOnly, title, flushRef }: EditorProps<SheetModel>) {
   const [model, setModel] = useState(initial);
   const modelRef = useRef(initial);
   const [active, setActive] = useState(0);
   const [range, setRange] = useState<Range>({ anchor: { col: 0, row: 0 }, focus: { col: 0, row: 0 } });
-  const [editing, setEditing] = useState<Editing | null>(null);
+  const [editing, setEditingState] = useState<Editing | null>(null);
+  // Laufende Eingabe auch als Ref: Tasten, die vor dem nächsten Zeichnen eintreffen, gehen nicht verloren.
+  const editingRef = useRef<Editing | null>(null);
+  const setEditing = useCallback((next: Editing | null) => {
+    editingRef.current = next;
+    setEditingState(next);
+  }, []);
   const [formulaError, setFormulaError] = useState("");
   const [history, setHistory] = useState<{ undo: SheetModel[]; redo: SheetModel[] }>({ undo: [], redo: [] });
   const [scroll, setScroll] = useState({ top: 0, left: 0, height: 600 });
@@ -142,6 +148,7 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title 
   const barRef = useRef<HTMLInputElement>(null);
   const drag = useRef<Drag>(null);
   const clip = useRef<Clip | null>(null);
+  const pasteHandled = useRef(true);
   const [point, setPoint] = useState<{ start: number; result: string } | null>(null);
   const emit = useRef(onChange);
   useEffect(() => {
@@ -157,13 +164,22 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title 
     [evaluator, active],
   );
 
-  const commit = useCallback((next: SheetModel) => {
-    const previous = modelRef.current;
+  // Verlauf als Ref (sicher bei schnellen Wiederholungen) und als Zustand (für die Knöpfe).
+  const historyRef = useRef<{ undo: SheetModel[]; redo: SheetModel[] }>({ undo: [], redo: [] });
+  const apply = useCallback((next: SheetModel) => {
     modelRef.current = next;
     setModel(next);
-    setHistory((current) => ({ undo: [...current.undo.slice(-HISTORY + 1), previous], redo: [] }));
+    setHistory({ undo: historyRef.current.undo, redo: historyRef.current.redo });
+    setActive((current) => Math.min(current, next.sheets.length - 1));
     emit.current(next);
   }, []);
+  const commit = useCallback(
+    (next: SheetModel) => {
+      historyRef.current = { undo: [...historyRef.current.undo.slice(-HISTORY + 1), modelRef.current], redo: [] };
+      apply(next);
+    },
+    [apply],
+  );
   const commitSheet = useCallback(
     (change: (sheet: Sheet) => Sheet) => {
       const current = modelRef.current;
@@ -172,28 +188,22 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title 
     [active, commit],
   );
   function undo() {
-    setHistory((current) => {
-      const previous = current.undo[current.undo.length - 1];
-      if (!previous) return current;
-      const now = modelRef.current;
-      modelRef.current = previous;
-      setModel(previous);
-      emit.current(previous);
-      if (active >= previous.sheets.length) setActive(previous.sheets.length - 1);
-      return { undo: current.undo.slice(0, -1), redo: [...current.redo, now] };
-    });
+    const previous = historyRef.current.undo[historyRef.current.undo.length - 1];
+    if (!previous) return;
+    historyRef.current = {
+      undo: historyRef.current.undo.slice(0, -1),
+      redo: [...historyRef.current.redo, modelRef.current],
+    };
+    apply(previous);
   }
   function redo() {
-    setHistory((current) => {
-      const next = current.redo[current.redo.length - 1];
-      if (!next) return current;
-      const now = modelRef.current;
-      modelRef.current = next;
-      setModel(next);
-      emit.current(next);
-      if (active >= next.sheets.length) setActive(next.sheets.length - 1);
-      return { undo: [...current.undo, now], redo: current.redo.slice(0, -1) };
-    });
+    const next = historyRef.current.redo[historyRef.current.redo.length - 1];
+    if (!next) return;
+    historyRef.current = {
+      undo: [...historyRef.current.undo, modelRef.current],
+      redo: historyRef.current.redo.slice(0, -1),
+    };
+    apply(next);
   }
 
   // ---------- Masse ----------
@@ -324,13 +334,22 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title 
     const pos = range.focus;
     const origin = [...mergeAt.origin.values()].find((merge) => inArea(merge, pos.col, pos.row));
     const target = origin ? { col: origin.c1, row: origin.r1 } : pos;
-    setEditing({ pos: target, value: value ?? rawAt(target), mode, source });
-    setFormulaError("");
-    setSuggestIndex(0);
-    setPoint(null);
+    // Sofort zeichnen und das Eingabefeld fokussieren: so landen auch schnell getippte Zeichen in der Zelle.
+    flushSync(() => {
+      setEditing({ pos: target, value: value ?? rawAt(target), mode, source });
+      setFormulaError("");
+      setSuggestIndex(0);
+      setPoint(null);
+    });
+    if (source === "cell") {
+      const input = gridRef.current?.querySelector<HTMLInputElement>(".sheet-cell-editor");
+      input?.focus({ preventScroll: true });
+      input?.setSelectionRange(input.value.length, input.value.length);
+    }
   }
 
-  function commitEdit(move?: { dc: number; dr: number }) {
+  function commitEdit(move?: { dc: number; dr: number }, options: { keepFocus?: boolean } = {}) {
+    const editing = editingRef.current;
     if (!editing) return true;
     const raw = editing.value;
     if (raw.startsWith("=") && raw.length > 1) {
@@ -340,7 +359,8 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title 
         return false;
       }
     }
-    if (raw !== rawAt(editing.pos)) commitSheet((current) => setValue(current, editing.pos, raw));
+    if (raw !== (modelRef.current.sheets[active].cells[cellKey(editing.pos.col, editing.pos.row)]?.v ?? ""))
+      commitSheet((current) => setValue(current, editing.pos, raw));
     setEditing(null);
     setFormulaError("");
     setPoint(null);
@@ -348,9 +368,28 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title 
       const next = { col: editing.pos.col + move.dc, row: editing.pos.row + move.dr };
       select(next);
     } else select(editing.pos);
-    focusGrid();
+    if (!options.keepFocus) focusGrid();
     return true;
   }
+
+  // Offene Eingabe übernehmen, bevor gespeichert, heruntergeladen oder geschlossen wird.
+  useEffect(() => {
+    if (!flushRef) return;
+    flushRef.current = () => commitEdit(undefined, { keepFocus: true });
+    return () => {
+      flushRef.current = null;
+    };
+  });
+
+  // Das Eingabefeld der Zelle erhält immer den Fokus (Schreibmarke am Ende).
+  useEffect(() => {
+    if (editing?.source !== "cell") return;
+    const input = gridRef.current?.querySelector<HTMLInputElement>(".sheet-cell-editor");
+    if (input && document.activeElement !== input) {
+      input.focus({ preventScroll: true });
+      input.setSelectionRange(input.value.length, input.value.length);
+    }
+  }, [editing?.source, editing?.pos.col, editing?.pos.row]);
 
   function cancelEdit() {
     setEditing(null);
@@ -481,7 +520,7 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title 
       region = { c1: 0, r1: startRow, c2: Math.max(0, used.cols - 1), r2: Math.max(startRow, used.rows - 1) };
       if (region.r2 <= region.r1) return;
     }
-    commitSheet((current) => sortArea(current, region, range.focus.col, direction, (col, row) => valueAt(col, row)));
+    commitSheet((current) => sortArea(current, region, range.anchor.col, direction, (col, row) => valueAt(col, row)));
     setNotice(direction === 1 ? "Aufsteigend sortiert" : "Absteigend sortiert");
   }
   function clear(what: "content" | "all") {
@@ -530,7 +569,7 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title 
     setNotice(cut ? "Ausgeschnitten – an der Zielzelle einfügen" : "Kopiert");
   }
   function paste(text: string) {
-    if (readOnly) return;
+    if (readOnly || !text) return;
     const target = { col: area.c1, row: area.r1 };
     const internal = clip.current && clip.current.text === text ? clip.current : null;
     if (internal) {
@@ -741,7 +780,29 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title 
   }
 
   function onGridKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
-    if (editing || event.target !== gridRef.current) return;
+    if (event.target !== gridRef.current) return;
+    // Eingabe läuft schon, das Eingabefeld hat aber (noch) keinen Fokus: Tasten trotzdem in die Zelle schreiben.
+    const pending = editingRef.current;
+    if (pending) {
+      const mod = event.metaKey || event.ctrlKey;
+      if (event.key === "Enter") {
+        event.preventDefault();
+        commitEdit({ dc: 0, dr: event.shiftKey ? -1 : 1 });
+      } else if (event.key === "Tab") {
+        event.preventDefault();
+        commitEdit({ dc: event.shiftKey ? -1 : 1, dr: 0 });
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        cancelEdit();
+      } else if (event.key === "Backspace") {
+        event.preventDefault();
+        setEditing({ ...pending, value: pending.value.slice(0, -1) });
+      } else if (!mod && !event.altKey && event.key.length === 1) {
+        event.preventDefault();
+        setEditing({ ...pending, value: pending.value + event.key });
+      }
+      return;
+    }
     const mod = event.metaKey || event.ctrlKey;
     const key = event.key;
     if (mod && key.toLowerCase() === "z") {
@@ -755,6 +816,20 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title 
     if (mod && key.toLowerCase() === "a") {
       event.preventDefault();
       return select({ col: 0, row: 0 }, { col: sheet.colCount - 1, row: sheet.rowCount - 1 });
+    }
+    // Kopieren/Ausschneiden merken sich die Auswahl auch dann, wenn der Browser kein Zwischenablage-Ereignis
+    // liefert; Einfügen nimmt dann das zuletzt Kopierte.
+    if (mod && (key.toLowerCase() === "c" || key.toLowerCase() === "x")) {
+      if (key.toLowerCase() === "x" && readOnly) return;
+      copy(key.toLowerCase() === "x");
+      return;
+    }
+    if (mod && key.toLowerCase() === "v") {
+      pasteHandled.current = false;
+      window.setTimeout(() => {
+        if (!pasteHandled.current && clip.current) paste(clip.current.text);
+      }, 80);
+      return;
     }
     if (mod && ["b", "i", "u"].includes(key.toLowerCase())) {
       event.preventDefault();
@@ -903,7 +978,19 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title 
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${title} – ${sheet.name}.csv`;
+    // Browser verwerfen bei solchen Downloads Namen mit Umlauten: „Bäder“ → „Baeder“.
+    const ascii = `${title} - ${sheet.name}`
+      .replace(/ä/g, "ae")
+      .replace(/ö/g, "oe")
+      .replace(/ü/g, "ue")
+      .replace(/Ä/g, "Ae")
+      .replace(/Ö/g, "Oe")
+      .replace(/Ü/g, "Ue")
+      .replace(/ß/g, "ss")
+      .normalize("NFKD")
+      .replace(/[^\x20-\x7e]/g, "")
+      .replace(/[\\/:*?"<>|]/g, "-");
+    link.download = `${ascii.trim() || "Tabelle"}.csv`;
     document.body.append(link);
     link.click();
     link.remove();
@@ -985,7 +1072,7 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title 
             ...(frozen ? { ...stickyTop, zIndex: 3 } : {}),
             ...(frozenCol ? { position: "sticky", left: ROWHEAD_W + colLefts[col], zIndex: frozen ? 4 : 2 } : {}),
           }}
-          title={isError(value) ? ERROR_HINTS[value.error] : undefined}
+          data-tip={isError(value) ? ERROR_HINTS[value.error] : undefined}
           onMouseDown={(event) => onCellMouseDown(event, { col, row })}
           onMouseEnter={() => onCellMouseEnter({ col, row })}
           onDoubleClick={() => startEdit("edit")}
@@ -1003,11 +1090,16 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title 
               value={editing.value}
               spellCheck={false}
               onChange={(event) => {
-                setEditing({ ...editing, value: event.target.value });
+                setEditing({ ...(editingRef.current ?? editing), value: event.target.value });
                 setSuggestIndex(0);
                 setPoint(null);
               }}
               onKeyDown={onEditorKeyDown}
+              onBlur={(event) => {
+                // Wer woanders hinklickt, übernimmt die Eingabe (wie in Excel) – ausser beim Wechsel in die Formelleiste.
+                if (event.relatedTarget === barRef.current) return;
+                if (editingRef.current?.source === "cell") commitEdit(undefined, { keepFocus: true });
+              }}
               onMouseDown={(event) => event.stopPropagation()}
             />
           ) : (
@@ -1347,11 +1439,15 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title 
             }}
             onChange={(event) => {
               if (!editing) startEdit("edit", event.target.value, "bar");
-              else setEditing({ ...editing, value: event.target.value });
+              else setEditing({ ...(editingRef.current ?? editing), value: event.target.value });
               setSuggestIndex(0);
               setPoint(null);
             }}
             onKeyDown={onEditorKeyDown}
+            onBlur={(event) => {
+              if ((event.relatedTarget as HTMLElement | null)?.classList.contains("sheet-cell-editor")) return;
+              if (editingRef.current?.source === "bar") commitEdit(undefined, { keepFocus: true });
+            }}
           />
           {editing && (suggestions.length > 0 || signature) && (
             <div className="sheet-suggest" role="listbox" aria-label="Funktionen">
@@ -1409,7 +1505,9 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title 
         onPaste={(event) => {
           if (editing || readOnly) return;
           event.preventDefault();
-          paste(event.clipboardData.getData("text/plain"));
+          pasteHandled.current = true;
+          // Leere Zwischenablage (z. B. ohne Zugriffsrecht): zuletzt in der Tabelle Kopiertes verwenden.
+          paste(event.clipboardData.getData("text/plain") || clip.current?.text || "");
         }}
       >
         <table className="sheet-table" style={{ width: totalWidth }}>
@@ -1548,7 +1646,7 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title 
               type="button"
               className="sheet-tab-add"
               aria-label="Blatt hinzufügen"
-              title="Blatt hinzufügen"
+              data-tip="Blatt hinzufügen"
               onClick={addSheet}
             >
               <Plus aria-hidden="true" />
