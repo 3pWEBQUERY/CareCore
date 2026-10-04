@@ -17,6 +17,7 @@ import { ROUNDS, type RoundKey } from "@/lib/medication-shared";
 import {
   LANGUAGES,
   MARITAL_STATUSES,
+  RELIGIONS,
   RESIDENT_DOCUMENT_CATEGORIES,
   RESIDENT_FILE_TYPES,
   RESUSCITATION_STATUSES,
@@ -283,6 +284,8 @@ export async function updateMasterData(ctx: ApiContext, residentIdInput: unknown
       ? insuranceNumberError(country, data.insuranceNumber)
       : null;
   if (insuranceError) throw new ApiError(insuranceError);
+  if (data.religion && data.religion !== b.religion && !RELIGIONS[country].includes(data.religion))
+    throw new ApiError("Bitte eine Konfession aus der Liste wählen.");
   // Versicherung aus der Liste der Einrichtung; ein früher frei erfasster Wert bleibt gültig, solange er unverändert ist.
   if (data.insurer && data.insurer !== b.insurer && !(await readInsurers(ctx)).insurers.includes(data.insurer))
     throw new ApiError("Bitte eine Versicherung aus der Liste wählen. Die Liste verwaltet die Administration.");

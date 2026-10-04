@@ -49,12 +49,15 @@ test("Stammdaten: Versicherung aus der Liste der Administration, Zimmerwechsel p
   await page.getByRole("button", { name: "Stammdaten bearbeiten" }).click();
   await page.getByRole("combobox", { name: "Krankenversicherung" }).click();
   await page.getByRole("option", { name: insurer, exact: true }).click();
+  await page.getByRole("combobox", { name: "Konfession" }).click();
+  await page.getByRole("option", { name: "Christkatholisch", exact: true }).click();
   await page.getByRole("combobox", { name: "Zimmer" }).click();
   await expect(page.getByRole("option", { name: new RegExp(`Zimmer A${tag} · bisheriges Zimmer`) })).toBeVisible();
   await page.getByRole("option", { name: new RegExp(`Zimmer B${tag} · 1 Bett frei`) }).click();
   await page.getByRole("button", { name: "Stammdaten speichern" }).click();
   await expect(page.locator(".toast")).toContainText("Zimmer gewechselt");
   await expect(page.getByRole("button", { name: "Stammdaten bearbeiten" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Konfession" })).toContainText("Christkatholisch");
   const card2 = page.locator("section", { has: page.getByRole("heading", { name: "Versicherung", exact: true }) });
   await expect(card2.locator("input").first()).toHaveValue(insurer);
   await expect(page.locator("label", { hasText: "Zimmer" }).locator("input").first()).toHaveValue(`Zimmer B${tag}`);
