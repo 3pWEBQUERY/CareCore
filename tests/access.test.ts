@@ -24,6 +24,12 @@ test("shared house files are readable by all staff", () => {
   assert.equal(mayReadFile(file("shared", { uploadedBy: null }), guest), true);
 });
 
+test("chat files are readable by members of the conversation only", () => {
+  assert.equal(mayReadFile(file("chat", { chatMember: true }), nurse), true);
+  assert.equal(mayReadFile(file("chat", { chatMember: false }), lead), false);
+  assert.equal(mayReadFile(file("chat", { uploadedBy: "nurse" }), nurse), false);
+});
+
 test("documents need the right to read resident records", () => {
   const document = file("document", { documentId: "doc" });
   assert.equal(mayReadFile(document, nurse), true);
