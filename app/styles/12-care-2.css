@@ -903,7 +903,7 @@
 }
 .document-file-label {
   color: var(--ink);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 750;
 }
 .document-file-input {
@@ -922,7 +922,7 @@
   gap: 6px;
   padding: 20px 16px;
   border: 1.5px dashed #bfdbfe;
-  border-radius: 8px;
+  border-radius: 6px;
   color: var(--ink);
   background: #f8fbff;
   text-align: center;
@@ -973,7 +973,7 @@
   gap: 12px;
   padding: 10px 10px 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 6px;
   background: white;
 }
 .document-file-selected.dragging {

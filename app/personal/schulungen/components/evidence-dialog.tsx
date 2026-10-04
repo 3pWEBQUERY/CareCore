@@ -5,6 +5,7 @@ import { EditorDialog } from "@/app/components/workspace-ui";
 import { CERTIFICATE_TYPES, type LearningPayload } from "@/lib/learning-shared";
 import { ScheduleDatePicker, ScheduleSelect } from "@/app/betrieb/components/operations-ui";
 import { postForm } from "./learning-utils";
+import DocumentFileField from "@/app/bewohner/components/document-file-field";
 
 export function EvidenceDialog({
   data,
@@ -86,14 +87,16 @@ export function EvidenceDialog({
         <span>Abgeschlossen am</span>
         <ScheduleDatePicker label="Abgeschlossen am" value={completedOn} onChange={setCompletedOn} />
       </label>
-      <label className="area-editor-wide">
-        <span>Zertifikat (PDF oder Bild, max. 4 MB)</span>
-        <input
-          type="file"
-          accept={CERTIFICATE_TYPES.join(",")}
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-        />
-      </label>
+      <DocumentFileField
+        label="Zertifikat (optional)"
+        types={CERTIFICATE_TYPES}
+        prompt="PDF oder Bild auswählen"
+        hint="oder hierher ziehen · PDF, JPG, PNG, WebP · höchstens 4 MB"
+        typeError="Bitte ein PDF oder ein Bild (JPG, PNG, WebP) auswählen."
+        file={file}
+        onChange={setFile}
+        onError={setError}
+      />
       <label className="area-editor-wide">
         <span>Bemerkung</span>
         <input

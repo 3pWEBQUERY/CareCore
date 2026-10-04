@@ -62,7 +62,7 @@
   border-radius: 6px;
   color: var(--muted);
   background: white;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 720;
   cursor: pointer;
 }
@@ -101,17 +101,17 @@
   display: block;
 }
 .team-composer strong {
-  font-size: 10px;
+  font-size: 14px;
 }
 .team-composer small {
   margin-top: 3px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
 }
 .team-composer .primary-button {
   min-height: 34px;
   padding-inline: 10px;
-  font-size: 9px;
+  font-size: 12px;
 }
 .team-composer .primary-button svg {
   width: 13px;
@@ -155,18 +155,18 @@
   display: block;
 }
 .team-post-main strong {
-  font-size: 11px;
+  font-size: 14px;
 }
 .team-post-main small {
   margin-top: 4px;
   color: #4f6478;
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.4;
 }
 .team-post-main em {
   margin-top: 5px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
   font-style: normal;
 }
 .team-post-side {
@@ -176,11 +176,11 @@
 }
 .team-post-side > small {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
 }
 .team-post-side .quiet-button {
   min-height: 27px;
-  font-size: 8px;
+  font-size: 12px;
 }
 .team-side-stack {
   display: grid;
@@ -221,12 +221,12 @@
   display: block;
 }
 .team-channels-card strong {
-  font-size: 10px;
+  font-size: 14px;
 }
 .team-channels-card small {
   margin-top: 3px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
 }
 .team-channels-card li > svg {
   width: 12px;
@@ -242,23 +242,23 @@
 .team-duty-list .avatar {
   width: 28px;
   height: 28px;
-  font-size: 8px;
+  font-size: 11px;
 }
 .team-duty-list strong,
 .team-duty-list small {
   display: block;
 }
 .team-duty-list strong {
-  font-size: 9px;
+  font-size: 14px;
 }
 .team-duty-list small {
   margin-top: 3px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
 }
 .team-duty-state {
   color: var(--success);
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 740;
 }
 .learning-layout {
@@ -306,7 +306,7 @@
   gap: 10px;
   padding: 8px 18px 17px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
 }
 .learning-progress-meta strong {
   color: var(--brand-dark);
@@ -324,17 +324,17 @@
 }
 .learning-focus h3 {
   margin: 3px 0;
-  font-size: 12px;
+  font-size: 15px;
 }
 .learning-focus p:last-child {
   margin: 0;
   color: #4f6478;
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.4;
 }
 .learning-focus .secondary-button {
   min-height: 31px;
-  font-size: 9px;
+  font-size: 12px;
 }
 .learning-course-grid {
   display: grid;
@@ -379,12 +379,12 @@
   display: block;
 }
 .learning-course strong {
-  font-size: 10px;
+  font-size: 14px;
 }
 .learning-course small {
   margin-top: 5px;
   color: #4f6478;
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.4;
 }
 .learning-course .status-badge {
@@ -396,7 +396,7 @@
   grid-column: 2;
   margin-top: 7px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
   font-style: normal;
 }
 .learning-calendar-card {
@@ -427,12 +427,12 @@
   display: block;
 }
 .learning-session b {
-  font-size: 9px;
+  font-size: 12px;
 }
 .learning-session small {
   margin-top: 3px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
 }
 .learning-calendar-card > .quiet-button {
   margin: 12px 15px 15px;
@@ -471,19 +471,21 @@
   display: block;
 }
 .documents-folder strong {
-  font-size: 9px;
+  font-size: 14px;
 }
 .documents-folder small {
   margin-top: 3px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
 }
 .documents-folder b {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
 }
 .documents-standards-layout {
   grid-template-columns: minmax(0, 1fr) 270px;
+  /* Eine lange Freigabe rechts vergrössert nur die zweite Zeile, die Standardsammlung bleibt kompakt. */
+  grid-template-rows: auto 1fr;
 }
 .documents-standards-layout .documents-folders {
   grid-column: 1;
@@ -533,7 +535,7 @@
   padding: 10px 18px;
   color: var(--muted);
   background: #f8fbff;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 760;
   text-transform: uppercase;
 }
@@ -582,21 +584,21 @@
   display: block;
 }
 .documents-row-main strong {
-  font-size: 10px;
+  font-size: 14px;
 }
 .documents-row-main small {
   margin-top: 4px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.35;
 }
 .documents-row-meta {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
 }
 .documents-table article > .quiet-button {
   min-height: 28px;
-  font-size: 8px;
+  font-size: 12px;
 }
 .documents-preview {
   grid-column: 3;
@@ -619,20 +621,37 @@
   color: var(--brand);
 }
 .documents-preview-page strong {
-  font-size: 11px;
+  font-size: 14px;
 }
 .documents-preview-page small,
 .documents-preview-page span {
   color: #4f6478;
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.45;
 }
 .documents-preview-page span {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
 }
 .documents-preview > .primary-button {
   width: calc(100% - 30px);
   margin: 0 15px 15px;
   justify-content: center;
+}
+/* Team, Schulungen, Standards: Filter, Kurzaktionen und Hinweise gut lesbar wie in den übrigen Arbeitslisten. */
+.team-filter-row button,
+.learning-filter-row button,
+.documents-filter-row button,
+.team-channel-tabs button,
+.team-channels-card .card-header .quiet-button,
+.learning-calendar-card > .quiet-button,
+.learning-manage .quiet-button {
+  font-size: 12px;
+}
+/* Weisung veröffentlichen: Lesebestätigung über die ganze Spalte, ohne abgeschnittenen Text. */
+.document-ack-options.duty-assignment-options .area-service-options {
+  grid-template-columns: minmax(0, 1fr);
+}
+.document-ack-options .area-service-options label {
+  font-size: 13px;
 }

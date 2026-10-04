@@ -708,102 +708,6 @@
   .governance-note-card li {
     font-size: 12px;
   }
-  .team-channel-tabs button {
-    font-size: 11.5px;
-  }
-  .team-composer strong {
-    font-size: 12px;
-  }
-  .team-composer small {
-    font-size: 11px;
-  }
-  .team-composer .primary-button {
-    font-size: 11.5px;
-  }
-  .team-post-main small {
-    font-size: 11.5px;
-  }
-  .team-post-main em {
-    font-size: 11px;
-  }
-  .team-post-side > small {
-    font-size: 11px;
-  }
-  .team-post-side .quiet-button {
-    font-size: 11px;
-  }
-  .team-channels-card strong {
-    font-size: 12px;
-  }
-  .team-channels-card small {
-    font-size: 11px;
-  }
-  .team-duty-list .avatar {
-    font-size: 11px;
-  }
-  .team-duty-list strong {
-    font-size: 11.5px;
-  }
-  .team-duty-list small {
-    font-size: 11px;
-  }
-  .team-duty-state {
-    font-size: 11px;
-  }
-  .learning-progress-meta {
-    font-size: 11px;
-  }
-  .learning-focus p:last-child {
-    font-size: 11.5px;
-  }
-  .learning-focus .secondary-button {
-    font-size: 11.5px;
-  }
-  .learning-course strong {
-    font-size: 12px;
-  }
-  .learning-course small {
-    font-size: 11px;
-  }
-  .learning-course em {
-    font-size: 11px;
-  }
-  .learning-session b {
-    font-size: 11.5px;
-  }
-  .learning-session small {
-    font-size: 11px;
-  }
-  .documents-folder strong {
-    font-size: 11.5px;
-  }
-  .documents-folder small {
-    font-size: 11px;
-  }
-  .documents-folder b {
-    font-size: 11px;
-  }
-  .documents-table-head {
-    font-size: 11px;
-  }
-  .documents-row-main strong {
-    font-size: 12px;
-  }
-  .documents-row-main small {
-    font-size: 11px;
-  }
-  .documents-row-meta {
-    font-size: 11px;
-  }
-  .documents-table article > .quiet-button {
-    font-size: 11px;
-  }
-  .documents-preview-page small {
-    font-size: 11.5px;
-  }
-  .documents-preview-page span {
-    font-size: 11px;
-  }
   .operations-pulse-intro .eyebrow {
     font-size: 11.5px;
   }
@@ -1593,15 +1497,6 @@
   .roster-print-notes ul {
     font-size: 12px;
   }
-  .learning-team strong {
-    font-size: 12px;
-  }
-  .learning-team b {
-    font-size: 12px;
-  }
-  .learning-team em {
-    font-size: 11px;
-  }
   .resident-insights-person small {
     font-size: 12px;
   }
@@ -1676,39 +1571,6 @@
   }
   :root .btm-print-sheet .btm-book {
     font-size: 12px;
-  }
-  :root .team-channel-bar small {
-    font-size: 11.5px;
-  }
-  :root .team-channel-join {
-    font-size: 11px;
-  }
-  :root .learning-focus-actions .quiet-button {
-    font-size: 11.5px;
-  }
-  :root .learning-focus-actions .secondary-button {
-    font-size: 11.5px;
-  }
-  :root .learning-manage {
-    font-size: 11.5px;
-  }
-  :root .learning-manage-session button {
-    font-size: 11px;
-  }
-  :root .documents-facts dt {
-    font-size: 11px;
-  }
-  :root .documents-facts dd {
-    font-size: 11.5px;
-  }
-  :root .documents-preview-actions .secondary-button {
-    font-size: 11.5px;
-  }
-  :root .documents-preview-actions .quiet-button {
-    font-size: 11.5px;
-  }
-  :root .documents-table article > a.quiet-button {
-    font-size: 11px;
   }
   :root .care-outcome-counts b {
     font-size: 12px;

@@ -91,17 +91,17 @@
   background: var(--brand-soft);
 }
 .learning-team strong {
-  font-size: 10px;
+  font-size: 14px;
 }
 .learning-team b {
   color: var(--brand-dark);
-  font-size: 10px;
+  font-size: 12px;
   text-align: right;
 }
 .learning-team em {
   grid-column: 1 / -1;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
   font-style: normal;
 }
 .learning-team-bar {
