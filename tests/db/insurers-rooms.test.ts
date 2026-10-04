@@ -56,7 +56,7 @@ test("Versicherungen: Vorgabe je Land, eigene Liste der Administration, Auswahl 
 
   // Ein bisheriger Wert, der nicht mehr in der Liste steht, bleibt unverändert gültig; neu wählbar ist er nicht.
   const saved = (await recordSummary(nurse, erna)).master;
-  await updateMasterData(nurse, erna, { ...saved, religion: "reformiert" });
+  await updateMasterData(nurse, erna, { ...saved, religion: "Evangelisch-reformiert" });
   assert.equal((await recordSummary(nurse, erna)).master.insurer, "Helsana");
   const otto = await createResident(f, "Otto Beispiel");
   const ottoMaster = (await recordSummary(nurse, otto)).master;
@@ -76,6 +76,25 @@ test("Versicherungen: Vorgabe je Land, eigene Liste der Administration, Auswahl 
   assert.deepEqual(
     audit.map((row) => row.after_data.insurers),
     [["Hauskasse Muster", "CSS"], "Vorgabe"],
+  );
+});
+
+test("Konfession: Auswahl je Land, früher frei erfasster Wert bleibt gültig", async () => {
+  const f = await fixture();
+  const nurse = await apiContextFor(f, "anna");
+  const erna = await createResident(f, "Erna Muster");
+  const master = (await recordSummary(nurse, erna)).master;
+  assert.match(await message(updateMasterData(nurse, erna, { ...master, religion: "Erfunden" })), /aus der Liste/);
+  await updateMasterData(nurse, erna, { ...master, religion: "Christkatholisch" });
+  // In Österreich gilt die österreichische Liste; der gespeicherte Wert bleibt unverändert gültig.
+  await q(`UPDATE carecore_organizations SET country = 'AT' WHERE id = $1`, [f.org]);
+  const saved = (await recordSummary(nurse, erna)).master;
+  assert.equal(saved.religion, "Christkatholisch");
+  await updateMasterData(nurse, erna, { ...saved, firstName: "Erna" });
+  await updateMasterData(nurse, erna, { ...saved, religion: "Evangelisch A.B." });
+  assert.match(
+    await message(updateMasterData(nurse, erna, { ...saved, religion: "Christkatholisch" })),
+    /aus der Liste/,
   );
 });
 

@@ -8,6 +8,7 @@ import { CareDatePicker, CareOptionSelect } from "@/app/components/care-form-con
 import {
   LANGUAGES,
   MARITAL_STATUSES,
+  RELIGIONS,
   RESUSCITATION_STATUSES,
   type MasterData,
   type RecordSummary,
@@ -33,7 +34,8 @@ const GENDERS: Record<string, string> = {
 export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
   const t = useTerms();
   const country = useCountry();
-  const advanceLabels = ADVANCE_CARE_LABELS[useWorkContext()?.country ?? "CH"];
+  const countryCode = useWorkContext()?.country ?? "CH";
+  const advanceLabels = ADVANCE_CARE_LABELS[countryCode];
   const {
     resident,
     contentRef,
@@ -296,7 +298,20 @@ export function RecordMasterDataView({ r }: { r: ResidentRecordState }) {
               </label>
               <label>
                 <span>Konfession</span>
-                <input {...field("religion")} />
+                <CareOptionSelect
+                  label="Konfession"
+                  value={values.religion ?? ""}
+                  onChange={(value) => set("religion", value || null)}
+                  disabled={!editable}
+                  options={[
+                    { value: "", label: "Nicht erfasst" },
+                    // Ein früher frei erfasster Wert bleibt wählbar.
+                    ...(values.religion && !RELIGIONS[countryCode].includes(values.religion)
+                      ? [{ value: values.religion, label: values.religion }]
+                      : []),
+                    ...RELIGIONS[countryCode].map((item) => ({ value: item, label: item })),
+                  ]}
+                />
               </label>
             </div>
           </section>

@@ -62,7 +62,11 @@ test("Stammdaten prüfen die Sozialversicherungsnummer im Format des Landes", as
   // Der gespeicherte Schweizer Wert bleibt beim Speichern anderer Felder gültig.
   assert.equal(
     await status(
-      updateMasterData(ctx, residentId, { ...base, religion: "keine", socialSecurityNumber: "756.1234.5678.97" }),
+      updateMasterData(ctx, residentId, {
+        ...base,
+        religion: "Konfessionslos",
+        socialSecurityNumber: "756.1234.5678.97",
+      }),
     ),
     200,
   );

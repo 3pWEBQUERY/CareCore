@@ -4,6 +4,25 @@ import type { EvacuationMobility } from "./evacuation-shared";
 // shared by the API and the record panel.
 
 export const MARITAL_STATUSES = ["Ledig", "Verheiratet", "Eingetragene Partnerschaft", "Verwitwet", "Geschieden"];
+// Konfession bzw. Religionszugehörigkeit zur Auswahl in den Stammdaten, je Land der Einrichtung (Bezeichnungen der
+// Landeskirchen bzw. anerkannten Kirchen und Religionsgesellschaften).
+const SHARED_RELIGIONS = [
+  "Evangelisch-freikirchlich",
+  "Orthodox",
+  "Andere christliche Gemeinschaft",
+  "Jüdisch",
+  "Muslimisch",
+  "Buddhistisch",
+  "Hinduistisch",
+  "Andere Religion",
+  "Konfessionslos",
+  "Keine Angabe gewünscht",
+];
+export const RELIGIONS: Record<"CH" | "DE" | "AT", string[]> = {
+  CH: ["Römisch-katholisch", "Evangelisch-reformiert", "Christkatholisch", ...SHARED_RELIGIONS],
+  DE: ["Römisch-katholisch", "Evangelisch", "Altkatholisch", ...SHARED_RELIGIONS],
+  AT: ["Römisch-katholisch", "Evangelisch A.B.", "Evangelisch H.B.", "Altkatholisch", ...SHARED_RELIGIONS],
+};
 export const LANGUAGES: Record<string, string> = {
   "de-CH": "Deutsch",
   "fr-CH": "Französisch",
