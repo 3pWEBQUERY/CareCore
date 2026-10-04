@@ -122,3 +122,75 @@ test("Tabelle: Eingaben gehen nie verloren, Tooltips und Umbenennen", async ({ p
   await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
   expect(errors).toEqual([]);
 });
+
+// Tabelle wie Excel: vertikale Ausrichtung, neue Funktionen, Rahmen, Filter, Auswahlliste – nach dem Speichern noch da.
+test("Tabelle: vertikale Ausrichtung, Funktionen, Rahmen, Filter und Auswahlliste", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  const stamp = Date.now();
+  await page.goto("/c/carecore-one/ablage");
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Tabelle/ }).click();
+  const gallery = page.getByRole("dialog", { name: "Neue Tabelle (Excel)" });
+  await gallery.getByLabel("Name").fill(`Excel ${stamp}`);
+  await gallery.getByRole("button", { name: "Erstellen und öffnen" }).click();
+  const cell = (row: number, col: number) => page.locator(".sheet-table tbody tr").nth(row).locator("td").nth(col);
+  const rows = [
+    ["Name", "Bereich", "Stunden"],
+    ["Anna", "Pflege", "8"],
+    ["Ben", "Küche", "6"],
+    ["Cem", "Pflege", "4"],
+  ];
+  for (const [r, line] of rows.entries()) {
+    await cell(r, 0).click();
+    for (const [c, value] of line.entries()) {
+      await page.keyboard.type(value);
+      await page.keyboard.press(c < line.length - 1 ? "Tab" : "Enter");
+    }
+  }
+  await cell(5, 0).click();
+  await page.keyboard.type('=XVERWEIS("Ben";A2:A4;C2:C4)');
+  await page.keyboard.press("Enter");
+  await page.keyboard.type('=SUMMEWENNS(C2:C4;B2:B4;"Pflege")');
+  await page.keyboard.press("Enter");
+  await page.keyboard.type('=TEXT(DATUM(2026;10;4);"TT.MM.JJJJ")');
+  await page.keyboard.press("Enter");
+  await expect(cell(5, 0)).toHaveText("6");
+  await expect(cell(6, 0)).toHaveText("12");
+  await expect(cell(7, 0)).toHaveText("04.10.2026");
+
+  // Vertikal: oben, Mitte, unten.
+  await cell(0, 0).click();
+  await page.getByRole("button", { name: "Oben ausrichten", exact: true }).click();
+  await expect(cell(0, 0)).toHaveCSS("vertical-align", "top");
+  await page.getByRole("button", { name: "Vertikal zentrieren", exact: true }).click();
+  await expect(cell(0, 0)).toHaveCSS("vertical-align", "middle");
+
+  // Rahmen unten, Filter und Auswahlliste.
+  await page.getByRole("button", { name: "Rahmen", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "Rahmenlinie unten" }).click();
+  await page.getByRole("button", { name: "Filter", exact: true }).click();
+  await page.getByRole("button", { name: "Filter B" }).click();
+  await page.locator(".sheet-filter-menu").getByRole("checkbox", { name: "Küche" }).click();
+  await page.locator(".sheet-filter-menu").getByRole("button", { name: "OK" }).click();
+  await expect(page.locator(".sheet-table")).not.toContainText("Ben");
+  await cell(9, 1).click();
+  await page.getByRole("button", { name: "Auswahlliste", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Auswahlliste" });
+  await dialog.getByLabel("Erlaubte Werte").fill("Ja\nNein");
+  await dialog.getByRole("button", { name: "Übernehmen" }).click();
+  await page.getByRole("button", { name: "Auswahlliste öffnen" }).click();
+  await page.getByRole("menuitemradio", { name: "Nein" }).click();
+  await expect(page.locator(".office-status")).toContainText("Gespeichert um");
+
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  await page.getByText(`Excel ${stamp}.xlsx`, { exact: true }).dblclick();
+  await expect(page.locator(".sheet-table tbody tr").first().locator("td").first()).toHaveCSS(
+    "vertical-align",
+    "middle",
+  );
+  await expect(page.locator(".sheet-table")).not.toContainText("Ben");
+  await expect(page.locator(".sheet-table")).toContainText("Nein");
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  expect(errors).toEqual([]);
+});
