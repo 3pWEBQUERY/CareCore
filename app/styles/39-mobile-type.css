@@ -588,7 +588,7 @@
   .med-reserve-actions button {
     font-size: 11.5px;
   }
-  .med-reserve-log p {
+  .med-reserve-log > div:last-child > p {
     font-size: 11.5px;
   }
   .operations-timeline-row time {

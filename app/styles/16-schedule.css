@@ -628,3 +628,16 @@
   width: 15px;
   color: var(--brand);
 }
+/* Kalender als Portal über der Seite: feste Position am Auslöser, nie abgeschnitten. */
+.schedule-date-menu.schedule-date-menu-portal {
+  position: fixed;
+  inset: auto;
+  /* Über allen Dialogen (bis Ebene 160). */
+  z-index: 200;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+}
+.schedule-date-menu.schedule-date-menu-portal.up {
+  inset: auto;
+  transform: translateY(-100%);
+}

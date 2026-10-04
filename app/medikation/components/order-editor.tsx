@@ -2,9 +2,15 @@
 
 import { useState } from "react";
 import { X } from "@phosphor-icons/react";
-import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
+import { CareDatePicker, CareOptionSelect, CareSelect } from "@/app/components/care-form-controls";
 import { WEEKDAYS, type MedOrder, type OrderInput } from "@/lib/medication-shared";
 import { EditorDialog, requestJson, todayInZurich } from "@/app/components/workspace-ui";
+
+// Auswahl innerhalb der Grenzen, die der Server annimmt (1–24 Gaben, 0,5–72 Stunden); die Werte legt die Verordnung fest.
+const MAX_DOSES = Array.from({ length: 24 }, (_, index) => index + 1);
+const INTERVALS = [...Array.from({ length: 24 }, (_, index) => (index + 1) / 2), 14, 16, 18, 20, 24, 36, 48, 72];
+const hours = (value: number) =>
+  `${value.toLocaleString("de-CH", { maximumFractionDigits: 1 })} ${value === 1 ? "Stunde" : "Stunden"}`;
 
 const ROUTES = [
   "oral",
@@ -234,26 +240,36 @@ export default function OrderEditor({
         <>
           <label>
             <span>Max. Gaben pro 24 h</span>
-            <input
-              required
-              type="number"
-              min={1}
-              max={24}
-              step={1}
-              value={draft.maxDosesPer24h ?? ""}
-              onChange={(e) => update("maxDosesPer24h", e.target.value ? Number(e.target.value) : null)}
+            <CareOptionSelect
+              label="Max. Gaben pro 24 h"
+              value={draft.maxDosesPer24h ? String(draft.maxDosesPer24h) : ""}
+              placeholder="Bitte wählen"
+              onChange={(value) => update("maxDosesPer24h", value ? Number(value) : null)}
+              options={[
+                // Ein früher erfasster Wert ausserhalb der Liste bleibt wählbar.
+                ...(draft.maxDosesPer24h && !MAX_DOSES.includes(draft.maxDosesPer24h)
+                  ? [{ value: String(draft.maxDosesPer24h), label: `${draft.maxDosesPer24h} Gaben` }]
+                  : []),
+                ...MAX_DOSES.map((count) => ({
+                  value: String(count),
+                  label: `${count} ${count === 1 ? "Gabe" : "Gaben"}`,
+                })),
+              ]}
             />
           </label>
           <label>
             <span>Mindestabstand (Stunden)</span>
-            <input
-              required
-              type="number"
-              min={0.5}
-              max={72}
-              step={0.5}
-              value={draft.minIntervalHours ?? ""}
-              onChange={(e) => update("minIntervalHours", e.target.value ? Number(e.target.value) : null)}
+            <CareOptionSelect
+              label="Mindestabstand (Stunden)"
+              value={draft.minIntervalHours ? String(draft.minIntervalHours) : ""}
+              placeholder="Bitte wählen"
+              onChange={(value) => update("minIntervalHours", value ? Number(value) : null)}
+              options={[
+                ...(draft.minIntervalHours && !INTERVALS.includes(draft.minIntervalHours)
+                  ? [{ value: String(draft.minIntervalHours), label: hours(draft.minIntervalHours) }]
+                  : []),
+                ...INTERVALS.map((value) => ({ value: String(value), label: hours(value) })),
+              ]}
             />
           </label>
           <label>

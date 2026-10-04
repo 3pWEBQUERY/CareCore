@@ -46,6 +46,7 @@ export function MovementJournal({
         <div>
           <p className="eyebrow">Nachvollziehbarkeit</p>
           <h2 className="card-title">{title}</h2>
+          <p className="card-subtitle">Eingänge, Gaben und Korrekturen mit Person und Zeitpunkt.</p>
         </div>
       </div>
       <div>

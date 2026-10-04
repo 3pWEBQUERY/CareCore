@@ -120,7 +120,7 @@
 .med-reserve-log > div:last-child {
   padding: 5px 16px 13px;
 }
-.med-reserve-log p {
+.med-reserve-log > div:last-child > p {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
   gap: 8px;
@@ -131,10 +131,10 @@
   color: #4f6478;
   font-size: 9px;
 }
-.med-reserve-log p:last-child {
+.med-reserve-log > div:last-child > p:last-child {
   border-bottom: 0;
 }
-.med-reserve-log p svg {
+.med-reserve-log > div:last-child > p svg {
   width: 14px;
   color: var(--success);
 }
@@ -698,4 +698,9 @@
 }
 .offline-status-edit .offline-status-actions {
   justify-content: flex-end;
+}
+/* Leeres Journal: Hinweis über die ganze Breite statt in der Symbolspalte. */
+.med-reserve-log > div:last-child > p.list-hint {
+  display: block;
+  color: var(--muted);
 }
