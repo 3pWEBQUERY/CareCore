@@ -12,7 +12,7 @@ test("Ablage: Dokument, Tabelle und Präsentation anlegen, bearbeiten und automa
   const saved = page.locator(".office-status");
 
   // Dokument aus der Vorlage „Protokoll“.
-  await page.getByRole("button", { name: "Neu" }).click();
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
   await page.getByRole("menuitem", { name: /Dokument/ }).click();
   const gallery = page.getByRole("dialog", { name: "Neues Dokument (Word)" });
   await gallery.getByRole("radio", { name: /Protokoll/ }).click();
@@ -34,7 +34,7 @@ test("Ablage: Dokument, Tabelle und Präsentation anlegen, bearbeiten und automa
   await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
 
   // Tabelle: Werte und Formeln, Ergebnis nach dem Speichern.
-  await page.getByRole("button", { name: "Neu" }).click();
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
   await page.getByRole("menuitem", { name: /Tabelle/ }).click();
   const sheetGallery = page.getByRole("dialog", { name: "Neue Tabelle (Excel)" });
   await sheetGallery.getByLabel("Name").fill(`Werte ${stamp}`);
@@ -59,7 +59,7 @@ test("Ablage: Dokument, Tabelle und Präsentation anlegen, bearbeiten und automa
   await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
 
   // Präsentation: Titel ändern, Folie hinzufügen.
-  await page.getByRole("button", { name: "Neu" }).click();
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
   await page.getByRole("menuitem", { name: /Präsentation/ }).click();
   const deckGallery = page.getByRole("dialog", { name: "Neue Präsentation (PowerPoint)" });
   await deckGallery.getByRole("radio", { name: /Teamsitzung/ }).click();
@@ -87,7 +87,7 @@ test("Tabelle: Eingaben gehen nie verloren, Tooltips und Umbenennen", async ({ p
   const errors = watchErrors(page);
   const stamp = Date.now();
   await page.goto("/c/carecore-one/ablage");
-  await page.getByRole("button", { name: "Neu" }).click();
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
   await page.getByRole("menuitem", { name: /Tabelle/ }).click();
   const gallery = page.getByRole("dialog", { name: "Neue Tabelle (Excel)" });
   await gallery.getByLabel("Name").fill(`Eingaben ${stamp}`);
