@@ -2,11 +2,15 @@
 .quality-workflow-card {
   padding-bottom: 16px;
 }
-.quality-workflow-card p {
+/* Nur die Texte der Karte, nicht die Überschrift im Kopf (sonst rückt sie ein und wird grau). */
+.quality-workflow-card > p {
   margin: 0 18px 12px;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.5;
+}
+.quality-workflow-card > .card-header + p {
+  margin-top: 14px;
 }
 .quality-workflow-card .secondary-button {
   margin: 0 18px;
