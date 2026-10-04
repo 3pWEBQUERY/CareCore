@@ -517,7 +517,11 @@ als Entwurf in `docs/ZWECKBESTIMMUNG.md`.
 
 ### Niedrig
 
-- [ ] **Wäsche- und Inventarliste beim Eintritt:** Kleidung und Einrichtungsgegenstände der Person mit Kennzeichnung.
+- [x] **Wäsche- und Inventarliste beim Eintritt:** Kleidung und Einrichtungsgegenstände der Person mit Kennzeichnung.
+      Umgesetzt als Erweiterung von „Hilfsmittel & Gegenstände“ in der Akte: neue Arten Kleidung / Wäsche und
+      Einrichtung mit Anzahl und Schnellauswahl; „Inventarliste drucken“ (A4 hoch, je Art gegliedert, mit Zimmer,
+      Eintrittsdatum und Unterschriftsfeldern für Person bzw. Vertretung und Mitarbeitende). Im Überleitungsbogen
+      erscheinen weiterhin nur Hilfsmittel und persönliche Gegenstände.
 
 ### Braucht eine externe Fachperson
 
