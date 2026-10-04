@@ -15,7 +15,8 @@ test("Hilfsmittel & Gegenstände: erfassen, im Überleitungsbogen, nicht mehr vo
   await dialog.getByRole("button", { name: "Hörgerät" }).click();
   await expect(dialog.getByLabel("Gegenstand")).toHaveValue("Hörgerät");
   await dialog.getByLabel("Kennzeichnung").fill(marking);
-  await dialog.getByLabel("Standort").fill("Nachttisch");
+  await dialog.getByRole("combobox", { name: "Standort" }).click();
+  await page.getByRole("option", { name: "Nachttisch", exact: true }).click();
   await dialog.getByRole("button", { name: "Speichern" }).click();
   await expect(dialog).toHaveCount(0);
   const item = card.locator("li", { hasText: marking });

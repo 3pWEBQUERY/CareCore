@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { PencilSimple, Plus, Trash } from "@phosphor-icons/react";
 import { EditorDialog, formatDateTime, requestJson, useApiData } from "@/app/components/workspace-ui";
+import { CareOptionSelect } from "@/app/components/care-form-controls";
 import {
   BELONGING_KINDS,
+  BELONGING_LOCATIONS,
   BELONGING_SUGGESTIONS,
   type Belonging,
   type BelongingKind,
@@ -287,11 +289,19 @@ export function RecordBelongingsCard({
           </label>
           <label>
             <span>Standort</span>
-            <input
-              maxLength={200}
-              placeholder="z. B. Nachttisch, Becher im Bad"
+            <CareOptionSelect
+              label="Standort"
               value={draft.location}
-              onChange={(event) => setDraft({ ...draft, location: event.target.value })}
+              placeholder="Standort wählen"
+              onChange={(value) => setDraft({ ...draft, location: value })}
+              options={[
+                { value: "", label: "Nicht angegeben" },
+                // Ein früher frei erfasster Standort bleibt wählbar.
+                ...(draft.location && !BELONGING_LOCATIONS.includes(draft.location)
+                  ? [{ value: draft.location, label: draft.location }]
+                  : []),
+                ...BELONGING_LOCATIONS.map((item) => ({ value: item, label: item })),
+              ]}
             />
           </label>
           <label className="area-editor-wide">

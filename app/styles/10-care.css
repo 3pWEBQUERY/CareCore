@@ -20,12 +20,12 @@
 }
 .house-resident-focus-body h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
 }
 .house-resident-focus-body > p {
   margin: 7px 0 15px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.55;
 }
 .house-resident-focus-body dl {
@@ -38,7 +38,7 @@
   gap: 12px;
   padding: 9px 0;
   border-bottom: 1px solid #edf1f5;
-  font-size: 9px;
+  font-size: 12px;
 }
 .house-resident-focus-body dt {
   color: var(--muted);
@@ -67,13 +67,13 @@
 }
 .archive-privacy-note strong {
   display: block;
-  font-size: 9px;
+  font-size: 12px;
 }
 .archive-privacy-note small {
   display: block;
   margin-top: 3px;
   color: #6e7b89;
-  font-size: 8px;
+  font-size: 11px;
 }
 .house-status-overview > div:last-child {
   padding: 7px 14px 14px;
@@ -101,13 +101,13 @@
 }
 .house-status-overview strong {
   display: block;
-  font-size: 10px;
+  font-size: 13px;
 }
 .house-status-overview small {
   display: block;
   margin-top: 3px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 11px;
 }
 .house-status-overview svg {
   width: 14px;
@@ -586,26 +586,33 @@
 .house-timeline li.empty {
   padding-left: 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 .house-timeline li.empty::before {
   display: none;
 }
-.house-timeline strong {
+.house-timeline li strong {
   display: block;
-  font-size: 10px;
+  font-size: 13px;
 }
-.house-timeline small {
+.house-timeline li small {
   display: block;
   margin-top: 2px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
 }
-.house-timeline p {
+.house-timeline li p {
   margin: 5px 0 0;
   color: #4d5c6b;
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.5;
+}
+/* Knöpfe der ausgewählten Akte: gleiche Grösse wie in den übrigen Karten, Text auf einer Zeile. */
+.house-resident-focus .course-focus-actions a,
+.house-resident-focus .course-focus-actions button {
+  min-height: 40px;
+  font-size: 13px;
+  line-height: 1.25;
 }
 .care-page-layout.header-resident-layout {
   grid-template-columns: minmax(0, 1fr);

@@ -17,6 +17,22 @@ export const BELONGING_SUGGESTIONS: Record<BelongingKind, string[]> = {
   furniture: ["Sessel", "Kommode", "Fernseher", "Bild", "Lampe", "Teppich"],
 };
 
+// Wo der Gegenstand aufbewahrt wird (Auswahl im Dialog; ein früher frei erfasster Standort bleibt erhalten).
+export const BELONGING_LOCATIONS = [
+  "Trägt die Person",
+  "Am Bett",
+  "Nachttisch",
+  "Kleiderschrank",
+  "Kommode",
+  "Bad",
+  "Im Zimmer",
+  "Am Rollstuhl / Rollator",
+  "Stationszimmer",
+  "Wäscherei",
+  "Lager / Keller",
+  "Bei Angehörigen",
+];
+
 // Gegenstände für den Überleitungsbogen (Kleidung und Einrichtung bleiben im Haus).
 export const TRANSFER_KINDS: BelongingKind[] = ["aid", "personal"];
 
