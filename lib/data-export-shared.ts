@@ -1,9 +1,9 @@
 // Auskunft und Datenexport je Person (Server und Oberfläche): alle gespeicherten Daten einer Akte, nach Bereichen.
-
 import { DIAGNOSIS_KINDS, DIAGNOSIS_STATUSES } from "@/lib/diagnoses-shared";
 import { VACCINATION_PLACES } from "@/lib/vaccinations-shared";
 import { BELONGING_KINDS } from "@/lib/belongings-shared";
 import { CONSENT_DECISIONS } from "@/lib/consents-shared";
+import { TRANSPORT_LABELS } from "@/lib/resident-appointments";
 
 export type ExportSection = { key: string; title: string; rows: Array<Record<string, unknown>> };
 
@@ -303,6 +303,16 @@ export const EXPORT_COLUMN_LABELS: Record<string, string> = {
   actor_user_id: "Durch",
   before_data: "Vorher",
   after_data: "Nachher",
+  outside: "Ausser Haus",
+  transport: "Transport",
+  transport_note: "Transport-Details",
+  pickup_at: "Abholung",
+  escort: "Begleitung",
+  documents: "Mitzugebende Unterlagen",
+  departed_at: "Abgefahren am",
+  departed_by: "Abfahrt vermerkt von",
+  returned_at: "Zurück am",
+  returned_by: "Rückkehr vermerkt von",
 };
 
 // Häufige technische Werte in lesbarer Form.
@@ -312,6 +322,7 @@ export const EXPORT_SECTION_VALUE_LABELS: Record<string, Record<string, Record<s
   vaccinations: { place: VACCINATION_PLACES },
   belongings: { kind: BELONGING_KINDS },
   consents: { decision: CONSENT_DECISIONS },
+  appointments: { transport: TRANSPORT_LABELS },
 };
 
 export const EXPORT_VALUE_LABELS: Record<string, string> = {

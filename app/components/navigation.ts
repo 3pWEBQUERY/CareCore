@@ -164,7 +164,7 @@ export const navigation: NavGroup[] = [
     id: "carecore-one",
     label: "CareCore One",
     modules: [
-      { id: "one-calendar", label: "Kalender", icon: "calendar", children: ["Kalender"] },
+      { id: "one-calendar", label: "Kalender", icon: "calendar", children: ["Kalender", "Fahrdienst"] },
       { id: "messenger", label: "Messenger", icon: "team", children: ["Nachrichten", "Portal-Nachrichten"] },
       { id: "cloud", label: "Cloud", icon: "docs", children: ["Gemeinsame Ablage", "Meine Dateien"] },
     ],
@@ -327,7 +327,7 @@ const routes: Record<string, Record<string, string>> = {
     "Standards & Weisungen": "/personal/dokumente/standards",
     Dokumente: "/personal/dokumente",
   },
-  "one-calendar": { Kalender: "/carecore-one/kalender" },
+  "one-calendar": { Kalender: "/carecore-one/kalender", Fahrdienst: "/carecore-one/kalender/fahrdienst" },
   messenger: { Nachrichten: "/carecore-one/messenger", "Portal-Nachrichten": "/carecore-one/portal-nachrichten" },
   cloud: { "Gemeinsame Ablage": "/carecore-one/ablage", "Meine Dateien": "/carecore-one/cloud" },
   quality: {

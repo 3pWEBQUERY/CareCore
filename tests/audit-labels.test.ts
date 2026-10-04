@@ -80,6 +80,7 @@ const COMPUTED = [
   "end_of_life_wishes:updated",
   "death_checklist:item_done",
   "death_checklist:item_reopened",
+  ...["departed", "returned", "departure_undone", "return_undone"].map((action) => `resident_appointment:${action}`),
 ];
 
 test("Änderungsprotokoll: jede protokollierte Aktion hat eine deutsche Bezeichnung", () => {

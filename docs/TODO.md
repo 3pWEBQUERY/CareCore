@@ -498,8 +498,11 @@ als Entwurf in `docs/ZWECKBESTIMMUNG.md`.
       kein Hinweis), Messung mit Datum, Uhrzeit, Wert und Person; ausserhalb der Grenzen ist die Massnahme Pflicht;
       Messungen speichern die damals geltenden Grenzen; Erinnerung an die Leitung Medikation bei fälliger Messung und
       bei Wert ausserhalb der Grenzen; Verlauf der letzten 31 Tage.
-- [ ] **Fahrdienst und externe Termine:** Arzt, Spital, Coiffeur, Fusspflege mit Transport, Begleitung und
-      mitzugebenden Unterlagen; Tagesliste für den Empfang.
+- [x] **Fahrdienst und externe Termine:** Arzt, Spital, Coiffeur, Fusspflege mit Transport, Begleitung und
+      mitzugebenden Unterlagen; Tagesliste für den Empfang. Umgesetzt: Termin im Kalender als „ausser Haus“ markieren
+      mit Transport, Abholzeit, Transport-Details, Begleitung und Unterlagen (Kategorien Coiffeur und Fusspflege
+      neu); Kalender › Fahrdienst zeigt die Tagesliste (Heute, Morgen oder Datum) mit Vermerk von Abfahrt und
+      Rückkehr samt Person (rückgängig möglich, im Protokoll der Akte) und Druck auf A4 quer.
 - [ ] **Einarbeitung neuer Mitarbeitender:** Checkliste je Rolle (Punkte legt die Einrichtung fest), mit Abzeichnen
       durch die einarbeitende Person.
 - [ ] **Rückmeldungen und Beschwerden:** von Angehörigen und Bewohnenden, mit Bearbeitung, Antwort und Frist der

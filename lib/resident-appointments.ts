@@ -4,6 +4,8 @@ export const appointmentCategories = [
   "Untersuchung",
   "Besuch",
   "Transport",
+  "Coiffeur",
+  "Fusspflege",
   "Sonstiges",
 ] as const;
 export const careUnitTaskCategories = [
@@ -17,6 +19,17 @@ export const careUnitTaskCategories = [
 export const appointmentStatuses = ["scheduled", "completed", "cancelled"] as const;
 
 export type AppointmentStatus = (typeof appointmentStatuses)[number];
+
+// Transport zu Terminen ausser Haus.
+export const TRANSPORT_LABELS = {
+  none: "Kein Transport nötig",
+  family: "Angehörige",
+  taxi: "Taxi / Fahrdienst",
+  patient_transport: "Krankentransport",
+  facility: "Fahrzeug der Einrichtung",
+  other: "Anderer",
+} as const;
+export type AppointmentTransport = keyof typeof TRANSPORT_LABELS;
 export type AppointmentKind = "resident" | "care_unit_task";
 
 export type ResidentAppointment = {
@@ -35,6 +48,12 @@ export type ResidentAppointment = {
   location: string | null;
   notes: string | null;
   status: AppointmentStatus;
+  outside: boolean;
+  transport: AppointmentTransport | null;
+  transport_note: string;
+  pickup_at: string | null;
+  escort: string;
+  documents: string;
   created_at: string;
   updated_at: string;
 };
@@ -62,6 +81,13 @@ export type AppointmentDraft = {
   location: string;
   notes: string;
   status: AppointmentStatus;
+  // Ausser Haus: Transport, Abholung (Uhrzeit am Termintag, leer = keine), Begleitung, mitzugebende Unterlagen.
+  outside: boolean;
+  transport: AppointmentTransport | null;
+  transportNote: string;
+  pickupTime: string;
+  escort: string;
+  documents: string;
 };
 
 const dateFormatter = new Intl.DateTimeFormat("en-CA", {
@@ -131,6 +157,12 @@ export function initialAppointmentDraft(
     location: "",
     notes: "",
     status: "scheduled",
+    outside: false,
+    transport: null,
+    transportNote: "",
+    pickupTime: "",
+    escort: "",
+    documents: "",
   };
 }
 
@@ -149,6 +181,12 @@ export function draftFromAppointment(appointment: ResidentAppointment): Appointm
     location: appointment.location ?? "",
     notes: appointment.notes ?? "",
     status: appointment.status,
+    outside: appointment.outside,
+    transport: appointment.transport,
+    transportNote: appointment.transport_note,
+    pickupTime: appointment.pickup_at ? appointmentLocalParts(appointment.pickup_at).time : "",
+    escort: appointment.escort,
+    documents: appointment.documents,
   };
 }
 

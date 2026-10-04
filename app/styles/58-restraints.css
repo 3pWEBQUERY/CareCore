@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Diagnosen, Impfungen, Hilfsmittel & Gegenstände, Einwilligungen, Geräte & Prüfungen, Kühlschrank-Temperatur, Küchenliste, Tippflächen kleiner Links und Textknöpfe sowie die Hauptüberschrift der Druckansichten. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Diagnosen, Impfungen, Hilfsmittel & Gegenstände, Einwilligungen, Geräte & Prüfungen, Kühlschrank-Temperatur, Fahrdienst, Küchenliste, Tippflächen kleiner Links und Textknöpfe sowie die Hauptüberschrift der Druckansichten. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -1757,6 +1757,26 @@
 .diagnosis-code.fridge-outside {
   color: #a43b2d;
   background: var(--critical-soft);
+}
+/* Fahrdienst: Tagwahl (Heute, Morgen, Datum) über der Tagesliste. */
+.outing-day-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 14px;
+}
+.outing-day-picker > .repositioning-choices {
+  margin: 0;
+}
+.outing-day-picker > .outing-print {
+  margin-left: auto;
+}
+@media (max-width: 760px) {
+  .outing-day-picker > .outing-print {
+    width: 100%;
+    margin-left: 0;
+  }
 }
 /* Küchenliste (A4 quer): breiter als die Evakuierungsliste, Allergien hervorgehoben. */
 .kitchen-sheet {
