@@ -133,17 +133,17 @@ test("Reanimationsstatus: in den Stammdaten erfassen, im Aktenkopf und im Überl
   await expect(page.getByRole("button", { name: "Stammdaten bearbeiten" })).toBeVisible();
   await expect(badge).toHaveText("REA: Nein");
   await expect(badge).toHaveClass(/critical/);
+  const href = await page.locator(".record-transfer-link").getAttribute("href");
+  await page.goto(href ?? "");
+  await expect(page.locator(".transfer-resuscitation")).toContainText(
+    "Keine Reanimation (DNR) · Grundlage: Patientenverfügung",
+  );
   // Nach dem Speichern zeigen alle Karten den neuen Stand.
   await page.goto("/c/bewohner");
   await expect(
     page.locator(".resident-list-row").nth(1).getByRole("img", { name: "Keine Reanimation (DNR)" }),
   ).toHaveText("REA Nein");
 
-  const href = await page.locator(".record-transfer-link").getAttribute("href");
-  await page.goto(href ?? "");
-  await expect(page.locator(".transfer-resuscitation")).toContainText(
-    "Keine Reanimation (DNR) · Grundlage: Patientenverfügung",
-  );
   expect(errors).toEqual([]);
 });
 
