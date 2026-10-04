@@ -81,6 +81,8 @@ const COMPUTED = [
   "death_checklist:item_done",
   "death_checklist:item_reopened",
   ...["departed", "returned", "departure_undone", "return_undone"].map((action) => `resident_appointment:${action}`),
+  "onboarding:step_signed",
+  "onboarding:step_reopened",
 ];
 
 test("Änderungsprotokoll: jede protokollierte Aktion hat eine deutsche Bezeichnung", () => {

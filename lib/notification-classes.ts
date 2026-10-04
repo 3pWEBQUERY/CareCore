@@ -18,6 +18,7 @@ const ACTION_TYPES = [
   "device_check_due",
   "fridge_reading_due",
   "fridge_temperature_outside",
+  "onboarding_mentor",
   "wound_overdue",
   "medication_effect_check",
   "visit_answered",

@@ -46,7 +46,8 @@ jobs:
   database:
     name: Datenbank-Tests (Postgres)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Die Tests laufen nacheinander auf derselben Datenbank; die Sammlung braucht inzwischen rund 15 Minuten.
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:16

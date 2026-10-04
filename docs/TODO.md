@@ -503,8 +503,11 @@ als Entwurf in `docs/ZWECKBESTIMMUNG.md`.
       mit Transport, Abholzeit, Transport-Details, Begleitung und Unterlagen (Kategorien Coiffeur und Fusspflege
       neu); Kalender › Fahrdienst zeigt die Tagesliste (Heute, Morgen oder Datum) mit Vermerk von Abfahrt und
       Rückkehr samt Person (rückgängig möglich, im Protokoll der Akte) und Druck auf A4 quer.
-- [ ] **Einarbeitung neuer Mitarbeitender:** Checkliste je Rolle (Punkte legt die Einrichtung fest), mit Abzeichnen
-      durch die einarbeitende Person.
+- [x] **Einarbeitung neuer Mitarbeitender:** Checkliste je Rolle (Punkte legt die Einrichtung fest), mit Abzeichnen
+      durch die einarbeitende Person. Umgesetzt unter Leitung › Mitarbeitende › Einarbeitung: Checklisten für alle
+      Rollen und je Rolle; beim Start werden die Punkte für die Person übernommen (spätere Änderungen betreffen nur
+      neue Einarbeitungen); die einarbeitende Person erhält einen Hinweis und zeichnet ab (mit Name und Uhrzeit,
+      zurücknehmbar); Abschluss durch die Leitung, wenn alle Punkte abgezeichnet sind; alles im Änderungsprotokoll.
 - [ ] **Rückmeldungen und Beschwerden:** von Angehörigen und Bewohnenden, mit Bearbeitung, Antwort und Frist der
       Einrichtung; Auswertung für das Qualitätsmanagement.
 
