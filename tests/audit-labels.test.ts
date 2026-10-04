@@ -66,6 +66,10 @@ const COMPUTED = [
   "shared_file:shared",
   "shared_file:updated",
   "shared_file:deleted",
+  ...["restored", "purged", "moved", "copied", "versioned", "version_restored"].map(
+    (action) => `shared_file:${action}`,
+  ),
+  ...["created", "renamed", "moved", "deleted", "restored", "purged"].map((action) => `shared_folder:${action}`),
   "care_supply_product:created",
   "care_supply_product:updated",
   "ai_draft:accepted",

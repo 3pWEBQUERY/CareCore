@@ -1,5 +1,10 @@
-import CloudWorkspace from "./workspace";
+import { Suspense } from "react";
+import FileExplorer from "../files/explorer";
 
 export default function CareCoreCloudPage() {
-  return <CloudWorkspace scope="personal" />;
+  return (
+    <Suspense fallback={null}>
+      <FileExplorer scope="personal" />
+    </Suspense>
+  );
 }

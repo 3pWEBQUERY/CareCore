@@ -58,6 +58,33 @@ async function selectChannels(ctx: ApiContext): Promise<Channel[]> {
   }));
 }
 
+// Im Dienst: eingestempelt oder laut veröffentlichtem Dienstplan gerade eingeteilt (auch für den Messenger).
+export function onDutyRows({ sql, actor }: Pick<ApiContext, "sql" | "actor">) {
+  return sql`
+      SELECT DISTINCT ON (u.id) u.id, u.display_name, COALESCE(st.name, 'Ungeplanter Einsatz') AS shift_name,
+        cu.name AS unit, e.clock_in AS checked_in_at
+      FROM carecore_users u
+      LEFT JOIN carecore_time_entries e ON e.employee_id = u.id AND e.status = 'OPEN' AND e.organization_id = ${actor.organizationId}
+      LEFT JOIN carecore_roster_shifts s ON s.employee_id = u.id AND s.category <> 'ABSENCE'
+        AND (s.id = e.shift_id OR (e.id IS NULL AND s.planned_start <= NOW() AND s.planned_end > NOW()
+          AND EXISTS (SELECT 1 FROM carecore_schedule_periods p WHERE p.id = s.period_id AND p.status = 'PUBLISHED')))
+      LEFT JOIN carecore_shift_types st ON st.id = s.shift_type_id
+      LEFT JOIN carecore_care_units cu ON cu.id = COALESCE(e.care_unit_id, s.care_unit_id)
+      WHERE u.active AND COALESCE(e.organization_id, s.organization_id) = ${actor.organizationId}
+      ORDER BY u.id, e.clock_in DESC NULLS LAST` as Promise<Row[]>;
+}
+
+export function onDutyPeople(rows: Row[]): OnDutyPerson[] {
+  return rows
+    .map((row) => ({
+      userId: String(row.id),
+      name: String(row.display_name),
+      detail: [row.unit, row.shift_name].filter(Boolean).join(" · "),
+      state: row.checked_in_at ? ("present" as const) : ("planned" as const),
+    }))
+    .sort((a, b) => (a.state === b.state ? a.name.localeCompare(b.name, "de-CH") : a.state === "present" ? -1 : 1));
+}
+
 export async function teamNews(ctx: ApiContext, params: URLSearchParams): Promise<TeamNewsPayload> {
   const { sql, actor } = ctx;
   await ensureDefaultChannel(ctx);
@@ -80,19 +107,7 @@ export async function teamNews(ctx: ApiContext, params: URLSearchParams): Promis
           ELSE p.channel_id = ${channelId}::uuid END
       ORDER BY p.pinned DESC, p.created_at DESC
       LIMIT 200` as Promise<Row[]>,
-    sql`
-      -- Im Dienst: eingestempelt oder laut veröffentlichtem Dienstplan gerade eingeteilt.
-      SELECT DISTINCT ON (u.id) u.id, u.display_name, COALESCE(st.name, 'Ungeplanter Einsatz') AS shift_name,
-        cu.name AS unit, e.clock_in AS checked_in_at
-      FROM carecore_users u
-      LEFT JOIN carecore_time_entries e ON e.employee_id = u.id AND e.status = 'OPEN' AND e.organization_id = ${actor.organizationId}
-      LEFT JOIN carecore_roster_shifts s ON s.employee_id = u.id AND s.category <> 'ABSENCE'
-        AND (s.id = e.shift_id OR (e.id IS NULL AND s.planned_start <= NOW() AND s.planned_end > NOW()
-          AND EXISTS (SELECT 1 FROM carecore_schedule_periods p WHERE p.id = s.period_id AND p.status = 'PUBLISHED')))
-      LEFT JOIN carecore_shift_types st ON st.id = s.shift_type_id
-      LEFT JOIN carecore_care_units cu ON cu.id = COALESCE(e.care_unit_id, s.care_unit_id)
-      WHERE u.active AND COALESCE(e.organization_id, s.organization_id) = ${actor.organizationId}
-      ORDER BY u.id, e.clock_in DESC NULLS LAST` as Promise<Row[]>,
+    onDutyRows(ctx),
     listCareUnits(ctx),
   ]);
 
@@ -118,14 +133,7 @@ export async function teamNews(ctx: ApiContext, params: URLSearchParams): Promis
     canEdit: manager || row.author_user_id === actor.id,
     isOwn: row.author_user_id === actor.id,
   }));
-  const onDuty: OnDutyPerson[] = dutyRows
-    .map((row) => ({
-      userId: String(row.id),
-      name: String(row.display_name),
-      detail: [row.unit, row.shift_name].filter(Boolean).join(" · "),
-      state: row.checked_in_at ? ("present" as const) : ("planned" as const),
-    }))
-    .sort((a, b) => (a.state === b.state ? a.name.localeCompare(b.name, "de-CH") : a.state === "present" ? -1 : 1));
+  const onDuty = onDutyPeople(dutyRows as Row[]);
 
   const weekAgo = Date.now() - 7 * 86_400_000;
   const monthAgo = Date.now() - 30 * 86_400_000;

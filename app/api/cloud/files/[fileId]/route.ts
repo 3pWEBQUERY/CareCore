@@ -2,7 +2,16 @@ import { NextResponse } from "next/server";
 import { apiErrorResponse } from "@/lib/api-context";
 import { readableFile } from "@/lib/file-access";
 import { carecoreActor } from "@/lib/server-data";
-import { deleteFile, updateFile } from "@/lib/shared-files";
+import {
+  copyFile,
+  listVersions,
+  purgeFile,
+  readText,
+  restoreVersion,
+  saveText,
+  updateFile,
+  versionContent,
+} from "@/lib/shared-files";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ fileId: string }> };
@@ -31,8 +40,15 @@ export async function GET(request: Request, { params }: Context) {
     const actor = await carecoreActor();
     if (!actor?.organizationId) return NextResponse.json({ error: "Bitte erneut anmelden." }, { status: 401 });
     const { fileId } = await params;
+    const search = new URL(request.url).searchParams;
+    // Bearbeiten als Text bzw. Versionen der Datei (Ablage).
+    if (search.get("text") === "1") return NextResponse.json(await readText(actor, fileId));
+    if (search.get("versions") === "1") return NextResponse.json({ versions: await listVersions(actor, fileId) });
+    const versionId = search.get("version");
     // Not found and not allowed look the same, so file ids cannot be probed.
-    const file = await readableFile(actor, fileId);
+    const file = versionId
+      ? { ...(await versionContent(actor, fileId, versionId)), mime_type: "application/octet-stream" }
+      : await readableFile(actor, fileId);
     if (!file) return NextResponse.json({ error: "Datei nicht gefunden." }, { status: 404 });
     const rows = [file];
     const safeName = rows[0].name.replace(/["\r\n]/g, "_");
@@ -56,8 +72,7 @@ export async function GET(request: Request, { params }: Context) {
       },
     });
   } catch (error) {
-    console.error("Cloud file download failed", error);
-    return NextResponse.json({ error: "Datei konnte nicht geladen werden." }, { status: 500 });
+    return apiErrorResponse(error, "Datei konnte nicht geladen werden.");
   }
 }
 
@@ -73,12 +88,43 @@ export async function PATCH(request: Request, { params }: Context) {
   }
 }
 
+// Text speichern (neue Version; versionNo schützt vor dem Überschreiben fremder Änderungen).
+export async function PUT(request: Request, { params }: Context) {
+  try {
+    const actor = await carecoreActor();
+    if (!actor?.organizationId) return NextResponse.json({ error: "Bitte erneut anmelden." }, { status: 401 });
+    const { fileId } = await params;
+    const file = await saveText(actor, fileId, (await request.json()) as Record<string, unknown>);
+    return NextResponse.json({ file });
+  } catch (error) {
+    return apiErrorResponse(error, "Text konnte nicht gespeichert werden.");
+  }
+}
+
+// Kopieren ({ action: "copy", folderId }) oder frühere Version wiederherstellen ({ action: "restoreVersion", versionId }).
+export async function POST(request: Request, { params }: Context) {
+  try {
+    const actor = await carecoreActor();
+    if (!actor?.organizationId) return NextResponse.json({ error: "Bitte erneut anmelden." }, { status: 401 });
+    const { fileId } = await params;
+    const body = (await request.json()) as Record<string, unknown>;
+    if (body.action === "copy")
+      return NextResponse.json({ file: await copyFile(actor, fileId, body) }, { status: 201 });
+    if (body.action === "restoreVersion")
+      return NextResponse.json({ file: await restoreVersion(actor, fileId, String(body.versionId)) });
+    return NextResponse.json({ error: "Unbekannte Aktion." }, { status: 400 });
+  } catch (error) {
+    return apiErrorResponse(error, "Datei konnte nicht geändert werden.");
+  }
+}
+
+// Endgültig löschen (nur aus dem Papierkorb; in den Papierkorb: PATCH { action: "trash" }).
 export async function DELETE(_request: Request, { params }: Context) {
   try {
     const actor = await carecoreActor();
     if (!actor?.organizationId) return NextResponse.json({ error: "Bitte erneut anmelden." }, { status: 401 });
     const { fileId } = await params;
-    await deleteFile(actor, fileId);
+    await purgeFile(actor, fileId);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return apiErrorResponse(error, "Datei konnte nicht gelöscht werden.");

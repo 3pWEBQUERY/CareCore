@@ -71,6 +71,7 @@ export const AUDIT_AREAS: Record<string, { area: string; href: string | null }> 
   resident_retention: { area: "Aufbewahrungsfrist", href: "/leitung/administration/konfiguration" },
   body_observation: { area: "Körperbefund", href: "/bewohner" },
   shared_file: { area: "Ablage", href: "/carecore-one/ablage" },
+  shared_folder: { area: "Ablage", href: "/carecore-one/ablage" },
   documentation_entry: { area: "Pflegebericht", href: "/pflegedokumentation" },
   care_plan: { area: "Pflegeplan", href: "/pflegeplanung" },
   care_goal: { area: "Pflegeziel", href: "/pflegeplanung" },
@@ -206,6 +207,19 @@ const VERBS: Record<string, string> = {
 
 // Aktionen, die als ganzer Satz lesbarer sind ({one} = Bezeichnung der betreuten Person).
 const TITLES: Record<string, string> = {
+  "shared_file:deleted": "Datei in den Papierkorb verschoben",
+  "shared_file:restored": "Datei aus dem Papierkorb wiederhergestellt",
+  "shared_file:purged": "Datei endgültig gelöscht",
+  "shared_file:moved": "Datei verschoben",
+  "shared_file:copied": "Datei kopiert",
+  "shared_file:versioned": "Neue Version der Datei gespeichert",
+  "shared_file:version_restored": "Frühere Version der Datei wiederhergestellt",
+  "shared_folder:created": "Ordner angelegt",
+  "shared_folder:renamed": "Ordner umbenannt",
+  "shared_folder:moved": "Ordner verschoben",
+  "shared_folder:deleted": "Ordner in den Papierkorb verschoben",
+  "shared_folder:restored": "Ordner aus dem Papierkorb wiederhergestellt",
+  "shared_folder:purged": "Ordner endgültig gelöscht",
   "organization:country_updated": "Land und Region der Einrichtung geändert",
   "organization:setup_dismissed": "Checkliste der Ersteinrichtung ausgeblendet",
   "organization:setup_shown": "Checkliste der Ersteinrichtung eingeblendet",
@@ -421,6 +435,8 @@ export const auditSettingTitle = (key: string) =>
 
 // Felder, die das Protokoll zeigt. Alles andere (technische Kennungen, Dateitypen, Zwischenwerte) bleibt verborgen.
 const FIELDS: Record<string, string> = {
+  folder: "Ordner",
+  from: "Vorlage bzw. frühere Version",
   advanceDirective: "Patientenverfügung",
   advanceDirectiveOn: "Patientenverfügung vom",
   evacuationMobility: "Mobilität im Notfall",
