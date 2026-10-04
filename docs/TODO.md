@@ -508,8 +508,12 @@ als Entwurf in `docs/ZWECKBESTIMMUNG.md`.
       Rollen und je Rolle; beim Start werden die Punkte für die Person übernommen (spätere Änderungen betreffen nur
       neue Einarbeitungen); die einarbeitende Person erhält einen Hinweis und zeichnet ab (mit Name und Uhrzeit,
       zurücknehmbar); Abschluss durch die Leitung, wenn alle Punkte abgezeichnet sind; alles im Änderungsprotokoll.
-- [ ] **Rückmeldungen und Beschwerden:** von Angehörigen und Bewohnenden, mit Bearbeitung, Antwort und Frist der
-      Einrichtung; Auswertung für das Qualitätsmanagement.
+- [x] **Rückmeldungen und Beschwerden:** von Angehörigen und Bewohnenden, mit Bearbeitung, Antwort und Frist der
+      Einrichtung; Auswertung für das Qualitätsmanagement. Umgesetzt unter Qualität & Kennzahlen › Rückmeldungen:
+      Beschwerde, Anregung oder Lob mit Herkunft, Weg, Person bzw. Wohnbereich und Thema; Zuständigkeit (mit Hinweis),
+      Massnahmen, Antwort mit Datum, Abschluss; Antwortfrist in Tagen legt die Einrichtung fest (leer = keine Frist,
+      nicht bei Lob), Erinnerung bei abgelaufener Frist; Auswertung je Jahr nach Art, Herkunft, Thema und Monat, Anteil
+      in der Frist beantwortet und Median bis zur Antwort; in der Auskunft der Person enthalten.
 
 ### Niedrig
 

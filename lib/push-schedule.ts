@@ -2,6 +2,7 @@ import { ApiError, type ApiContext, type Sql } from "@/lib/api-context";
 import { createLearningReminders } from "@/lib/learning";
 import { createBtmReminders } from "@/lib/medication-btm";
 import { createDeviceReminders } from "@/lib/devices";
+import { createFeedbackReminders } from "@/lib/feedback";
 import { createFridgeReminders } from "@/lib/fridges";
 import { createEffectCheckReminders } from "@/lib/medication-effect";
 import { dispatchPush, pushKeys, webPushSender, type PushSender } from "@/lib/push";
@@ -44,6 +45,7 @@ export async function runPushSchedule(sql: Sql, send?: PushSender) {
       createEffectCheckReminders(ctx),
       createDeviceReminders(ctx),
       createFridgeReminders(ctx),
+      createFeedbackReminders(ctx),
     ]).catch((error) => console.error("Reminders failed", error));
   }
   return dispatchPush(sql, sender);

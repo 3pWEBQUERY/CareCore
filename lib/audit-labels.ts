@@ -16,6 +16,16 @@ import { POSITIONS, SKIN_FINDINGS } from "@/lib/repositioning-shared";
 import { ELIMINATION_AMOUNTS, ELIMINATION_KINDS } from "@/lib/elimination-shared";
 import { EVACUATION_MOBILITY, type EvacuationMobility } from "@/lib/evacuation-shared";
 import { DEVICE_CHECK_RESULTS, type DeviceCheckResult } from "@/lib/devices-shared";
+import {
+  FEEDBACK_CHANNELS,
+  FEEDBACK_KINDS,
+  FEEDBACK_SOURCES,
+  FEEDBACK_STATUSES,
+  type FeedbackChannel,
+  type FeedbackKind,
+  type FeedbackSource,
+  type FeedbackStatus,
+} from "@/lib/feedback-shared";
 import { CONSENT_DECISIONS, type ConsentDecision } from "@/lib/consents-shared";
 import { BELONGING_KINDS, type BelongingKind } from "@/lib/belongings-shared";
 import { VACCINATION_PLACES, type VaccinationPlace } from "@/lib/vaccinations-shared";
@@ -119,6 +129,7 @@ export const AUDIT_AREAS: Record<string, { area: string; href: string | null }> 
   device: { area: "Gerät", href: "/leitung/qualitaet/geraete" },
   fridge: { area: "Kühlschrank-Temperatur", href: "/medikation/kuehlschrank" },
   onboarding: { area: "Einarbeitung", href: "/leitung/teamleitung/einarbeitung" },
+  feedback: { area: "Rückmeldung", href: "/leitung/qualitaet/rueckmeldungen" },
   death_checklist: { area: "Ablauf nach dem Todesfall", href: "/bewohner" },
   assessment_instrument: { area: "Einschätzungsinstrumente", href: "/leitung/administration/konfiguration" },
   outbreak: { area: "Ausbruch", href: "/bewohner/hygiene" },
@@ -290,6 +301,11 @@ const TITLES: Record<string, string> = {
   "onboarding:step_signed": "Punkt der Einarbeitung abgezeichnet",
   "onboarding:step_reopened": "Punkt der Einarbeitung zurückgenommen",
   "onboarding:completed": "Einarbeitung abgeschlossen",
+  "feedback:recorded": "Rückmeldung erfasst",
+  "feedback:updated": "Rückmeldung bearbeitet",
+  "feedback:answered": "Antwort auf eine Rückmeldung festgehalten",
+  "feedback:closed": "Rückmeldung abgeschlossen",
+  "feedback:reopened": "Rückmeldung wieder geöffnet",
   "resident_consent:recorded": "Einwilligung bzw. Ablehnung erfasst",
   "resident_appointment:departed": "Abfahrt zu einem Termin ausser Haus vermerkt",
   "resident_appointment:returned": "Rückkehr von einem Termin ausser Haus vermerkt",
@@ -393,6 +409,7 @@ const EXTRA_SETTINGS: Record<string, string> = {
   death_checklist: "Checkliste nach einem Todesfall",
   consent_topics: "Themen der Einwilligungen",
   onboarding_checklist: "Checkliste der Einarbeitung",
+  feedback_response_days: "Antwortfrist für Rückmeldungen",
   terminology: "Bezeichnung der betreuten Personen",
 };
 
@@ -443,6 +460,13 @@ const FIELDS: Record<string, string> = {
   hidden: "Ausgeblendet",
   items: "Punkte",
   person: "Person",
+  sourceName: "Name",
+  contact: "Kontakt",
+  channel: "Weg",
+  receivedOn: "Eingegangen am",
+  response: "Antwort",
+  answeredOn: "Beantwortet am",
+  days: "Tage",
   mentor: "Einarbeitung durch",
   item: "Punkt",
   label: "Bezeichnung",
@@ -784,6 +808,11 @@ function show(field: string, value: unknown, context: { entityType: string; acti
   const text = String(value);
   if (context.entityType === "resident" && context.action === "resuscitation_updated" && field === "status")
     return RESUSCITATION(text) ?? "nicht erfasst";
+  if (context.entityType === "feedback" && field === "kind") return FEEDBACK_KINDS[text as FeedbackKind] ?? text;
+  if (context.entityType === "feedback" && field === "source") return FEEDBACK_SOURCES[text as FeedbackSource] ?? text;
+  if (context.entityType === "feedback" && field === "channel")
+    return FEEDBACK_CHANNELS[text as FeedbackChannel] ?? text;
+  if (context.entityType === "feedback" && field === "status") return FEEDBACK_STATUSES[text as FeedbackStatus] ?? text;
   if (context.entityType === "device" && field === "result")
     return DEVICE_CHECK_RESULTS[text as DeviceCheckResult] ?? text;
   if (context.entityType === "resident_consent" && field === "decision")

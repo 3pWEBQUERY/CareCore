@@ -285,6 +285,12 @@ export const EXPORT_SECTIONS: Array<{ key: string; title: string; tables: string
     },
   },
   {
+    key: "feedback",
+    title: "Rückmeldungen und Beschwerden",
+    tables: ["carecore_feedback"],
+    query: (sql, id) => sql`SELECT * FROM carecore_feedback WHERE resident_id = ${id} ORDER BY received_on, created_at`,
+  },
+  {
     key: "appointments",
     title: "Termine",
     tables: ["carecore_resident_appointments"],
