@@ -7,6 +7,12 @@ const PNG = Buffer.from(
   "base64",
 );
 
+// 6×10-PNG (Hochformat): muss trotzdem rund und quadratisch erscheinen.
+const PORTRAIT = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAYAAAAKCAIAAAAYbLhkAAAAGElEQVR4nGM4URGAhhioKaRh04OGqCkEAFSHSwFOUUQMAAAAAElFTkSuQmCC",
+  "base64",
+);
+
 // Aufnahme mit Bild: Bild wählen, Vorschau, entfernen und wieder wählen, aufnehmen; das Bild steht danach in der Akte.
 test("Bewohner aufnehmen: Bild direkt hinzufügen, Vorschau, gespeichert in der Akte", async ({ page }) => {
   await login(page, ADMIN);
@@ -25,8 +31,10 @@ test("Bewohner aufnehmen: Bild direkt hinzufügen, Vorschau, gespeichert in der 
   await expect(dialog.getByRole("img", { name: /^Bild von / })).toBeVisible();
   await dialog.getByRole("button", { name: "Entfernen" }).click();
   await expect(dialog.getByRole("img", { name: /^Bild von / })).toHaveCount(0);
-  await input.setInputFiles({ name: "portrait.png", mimeType: "image/png", buffer: PNG });
+  await input.setInputFiles({ name: "hochformat.png", mimeType: "image/png", buffer: PORTRAIT });
   await expect(dialog.getByRole("button", { name: "Bild ändern", exact: true })).toBeVisible();
+  const preview = await dialog.getByRole("img", { name: /^Bild von / }).boundingBox();
+  expect(preview && Math.round(preview.width)).toBe(preview && Math.round(preview.height));
 
   // Falscher Dateityp: Hinweis, Bild bleibt.
   await input.setInputFiles({ name: "notiz.txt", mimeType: "text/plain", buffer: Buffer.from("hallo") });
@@ -68,6 +76,9 @@ test("Bewohner aufnehmen: Bild direkt hinzufügen, Vorschau, gespeichert in der 
 
   await page.getByText(lastName).first().click();
   const record = page.getByRole("dialog", { name: new RegExp(lastName) });
-  await expect(record.getByRole("img", { name: new RegExp(`Profilbild von .*${lastName}`) })).toBeVisible();
+  const photo = record.getByRole("img", { name: new RegExp(`Profilbild von .*${lastName}`) });
+  await expect(photo).toBeVisible();
+  const box = await photo.boundingBox();
+  expect(box && Math.round(box.width)).toBe(box && Math.round(box.height));
   expect(errors).toEqual([]);
 });
