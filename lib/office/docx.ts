@@ -1,0 +1,716 @@
+import { createZip, readZip, type ZipEntry } from "@/lib/zip";
+import {
+  DEFAULT_PAGE,
+  MARGINS_MM,
+  cleanModel,
+  emptyDoc,
+  type DocMark,
+  type DocNode,
+  type DocumentModel,
+  type PageSetup,
+} from "./model";
+import {
+  MODEL_PART,
+  REL,
+  XML_HEAD,
+  appProps,
+  contentTypes,
+  coreProps,
+  dataImage,
+  mediaDataUrl,
+  packModel,
+  relationships,
+  resolvePart,
+  rootRels,
+  sha256,
+  unpackModel,
+  type Rel,
+} from "./package";
+import { child, childrenOf, esc, find, findAll, parseXml, textOf, type XmlNode } from "./xml";
+
+// Word-Dokument (.docx) aus dem Dokument der Ablage schreiben und wieder lesen.
+
+const W =
+  'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+const TWIPS_PER_MM = 56.6929;
+const A4 = { width: 11906, height: 16838 };
+const FONT = "Calibri";
+
+const hex = (value: unknown) => {
+  if (typeof value !== "string") return null;
+  const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(value);
+  if (short) return `${short[1]}${short[1]}${short[2]}${short[2]}${short[3]}${short[3]}`.toUpperCase();
+  const long = /^#([0-9a-f]{6})$/i.exec(value);
+  if (long) return long[1].toUpperCase();
+  const rgb = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/i.exec(value);
+  if (rgb)
+    return rgb
+      .slice(1, 4)
+      .map((part) => Number(part).toString(16).padStart(2, "0"))
+      .join("")
+      .toUpperCase();
+  return null;
+};
+
+// Schriftgrösse aus „14pt“ oder „18px“ in halben Punkten (so rechnet Word).
+const halfPoints = (value: unknown) => {
+  const match = typeof value === "string" ? /^([\d.]+)\s*(pt|px)$/.exec(value) : null;
+  if (!match) return null;
+  const points = match[2] === "px" ? Number(match[1]) * 0.75 : Number(match[1]);
+  return Math.round(Math.min(144, Math.max(4, points)) * 2);
+};
+
+const ALIGN: Record<string, string> = { left: "left", center: "center", right: "right", justify: "both" };
+
+type Writer = {
+  rels: Rel[];
+  media: ZipEntry[];
+  mediaBySrc: Map<string, string>;
+  nums: { id: number; start: number }[];
+  drawings: number;
+  contentWidth: number;
+};
+
+function addRel(writer: Writer, type: string, target: string, external = false) {
+  const id = `rId${writer.rels.length + 10}`;
+  writer.rels.push({ id, type, target, external });
+  return id;
+}
+
+function runProps(marks: DocMark[] | undefined, extra = "") {
+  const has = (type: string) => marks?.find((mark) => mark.type === type);
+  const style = has("textStyle")?.attrs ?? {};
+  const parts: string[] = [];
+  if (has("link")) parts.push('<w:rStyle w:val="Hyperlink"/>');
+  if (typeof style.fontFamily === "string" && style.fontFamily) {
+    const font = esc(style.fontFamily.split(",")[0].replace(/["']/g, "").trim());
+    parts.push(`<w:rFonts w:ascii="${font}" w:hAnsi="${font}" w:cs="${font}"/>`);
+  }
+  if (has("bold") || extra.includes("b")) parts.push("<w:b/>");
+  if (has("italic")) parts.push("<w:i/>");
+  if (has("strike")) parts.push("<w:strike/>");
+  const color = hex(style.color);
+  if (color) parts.push(`<w:color w:val="${color}"/>`);
+  const size = halfPoints(style.fontSize);
+  if (size) parts.push(`<w:sz w:val="${size}"/><w:szCs w:val="${size}"/>`);
+  if (has("underline")) parts.push('<w:u w:val="single"/>');
+  const fill =
+    hex(has("highlight")?.attrs?.color ?? (has("highlight") ? "#fef08a" : null)) ?? hex(style.backgroundColor);
+  if (fill) parts.push(`<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>`);
+  if (has("superscript")) parts.push('<w:vertAlign w:val="superscript"/>');
+  else if (has("subscript")) parts.push('<w:vertAlign w:val="subscript"/>');
+  return parts.length ? `<w:rPr>${parts.join("")}</w:rPr>` : "";
+}
+
+const textRun = (text: string, props: string) =>
+  text
+    .split("\t")
+    .map(
+      (piece, index) =>
+        `${index ? `<w:r>${props}<w:tab/></w:r>` : ""}${piece ? `<w:r>${props}<w:t xml:space="preserve">${esc(piece)}</w:t></w:r>` : ""}`,
+    )
+    .join("");
+
+function inline(nodes: DocNode[] | undefined, writer: Writer, extra = "") {
+  let out = "";
+  for (const node of nodes ?? []) {
+    if (node.type === "hardBreak") {
+      out += "<w:r><w:br/></w:r>";
+      continue;
+    }
+    if (node.type === "image") {
+      out += image(node, writer);
+      continue;
+    }
+    if (node.type !== "text" || !node.text) continue;
+    const run = textRun(node.text, runProps(node.marks, extra));
+    const link = node.marks?.find((mark) => mark.type === "link");
+    const href = typeof link?.attrs?.href === "string" ? link.attrs.href : "";
+    out += href
+      ? `<w:hyperlink r:id="${addRel(writer, REL.hyperlink, href, true)}" w:history="1">${run}</w:hyperlink>`
+      : run;
+  }
+  return out;
+}
+
+function image(node: DocNode, writer: Writer) {
+  const picture = dataImage(node.attrs?.src);
+  if (!picture) return "";
+  writer.drawings += 1;
+  const number = writer.drawings;
+  const src = String(node.attrs?.src);
+  let name = writer.mediaBySrc.get(src)?.replace("word/media/", "");
+  if (!name) {
+    name = `bild${number}.${picture.extension}`;
+    writer.media.push({ path: `word/media/${name}`, content: picture.bytes });
+    writer.mediaBySrc.set(src, `word/media/${name}`);
+  }
+  const rel = addRel(writer, REL.image, `media/${name}`);
+  const wanted = typeof node.attrs?.width === "number" ? node.attrs.width : picture.width;
+  // Pixel → EMU (96 dpi); nie breiter als der Satzspiegel.
+  const maxWidth = (writer.contentWidth / 1440) * 914_400;
+  let cx = Math.max(1, wanted) * 9525;
+  let cy = (cx * picture.height) / Math.max(1, picture.width);
+  if (cx > maxWidth) {
+    cy = (cy * maxWidth) / cx;
+    cx = maxWidth;
+  }
+  cx = Math.round(cx);
+  cy = Math.round(cy);
+  const alt = esc(typeof node.attrs?.alt === "string" ? node.attrs.alt : `Bild ${number}`);
+  return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${number}" name="Bild ${number}" descr="${alt}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${number}" name="${name}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rel}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+}
+
+type ParagraphOptions = {
+  style?: string;
+  num?: { id: number; level: number };
+  indent?: number;
+  border?: boolean;
+  extra?: string;
+  prefix?: string;
+};
+
+function paragraph(node: DocNode, writer: Writer, options: ParagraphOptions = {}) {
+  const props: string[] = [];
+  if (options.style) props.push(`<w:pStyle w:val="${options.style}"/>`);
+  if (options.num)
+    props.push(`<w:numPr><w:ilvl w:val="${options.num.level}"/><w:numId w:val="${options.num.id}"/></w:numPr>`);
+  if (options.border) props.push('<w:pBdr><w:bottom w:val="single" w:sz="8" w:space="1" w:color="A0AEB0"/></w:pBdr>');
+  if (options.indent) props.push(`<w:ind w:left="${options.indent}"/>`);
+  const align = ALIGN[String(node.attrs?.textAlign ?? "")];
+  if (align && align !== "left") props.push(`<w:jc w:val="${align}"/>`);
+  const prefix = options.prefix ? `<w:r><w:t xml:space="preserve">${esc(options.prefix)}</w:t></w:r>` : "";
+  return `<w:p>${props.length ? `<w:pPr>${props.join("")}</w:pPr>` : ""}${prefix}${inline(node.content, writer, options.extra)}</w:p>`;
+}
+
+function blocks(
+  nodes: DocNode[] | undefined,
+  writer: Writer,
+  context: { quote?: boolean; depth?: number } = {},
+): string {
+  let out = "";
+  for (const node of nodes ?? []) out += block(node, writer, context);
+  return out;
+}
+
+function listItems(node: DocNode, writer: Writer, depth: number, numId: number | null, task: boolean): string {
+  let out = "";
+  for (const item of node.content ?? []) {
+    let first = true;
+    for (const part of item.content ?? []) {
+      if (part.type === "paragraph" || part.type === "heading") {
+        const prefix = task && first ? (item.attrs?.checked ? "☒ " : "☐ ") : undefined;
+        out += paragraph(part, writer, {
+          style: "ListParagraph",
+          num: first && numId !== null ? { id: numId, level: Math.min(8, depth) } : undefined,
+          indent: first && numId !== null ? undefined : 720 * (depth + 1),
+          prefix,
+        });
+        first = false;
+      } else out += block(part, writer, { depth: depth + 1 });
+    }
+  }
+  return out;
+}
+
+function table(node: DocNode, writer: Writer) {
+  const rows = node.content ?? [];
+  const columns = Math.max(
+    1,
+    ...rows.map((row) => (row.content ?? []).reduce((sum, cell) => sum + Number(cell.attrs?.colspan ?? 1), 0)),
+  );
+  const widths: number[] = Array.from({ length: columns }, () => Math.floor(writer.contentWidth / columns));
+  const first = rows[0]?.content ?? [];
+  let col = 0;
+  for (const cell of first) {
+    const span = Number(cell.attrs?.colspan ?? 1);
+    const colwidth = Array.isArray(cell.attrs?.colwidth) ? (cell.attrs.colwidth as number[]) : [];
+    for (let index = 0; index < span; index += 1)
+      if (colwidth[index]) widths[col + index] = Math.round(colwidth[index] * 15);
+    col += span;
+  }
+  const total = widths.reduce((sum, width) => sum + width, 0);
+  if (total > writer.contentWidth)
+    for (let index = 0; index < widths.length; index += 1)
+      widths[index] = Math.floor((widths[index] * writer.contentWidth) / total);
+  const pending = new Map<number, { remaining: number; span: number }>();
+  let out = `<w:tbl><w:tblPr><w:tblStyle w:val="Tabellenraster"/><w:tblW w:w="0" w:type="auto"/><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid>${widths.map((width) => `<w:gridCol w:w="${width}"/>`).join("")}</w:tblGrid>`;
+  for (const row of rows) {
+    const cells = [...(row.content ?? [])];
+    const header = cells.length > 0 && cells.every((cell) => cell.type === "tableHeader");
+    out += `<w:tr>${header ? "<w:trPr><w:tblHeader/></w:trPr>" : ""}`;
+    let position = 0;
+    while (position < columns) {
+      const merged = pending.get(position);
+      if (merged && merged.remaining > 0) {
+        merged.remaining -= 1;
+        const width = widths.slice(position, position + merged.span).reduce((a, b) => a + b, 0);
+        out += `<w:tc><w:tcPr><w:tcW w:w="${width}" w:type="dxa"/>${merged.span > 1 ? `<w:gridSpan w:val="${merged.span}"/>` : ""}<w:vMerge/></w:tcPr><w:p/></w:tc>`;
+        position += merged.span;
+        continue;
+      }
+      const cell = cells.shift();
+      if (!cell) {
+        out += `<w:tc><w:tcPr><w:tcW w:w="${widths[position]}" w:type="dxa"/></w:tcPr><w:p/></w:tc>`;
+        position += 1;
+        continue;
+      }
+      const span = Math.max(1, Math.min(columns - position, Number(cell.attrs?.colspan ?? 1)));
+      const rowspan = Math.max(1, Number(cell.attrs?.rowspan ?? 1));
+      if (rowspan > 1) pending.set(position, { remaining: rowspan - 1, span });
+      const width = widths.slice(position, position + span).reduce((a, b) => a + b, 0);
+      const fill = hex(cell.attrs?.backgroundColor) ?? (cell.type === "tableHeader" ? "EAF1FF" : null);
+      const content = (cell.content ?? []).length
+        ? (cell.content ?? [])
+            .map((part) =>
+              part.type === "paragraph" || part.type === "heading"
+                ? paragraph(part, writer, { extra: cell.type === "tableHeader" ? "b" : "" })
+                : block(part, writer, {}),
+            )
+            .join("")
+        : "<w:p/>";
+      out += `<w:tc><w:tcPr><w:tcW w:w="${width}" w:type="dxa"/>${span > 1 ? `<w:gridSpan w:val="${span}"/>` : ""}${rowspan > 1 ? '<w:vMerge w:val="restart"/>' : ""}${fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>` : ""}</w:tcPr>${content.endsWith("</w:p>") ? content : `${content}<w:p/>`}</w:tc>`;
+      position += span;
+    }
+    out += "</w:tr>";
+  }
+  // Word verlangt nach einer Tabelle am Zellende einen Absatz – im Fliesstext genügt die Tabelle selbst.
+  return `${out}</w:tbl>`;
+}
+
+function block(node: DocNode, writer: Writer, context: { quote?: boolean; depth?: number }): string {
+  const depth = context.depth ?? 0;
+  switch (node.type) {
+    case "paragraph":
+      return paragraph(node, writer, { style: context.quote ? "Zitat" : undefined });
+    case "heading": {
+      const level = Math.min(3, Math.max(1, Number(node.attrs?.level ?? 1)));
+      return paragraph(node, writer, { style: `berschrift${level}` });
+    }
+    case "blockquote":
+      return blocks(node.content, writer, { ...context, quote: true });
+    case "bulletList":
+      return listItems(node, writer, depth, 1, false);
+    case "orderedList": {
+      const id = 2 + writer.nums.length;
+      writer.nums.push({ id, start: Math.max(1, Number(node.attrs?.start ?? 1)) });
+      return listItems(node, writer, depth, id, false);
+    }
+    case "taskList":
+      return listItems(node, writer, depth, null, true);
+    case "table":
+      return table(node, writer);
+    case "horizontalRule":
+      return paragraph({ type: "paragraph" }, writer, { border: true });
+    case "pageBreak":
+      return '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+    case "image":
+      return `<w:p>${image(node, writer)}</w:p>`;
+    default:
+      return "";
+  }
+}
+
+function pageSize(page: PageSetup) {
+  const landscape = page.orientation === "landscape";
+  const width = landscape ? A4.height : A4.width;
+  const height = landscape ? A4.width : A4.height;
+  const margin = Math.round(MARGINS_MM[page.margins] * TWIPS_PER_MM);
+  return { width, height, margin, contentWidth: width - 2 * margin, landscape };
+}
+
+const STYLES = `${XML_HEAD}<w:styles ${W}><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:eastAsia="${FONT}" w:cs="${FONT}"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="de-CH"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Standard"><w:name w:val="Normal"/><w:qFormat/></w:style>${[
+  [1, 36, "1D4ED8", 360],
+  [2, 28, "102A43", 280],
+  [3, 24, "102A43", 200],
+]
+  .map(
+    ([level, size, color, before]) =>
+      `<w:style w:type="paragraph" w:styleId="berschrift${level}"><w:name w:val="heading ${level}"/><w:basedOn w:val="Standard"/><w:next w:val="Standard"/><w:qFormat/><w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before="${before}" w:after="120"/><w:outlineLvl w:val="${Number(level) - 1}"/></w:pPr><w:rPr><w:b/><w:color w:val="${color}"/><w:sz w:val="${size}"/><w:szCs w:val="${size}"/></w:rPr></w:style>`,
+  )
+  .join(
+    "",
+  )}<w:style w:type="paragraph" w:styleId="Zitat"><w:name w:val="Quote"/><w:basedOn w:val="Standard"/><w:qFormat/><w:pPr><w:pBdr><w:left w:val="single" w:sz="18" w:space="8" w:color="2563EB"/></w:pBdr><w:ind w:left="360"/></w:pPr><w:rPr><w:i/><w:color w:val="5B6B6D"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="ListParagraph"><w:name w:val="List Paragraph"/><w:basedOn w:val="Standard"/><w:qFormat/><w:pPr><w:spacing w:after="60"/><w:contextualSpacing/></w:pPr></w:style><w:style w:type="character" w:styleId="Hyperlink"><w:name w:val="Hyperlink"/><w:rPr><w:color w:val="2563EB"/><w:u w:val="single"/></w:rPr></w:style><w:style w:type="table" w:styleId="Tabellenraster"><w:name w:val="Table Grid"/><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/><w:left w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/><w:right w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/></w:tblBorders><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="100" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style><w:style w:type="paragraph" w:styleId="Kopfzeile"><w:name w:val="header"/><w:basedOn w:val="Standard"/><w:rPr><w:color w:val="5B6B6D"/><w:sz w:val="18"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Fusszeile"><w:name w:val="footer"/><w:basedOn w:val="Standard"/><w:rPr><w:color w:val="5B6B6D"/><w:sz w:val="18"/></w:rPr></w:style></w:styles>`;
+
+const BULLETS = ["•", "◦", "▪"];
+function numbering(nums: { id: number; start: number }[]) {
+  const levels = (ordered: boolean) =>
+    Array.from({ length: 9 }, (_, level) => {
+      const format = ordered ? (["decimal", "lowerLetter", "lowerRoman"][level % 3] as string) : "bullet";
+      const text = ordered ? `%${level + 1}.` : BULLETS[level % 3];
+      return `<w:lvl w:ilvl="${level}"><w:start w:val="1"/><w:numFmt w:val="${format}"/><w:lvlText w:val="${text}"/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="${720 * (level + 1)}" w:hanging="360"/></w:pPr>${ordered ? "" : `<w:rPr><w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}"/></w:rPr>`}</w:lvl>`;
+    }).join("");
+  return `${XML_HEAD}<w:numbering ${W}><w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="hybridMultilevel"/>${levels(false)}</w:abstractNum><w:abstractNum w:abstractNumId="1"><w:multiLevelType w:val="hybridMultilevel"/>${levels(true)}</w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num>${nums
+    .map(
+      (num) =>
+        `<w:num w:numId="${num.id}"><w:abstractNumId w:val="1"/><w:lvlOverride w:ilvl="0"><w:startOverride w:val="${num.start}"/></w:lvlOverride></w:num>`,
+    )
+    .join("")}</w:numbering>`;
+}
+
+const SETTINGS = `${XML_HEAD}<w:settings ${W}><w:defaultTabStop w:val="708"/><w:characterSpacingControl w:val="doNotCompress"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`;
+
+function headerFooter(tag: "hdr" | "ftr", text: string, pageNumbers: boolean) {
+  const style = tag === "hdr" ? "Kopfzeile" : "Fusszeile";
+  const field = (instr: string) =>
+    `<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> ${instr} </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>`;
+  const numbers = pageNumbers
+    ? `<w:r><w:t xml:space="preserve">${text ? "   ·   " : ""}Seite </w:t></w:r>${field("PAGE")}<w:r><w:t xml:space="preserve"> von </w:t></w:r>${field("NUMPAGES")}`
+    : "";
+  return `${XML_HEAD}<w:${tag} ${W}><w:p><w:pPr><w:pStyle w:val="${style}"/><w:jc w:val="${tag === "hdr" ? "right" : "center"}"/></w:pPr>${text ? `<w:r><w:t xml:space="preserve">${esc(text)}</w:t></w:r>` : ""}${numbers}</w:p></w:${tag}>`;
+}
+
+export function buildDocx(model: DocumentModel, meta: { title: string; author: string }) {
+  const page = pageSize(model.page);
+  const writer: Writer = {
+    rels: [],
+    media: [],
+    mediaBySrc: new Map(),
+    nums: [],
+    drawings: 0,
+    contentWidth: page.contentWidth,
+  };
+  const body = blocks(model.content.content, writer) || "<w:p/>";
+  const withHeader = Boolean(model.page.header);
+  const withFooter = Boolean(model.page.footer) || model.page.pageNumbers;
+  const references = `${withHeader ? '<w:headerReference w:type="default" r:id="rId4"/>' : ""}${withFooter ? '<w:footerReference w:type="default" r:id="rId5"/>' : ""}`;
+  const document = `${XML_HEAD}<w:document ${W}><w:body>${body}<w:sectPr>${references}<w:pgSz w:w="${page.width}" w:h="${page.height}"${page.landscape ? ' w:orient="landscape"' : ""}/><w:pgMar w:top="${page.margin}" w:right="${page.margin}" w:bottom="${page.margin}" w:left="${page.margin}" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const rels: Rel[] = [
+    { id: "rId1", type: REL.styles, target: "styles.xml" },
+    { id: "rId2", type: REL.numbering, target: "numbering.xml" },
+    { id: "rId3", type: REL.settings, target: "settings.xml" },
+    ...(withHeader ? [{ id: "rId4", type: REL.header, target: "header1.xml" }] : []),
+    ...(withFooter ? [{ id: "rId5", type: REL.footer, target: "footer1.xml" }] : []),
+    ...writer.rels,
+  ];
+  const main = "application/vnd.openxmlformats-officedocument.wordprocessingml";
+  const overrides: [string, string][] = [
+    ["/word/document.xml", `${main}.document.main+xml`],
+    ["/word/styles.xml", `${main}.styles+xml`],
+    ["/word/numbering.xml", `${main}.numbering+xml`],
+    ["/word/settings.xml", `${main}.settings+xml`],
+    ...(withHeader ? ([["/word/header1.xml", `${main}.header+xml`]] as [string, string][]) : []),
+    ...(withFooter ? ([["/word/footer1.xml", `${main}.footer+xml`]] as [string, string][]) : []),
+  ];
+  const entries: ZipEntry[] = [
+    { path: "[Content_Types].xml", content: Buffer.from(contentTypes(overrides, writer.media.length > 0)) },
+    { path: "_rels/.rels", content: Buffer.from(rootRels("word/document.xml")) },
+    { path: "docProps/core.xml", content: Buffer.from(coreProps(meta.title, meta.author)) },
+    { path: "docProps/app.xml", content: Buffer.from(appProps()) },
+    { path: "word/document.xml", content: Buffer.from(document) },
+    { path: "word/_rels/document.xml.rels", content: Buffer.from(relationships(rels)) },
+    { path: "word/styles.xml", content: Buffer.from(STYLES) },
+    { path: "word/numbering.xml", content: Buffer.from(numbering(writer.nums)) },
+    { path: "word/settings.xml", content: Buffer.from(SETTINGS) },
+    ...(withHeader
+      ? [{ path: "word/header1.xml", content: Buffer.from(headerFooter("hdr", model.page.header, false)) }]
+      : []),
+    ...(withFooter
+      ? [
+          {
+            path: "word/footer1.xml",
+            content: Buffer.from(headerFooter("ftr", model.page.footer, model.page.pageNumbers)),
+          },
+        ]
+      : []),
+    ...writer.media,
+    { path: MODEL_PART, content: packModel(model, sha256(document), writer.mediaBySrc) },
+  ];
+  return createZip(entries);
+}
+
+// ---------- Lesen ----------
+
+type Reader = {
+  files: Map<string, Buffer>;
+  rels: Map<string, string>;
+  styles: Map<string, string>;
+  numFormats: Map<string, Map<number, string>>;
+};
+
+function readRels(files: Map<string, Buffer>, part: string) {
+  const map = new Map<string, string>();
+  const slash = part.lastIndexOf("/");
+  const source = files.get(`${part.slice(0, slash + 1)}_rels/${part.slice(slash + 1)}.rels`);
+  if (!source) return map;
+  for (const rel of findAll(parseXml(source.toString("utf8")), "Relationship"))
+    map.set(rel.attrs.Id, rel.attrs.TargetMode === "External" ? rel.attrs.Target : resolvePart(part, rel.attrs.Target));
+  return map;
+}
+
+function readMarks(props: XmlNode | undefined): DocMark[] {
+  if (!props) return [];
+  const on = (name: string) => {
+    const node = child(props, name);
+    return Boolean(node) && node?.attrs.val !== "0" && node?.attrs.val !== "false" && node?.attrs.val !== "none";
+  };
+  const marks: DocMark[] = [];
+  if (on("b")) marks.push({ type: "bold" });
+  if (on("i")) marks.push({ type: "italic" });
+  if (on("u")) marks.push({ type: "underline" });
+  if (on("strike")) marks.push({ type: "strike" });
+  const vert = child(props, "vertAlign")?.attrs.val;
+  if (vert === "superscript") marks.push({ type: "superscript" });
+  if (vert === "subscript") marks.push({ type: "subscript" });
+  const attrs: Record<string, unknown> = {};
+  const color = child(props, "color")?.attrs.val;
+  if (color && /^[0-9a-f]{6}$/i.test(color) && color.toUpperCase() !== "000000")
+    attrs.color = `#${color.toLowerCase()}`;
+  const size = Number(child(props, "sz")?.attrs.val);
+  if (size && size !== 22) attrs.fontSize = `${size / 2}pt`;
+  if (Object.keys(attrs).length) marks.push({ type: "textStyle", attrs });
+  const fill = child(props, "shd")?.attrs.fill;
+  const highlight = child(props, "highlight")?.attrs.val;
+  const named: Record<string, string> = {
+    yellow: "#fef08a",
+    green: "#bbf7d0",
+    cyan: "#a5f3fc",
+    magenta: "#f5d0fe",
+    red: "#fecaca",
+    lightGray: "#e5e7eb",
+  };
+  if (fill && /^[0-9a-f]{6}$/i.test(fill) && fill.toUpperCase() !== "FFFFFF")
+    marks.push({ type: "highlight", attrs: { color: `#${fill.toLowerCase()}` } });
+  else if (highlight && named[highlight]) marks.push({ type: "highlight", attrs: { color: named[highlight] } });
+  return marks;
+}
+
+function readRuns(node: XmlNode, reader: Reader, link?: string): DocNode[] {
+  const out: DocNode[] = [];
+  for (const item of node.children) {
+    if (item.name === "hyperlink") {
+      const target = item.attrs.id ? reader.rels.get(item.attrs.id) : undefined;
+      out.push(...readRuns(item, reader, target && /^(https?:|mailto:)/.test(target) ? target : undefined));
+      continue;
+    }
+    if (item.name === "ins" || item.name === "smartTag" || item.name === "sdt" || item.name === "sdtContent") {
+      out.push(...readRuns(item, reader, link));
+      continue;
+    }
+    if (item.name !== "r") continue;
+    const marks = readMarks(child(item, "rPr"));
+    if (link) marks.push({ type: "link", attrs: { href: link } });
+    for (const part of item.children) {
+      if (part.name === "t") {
+        const text = textOf(part);
+        if (text) out.push({ type: "text", text, ...(marks.length ? { marks } : {}) });
+      } else if (part.name === "tab") out.push({ type: "text", text: "\t", ...(marks.length ? { marks } : {}) });
+      else if (part.name === "br" && part.attrs.type !== "page") out.push({ type: "hardBreak" });
+      else if (part.name === "drawing") {
+        const blip = find(part, "blip");
+        const target = blip?.attrs.embed ? reader.rels.get(blip.attrs.embed) : undefined;
+        const src = target ? mediaDataUrl(target, reader.files.get(target)) : "";
+        const extent = find(part, "extent");
+        if (src)
+          out.push({
+            type: "image",
+            attrs: { src, ...(extent ? { width: Math.round(Number(extent.attrs.cx) / 9525) } : {}) },
+          });
+      }
+    }
+  }
+  // Benachbarte Texte mit gleicher Formatierung zusammenfassen.
+  return out.reduce<DocNode[]>((list, node) => {
+    const last = list[list.length - 1];
+    if (
+      last?.type === "text" &&
+      node.type === "text" &&
+      JSON.stringify(last.marks ?? []) === JSON.stringify(node.marks ?? [])
+    ) {
+      last.text = `${last.text}${node.text}`;
+      return list;
+    }
+    list.push(node);
+    return list;
+  }, []);
+}
+
+type ReadParagraph = { node: DocNode; list?: { ordered: boolean; level: number; numId: string }; pageBreak: boolean };
+
+function readParagraph(p: XmlNode, reader: Reader): ReadParagraph {
+  const props = child(p, "pPr");
+  const styleName = (reader.styles.get(child(props, "pStyle")?.attrs.val ?? "") ?? "").toLowerCase();
+  const align = child(props, "jc")?.attrs.val;
+  const attrs: Record<string, unknown> = {};
+  if (align === "center" || align === "right") attrs.textAlign = align;
+  if (align === "both" || align === "distribute") attrs.textAlign = "justify";
+  const content = readRuns(p, reader);
+  const pageBreak = findAll(p, "br").some((br) => br.attrs.type === "page");
+  const heading = /^(heading|überschrift) (\d)$/.exec(styleName);
+  let node: DocNode;
+  if (heading || styleName === "title")
+    node = { type: "heading", attrs: { ...attrs, level: heading ? Math.min(3, Number(heading[2])) : 1 } };
+  else node = { type: "paragraph", ...(Object.keys(attrs).length ? { attrs } : {}) };
+  if (content.length) node.content = content;
+  const numPr = child(props, "numPr");
+  const numId = child(numPr, "numId")?.attrs.val;
+  if (numId && numId !== "0") {
+    const level = Number(child(numPr, "ilvl")?.attrs.val ?? 0);
+    const format = reader.numFormats.get(numId)?.get(level) ?? "bullet";
+    return { node, list: { ordered: format !== "bullet" && format !== "none", level, numId }, pageBreak };
+  }
+  if (styleName === "quote" || styleName === "intense quote")
+    return { node: { type: "blockquote", content: [node] }, pageBreak };
+  return { node, pageBreak };
+}
+
+function readTable(tbl: XmlNode, reader: Reader): DocNode {
+  const rows: DocNode[] = [];
+  const origins: (DocNode | null)[][] = [];
+  childrenOf(tbl, "tr").forEach((tr, rowIndex) => {
+    const header = Boolean(child(child(tr, "trPr"), "tblHeader"));
+    const cells: DocNode[] = [];
+    origins[rowIndex] = [];
+    let col = 0;
+    for (const tc of childrenOf(tr, "tc")) {
+      const props = child(tc, "tcPr");
+      const span = Number(child(props, "gridSpan")?.attrs.val ?? 1);
+      const vMerge = child(props, "vMerge");
+      if (vMerge && vMerge.attrs.val !== "restart") {
+        // Fortsetzung einer verbundenen Zelle: die Zelle darüber wird höher.
+        for (let up = rowIndex - 1; up >= 0; up -= 1) {
+          const origin = origins[up]?.[col];
+          if (origin) {
+            origin.attrs = { ...origin.attrs, rowspan: Number(origin.attrs?.rowspan ?? 1) + 1 };
+            break;
+          }
+        }
+        col += span;
+        continue;
+      }
+      const content = readBody(tc, reader);
+      const fill = child(props, "shd")?.attrs.fill;
+      const cell: DocNode = {
+        type: header ? "tableHeader" : "tableCell",
+        attrs: {
+          colspan: span,
+          rowspan: 1,
+          ...(fill && /^[0-9a-f]{6}$/i.test(fill) && fill.toUpperCase() !== "FFFFFF"
+            ? { backgroundColor: `#${fill.toLowerCase()}` }
+            : {}),
+        },
+        content: content.length ? content : [{ type: "paragraph" }],
+      };
+      origins[rowIndex][col] = cell;
+      cells.push(cell);
+      col += span;
+    }
+    if (cells.length) rows.push({ type: "tableRow", content: cells });
+  });
+  return { type: "table", content: rows };
+}
+
+function readBody(parent: XmlNode, reader: Reader): DocNode[] {
+  const out: DocNode[] = [];
+  // Offene Listen je Ebene (verschachtelt wie im Dokument).
+  let stack: { node: DocNode; level: number; ordered: boolean; numId: string }[] = [];
+  const closeLists = () => {
+    stack = [];
+  };
+  for (const item of parent.children) {
+    if (item.name === "sdt") {
+      out.push(...readBody(child(item, "sdtContent") ?? item, reader));
+      continue;
+    }
+    if (item.name === "tbl") {
+      closeLists();
+      out.push(readTable(item, reader));
+      continue;
+    }
+    if (item.name !== "p") continue;
+    const read = readParagraph(item, reader);
+    if (!read.list) {
+      closeLists();
+      // Absätze, die nur ein Bild enthalten, werden zu einem Bildblock.
+      if (read.node.content?.length === 1 && read.node.content[0].type === "image") out.push(read.node.content[0]);
+      else if (!(read.pageBreak && !read.node.content?.length)) out.push(read.node);
+      if (read.pageBreak) out.push({ type: "pageBreak" });
+      continue;
+    }
+    const { level, ordered, numId } = read.list;
+    while (stack.length && stack[stack.length - 1].level > level) stack.pop();
+    let top = stack[stack.length - 1];
+    if (top && top.level === level && (top.ordered !== ordered || top.numId !== numId)) {
+      stack.pop();
+      top = stack[stack.length - 1];
+    }
+    if (!top || top.level < level) {
+      const list: DocNode = {
+        type: ordered ? "orderedList" : "bulletList",
+        content: [],
+        ...(ordered ? { attrs: { start: 1 } } : {}),
+      };
+      if (top) {
+        const parentItem = top.node.content?.[top.node.content.length - 1];
+        if (parentItem) parentItem.content = [...(parentItem.content ?? []), list];
+        else out.push(list);
+      } else out.push(list);
+      stack.push({ node: list, level, ordered, numId });
+      top = stack[stack.length - 1];
+    }
+    const paragraphNode =
+      read.node.type === "heading" ? { ...read.node, type: "paragraph", attrs: undefined } : read.node;
+    top.node.content = [...(top.node.content ?? []), { type: "listItem", content: [paragraphNode] }];
+  }
+  return out;
+}
+
+export function readDocx(bytes: Buffer): { model: DocumentModel; imported: boolean } {
+  const files = readZip(bytes);
+  const documentXml = files.get("word/document.xml");
+  if (!documentXml) throw new Error("Kein Word-Dokument.");
+  const stored = files.get(MODEL_PART);
+  if (stored) {
+    try {
+      const parsed = unpackModel(stored, files);
+      // Nur wenn die Datei seither nicht in Word geändert wurde (sonst gilt der Inhalt der Datei).
+      if (parsed.check === sha256(documentXml))
+        return { model: cleanModel("document", parsed.model) as DocumentModel, imported: false };
+    } catch {
+      // Beschädigtes Modell: aus der Datei lesen.
+    }
+  }
+  const styles = new Map<string, string>();
+  const stylesXml = files.get("word/styles.xml");
+  if (stylesXml)
+    for (const style of findAll(parseXml(stylesXml.toString("utf8")), "style"))
+      styles.set(style.attrs.styleId, child(style, "name")?.attrs.val ?? "");
+  const numFormats = new Map<string, Map<number, string>>();
+  const numberingXml = files.get("word/numbering.xml");
+  if (numberingXml) {
+    const root = parseXml(numberingXml.toString("utf8"));
+    const abstracts = new Map<string, Map<number, string>>();
+    for (const abstract of findAll(root, "abstractNum")) {
+      const levels = new Map<number, string>();
+      for (const lvl of childrenOf(abstract, "lvl"))
+        levels.set(Number(lvl.attrs.ilvl), child(lvl, "numFmt")?.attrs.val ?? "bullet");
+      abstracts.set(abstract.attrs.abstractNumId, levels);
+    }
+    for (const num of findAll(root, "num")) {
+      const levels = abstracts.get(child(num, "abstractNumId")?.attrs.val ?? "");
+      if (levels) numFormats.set(num.attrs.numId, levels);
+    }
+  }
+  const reader: Reader = { files, rels: readRels(files, "word/document.xml"), styles, numFormats };
+  const root = parseXml(documentXml.toString("utf8"));
+  const body = find(root, "body");
+  const content = body ? readBody(body, reader) : [];
+  const sect = child(body, "sectPr");
+  const size = child(sect, "pgSz");
+  const margin = Number(child(sect, "pgMar")?.attrs.left ?? 1417) / TWIPS_PER_MM;
+  const page: PageSetup = {
+    ...DEFAULT_PAGE,
+    orientation:
+      size?.attrs.orient === "landscape" || Number(size?.attrs.w) > Number(size?.attrs.h) ? "landscape" : "portrait",
+    margins: margin < 18 ? "narrow" : margin > 32 ? "wide" : "normal",
+    pageNumbers: false,
+  };
+  return {
+    model: cleanModel("document", {
+      kind: "document",
+      page,
+      content: { type: "doc", content: content.length ? content : emptyDoc().content },
+    }) as DocumentModel,
+    imported: true,
+  };
+}

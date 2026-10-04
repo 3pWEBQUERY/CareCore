@@ -47,13 +47,16 @@ import {
   type FolderNode,
   type NewDocumentKind,
 } from "@/lib/files-shared";
+import { OFFICE_TYPES, officeKindOf, type OfficeKind } from "@/lib/office/model";
 import { call, download, fileUrl, loadTree, uploadOne, zipUrl, type UploadOutcome } from "./explorer-api";
+import OfficeEditor from "./office/office-editor";
 import {
   ConfirmDialog,
   ConflictDialog,
   FolderPickerDialog,
   NameDialog,
   NewDocumentDialog,
+  NewOfficeDialog,
   PreviewDialog,
   ShareToChatDialog,
   TextEditorDialog,
@@ -80,6 +83,8 @@ type SortKey = "name" | "updated" | "by" | "size";
 type Dialog =
   | { kind: "folder" }
   | { kind: "document"; initial: NewDocumentKind }
+  | { kind: "gallery"; office: OfficeKind }
+  | { kind: "office"; file: ExplorerFile }
   | { kind: "rename"; item: Item }
   | { kind: "move" | "copy"; items: Item[] }
   | { kind: "editor"; file: ExplorerFile }
@@ -189,7 +194,13 @@ export default function FileExplorer({ scope }: { scope: FileScope }) {
       const linked = fileParam ? listing.files.find((item) => item.id === fileParam) : null;
       if (linked && openedLink.current !== linked.id) {
         openedLink.current = linked.id;
-        setDialog(isTextEditable(linked) ? { kind: "editor", file: linked } : { kind: "preview", file: linked });
+        setDialog(
+          officeKindOf(linked.name)
+            ? { kind: "office", file: linked }
+            : isTextEditable(linked)
+              ? { kind: "editor", file: linked }
+              : { kind: "preview", file: linked },
+        );
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Die Ablage konnte nicht geladen werden.");
@@ -275,6 +286,7 @@ export default function FileExplorer({ scope }: { scope: FileScope }) {
     if (inTrash) return;
     if (item.type === "folder") return openFolder(item.folder.id);
     const file = item.file;
+    if (officeKindOf(file.name)) return setDialog({ kind: "office", file });
     if (isTextEditable(file)) return setDialog({ kind: "editor", file });
     const type = file.mimeType.toLowerCase();
     if (
@@ -788,6 +800,32 @@ export default function FileExplorer({ scope }: { scope: FileScope }) {
                             <FolderPlus aria-hidden="true" />
                             Ordner
                           </button>
+                          <span className="files-menu-separator" role="separator" />
+                          {(Object.keys(OFFICE_TYPES) as OfficeKind[]).map((kind) => (
+                            <button
+                              key={kind}
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                setNewMenu(false);
+                                setDialog({ kind: "gallery", office: kind });
+                              }}
+                            >
+                              <FileIcon
+                                file={{
+                                  name: `x.${OFFICE_TYPES[kind].extension}`,
+                                  mimeType: OFFICE_TYPES[kind].mimeType,
+                                }}
+                              />
+                              <span className="files-menu-text">
+                                {OFFICE_TYPES[kind].label}
+                                <small>
+                                  {kind === "document" ? "Word" : kind === "sheet" ? "Excel" : "PowerPoint"}
+                                </small>
+                              </span>
+                            </button>
+                          ))}
+                          <span className="files-menu-separator" role="separator" />
                           {(Object.keys(NEW_DOCUMENTS) as NewDocumentKind[]).map((kind) => (
                             <button
                               key={kind}
@@ -1338,6 +1376,37 @@ export default function FileExplorer({ scope }: { scope: FileScope }) {
                 });
                 await reload();
                 setDialog({ kind: "editor", file: result.file });
+              }}
+            />
+          )}
+          {dialog?.kind === "gallery" && (
+            <NewOfficeDialog
+              initialKind={dialog.office}
+              onClose={() => setDialog(null)}
+              onSubmit={async (template, name) => {
+                const result = await call<{ file: ExplorerFile }>("/api/cloud/files", {
+                  method: "POST",
+                  json: { action: "document", scope, folderId: currentFolderId, template: template.id, name },
+                });
+                await reload();
+                setDialog({ kind: "office", file: result.file });
+              }}
+            />
+          )}
+          {dialog?.kind === "office" && (
+            <OfficeEditor
+              key={dialog.file.id}
+              file={dialog.file}
+              scope={scope}
+              onClose={(changed) => {
+                setDialog(null);
+                if (fileParam) router.replace(folderParam ? `${pathname}?folder=${folderParam}` : pathname);
+                if (changed) void reload();
+              }}
+              onCopied={(copy) => {
+                setNotice(`Als „${copy.name}“ gespeichert`);
+                void reload();
+                setDialog({ kind: "office", file: copy });
               }}
             />
           )}

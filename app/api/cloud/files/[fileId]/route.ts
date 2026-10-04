@@ -6,8 +6,10 @@ import {
   copyFile,
   listVersions,
   purgeFile,
+  readOffice,
   readText,
   restoreVersion,
+  saveOffice,
   saveText,
   updateFile,
   versionContent,
@@ -43,6 +45,7 @@ export async function GET(request: Request, { params }: Context) {
     const search = new URL(request.url).searchParams;
     // Bearbeiten als Text bzw. Versionen der Datei (Ablage).
     if (search.get("text") === "1") return NextResponse.json(await readText(actor, fileId));
+    if (search.get("office") === "1") return NextResponse.json(await readOffice(actor, fileId));
     if (search.get("versions") === "1") return NextResponse.json({ versions: await listVersions(actor, fileId) });
     const versionId = search.get("version");
     // Not found and not allowed look the same, so file ids cannot be probed.
@@ -88,13 +91,16 @@ export async function PATCH(request: Request, { params }: Context) {
   }
 }
 
-// Text speichern (neue Version; versionNo schützt vor dem Überschreiben fremder Änderungen).
+// Text speichern (neue Version; versionNo schützt vor dem Überschreiben fremder Änderungen) oder Dokument, Tabelle
+// bzw. Präsentation aus dem Editor ({ model, revision, auto }).
 export async function PUT(request: Request, { params }: Context) {
   try {
     const actor = await carecoreActor();
     if (!actor?.organizationId) return NextResponse.json({ error: "Bitte erneut anmelden." }, { status: 401 });
     const { fileId } = await params;
-    const file = await saveText(actor, fileId, (await request.json()) as Record<string, unknown>);
+    const body = (await request.json()) as Record<string, unknown>;
+    if ("model" in body) return NextResponse.json(await saveOffice(actor, fileId, body));
+    const file = await saveText(actor, fileId, body);
     return NextResponse.json({ file });
   } catch (error) {
     return apiErrorResponse(error, "Text konnte nicht gespeichert werden.");

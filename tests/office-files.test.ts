@@ -1,0 +1,317 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { createZip, readZip } from "@/lib/zip";
+import { buildDocx, readDocx } from "@/lib/office/docx";
+import { buildXlsx, readXlsx } from "@/lib/office/xlsx";
+import { buildPptx, readPptx } from "@/lib/office/pptx";
+import {
+  OFFICE_TEMPLATES,
+  cleanModel,
+  newSheet,
+  newSlide,
+  plainText,
+  templateModel,
+  type DeckModel,
+  type DocNode,
+  type DocumentModel,
+  type SheetModel,
+} from "@/lib/office/model";
+import { insertDelete, parseClipboard, renameSheet, sortArea, toDelimited } from "@/lib/office/sheet-ops";
+import { parseXml, textOf, findAll } from "@/lib/office/xml";
+
+const meta = { title: "Test", author: "Pflege Team" };
+// Kleinstes gültiges PNG (1 × 1 Pixel).
+const PNG =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+// Wie eine Datei, die in Word, Excel oder PowerPoint gespeichert wurde: ohne das eingebettete CareCore-Modell.
+function foreign(bytes: Buffer) {
+  const files = readZip(bytes);
+  files.delete("carecore/model.json");
+  return createZip([...files.entries()].map(([path, content]) => ({ path, content })));
+}
+const xml = (bytes: Buffer, part: string) => parseXml(readZip(bytes).get(part)!.toString("utf8"));
+
+test("ZIP: Archiv lesen (gepackt und ungepackt) und Grenzen einhalten", () => {
+  const zip = createZip([
+    { path: "a.txt", content: Buffer.from("Hallo Ablage ".repeat(50)) },
+    { path: "ordner/ä.bin", content: Buffer.from([1, 2, 3]) },
+  ]);
+  const files = readZip(zip);
+  assert.equal(files.get("a.txt")?.toString(), "Hallo Ablage ".repeat(50));
+  assert.deepEqual([...files.get("ordner/ä.bin")!], [1, 2, 3]);
+  assert.throws(() => readZip(zip, 10));
+  assert.throws(() => readZip(Buffer.from("kein zip")));
+});
+
+test("Vorlagen: jede Vorlage ergibt eine gültige Office-Datei, die sich unverändert wieder öffnen lässt", () => {
+  for (const template of OFFICE_TEMPLATES) {
+    const model = templateModel(template.id);
+    const bytes =
+      model.kind === "document"
+        ? buildDocx(model, meta)
+        : model.kind === "sheet"
+          ? buildXlsx(model, meta)
+          : buildPptx(model, meta);
+    const files = readZip(bytes);
+    assert.ok(files.has("[Content_Types].xml"), template.id);
+    assert.ok(files.has("docProps/core.xml"), template.id);
+    const back =
+      model.kind === "document" ? readDocx(bytes) : model.kind === "sheet" ? readXlsx(bytes) : readPptx(bytes);
+    assert.equal(back.imported, false, template.id);
+    assert.deepEqual(back.model, cleanModel(model.kind, model), template.id);
+  }
+});
+
+const richDocument = (): DocumentModel => ({
+  kind: "document",
+  page: {
+    orientation: "landscape",
+    margins: "narrow",
+    header: "Haus Ahorn",
+    footer: "Stand Oktober",
+    pageNumbers: true,
+  },
+  content: {
+    type: "doc",
+    content: [
+      { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Hygieneplan" }] },
+      {
+        type: "paragraph",
+        attrs: { textAlign: "center" },
+        content: [
+          { type: "text", text: "Fett ", marks: [{ type: "bold" }] },
+          { type: "text", text: "rot", marks: [{ type: "textStyle", attrs: { color: "#b42318", fontSize: "14pt" } }] },
+          { type: "text", text: " & <Link>", marks: [{ type: "link", attrs: { href: "https://example.org" } }] },
+        ],
+      },
+      {
+        type: "bulletList",
+        content: [
+          { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Hände" }] }] },
+          {
+            type: "listItem",
+            content: [
+              { type: "paragraph", content: [{ type: "text", text: "Flächen" }] },
+              {
+                type: "orderedList",
+                attrs: { start: 1 },
+                content: [
+                  { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Bad" }] }] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        type: "table",
+        content: [
+          {
+            type: "tableRow",
+            content: ["Was", "Wer"].map((text) => ({
+              type: "tableHeader",
+              content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+            })),
+          },
+          {
+            type: "tableRow",
+            content: [
+              {
+                type: "tableCell",
+                attrs: { colspan: 2, rowspan: 1 },
+                content: [{ type: "paragraph", content: [{ type: "text", text: "Alle" }] }],
+              },
+            ],
+          },
+        ],
+      },
+      { type: "pageBreak" },
+      { type: "image", attrs: { src: PNG, alt: "Plan", width: 120 } },
+    ],
+  },
+});
+
+test("Word: Formatierung, Listen, Tabellen, Bilder, Seite und Kopf-/Fusszeile in der .docx-Datei", () => {
+  const model = richDocument();
+  const bytes = buildDocx(model, meta);
+  const files = readZip(bytes);
+  const document = xml(bytes, "word/document.xml");
+  const text = findAll(document, "t").map(textOf).join("");
+  assert.match(text, /Hygieneplan/);
+  assert.match(text, /& <Link>/);
+  assert.ok(findAll(document, "numPr").length >= 3, "Listen nummeriert");
+  assert.equal(findAll(document, "tbl").length, 1);
+  assert.equal(findAll(document, "gridSpan")[0]?.attrs.val, "2");
+  assert.equal(findAll(document, "pgSz")[0]?.attrs.orient, "landscape");
+  assert.ok(findAll(document, "br").some((node) => node.attrs.type === "page"));
+  assert.ok([...files.keys()].some((path) => path.startsWith("word/media/bild")));
+  assert.match(files.get("word/footer1.xml")!.toString(), /NUMPAGES/);
+  assert.match(files.get("word/header1.xml")!.toString(), /Haus Ahorn/);
+  // Bild nur einmal in der Datei: im Modell nur verknüpft.
+  assert.ok(!files.get("carecore/model.json")!.toString().includes("base64"));
+  assert.deepEqual(readDocx(bytes).model, cleanModel("document", model));
+});
+
+test("Word: Datei aus einem anderen Programm wird gelesen (Überschriften, Listen, Tabelle, Bild, Querformat)", () => {
+  const { model, imported } = readDocx(foreign(buildDocx(richDocument(), meta)));
+  assert.equal(imported, true);
+  const types = (model.content.content ?? []).map((node) => node.type);
+  assert.deepEqual(types, ["heading", "paragraph", "bulletList", "table", "pageBreak", "image"]);
+  const paragraph = model.content.content![1];
+  assert.equal(paragraph.attrs?.textAlign, "center");
+  assert.deepEqual(paragraph.content?.[0].marks, [{ type: "bold" }]);
+  assert.equal(paragraph.content?.[1].marks?.find((mark) => mark.type === "textStyle")?.attrs?.color, "#b42318");
+  assert.equal(paragraph.content?.[2].marks?.find((mark) => mark.type === "link")?.attrs?.href, "https://example.org");
+  const list = model.content.content![2];
+  assert.equal(list.content?.length, 2);
+  assert.equal(list.content?.[1].content?.[1].type, "orderedList");
+  const table = model.content.content![3];
+  assert.equal(table.content?.[0].content?.[0].type, "tableHeader");
+  assert.equal(table.content?.[1].content?.[0].attrs?.colspan, 2);
+  assert.match(String(model.content.content![5].attrs?.src), /^data:image\/png;base64,/);
+  assert.equal(model.page.orientation, "landscape");
+  assert.equal(model.page.margins, "narrow");
+  assert.equal(plainText(model.content).includes("Flächen"), true);
+});
+
+test("Excel: Werte, Formeln (englisch in der Datei), Formate, Blätter, Spaltenbreiten, verbundene Zellen", () => {
+  const sheet = newSheet("Lager");
+  sheet.cells.A1 = { v: "Artikel", s: { b: true, fill: "#eaf1ff", border: true } };
+  sheet.cells.A2 = { v: "Handschuhe" };
+  sheet.cells.B2 = { v: "12.5", s: { fmt: "chf" } };
+  sheet.cells.B3 = { v: "=SUMME(B2:B2)*2", s: { fmt: "chf" } };
+  sheet.cells.C2 = { v: "04.10.2026", s: { fmt: "date" } };
+  sheet.cells.D2 = { v: "'007" };
+  sheet.cells.E2 = { v: '=WENN(B2>10;"teuer";"günstig")' };
+  sheet.cols["0"] = 220;
+  sheet.merges = ["A5:C5"];
+  sheet.freeze = { rows: 1, cols: 0 };
+  const other = newSheet("Mai 2026");
+  other.cells.A1 = { v: "=Lager!B3+1" };
+  const model: SheetModel = { kind: "sheet", sheets: [sheet, other] };
+  const bytes = buildXlsx(model, meta);
+  const lager = xml(bytes, "xl/worksheets/sheet1.xml");
+  const cell = (ref: string) => findAll(lager, "c").find((node) => node.attrs.r === ref)!;
+  assert.equal(textOf(findAll(cell("B3"), "f")[0]), "SUM(B2:B2)*2");
+  assert.equal(textOf(findAll(cell("B3"), "v")[0]), "25");
+  assert.equal(cell("E2").attrs.t, "str");
+  assert.equal(textOf(findAll(cell("E2"), "v")[0]), "teuer");
+  assert.equal(cell("D2").attrs.t, "inlineStr");
+  assert.equal(findAll(lager, "mergeCell")[0].attrs.ref, "A5:C5");
+  assert.equal(findAll(lager, "pane")[0].attrs.ySplit, "1");
+  assert.match(readZip(bytes).get("xl/styles.xml")!.toString(), /CHF/);
+  assert.equal(textOf(findAll(xml(bytes, "xl/worksheets/sheet2.xml"), "v")[0]), "26");
+  assert.deepEqual(readXlsx(bytes).model, cleanModel("sheet", model));
+
+  const imported = readXlsx(foreign(bytes));
+  assert.equal(imported.imported, true);
+  const [back, backOther] = imported.model.sheets;
+  assert.equal(back.name, "Lager");
+  assert.equal(back.cells.B3.v, "=SUMME(B2:B2)*2");
+  assert.equal(back.cells.E2.v, '=WENN(B2>10;"teuer";"günstig")');
+  assert.equal(back.cells.D2.v, "'007");
+  assert.equal(back.cells.A1.s?.b, true);
+  assert.equal(back.cells.A1.s?.fill, "#eaf1ff");
+  assert.equal(back.cells.B2.s?.fmt, "chf");
+  assert.equal(back.cells.C2.s?.fmt, "date");
+  assert.equal(back.cols["0"], 220);
+  assert.deepEqual(back.merges, ["A5:C5"]);
+  assert.deepEqual(back.freeze, { rows: 1, cols: 0 });
+  assert.equal(backOther.cells.A1.v, "=Lager!B3+1");
+});
+
+test("PowerPoint: Folien, Layouts, Design, Bild und Notizen in der .pptx-Datei", () => {
+  const title = newSlide("title", "Schulung", [], "Hygiene");
+  const content = newSlide("content", "Inhalte", ["Hände", "Flächen"]);
+  content.notes = "Zuerst die Hände.";
+  const picture = newSlide("image", "Praxis", ["Ablauf"]);
+  picture.image = PNG;
+  const model: DeckModel = { kind: "deck", theme: "wald", slides: [title, content, picture] };
+  const bytes = buildPptx(model, meta);
+  const files = readZip(bytes);
+  assert.equal(findAll(xml(bytes, "ppt/presentation.xml"), "sldId").length, 3);
+  assert.ok(files.has("ppt/media/folie3.png"));
+  assert.ok(files.has("ppt/notesSlides/notesSlide2.xml"));
+  const second = findAll(xml(bytes, "ppt/slides/slide2.xml"), "t").map(textOf);
+  assert.deepEqual(second, ["Inhalte", "Hände", "Flächen"]);
+  assert.deepEqual(readPptx(bytes).model, cleanModel("deck", model));
+
+  const imported = readPptx(foreign(bytes));
+  assert.equal(imported.imported, true);
+  const slides = imported.model.slides;
+  assert.equal(slides.length, 3);
+  assert.equal(slides[0].title, "Schulung");
+  assert.equal(slides[1].title, "Inhalte");
+  assert.equal(slides[1].body.content?.[0].type, "bulletList");
+  assert.equal(slides[1].notes, "Zuerst die Hände.");
+  assert.equal(slides[2].layout, "image");
+  assert.match(slides[2].image, /^data:image\/png;base64,/);
+});
+
+test("Prüfen: fremde Daten vom Browser werden bereinigt (Skript-Links, fremde Bilder, unbekannte Knoten)", () => {
+  const dirty = cleanModel("document", {
+    content: {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "x", marks: [{ type: "link", attrs: { href: "javascript:alert(1)" } }] }],
+        },
+        { type: "image", attrs: { src: "https://example.org/a.png" } },
+        { type: "script", content: [] },
+      ],
+    },
+  }) as DocumentModel;
+  assert.deepEqual(dirty.content.content, [{ type: "paragraph", content: [{ type: "text", text: "x" }] }]);
+  const sheet = cleanModel("sheet", {
+    sheets: [{ name: "a/b:c", cells: { A1: { v: "1", s: { color: "red", b: true } }, ZZZZ1: { v: "x" } } }],
+  }) as SheetModel;
+  assert.equal(sheet.sheets[0].name, "abc");
+  assert.deepEqual(sheet.sheets[0].cells, { A1: { v: "1", s: { b: true } } });
+  const deck = cleanModel("deck", {
+    slides: [{ layout: "evil", body: { type: "bulletList", content: [] } }],
+  }) as DeckModel;
+  assert.equal(deck.slides[0].layout, "content");
+  assert.equal(deck.slides[0].body.type, "doc");
+});
+
+test("Tabelle bearbeiten: Zeilen einfügen/löschen passt Formeln an, Sortieren, Zwischenablage", () => {
+  const sheet = newSheet("Tabelle1");
+  sheet.cells.A1 = { v: "3" };
+  sheet.cells.A2 = { v: "1" };
+  sheet.cells.A3 = { v: "2" };
+  sheet.cells.A5 = { v: "=SUMME(A1:A3)" };
+  const other = newSheet("Bericht");
+  other.cells.A1 = { v: "=Tabelle1!A5" };
+  let model: SheetModel = { kind: "sheet", sheets: [sheet, other] };
+  model = insertDelete(model, 0, "row", 1, 2);
+  assert.equal(model.sheets[0].cells.A7.v, "=SUMME(A1:A5)");
+  assert.equal(model.sheets[0].cells.A4.v, "1");
+  assert.equal(model.sheets[1].cells.A1.v, "=Tabelle1!A7");
+  model = insertDelete(model, 0, "row", 0, -1);
+  assert.equal(model.sheets[0].cells.A6.v, "=SUMME(A1:A4)");
+  model = renameSheet(model, 0, "Werte");
+  assert.equal(model.sheets[1].cells.A1.v, "=Werte!A6");
+  const sorted = sortArea(model.sheets[0], { c1: 0, r1: 2, c2: 0, r2: 3 }, 0, 1, (col, row) =>
+    Number(model.sheets[0].cells[`A${row + 1}`]?.v ?? NaN),
+  );
+  assert.equal(sorted.cells.A3.v, "1");
+  assert.equal(sorted.cells.A4.v, "2");
+  assert.deepEqual(parseClipboard('a\t"b\tc"\n1\t2\n'), [
+    ["a", "b\tc"],
+    ["1", "2"],
+  ]);
+  assert.equal(toDelimited([["a;b", "x"]], ";"), '"a;b";x');
+});
+
+test("Dokumentknoten: Text für Vorschau und Suche", () => {
+  const doc: DocNode = {
+    type: "doc",
+    content: [
+      { type: "paragraph", content: [{ type: "text", text: "A" }] },
+      { type: "paragraph", content: [{ type: "text", text: "B" }] },
+    ],
+  };
+  assert.equal(plainText(doc), "A\nB");
+});
