@@ -120,24 +120,49 @@ export default function AssessmentDialog({
           />
         )}
       </label>
-      {instrument.items.map((item) => (
-        <fieldset key={item.key} className="area-editor-wide assessment-item">
-          <legend>{item.label}</legend>
-          <div className={item.options.length > 5 ? "compact" : ""}>
-            {item.options.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className={answers[item.key] === option.value ? "active" : ""}
-                aria-pressed={answers[item.key] === option.value}
-                onClick={() => setAnswers((current) => ({ ...current, [item.key]: option.value }))}
-              >
-                {item.options.length > 5 ? option.label : `${option.label} (${option.value})`}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-      ))}
+      {instrument.items.map((item, index) => {
+        const chosen = item.options.find((option) => answers[item.key] === option.value);
+        const compact = item.options.length > 5;
+        return (
+          <fieldset key={item.key} className={`area-editor-wide assessment-item ${chosen ? "answered" : ""}`}>
+            <legend>
+              <span className="assessment-item-number" aria-hidden="true">
+                {index + 1}
+              </span>
+              <span className="assessment-item-title">{item.label}</span>
+              <span className="assessment-item-state">
+                {chosen ? `${chosen.value} ${chosen.value === 1 ? "Punkt" : "Punkte"}` : "offen"}
+              </span>
+            </legend>
+            <div className={compact ? "compact" : ""}>
+              {item.options.map((option) => {
+                const active = answers[item.key] === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={active ? "active" : ""}
+                    aria-pressed={active}
+                    aria-label={compact ? option.label : `${option.label} (${option.value})`}
+                    onClick={() => setAnswers((current) => ({ ...current, [item.key]: option.value }))}
+                  >
+                    {compact ? (
+                      option.label
+                    ) : (
+                      <>
+                        <span className="assessment-option-points" aria-hidden="true">
+                          {option.value}
+                        </span>
+                        <span className="assessment-option-label">{option.label}</span>
+                      </>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+        );
+      })}
       <div className={`area-editor-wide assessment-score ${band?.tone ?? ""}`} aria-live="polite">
         <strong>{score === null ? `${answered} / ${instrument.items.length} beantwortet` : `${score} Punkte`}</strong>
         <span>{band?.label ?? "Ergebnis erscheint, sobald alle Fragen beantwortet sind."}</span>

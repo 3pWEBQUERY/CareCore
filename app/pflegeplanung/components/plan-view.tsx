@@ -170,7 +170,7 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
                       Plan bearbeiten
                     </button>
                     <button
-                      className="quiet-button"
+                      className="secondary-button"
                       type="button"
                       onClick={() => planning.closePlan(plan, resident.name)}
                     >

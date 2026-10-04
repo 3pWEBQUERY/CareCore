@@ -611,3 +611,207 @@ export function CareOptionSelect({
     </>
   );
 }
+
+// Mehrfachauswahl mit eigener Oberfläche: Liste mit Häkchen (bleibt beim Wählen offen), eigene Ergänzung und die
+// gewählten Einträge als entfernbare Chips unter dem Feld.
+export function CareMultiSelect({
+  label,
+  values,
+  options,
+  onChange,
+  placeholder = "Bitte wählen",
+  customLabel = "Eigene Ergänzung",
+  maxLength = 120,
+}: {
+  label: string;
+  values: string[];
+  options: string[];
+  onChange: (values: string[]) => void;
+  placeholder?: string;
+  customLabel?: string;
+  maxLength?: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const [custom, setCustom] = useState("");
+  const customRef = useRef<HTMLInputElement>(null);
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [openUp, setOpenUp] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const listId = useId();
+  // Früher frei erfasste Einträge erscheinen ebenfalls in der Liste.
+  const all = [...options, ...values.filter((value) => !options.includes(value))];
+  const place = useCallback(() => {
+    const rect = rootRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const height = Math.min(all.length * 40 + 80, 400);
+    const up = window.innerHeight - rect.bottom < height && rect.top > height;
+    setOpenUp(up);
+    setPosition({ top: up ? rect.top - 6 : rect.bottom + 6, left: rect.left, width: Math.max(rect.width, 220) });
+  }, [all.length]);
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node) && !menuRef.current?.contains(event.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, []);
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open, place]);
+  // Offene Liste: Escape schliesst nur die Liste (vor dem Dialog, der ebenfalls auf Escape hört).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setOpen(false);
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [open]);
+  // Neue Chips verschieben das Feld nach unten: Liste bleibt darunter.
+  useEffect(() => {
+    if (open) place();
+  }, [open, values.length, place]);
+  const toggle = (value: string) =>
+    onChange(values.includes(value) ? values.filter((item) => item !== value) : [...values, value]);
+  const addCustom = () => {
+    const value = custom.trim().slice(0, maxLength);
+    if (!value) return;
+    if (!values.some((item) => item.toLocaleLowerCase("de-CH") === value.toLocaleLowerCase("de-CH")))
+      onChange([...values, value]);
+    setCustom("");
+    customRef.current?.focus();
+  };
+  const menu =
+    open && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            ref={menuRef}
+            className={`area-select-menu area-select-menu-portal care-multi-menu ${openUp ? "up" : ""}`}
+            style={{ top: position.top, left: position.left, width: position.width }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setOpen(false);
+              }
+            }}
+          >
+            <div id={listId} role="listbox" aria-label={label} aria-multiselectable="true">
+              {all.map((option) => {
+                const checked = values.includes(option);
+                return (
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={checked}
+                    className={checked ? "selected" : ""}
+                    key={option}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      toggle(option);
+                    }}
+                  >
+                    <span className="care-multi-box" aria-hidden="true">
+                      {checked && <ModuleIcon name="check" />}
+                    </span>
+                    <span className="care-multi-label">{option}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="care-multi-custom">
+              <input
+                ref={customRef}
+                value={custom}
+                maxLength={maxLength}
+                placeholder={customLabel}
+                aria-label={customLabel}
+                onChange={(event) => setCustom(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addCustom();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="care-multi-add"
+                disabled={!custom.trim()}
+                onClick={(event) => {
+                  event.preventDefault();
+                  addCustom();
+                }}
+              >
+                Hinzufügen
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
+  return (
+    <>
+      <div className="area-custom-select care-multi-select" ref={rootRef}>
+        <button
+          className="area-select-trigger"
+          type="button"
+          role="combobox"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-controls={open ? listId : undefined}
+          aria-label={label}
+          onClick={(event) => {
+            event.preventDefault();
+            if (open) setOpen(false);
+            else {
+              place();
+              setOpen(true);
+            }
+          }}
+          onKeyDown={(event) => {
+            // Offene Liste: Escape schliesst nur die Liste, nicht den Dialog.
+            if (event.key === "Escape" && open) {
+              event.preventDefault();
+              setOpen(false);
+            }
+          }}
+        >
+          <span className={values.length ? "" : "placeholder"}>
+            {values.length ? `${values.length} ausgewählt` : placeholder}
+          </span>
+          <ModuleIcon name="caretDown" className={open ? "open" : ""} />
+        </button>
+        {values.length > 0 && (
+          <ul className="care-multi-chips" aria-label={`${label}: ausgewählt`}>
+            {values.map((value) => (
+              <li key={value}>
+                <span>{value}</span>
+                <button
+                  type="button"
+                  aria-label={`${value} entfernen`}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    toggle(value);
+                  }}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {menu}
+    </>
+  );
+}

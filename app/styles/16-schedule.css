@@ -423,7 +423,7 @@
   padding: 0 18px;
   color: var(--muted);
   background: #f7f9fc;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -445,17 +445,22 @@
 .assessment-list > article.complete {
   opacity: 0.6;
 }
-.assessment-list strong,
-.assessment-list small {
+/* Nur die Zeilen; der leere Zustand behält seine eigene Gestaltung. */
+.assessment-list > article strong,
+.assessment-list > article small {
   display: block;
 }
-.assessment-list strong {
-  font-size: 10px;
+.assessment-list > article strong {
+  font-size: 13px;
 }
-.assessment-list small {
+.assessment-list > article small {
   margin-top: 4px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 11px;
+}
+.assessment-list > article .quiet-button {
+  min-height: 34px;
+  font-size: 12px;
 }
 .governance-summary {
   margin-bottom: 20px;

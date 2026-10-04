@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { CareDatePicker, CareSelect } from "@/app/components/care-form-controls";
+import { CareDatePicker, CareMultiSelect, CareSelect } from "@/app/components/care-form-controls";
 import { EditorDialog, requestJson, todayInZurich } from "@/app/components/workspace-ui";
 import { useCountry } from "@/app/components/care-context";
 import { NOT_ASSESSED, careLevelOptions } from "@/lib/country";
 import {
+  CARE_RESOURCES,
   GOAL_CATEGORIES,
   OUTCOME_LABELS,
   RESPONSIBLE_ROLES,
+  splitResources,
   type CareGoal,
   type CarePlan,
   type Intervention,
@@ -194,12 +196,13 @@ export function GoalDialog({
       </label>
       <label className="area-editor-wide">
         <span>Ressourcen</span>
-        <textarea
-          rows={2}
-          maxLength={4000}
-          value={form.resources}
-          onChange={(e) => set("resources", e.target.value)}
-          placeholder="z. B. motiviert, nutzt Rollator, gute Kooperation"
+        <CareMultiSelect
+          label="Ressourcen"
+          values={splitResources(form.resources)}
+          options={CARE_RESOURCES}
+          placeholder="Ressourcen wählen"
+          customLabel="Eigene Ressource ergänzen"
+          onChange={(values) => set("resources", values.join(", "))}
         />
       </label>
       <label className="area-editor-wide">

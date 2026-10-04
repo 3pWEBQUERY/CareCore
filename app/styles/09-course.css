@@ -8,6 +8,10 @@
   gap: 18px;
   align-items: start;
 }
+/* Ohne ausgewählten Eintrag (keine Einträge) gibt es keine Detailspalte: Liste über die ganze Breite. */
+.wound-doc-layout.single {
+  grid-template-columns: minmax(0, 1fr);
+}
 .course-card,
 .wound-doc-directory {
   overflow: hidden;
