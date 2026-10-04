@@ -29,6 +29,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Kennung je Deployment (Railway setzt die Commit-Kennung): Geöffnete Fenster einer älteren Fassung laden beim
+  // nächsten Seitenwechsel vollständig neu, statt weiter die alten Programmdateien zu verwenden.
+  deploymentId: process.env.RAILWAY_GIT_COMMIT_SHA || process.env.NEXT_DEPLOYMENT_ID || undefined,
   // Postgres-Verbindungspool (Railway) nur auf dem Server, nicht gebündelt.
   serverExternalPackages: ["pg"],
   // /api/health vergleicht die angewendeten Migrationen mit den Dateien im Deployment.
