@@ -251,6 +251,33 @@
   background: var(--brand-soft);
   font-weight: 750;
 }
+.schedule-date-grid button:disabled {
+  color: #b6c0cc;
+  background: transparent;
+  border-color: transparent;
+  font-weight: 500;
+  cursor: not-allowed;
+}
+/* Jahres- und Monatsauswahl (z. B. Geburtsdatum): grössere Felder, drei je Zeile. */
+.schedule-date-grid.schedule-date-choices {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.schedule-date-grid.schedule-date-choices button {
+  min-height: 40px;
+  font-size: 12px;
+}
+.schedule-date-menu-header .schedule-date-period {
+  width: auto;
+  padding: 0 10px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 750;
+  text-transform: capitalize;
+}
+.schedule-date-placeholder {
+  color: var(--muted);
+}
 .schedule-date-menu-footer {
   display: flex;
   align-items: center;

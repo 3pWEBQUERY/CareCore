@@ -73,6 +73,10 @@ function IntakeForm({ onClose, onSuccess }: Props) {
   }
   async function submitIntake(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!birthDate) {
+      setError("Bitte das Geburtsdatum wählen.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -235,13 +239,15 @@ function IntakeForm({ onClose, onSuccess }: Props) {
             </label>
             <label>
               Geburtsdatum
-              <input
-                type="date"
+              <CareDatePicker
+                label="Geburtsdatum"
                 value={birthDate}
+                onChange={setBirthDate}
                 max={admissionDate}
-                onChange={(event) => setBirthDate(event.target.value)}
-                aria-label="Geburtsdatum"
-                required
+                placeholder="Geburtsdatum wählen"
+                yearSelect
+                showToday={false}
+                openAtYear={Number(admissionDate.slice(0, 4)) - 85}
               />
             </label>
             <label>

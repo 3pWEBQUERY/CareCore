@@ -38,7 +38,28 @@ test("Bewohner aufnehmen: Bild direkt hinzufügen, Vorschau, gespeichert in der 
 
   await dialog.getByLabel("Vorname").fill("Erika");
   await dialog.getByLabel("Nachname").fill(lastName);
-  await dialog.getByLabel("Geburtsdatum").fill("1938-04-12");
+  // Geburtsdatum über die eigene Kalenderauswahl: Jahre zurückblättern, Jahr, Monat, Tag.
+  await dialog.getByRole("button", { name: "Geburtsdatum", exact: true }).click();
+  const picker = page.getByRole("dialog", { name: "Geburtsdatum auswählen" });
+  // Beginnt rund 85 Jahre vor dem Eintritt; sonst zurück- bzw. vorblättern.
+  for (
+    let step = 0;
+    step < 20 && !(await picker.getByRole("button", { name: "1938", exact: true }).isVisible());
+    step++
+  )
+    await picker
+      .getByRole("button", {
+        name:
+          Number((await picker.locator(".schedule-date-period").innerText()).slice(0, 4)) > 1938
+            ? "Vorherige Jahre"
+            : "Nächste Jahre",
+      })
+      .click();
+  await picker.getByRole("button", { name: "1938", exact: true }).click();
+  await picker.getByRole("button", { name: /^Apr/ }).click();
+  await picker.getByRole("button", { name: "12", exact: true }).click();
+  await expect(picker).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "Geburtsdatum", exact: true })).toContainText("12.04.1938");
   await dialog.getByLabel("Zimmer").fill("Zimmer 118");
   await dialog.getByRole("button", { name: /aufnehmen$/ }).click();
   await expect(dialog).toHaveCount(0);

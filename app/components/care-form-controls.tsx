@@ -167,18 +167,36 @@ export function CareSelect({
   );
 }
 
+// Eigene Datumsauswahl (statt des Browser-Kalenders). Optional: Grenzen (min, max), Platzhalter ohne Datum,
+// Jahres- und Monatsauswahl für weit zurückliegende Daten (z. B. Geburtsdatum) und ohne „Heute“.
 export function CareDatePicker({
   label,
   value,
   onChange,
+  min,
+  max,
+  placeholder = "Datum wählen",
+  yearSelect = false,
+  showToday = true,
+  openAtYear,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  min?: string;
+  max?: string;
+  placeholder?: string;
+  yearSelect?: boolean;
+  showToday?: boolean;
+  // Ohne Datum: Jahr, bei dem die Auswahl beginnt (nur Anzeige, kein vorgeschlagener Wert).
+  openAtYear?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [openUp, setOpenUp] = useState(false);
-  const [viewMonth, setViewMonth] = useState(() => new Date(`${value}T12:00:00`));
+  const [mode, setMode] = useState<"days" | "months" | "years">("days");
+  const startView = () =>
+    !value && openAtYear ? new Date(openAtYear, 0, 1) : new Date(`${value || max || todayIso()}T12:00:00`);
+  const [viewMonth, setViewMonth] = useState(startView);
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const onPointerDown = (event: PointerEvent) => {
@@ -187,28 +205,49 @@ export function CareDatePicker({
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, []);
-  const firstDay = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1);
+  const year = viewMonth.getFullYear();
+  const month = viewMonth.getMonth();
+  const firstDay = new Date(year, month, 1);
   const offset = (firstDay.getDay() + 6) % 7;
-  const daysInMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0).getDate();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
   const days: Array<number | null> = [
     ...Array.from({ length: offset }, () => null),
     ...Array.from({ length: daysInMonth }, (_, index) => index + 1),
   ];
   const monthLabel = viewMonth.toLocaleDateString("de-CH", { month: "long", year: "numeric" });
+  const iso = (y: number, m: number, d: number) =>
+    `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const outside = (date: string) => Boolean((min && date < min) || (max && date > max));
+  // Jahre in Zwölferblöcken; ein Jahr ist wählbar, wenn mindestens ein Tag darin innerhalb der Grenzen liegt.
+  const decadeStart = Math.floor(year / 12) * 12;
+  const years = Array.from({ length: 12 }, (_, index) => decadeStart + index);
+  const yearOutside = (y: number) => Boolean((min && `${y}-12-31` < min) || (max && `${y}-01-01` > max));
+  const monthOutside = (m: number) =>
+    Boolean((min && iso(year, m, new Date(year, m + 1, 0).getDate()) < min) || (max && iso(year, m, 1) > max));
   const toggle = () =>
     setOpen((current) => {
       if (!current) {
         const rect = rootRef.current?.getBoundingClientRect();
         setOpenUp(Boolean(rect && window.innerHeight - rect.bottom < 350 && rect.top > 350));
+        setViewMonth(startView());
+        setMode(yearSelect && !value ? "years" : "days");
       } else setOpenUp(false);
       return !current;
     });
   const selectDay = (day: number) => {
-    const next = `${viewMonth.getFullYear()}-${String(viewMonth.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    onChange(next);
+    onChange(iso(year, month, day));
     setOpen(false);
     setOpenUp(false);
   };
+  const step = (direction: number) =>
+    setViewMonth((current) =>
+      mode === "years"
+        ? new Date(current.getFullYear() + direction * 12, current.getMonth(), 1)
+        : mode === "months"
+          ? new Date(current.getFullYear() + direction, current.getMonth(), 1)
+          : new Date(current.getFullYear(), current.getMonth() + direction, 1),
+    );
+  const stepLabel = mode === "years" ? "Jahre" : mode === "months" ? "Jahr" : "Monat";
   return (
     <div className="schedule-date-picker" ref={rootRef}>
       <button
@@ -219,77 +258,136 @@ export function CareDatePicker({
         aria-label={label}
         onClick={toggle}
       >
-        <span>{formatCareDate(value)}</span>
+        <span className={value ? undefined : "schedule-date-placeholder"}>
+          {value ? formatCareDate(value) : placeholder}
+        </span>
         <ModuleIcon name="calendar" />
       </button>
       {open && (
-        <div className={`schedule-date-menu ${openUp ? "up" : ""}`} role="dialog" aria-label={`${label} auswählen`}>
+        // Steht die Auswahl in einem <label>, leitet der Browser Klicks sonst an den Auslöser weiter (schliesst).
+        <div
+          className={`schedule-date-menu ${openUp ? "up" : ""}`}
+          role="dialog"
+          aria-label={`${label} auswählen`}
+          onClick={(event) => event.preventDefault()}
+        >
           <div className="schedule-date-menu-header">
             <button
               type="button"
-              aria-label="Vorheriger Monat"
-              onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}
+              aria-label={mode === "days" ? "Vorheriger Monat" : `Vorherige ${stepLabel}`}
+              onClick={() => step(-1)}
             >
               <ModuleIcon name="chevron" className="previous" />
             </button>
-            <strong>{monthLabel}</strong>
+            {yearSelect ? (
+              <button
+                type="button"
+                className="schedule-date-period"
+                aria-label={mode === "days" ? `${monthLabel}: Jahr und Monat wählen` : "Jahr wählen"}
+                onClick={() => setMode(mode === "years" ? "days" : "years")}
+              >
+                {mode === "years" ? `${years[0]} – ${years[11]}` : mode === "months" ? String(year) : monthLabel}
+              </button>
+            ) : (
+              <strong>{monthLabel}</strong>
+            )}
             <button
               type="button"
-              aria-label="Nächster Monat"
-              onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}
+              aria-label={mode === "days" ? "Nächster Monat" : `Nächste ${stepLabel}`}
+              onClick={() => step(1)}
             >
               <ModuleIcon name="chevron" />
             </button>
           </div>
-          <div className="schedule-date-weekdays">
-            {["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].map((day) => (
-              <span key={day}>{day}</span>
-            ))}
-          </div>
-          <div className="schedule-date-grid">
-            {days.map((day, index) =>
-              day ? (
+          {mode === "years" ? (
+            <div className="schedule-date-grid schedule-date-choices" role="group" aria-label="Jahr">
+              {years.map((item) => (
                 <button
                   type="button"
-                  key={day}
-                  className={
-                    value ===
-                    `${viewMonth.getFullYear()}-${String(viewMonth.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-                      ? "selected"
-                      : ""
-                  }
-                  onClick={() => selectDay(day)}
+                  key={item}
+                  disabled={yearOutside(item)}
+                  className={value.startsWith(`${item}-`) ? "selected" : ""}
+                  onClick={() => {
+                    setViewMonth(new Date(item, month, 1));
+                    setMode("months");
+                  }}
                 >
-                  {day}
+                  {item}
                 </button>
-              ) : (
-                <span aria-hidden="true" key={`empty-${index}`} />
-              ),
-            )}
-          </div>
+              ))}
+            </div>
+          ) : mode === "months" ? (
+            <div className="schedule-date-grid schedule-date-choices" role="group" aria-label="Monat">
+              {Array.from({ length: 12 }, (_, index) => index).map((item) => (
+                <button
+                  type="button"
+                  key={item}
+                  disabled={monthOutside(item)}
+                  className={value.startsWith(iso(year, item, 1).slice(0, 8)) ? "selected" : ""}
+                  onClick={() => {
+                    setViewMonth(new Date(year, item, 1));
+                    setMode("days");
+                  }}
+                >
+                  {new Date(year, item, 1).toLocaleDateString("de-CH", { month: "short" })}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="schedule-date-weekdays">
+                {["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].map((day) => (
+                  <span key={day}>{day}</span>
+                ))}
+              </div>
+              <div className="schedule-date-grid">
+                {days.map((day, index) =>
+                  day ? (
+                    <button
+                      type="button"
+                      key={day}
+                      disabled={outside(iso(year, month, day))}
+                      className={value === iso(year, month, day) ? "selected" : ""}
+                      onClick={() => selectDay(day)}
+                    >
+                      {day}
+                    </button>
+                  ) : (
+                    <span aria-hidden="true" key={`empty-${index}`} />
+                  ),
+                )}
+              </div>
+            </>
+          )}
           <div className="schedule-date-menu-footer">
-            <span>{formatCareDate(value)}</span>
-            <button
-              type="button"
-              onClick={() => {
-                const today = new Intl.DateTimeFormat("en-CA", {
-                  timeZone: "Europe/Zurich",
-                  year: "numeric",
-                  month: "2-digit",
-                  day: "2-digit",
-                }).format(new Date());
-                setViewMonth(new Date(`${today}T12:00:00`));
-                onChange(today);
-                setOpen(false);
-              }}
-            >
-              Heute
-            </button>
+            <span>{value ? formatCareDate(value) : placeholder}</span>
+            {showToday && (
+              <button
+                type="button"
+                onClick={() => {
+                  const today = todayIso();
+                  setViewMonth(new Date(`${today}T12:00:00`));
+                  onChange(today);
+                  setOpen(false);
+                }}
+              >
+                Heute
+              </button>
+            )}
           </div>
         </div>
       )}
     </div>
   );
+}
+
+function todayIso() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Zurich",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 export type CareOption = { value: string; label: string; disabled?: boolean };
