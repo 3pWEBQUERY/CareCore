@@ -3,6 +3,7 @@ import { carecoreActor, carecoreDb } from "@/lib/server-data";
 import { createLearningReminders } from "@/lib/learning";
 import { createBtmReminders } from "@/lib/medication-btm";
 import { createDeviceReminders } from "@/lib/devices";
+import { createFeedbackReminders } from "@/lib/feedback";
 import { createFridgeReminders } from "@/lib/fridges";
 import { createEffectCheckReminders } from "@/lib/medication-effect";
 import { schedulePush } from "@/lib/push";
@@ -30,6 +31,7 @@ export async function GET() {
         createEffectCheckReminders(ctx),
         createDeviceReminders(ctx),
         createFridgeReminders(ctx),
+        createFeedbackReminders(ctx),
       ]).catch((error) => console.error("Reminders failed", error));
       schedulePush();
     }
