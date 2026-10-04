@@ -1,4 +1,4 @@
-/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Diagnosen, Impfungen, Hilfsmittel & Gegenstände, Einwilligungen, Geräte & Prüfungen, Kühlschrank-Temperatur, Fahrdienst, Einarbeitung, Rückmeldungen, Inventarliste, Küchenliste, Tippflächen kleiner Links und Textknöpfe sowie die Hauptüberschrift der Druckansichten. */
+/* FBM (Tab „FBM“), Reiterleiste der Akte, Vorsorge & Vertretung, Qualitätsindikatoren, Visite, Leistungserfassung, Isolation & Ausbruch, Alltag & Aktivierung, Belegung & Eintritt (mit QR-Etiketten je Zimmer), eMediplan, Lagerung & Bewegung, Auskunft & Datenexport, Wünsche am Lebensende und Ablauf nach dem Todesfall, Evakuierungsliste, Diagnosen, Impfungen, Hilfsmittel & Gegenstände, Einwilligungen, Geräte & Prüfungen, Kühlschrank-Temperatur, Fahrdienst, Einarbeitung, Rückmeldungen, Inventarliste, Bild bei der Aufnahme, Küchenliste, Tippflächen kleiner Links und Textknöpfe sowie die Hauptüberschrift der Druckansichten. */
 .restraints-list {
   display: grid;
   gap: 16px;
@@ -1901,6 +1901,69 @@
 .inventory-signatures span {
   padding-top: 2mm;
   border-top: 1px solid #000;
+}
+/* Bild bei der Aufnahme: Vorschau wie in der Akte (rund, Kamera-Zeichen), daneben Hinweis und Knöpfe. */
+.intake-photo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fbfcfe;
+}
+.intake-photo .record-photo-trigger {
+  width: 64px;
+  height: 64px;
+  position: relative;
+  overflow: visible;
+  padding: 0;
+  border: 0;
+  font-size: 18px;
+  cursor: pointer;
+}
+.intake-photo .record-photo-trigger:focus-visible {
+  outline: 3px solid #bfdbfe;
+  outline-offset: 3px;
+}
+.intake-photo .record-photo-trigger:disabled {
+  cursor: wait;
+}
+.intake-photo .record-photo-trigger > span:first-child svg {
+  width: 26px;
+  height: 26px;
+}
+.intake-photo > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.intake-photo strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+.intake-photo small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.intake-photo small.intake-photo-error {
+  color: #a43b2d;
+}
+.intake-photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+@media (max-width: 760px) {
+  .intake-photo {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .intake-photo-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
 }
 /* Küchenliste (A4 quer): breiter als die Evakuierungsliste, Allergien hervorgehoben. */
 .kitchen-sheet {

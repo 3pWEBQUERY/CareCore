@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { carecoreActor, carecoreDb, forbidden, hasPermission } from "@/lib/server-data";
 import { auditOrigin } from "@/lib/audit-origin";
 import { NOT_ASSESSED, careLevelError, countryCode, isCareLevel } from "@/lib/country";
+import { residentAudit } from "@/lib/resident-audit";
+import { parsePhotoDataUrl } from "@/lib/resident-photo";
+import { removeMedia, storeMedia } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -86,6 +89,9 @@ export async function POST(request: Request) {
     const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if ((unitIdInput && !uuid.test(unitIdInput)) || (nurseIdInput && !uuid.test(nurseIdInput)))
       return NextResponse.json({ error: "Wohnbereich oder Bezugspflege ist ungültig." }, { status: 400 });
+    // Optional: Bild der Person direkt bei der Aufnahme (gleiche Prüfung wie in der Akte).
+    const photo = body.photoDataUrl ? parsePhotoDataUrl(body.photoDataUrl) : null;
+    if (photo && !photo.ok) return NextResponse.json({ error: photo.error }, { status: photo.status });
     const sql = carecoreDb();
     const units = unitIdInput
       ? await sql`SELECT cu.id FROM carecore_care_units cu JOIN carecore_sites s ON s.id = cu.site_id WHERE s.organization_id = ${actor.organizationId} AND cu.id = ${unitIdInput} AND cu.active = TRUE LIMIT 1`
@@ -106,11 +112,28 @@ export async function POST(request: Request) {
     const rooms =
       await sql`INSERT INTO carecore_rooms (id, care_unit_id, name, room_number) VALUES (${randomUUID()}, ${unitId}, ${roomName}, ${roomName.replace(/\D/g, "") || null}) ON CONFLICT (care_unit_id, name) DO UPDATE SET active = TRUE RETURNING id`;
     const residentId = randomUUID();
-    await sql`INSERT INTO carecore_residents (id, organization_id, first_name, last_name, date_of_birth, gender, status, admitted_on, notes, primary_care_user_id) VALUES (${residentId}, ${actor.organizationId}, ${firstName}, ${lastName}, ${birthDate}, ${gender}, ${status}, ${admissionDate}, ${note || null}, ${ownerId})`;
+    const photoKey = photo?.ok
+      ? await storeMedia("resident-photos", actor.organizationId, randomUUID(), photo.image, photo.mimeType)
+      : null;
+    const photoBase64 = photo?.ok && !photoKey ? photo.image.toString("base64") : null;
+    try {
+      await sql`INSERT INTO carecore_residents (id, organization_id, first_name, last_name, date_of_birth, gender, status, admitted_on, notes, primary_care_user_id, photo_base64, photo_storage_key, photo_mime_type, photo_updated_at) VALUES (${residentId}, ${actor.organizationId}, ${firstName}, ${lastName}, ${birthDate}, ${gender}, ${status}, ${admissionDate}, ${note || null}, ${ownerId}, ${photoBase64}, ${photoKey}, ${photo?.ok ? photo.mimeType : null}, ${photo?.ok ? new Date().toISOString() : null})`;
+    } catch (error) {
+      await removeMedia([photoKey]);
+      throw error;
+    }
     await sql`INSERT INTO carecore_resident_stays (id, resident_id, care_unit_id, room_id, started_at, created_by) VALUES (${randomUUID()}, ${residentId}, ${unitId}, ${rooms[0].id}, ${new Date(`${admissionDate}T12:00:00Z`).toISOString()}, ${actor.id})`;
     if (careLevel && careLevel !== NOT_ASSESSED)
       await sql`INSERT INTO carecore_care_plans (id, resident_id, owner_user_id, care_level, focus) VALUES (${randomUUID()}, ${residentId}, ${ownerId}, ${careLevel}, ${note || "Aufnahme und Pflegebedarf prüfen."})`;
     await sql`INSERT INTO carecore_audit_log (id, organization_id, actor_user_id, session_id, user_agent, entity_type, entity_id, action, after_data) VALUES (${randomUUID()}, ${actor.organizationId}, ${actor.id}, ${auditOrigin(actor).sessionId}, ${auditOrigin(actor).userAgent}, 'resident', ${residentId}, 'admitted', ${JSON.stringify({ name: `${firstName} ${lastName}`, careUnitId: unitId, room: roomName, primaryNurseId: ownerId })}::jsonb)`;
+    if (photo?.ok)
+      await residentAudit(sql, actor, {
+        residentId,
+        entityType: "resident_photo",
+        entityId: residentId,
+        action: "updated",
+        after: { mimeType: photo.mimeType, bytes: photo.image.length },
+      });
     return NextResponse.json({ id: residentId }, { status: 201 });
   } catch (error) {
     console.error("Residents POST failed", error);

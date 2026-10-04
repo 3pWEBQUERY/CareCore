@@ -1,12 +1,11 @@
 import { mediaContent, removeMedia, storeMedia } from "@/lib/storage";
 import { NextResponse } from "next/server";
 import { residentAudit } from "@/lib/resident-audit";
+import { PHOTO_TYPES, parsePhotoDataUrl } from "@/lib/resident-photo";
 import { carecoreActor, carecoreDb, forbidden, hasPermission, type Permission } from "@/lib/server-data";
 
 export const runtime = "nodejs";
 
-const MAX_PHOTO_BYTES = 1024 * 1024;
-const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 async function access(residentId: string, permission: Permission) {
   const actor = await carecoreActor();
   if (!actor?.organizationId || !/^[0-9a-f-]{36}$/i.test(residentId)) return null;
@@ -15,18 +14,6 @@ async function access(residentId: string, permission: Permission) {
   const rows =
     await sql`SELECT id FROM carecore_residents WHERE id = ${residentId} AND organization_id = ${actor.organizationId} LIMIT 1`;
   return rows[0] ? { sql, actor } : null;
-}
-
-function hasValidImageSignature(bytes: Buffer, mimeType: string) {
-  if (mimeType === "image/jpeg")
-    return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-  if (mimeType === "image/png")
-    return (
-      bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
-    );
-  if (mimeType === "image/webp")
-    return bytes.length >= 12 && bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP";
-  return false;
 }
 
 export async function GET(request: Request, context: { params: Promise<{ residentId: string }> }) {
@@ -40,7 +27,7 @@ export async function GET(request: Request, context: { params: Promise<{ residen
       await sql`SELECT photo_base64, photo_storage_key, photo_mime_type, photo_updated_at FROM carecore_residents WHERE id = ${residentId} LIMIT 1`;
     const resident = rows[0];
     const stored =
-      resident && allowedTypes.has(String(resident.photo_mime_type))
+      resident && PHOTO_TYPES.has(String(resident.photo_mime_type))
         ? await mediaContent(resident.photo_storage_key, resident.photo_base64)
         : null;
     if (new URL(request.url).searchParams.get("format") === "raw") {
@@ -77,35 +64,28 @@ export async function PUT(request: Request, context: { params: Promise<{ residen
     if (allowed === "forbidden") return forbidden();
     const { sql, actor } = allowed;
     const input = (await request.json()) as { photoDataUrl?: unknown };
-    if (typeof input.photoDataUrl !== "string")
-      return NextResponse.json({ error: "Bitte ein Bild auswählen." }, { status: 400 });
-    const match = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(input.photoDataUrl);
-    if (!match || !allowedTypes.has(match[1]))
-      return NextResponse.json({ error: "Erlaubt sind JPEG-, PNG- und WebP-Bilder." }, { status: 400 });
-    const image = Buffer.from(match[2], "base64");
-    if (!image.length || image.length > MAX_PHOTO_BYTES)
-      return NextResponse.json({ error: "Das optimierte Bild darf höchstens 1 MB gross sein." }, { status: 413 });
-    if (!hasValidImageSignature(image, match[1]))
-      return NextResponse.json({ error: "Die Bilddatei ist ungültig." }, { status: 400 });
+    const photo = parsePhotoDataUrl(input.photoDataUrl);
+    if (!photo.ok) return NextResponse.json({ error: photo.error }, { status: photo.status });
+    const { image, mimeType } = photo;
     const base64 = image.toString("base64");
     const [previous] = await sql`SELECT photo_storage_key FROM carecore_residents WHERE id = ${residentId}`;
     // Jede Fassung unter eigenem Schlüssel; die alte wird nach dem Speichern entfernt.
     const organizationId = actor.organizationId ?? "unknown";
-    const key = await storeMedia("resident-photos", organizationId, crypto.randomUUID(), image, match[1]);
+    const key = await storeMedia("resident-photos", organizationId, crypto.randomUUID(), image, mimeType);
     const [rows] = await sql.transaction([
-      sql`UPDATE carecore_residents SET photo_base64 = ${key ? null : base64}, photo_storage_key = ${key}, photo_mime_type = ${match[1]}, photo_updated_at = NOW(), updated_at = NOW() WHERE id = ${residentId} RETURNING photo_updated_at`,
+      sql`UPDATE carecore_residents SET photo_base64 = ${key ? null : base64}, photo_storage_key = ${key}, photo_mime_type = ${mimeType}, photo_updated_at = NOW(), updated_at = NOW() WHERE id = ${residentId} RETURNING photo_updated_at`,
       residentAudit(sql, actor, {
         residentId,
         entityType: "resident_photo",
         entityId: residentId,
         action: "updated",
-        after: { mimeType: match[1], bytes: image.length },
+        after: { mimeType, bytes: image.length },
       }),
     ]);
     if (!rows[0]) return NextResponse.json({ error: "Akte nicht gefunden." }, { status: 404 });
     await removeMedia([previous?.photo_storage_key]);
     return NextResponse.json({
-      photoDataUrl: `data:${match[1]};base64,${base64}`,
+      photoDataUrl: `data:${mimeType};base64,${base64}`,
       updatedAt: rows[0].photo_updated_at,
     });
   } catch (error) {

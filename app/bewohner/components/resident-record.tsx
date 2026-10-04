@@ -24,6 +24,7 @@ import { RecordRestraintsView } from "./record-restraints-view";
 import { BodyObservationDialog } from "./record-body-dialog";
 import { ContactEditorDialog } from "./record-contact-dialog";
 import { SupplyEditorDialog } from "./record-supply-dialog";
+import { PHOTO_ACCEPT } from "@/lib/resident-photo-client";
 
 export function ResidentRecord(props: ResidentRecordProps) {
   const t = useTerms();
@@ -94,7 +95,7 @@ export function ResidentRecord(props: ResidentRecordProps) {
               ref={residentPhotoInputRef}
               className="record-photo-input"
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+              accept={PHOTO_ACCEPT}
               onChange={uploadResidentPhoto}
               tabIndex={-1}
               aria-hidden="true"
