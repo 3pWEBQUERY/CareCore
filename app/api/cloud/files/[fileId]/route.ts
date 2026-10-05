@@ -5,6 +5,7 @@ import { carecoreActor } from "@/lib/server-data";
 import {
   copyFile,
   listVersions,
+  officeLive,
   purgeFile,
   readOffice,
   readText,
@@ -116,6 +117,8 @@ export async function POST(request: Request, { params }: Context) {
     const body = (await request.json()) as Record<string, unknown>;
     if (body.action === "copy")
       return NextResponse.json({ file: await copyFile(actor, fileId, body) }, { status: 201 });
+    // Gleichzeitiges Bearbeiten: Lebenszeichen und neuester Stand der Datei.
+    if (body.action === "live") return NextResponse.json(await officeLive(actor, fileId, body));
     if (body.action === "restoreVersion")
       return NextResponse.json({ file: await restoreVersion(actor, fileId, String(body.versionId)) });
     return NextResponse.json({ error: "Unbekannte Aktion." }, { status: 400 });

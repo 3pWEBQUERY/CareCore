@@ -442,6 +442,8 @@ test("Tabelle: vertikale Ausrichtung, Funktionen, Rahmen, Filter und Auswahllist
   await page.getByRole("button", { name: "Rahmen", exact: true }).click();
   await page.getByRole("menuitemradio", { name: "Rahmenlinie unten" }).click();
   await page.getByRole("button", { name: "Filter", exact: true }).click();
+  // Filterknopf in seiner eigenen Gestalt (nicht von anderen Regeln überdeckt).
+  await expect(page.getByRole("button", { name: "Filter B" })).toHaveCSS("width", "18px");
   await page.getByRole("button", { name: "Filter B" }).click();
   await page.locator(".sheet-filter-menu").getByRole("checkbox", { name: "Küche" }).click();
   await page.locator(".sheet-filter-menu").getByRole("button", { name: "OK" }).click();
@@ -559,4 +561,132 @@ test("Kommentare in Dokument, Tabelle und Präsentation", async ({ page }) => {
   await expect(page.locator(".deck-thumb-comments")).toHaveCount(0);
   await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
   expect(errors).toEqual([]);
+});
+
+// Gleichzeitiges Bearbeiten: zwei Fenster in derselben Datei sehen einander und die Änderungen des anderen;
+// gleichzeitige Eingaben gehen nicht verloren (Tabelle und Dokument).
+test("Gleichzeitiges Bearbeiten in Tabelle und Dokument", async ({ page, browser }) => {
+  await login(page, ADMIN);
+  // Speichern zweier Fenster im selben Moment wird erkannt (409) und zusammengeführt.
+  const expected = [/^409 PUT \/api\/cloud\/files\//];
+  const errors = watchErrors(page, expected);
+  const other = await (await browser.newContext({ locale: "de-CH", timezoneId: "Europe/Zurich" })).newPage();
+  await other.setViewportSize({ width: 1440, height: 950 });
+  await login(other, ADMIN);
+  const otherErrors = watchErrors(other, expected);
+  const stamp = Date.now();
+
+  // Tabelle anlegen und im zweiten Fenster öffnen.
+  await page.goto("/c/carecore-one/ablage");
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Tabelle/ }).click();
+  const gallery = page.getByRole("dialog", { name: "Neue Tabelle (Excel)" });
+  await gallery.getByLabel("Name").fill(`Gemeinsam ${stamp}`);
+  await gallery.getByRole("button", { name: "Erstellen und öffnen" }).click();
+  const grid = page.getByRole("grid", { name: "Blatt Tabelle1" });
+  await grid.focus();
+  await page.keyboard.type("Name");
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".office-status")).toContainText("Gespeichert um");
+  await other.goto("/c/carecore-one/ablage");
+  await other.getByText(`Gemeinsam ${stamp}.xlsx`, { exact: true }).dblclick();
+  const otherGrid = other.getByRole("grid", { name: "Blatt Tabelle1" });
+  await expect(otherGrid.locator("td").filter({ hasText: /^Name$/ })).toHaveCount(1);
+
+  // Beide sehen einander (gleiche Person in zwei Fenstern) und die Zelle des anderen.
+  await expect(page.locator(".office-people li")).toHaveCount(1);
+  await expect(other.locator(".office-people li")).toHaveCount(1);
+  await otherGrid.locator("tbody tr").nth(0).locator("td").nth(2).click();
+  await expect(page.locator(".sheet-remote")).toBeVisible();
+
+  // Gleichzeitig in verschiedene Zellen schreiben: am Ende stehen beide Eingaben in beiden Fenstern.
+  await page.keyboard.type("Anna");
+  await page.keyboard.press("Enter");
+  await other.keyboard.type("Zimmer 12");
+  await other.keyboard.press("Enter");
+  for (const view of [grid, otherGrid]) {
+    await expect(view.locator("td").filter({ hasText: /^Anna$/ })).toHaveCount(1);
+    await expect(view.locator("td").filter({ hasText: /^Zimmer 12$/ })).toHaveCount(1);
+  }
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  await other.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  await page.getByText(`Gemeinsam ${stamp}.xlsx`, { exact: true }).dblclick();
+  const reopened = page.getByRole("grid", { name: "Blatt Tabelle1" });
+  for (const value of ["Name", "Anna", "Zimmer 12"])
+    await expect(reopened.locator("td").filter({ hasText: new RegExp(`^${value}$`) })).toHaveCount(1);
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+
+  // Dokument: beide schreiben gleichzeitig in verschiedene Absätze.
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Dokument/ }).click();
+  const docGallery = page.getByRole("dialog", { name: "Neues Dokument (Word)" });
+  await docGallery.getByLabel("Name").fill(`Gemeinsam ${stamp}`);
+  await docGallery.getByRole("button", { name: "Erstellen und öffnen" }).click();
+  const prose = page.locator(".office-prose");
+  await prose.click();
+  await page.keyboard.type("Erster Absatz");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("Zweiter Absatz");
+  await expect(page.locator(".office-status")).toContainText("Gespeichert um");
+  await other.goto("/c/carecore-one/ablage");
+  await other.getByText(`Gemeinsam ${stamp}.docx`, { exact: true }).dblclick();
+  const otherProse = other.locator(".office-prose");
+  await expect(otherProse.locator("p").nth(1)).toHaveText("Zweiter Absatz");
+  await otherProse.locator("p").nth(1).click();
+  await other.keyboard.press("End");
+  await page.locator(".office-prose p").nth(0).click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" von Anna");
+  await other.keyboard.type(" von Beat");
+  for (const view of [prose, otherProse]) {
+    await expect(view.locator("p").nth(0)).toHaveText("Erster Absatz von Anna");
+    await expect(view.locator("p").nth(1)).toHaveText("Zweiter Absatz von Beat");
+  }
+  // Der eigene Cursor bleibt beim Übernehmen fremder Änderungen an seiner Stelle.
+  await page.keyboard.type("!");
+  await expect(prose.locator("p").nth(0)).toHaveText("Erster Absatz von Anna!");
+  await expect(otherProse.locator("p").nth(0)).toHaveText("Erster Absatz von Anna!");
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  await other.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  expect(errors).toEqual([]);
+  expect(otherErrors).toEqual([]);
+  await other.context().close();
+});
+
+test("Gleichzeitiges Bearbeiten in der Präsentation", async ({ page, browser }) => {
+  await login(page, ADMIN);
+  const expected = [/^409 PUT \/api\/cloud\/files\//];
+  const errors = watchErrors(page, expected);
+  const other = await (await browser.newContext({ locale: "de-CH", timezoneId: "Europe/Zurich" })).newPage();
+  await other.setViewportSize({ width: 1440, height: 950 });
+  await login(other, ADMIN);
+  const otherErrors = watchErrors(other, expected);
+  const stamp = Date.now();
+  await page.goto("/c/carecore-one/ablage");
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Präsentation/ }).click();
+  const gallery = page.getByRole("dialog", { name: "Neue Präsentation (PowerPoint)" });
+  await gallery.getByLabel("Name").fill(`Gemeinsam ${stamp}`);
+  await gallery.getByRole("button", { name: "Erstellen und öffnen" }).click();
+  await expect(page.locator(".deck-stage")).toBeVisible();
+  await page.getByRole("button", { name: "Folie", exact: true }).click();
+  await expect(page.locator(".office-status")).toContainText("Gespeichert um");
+  await other.goto("/c/carecore-one/ablage");
+  await other.getByText(`Gemeinsam ${stamp}.pptx`, { exact: true }).dblclick();
+  await expect(other.locator(".deck-thumb")).toHaveCount(2);
+
+  // Wer auf welcher Folie ist, zeigt die Folienleiste.
+  await expect(other.locator(".deck-thumb").nth(1).locator(".deck-thumb-person")).toHaveCount(1);
+  // Gleichzeitig: Titel der ersten Folie im einen, Notizen der zweiten Folie im anderen Fenster.
+  await other.locator(".deck-thumb-button").nth(0).click();
+  await other.getByLabel("Titel der Präsentation").fill(`Teamtag ${stamp}`);
+  await page.getByLabel("Notizen für die Vortragenden").fill("Pause um zehn Uhr");
+  await expect(page.locator(".deck-thumb").nth(0)).toContainText(`Teamtag ${stamp}`);
+  await other.locator(".deck-thumb-button").nth(1).click();
+  await expect(other.getByLabel("Notizen für die Vortragenden")).toHaveValue("Pause um zehn Uhr");
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  await other.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  expect(errors).toEqual([]);
+  expect(otherErrors).toEqual([]);
+  await other.context().close();
 });

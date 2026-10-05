@@ -1,3 +1,4 @@
+import type { OfficePlace } from "@/lib/office/presence";
 import { mediaContent, removeMedia, storeMedia } from "@/lib/storage";
 import { randomUUID } from "node:crypto";
 import { ApiError, iso, type Row } from "@/lib/api-context";
@@ -688,6 +689,72 @@ export async function saveOffice(actor: CarecoreActor, fileId: string, body: Rec
     await audit(actor, scope, "shared_file", fileId, "versioned", { name: file.name, version: result.versionNo });
   const reloaded = await loadScope(actor, scope);
   return { file: reloaded.toFile(reloaded.file(fileId)), revision: result.revision };
+}
+
+// Gleichzeitiges Bearbeiten: Lebenszeichen des Editors (wer ist wo in der Datei) und neuester Stand. Das Modell
+// kommt nur mit, wenn sich die Datei seit dem Stand des Editors geändert hat.
+const PRESENCE_SECONDS = 30;
+const SESSION = /^[A-Za-z0-9_-]{8,40}$/;
+
+function cleanPlace(input: unknown): OfficePlace | null {
+  if (!input || typeof input !== "object") return null;
+  const raw = input as Record<string, unknown>;
+  const place: OfficePlace = {};
+  if (typeof raw.sheet === "string" && SESSION.test(raw.sheet)) place.sheet = raw.sheet;
+  if (typeof raw.cell === "string" && /^[A-Z]{1,3}[1-9]\d{0,6}$/.test(raw.cell)) place.cell = raw.cell;
+  if (typeof raw.slide === "string" && SESSION.test(raw.slide)) place.slide = raw.slide;
+  if (Number.isInteger(raw.block) && Number(raw.block) >= 0 && Number(raw.block) < 100_000)
+    place.block = Number(raw.block);
+  return Object.keys(place).length ? place : null;
+}
+
+export async function officeLive(actor: CarecoreActor, fileId: string, body: Record<string, unknown>) {
+  const { file } = await locateFile(actor, fileId);
+  if (file.deletedAt) throw new ApiError("Die Datei liegt im Papierkorb.", 409);
+  const kind = officeKindOf(file.name);
+  if (!kind) throw new ApiError("Diese Datei ist kein Dokument, keine Tabelle und keine Präsentation.");
+  const session = String(body.session ?? "");
+  if (!SESSION.test(session)) throw new ApiError("Sitzung fehlt. Bitte neu öffnen.");
+  const sql = carecoreDb();
+  if (body.leave === true) {
+    await sql`DELETE FROM carecore_office_presence WHERE file_id = ${fileId} AND session_id = ${session}`;
+    return { revision: Number(body.revision) || 0, people: [] };
+  }
+  const place = cleanPlace(body.place);
+  await sql`
+    INSERT INTO carecore_office_presence (file_id, session_id, user_id, display_name, place, seen_at)
+    VALUES (${fileId}, ${session}, ${actor.id}, ${authorName(actor) || "Unbekannt"}, ${place ? JSON.stringify(place) : null}::jsonb, NOW())
+    ON CONFLICT (file_id, session_id) DO UPDATE
+      SET place = EXCLUDED.place, seen_at = NOW(), display_name = EXCLUDED.display_name`;
+  await sql`
+    DELETE FROM carecore_office_presence
+    WHERE file_id = ${fileId} AND seen_at < NOW() - make_interval(secs => ${PRESENCE_SECONDS * 4})`;
+  const people = (await sql`
+    SELECT session_id, user_id, display_name, place FROM carecore_office_presence
+    WHERE file_id = ${fileId} AND session_id <> ${session}
+      AND seen_at > NOW() - make_interval(secs => ${PRESENCE_SECONDS})
+    ORDER BY display_name, session_id`) as Row[];
+  const rows = (await sql`
+    SELECT content_base64, storage_key, revision FROM carecore_cloud_files WHERE id = ${fileId}`) as Row[];
+  const revision = Number(rows[0]?.revision ?? 0);
+  const result = {
+    revision,
+    people: people.map((row) => ({
+      session: String(row.session_id),
+      name: String(row.display_name),
+      self: row.user_id === actor.id,
+      place: cleanPlace(row.place),
+    })),
+  };
+  if (Number(body.revision) === revision) return result;
+  const bytes = await mediaContent(rows[0]?.storage_key, rows[0]?.content_base64);
+  if (!bytes) return result;
+  try {
+    const read = kind === "document" ? readDocx(bytes) : kind === "sheet" ? readXlsx(bytes) : readPptx(bytes);
+    return { ...result, model: read.model };
+  } catch {
+    return result;
+  }
 }
 
 // Text zum Bearbeiten (UTF-8) mit aktueller Version für die Kontrolle beim Speichern.

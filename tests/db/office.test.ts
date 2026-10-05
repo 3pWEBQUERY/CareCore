@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ApiError } from "@/lib/api-context";
 import type { CarecoreActor } from "@/lib/server-data";
-import { createDocument, listVersions, readOffice, saveOffice, uploadFile } from "@/lib/shared-files";
+import { createDocument, listVersions, officeLive, readOffice, saveOffice, uploadFile } from "@/lib/shared-files";
 import { readableFile } from "@/lib/file-access";
 import { createZip, readZip } from "@/lib/zip";
 import { buildDocx } from "@/lib/office/docx";
@@ -139,4 +139,45 @@ test("Office in der Ablage: Word-Datei aus einem anderen Programm öffnen und be
   if ("file" in result) assert.equal(await status(readOffice(anna, result.file.id)), 422);
   else assert.fail("Upload erwartet");
   await q(`SELECT 1`);
+});
+
+test("Gleichzeitiges Bearbeiten: wer ist in der Datei, wo, und neuester Stand nur bei Änderung", async () => {
+  const f = await fixture();
+  const anna = await actorOf(f, "anna");
+  const lead = await actorOf(f, "leadA");
+  const max = await actorOf(f, "max");
+  const file = await createDocument(anna, { action: "document", scope: "shared", template: "sheet-order" });
+  const sessionA = "annafenster01";
+  const sessionL = "leitungfenster01";
+
+  // Erstes Lebenszeichen: noch niemand sonst da, Stand unverändert → ohne Modell.
+  const first = await officeLive(anna, file.id, { session: sessionA, revision: 0, place: { cell: "B2" } });
+  assert.deepEqual(first.people, []);
+  assert.equal(first.revision, 0);
+  assert.equal("model" in first, false);
+
+  // Die Leitung kommt dazu und speichert; Anna sieht sie, ihre Stelle und den neuen Stand.
+  const opened = await readOffice(lead, file.id);
+  await officeLive(lead, file.id, { session: sessionL, revision: 0, place: { sheet: "x".repeat(8), cell: "C4" } });
+  const sheet = opened.model as SheetModel;
+  sheet.sheets[0].cells.A2 = { v: "Handschuhe" };
+  const saved = await saveOffice(lead, file.id, { model: sheet, revision: 0, auto: true });
+  const seen = await officeLive(anna, file.id, { session: sessionA, revision: 0, place: { cell: "B2" } });
+  assert.equal(seen.revision, saved.revision);
+  assert.deepEqual(
+    seen.people.map((person) => [person.name.length > 0, person.self, person.place]),
+    [[true, false, { sheet: "xxxxxxxx", cell: "C4" }]],
+  );
+  assert.equal((seen as { model?: SheetModel }).model?.sheets[0].cells.A2.v, "Handschuhe");
+  // Ungültige Stellen werden verworfen, nicht gespeichert.
+  await officeLive(lead, file.id, { session: sessionL, revision: saved.revision, place: { cell: "<b>", block: -1 } });
+  const cleaned = await officeLive(anna, file.id, { session: sessionA, revision: saved.revision });
+  assert.equal(cleaned.people[0].place, null);
+
+  // Verlassen: nicht mehr in der Liste. Ohne Sitzung oder ohne Zugriff kein Lebenszeichen.
+  await officeLive(lead, file.id, { session: sessionL, leave: true });
+  assert.deepEqual((await officeLive(anna, file.id, { session: sessionA, revision: saved.revision })).people, []);
+  assert.equal(await status(officeLive(anna, file.id, { session: "x", revision: 0 })), 400);
+  const own = await createDocument(anna, { action: "document", scope: "personal", template: "sheet-order" });
+  assert.equal(await status(officeLive(max, own.id, { session: "maxfenster01", revision: 0 })), 404);
 });
