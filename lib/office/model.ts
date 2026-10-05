@@ -299,6 +299,11 @@ export function evaluateWorkbook(model: SheetModel, options: { today?: () => num
             const target = sheetIndex(index, sheet);
             return target === undefined ? "" : (model.sheets[target].cells[cellKey(col, row)]?.v ?? "");
           },
+          spill: (sheet, col, row) => {
+            const target = sheetIndex(index, sheet);
+            if (target === undefined) return null;
+            return spillList[target].get(cellKey(col, row))?.area ?? null;
+          },
           rowHidden: (sheet, row, manual) => {
             const target = sheetIndex(index, sheet);
             if (target === undefined) return false;

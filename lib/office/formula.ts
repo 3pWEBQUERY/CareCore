@@ -142,7 +142,8 @@ export function parseInput(raw: string): ParsedInput {
 type Token =
   | { t: "num"; v: number }
   | { t: "str"; v: string }
-  | { t: "ref"; v: string; sheet?: string }
+  // spill: „A1#“ = ganzer Überlaufbereich der Zelle A1.
+  | { t: "ref"; v: string; sheet?: string; spill?: boolean }
   | { t: "name"; v: string }
   | { t: "op"; v: string }
   | { t: "err"; v: ErrorCode }
@@ -192,8 +193,10 @@ function tokenize(source: string): Token[] {
       i = close + 2;
       const ref = /^\$?[A-Za-z]{1,3}\$?\d+/.exec(source.slice(i));
       if (!ref) throw new SyntaxProblem("Zellbezug erwartet");
-      tokens.push({ t: "ref", v: ref[0], sheet });
       i += ref[0].length;
+      const spill = source[i] === "#";
+      if (spill) i += 1;
+      tokens.push({ t: "ref", v: ref[0], sheet, ...(spill ? { spill } : {}) });
       continue;
     }
     if (/\d/.test(char) || (char === "." && /\d/.test(source[i + 1] ?? ""))) {
@@ -209,12 +212,17 @@ function tokenize(source: string): Token[] {
         i += 1;
         const ref = /^\$?[A-Za-z]{1,3}\$?\d+/.exec(source.slice(i));
         if (!ref) throw new SyntaxProblem("Zellbezug erwartet");
-        tokens.push({ t: "ref", v: ref[0], sheet: word });
         i += ref[0].length;
+        const spill = source[i] === "#";
+        if (spill) i += 1;
+        tokens.push({ t: "ref", v: ref[0], sheet: word, ...(spill ? { spill } : {}) });
         continue;
       }
-      if (/^\$?[A-Za-z]{1,3}\$?\d+$/.test(word) && parseCellKey(word)) tokens.push({ t: "ref", v: word });
-      else {
+      if (/^\$?[A-Za-z]{1,3}\$?\d+$/.test(word) && parseCellKey(word)) {
+        const spill = source[i] === "#";
+        if (spill) i += 1;
+        tokens.push({ t: "ref", v: word, ...(spill ? { spill } : {}) });
+      } else {
         // Ganze Spalten („A:A“, „B:D“).
         const columns =
           /^\$?[A-Za-z]{1,3}$/.test(word) && source[i] === ":"
@@ -262,8 +270,12 @@ export type Expr =
   | { k: "percent"; arg: Expr }
   | { k: "binary"; op: string; left: Expr; right: Expr }
   | { k: "call"; name: string; args: Expr[] }
-  // Name ohne Klammer: Variable aus LET (sonst #NAME?).
+  // Name ohne Klammer: Variable aus LET oder LAMBDA (sonst #NAME?).
   | { k: "name"; v: string }
+  // Überlaufbereich einer Zelle („A1#“).
+  | { k: "spillref"; sheet?: string; col: number; row: number }
+  // Aufruf eines berechneten LAMBDA („LAMBDA(x;x*2)(5)“).
+  | { k: "invoke"; fn: Expr; args: Expr[] }
   | { k: "error"; code: ErrorCode };
 
 const PRECEDENCE: Record<string, number> = {
@@ -309,6 +321,7 @@ export function parseFormula(source: string): Expr {
     if (token.t === "ref") {
       const start = parseCellKey(token.v);
       if (!start) return { k: "error", code: "#REF!" };
+      if (token.spill) return { k: "spillref", sheet: token.sheet, col: start.col, row: start.row };
       const next = peek();
       if (next?.t === "op" && next.v === ":") {
         pos += 1;
@@ -322,21 +335,7 @@ export function parseFormula(source: string): Expr {
     }
     if (token.t === "name") {
       const upper = token.v.toUpperCase();
-      if (peek()?.t === "(") {
-        pos += 1;
-        const args: Expr[] = [];
-        if (peek()?.t === ")") pos += 1;
-        else
-          for (;;) {
-            // Leeres Argument („WENN(A1;;1)“) zählt als leer.
-            if (peek()?.t === "sep" || peek()?.t === ")") args.push({ k: "str", v: "" });
-            else args.push(expression(0));
-            const after = tokens[pos++];
-            if (after?.t === ")") break;
-            if (after?.t !== "sep") throw new SyntaxProblem("Trennzeichen „;“ oder „)“ erwartet");
-          }
-        return { k: "call", name: upper, args };
-      }
+      if (peek()?.t === "(") return { k: "call", name: upper, args: argumentList() };
       if (upper === "WAHR" || upper === "TRUE") return { k: "bool", v: true };
       if (upper === "FALSCH" || upper === "FALSE") return { k: "bool", v: false };
       // In der Datei tragen LET-Variablen die Vorsilbe „_xlpm.“.
@@ -344,8 +343,28 @@ export function parseFormula(source: string): Expr {
     }
     throw new SyntaxProblem("Unerwartetes Zeichen in der Formel");
   }
+  // Argumente in Klammern (die öffnende Klammer ist das nächste Zeichen).
+  function argumentList(): Expr[] {
+    pos += 1;
+    const args: Expr[] = [];
+    if (peek()?.t === ")") {
+      pos += 1;
+      return args;
+    }
+    for (;;) {
+      // Leeres Argument („WENN(A1;;1)“) zählt als leer.
+      if (peek()?.t === "sep" || peek()?.t === ")") args.push({ k: "str", v: "" });
+      else args.push(expression(0));
+      const after = tokens[pos++];
+      if (after?.t === ")") return args;
+      if (after?.t !== "sep") throw new SyntaxProblem("Trennzeichen „;“ oder „)“ erwartet");
+    }
+  }
   function postfix(): Expr {
     let node = primary();
+    // Ergebnis einer Funktion direkt aufrufen: LAMBDA(x;x+1)(5).
+    while (peek()?.t === "(" && (node.k === "call" || node.k === "invoke"))
+      node = { k: "invoke", fn: node, args: argumentList() };
     while (peek()?.t === "op" && (peek() as { v: string }).v === "%") {
       pos += 1;
       node = { k: "percent", arg: node };
@@ -395,6 +414,8 @@ export type Resolver = {
   self?: { col: number; row: number };
   // Eingabe einer Zelle (für ISTFORMEL, FORMELTEXT und TEILERGEBNIS).
   raw?: (sheet: string | undefined, col: number, row: number) => string;
+  // Überlaufbereich der Formel in einer Zelle (für „A1#“), null wenn sie nicht überläuft.
+  spill?: (sheet: string | undefined, col: number, row: number) => Area | null;
   // Ausgeblendete Zeile (Filter immer, von Hand ausgeblendete nur mit „manual“), für TEILERGEBNIS.
   rowHidden?: (sheet: string | undefined, row: number, manual: boolean) => boolean;
 };
@@ -2470,6 +2491,15 @@ Object.assign(FUNCTIONS, {
   FORMULATEXT: () => fail("#N/A"),
   SUBTOTAL: () => fail("#VALUE!"),
   LET: () => fail("#VALUE!"),
+  LAMBDA: () => fail("#CALC!"),
+  ISOMITTED: () => fail("#VALUE!"),
+  ANCHORARRAY: () => fail("#REF!"),
+  MAP: () => fail("#VALUE!"),
+  REDUCE: () => fail("#VALUE!"),
+  SCAN: () => fail("#VALUE!"),
+  BYROW: () => fail("#VALUE!"),
+  BYCOL: () => fail("#VALUE!"),
+  MAKEARRAY: () => fail("#VALUE!"),
 } satisfies Record<string, Impl>);
 
 // Fehlerfunktion: Reihe für kleine Werte, Kettenbruch für grosse (Genauigkeit besser als 1e-12).
@@ -2729,6 +2759,12 @@ const GERMAN: Record<string, string> = {
   "NETTOARBEITSTAGE.INTL": "NETWORKDAYS.INTL",
   "ARBEITSTAG.INTL": "WORKDAY.INTL",
   TYP: "TYPE",
+  ZUORDNEN: "MAP",
+  REDUZIEREN: "REDUCE",
+  NACHZEILE: "BYROW",
+  NACHSPALTE: "BYCOL",
+  MATRIXERSTELLEN: "MAKEARRAY",
+  ISTAUSGELASSEN: "ISOMITTED",
   "FEHLER.TYP": "ERROR.TYPE",
   QUANTIL: "PERCENTILE.INC",
   PROGNOSE: "FORECAST.LINEAR",
@@ -2802,6 +2838,15 @@ const XLFN = new Set([
   "WORKDAY.INTL",
   "ISFORMULA",
   "FORMULATEXT",
+  "LAMBDA",
+  "MAP",
+  "REDUCE",
+  "SCAN",
+  "BYROW",
+  "BYCOL",
+  "MAKEARRAY",
+  "ISOMITTED",
+  "ANCHORARRAY",
 ]);
 // Arbeitsblatt-Funktionen mit doppelter Vorsilbe („_xlfn._xlws.FILTER“).
 const XLWS = new Set(["FILTER", "SORT"]);
@@ -2810,7 +2855,17 @@ const GERMAN_OF = Object.fromEntries(
   Object.entries(GERMAN)
     .filter(
       ([german]) =>
-        !["TEXTKETTE", "RANG.GLEICH", "MODUS.EINF", "STABW.S", "VAR.S", "QUANTIL", "PROGNOSE"].includes(german),
+        ![
+          "TEXTKETTE",
+          "RANG.GLEICH",
+          "MODUS.EINF",
+          "STABW.S",
+          "VAR.S",
+          "QUANTIL",
+          "PROGNOSE",
+          "ZUORDNEN",
+          "REDUZIEREN",
+        ].includes(german),
     )
     .map(([german, english]) => [english, german]),
 );
@@ -3146,9 +3201,44 @@ export const FUNCTION_HELP: { name: string; syntax: string; text: string }[] = [
   },
   { name: "TYP", syntax: "TYP(Wert)", text: "Art des Wertes (1 Zahl, 2 Text, 4 Wahrheitswert, 16 Fehler)" },
   { name: "FEHLER.TYP", syntax: "FEHLER.TYP(Fehlerwert)", text: "Nummer eines Fehlers" },
+  {
+    name: "LAMBDA",
+    syntax: "LAMBDA(Parameter1; …; Berechnung)",
+    text: "Eigene Funktion, z. B. LAMBDA(x;x*2)(5) oder in LET benannt",
+  },
+  {
+    name: "MAP",
+    syntax: "MAP(Bereich1; …; LAMBDA(Wert1; …; Berechnung))",
+    text: "Jeden Wert mit einem LAMBDA umrechnen",
+  },
+  {
+    name: "REDUCE",
+    syntax: "REDUCE([Anfangswert]; Bereich; LAMBDA(Summe; Wert; Berechnung))",
+    text: "Alle Werte zu einem Ergebnis zusammenfassen",
+  },
+  {
+    name: "SCAN",
+    syntax: "SCAN([Anfangswert]; Bereich; LAMBDA(Summe; Wert; Berechnung))",
+    text: "Wie REDUCE, mit allen Zwischenergebnissen",
+  },
+  { name: "NACHZEILE", syntax: "NACHZEILE(Bereich; LAMBDA(Zeile; Berechnung))", text: "Ein Ergebnis je Zeile" },
+  { name: "NACHSPALTE", syntax: "NACHSPALTE(Bereich; LAMBDA(Spalte; Berechnung))", text: "Ein Ergebnis je Spalte" },
+  {
+    name: "MATRIXERSTELLEN",
+    syntax: "MATRIXERSTELLEN(Zeilen; Spalten; LAMBDA(Zeile; Spalte; Berechnung))",
+    text: "Bereich aus einer Berechnung je Zelle",
+  },
+  { name: "ISTAUSGELASSEN", syntax: "ISTAUSGELASSEN(Parameter)", text: "WAHR, wenn ein LAMBDA-Parameter fehlt" },
 ];
 
-type Scope = Map<string, Arg> | undefined;
+// LAMBDA mit den Variablen, die beim Erstellen sichtbar waren.
+type Lambda = { kind: "lambda"; params: string[]; body: Expr; scope: Scope };
+// Nicht übergebener LAMBDA-Parameter (ISTAUSGELASSEN).
+type Omitted = { kind: "omitted" };
+type Binding = Arg | Lambda | Omitted;
+type Scope = Map<string, Binding> | undefined;
+const isBound = (value: Binding | undefined): value is Lambda | Omitted =>
+  typeof value === "object" && value !== null && !Array.isArray(value) && "kind" in value;
 
 export function evaluate(expr: Expr, resolver: Resolver, scope?: Scope): Value {
   const result = evaluateArg(expr, resolver, scope);
@@ -3215,6 +3305,12 @@ function referenceFromText(text: string): { sheet?: string; area: Area } | null 
 function referenceOf(expr: Expr, resolver: Resolver, scope: Scope): { sheet?: string; area: Area } | CellError | null {
   if (expr.k === "ref") return { sheet: expr.sheet, area: { c1: expr.col, r1: expr.row, c2: expr.col, r2: expr.row } };
   if (expr.k === "range") return { sheet: expr.sheet, area: expr.area };
+  if (expr.k === "spillref") {
+    if (expr.sheet !== undefined && !resolver.hasSheet(expr.sheet)) return fail("#REF!");
+    const area = resolver.spill?.(expr.sheet, expr.col, expr.row);
+    // Zelle ohne Überlauf: nur die Zelle selbst (Excel: einzelner Wert).
+    return { sheet: expr.sheet, area: area ?? { c1: expr.col, r1: expr.row, c2: expr.col, r2: expr.row } };
+  }
   if (expr.k !== "call") return null;
   const name = canonical(expr.name);
   if (name === "INDIRECT") {
@@ -3280,6 +3376,143 @@ const SUBTOTAL_FUNCTIONS: Record<number, string> = {
 };
 const SUBTOTAL_FORMULA = /^=\s*(?:_xlfn\.)?(TEILERGEBNIS|SUBTOTAL|AGGREGAT|AGGREGATE)\s*\(/i;
 
+// ---------- LAMBDA ----------
+
+const OMITTED: Omitted = { kind: "omitted" };
+let lambdaDepth = 0;
+
+// LAMBDA aus einem Ausdruck: LAMBDA(…), Name eines gespeicherten LAMBDA oder ein Aufruf, der eines liefert.
+function lambdaOf(expr: Expr, resolver: Resolver, scope: Scope): Lambda | CellError | null {
+  if (expr.k === "name") {
+    const bound = scope?.get(expr.v);
+    return isBound(bound) && bound.kind === "lambda" ? bound : null;
+  }
+  if (expr.k === "call" && canonical(expr.name) === "LAMBDA") {
+    if (!expr.args.length) return fail("#VALUE!");
+    const params = expr.args.slice(0, -1);
+    if (params.some((param) => param.k !== "name")) return fail("#VALUE!");
+    const names = params.map((param) => (param as { v: string }).v);
+    if (new Set(names).size !== names.length || names.length > 253) return fail("#VALUE!");
+    return { kind: "lambda", params: names, body: expr.args[expr.args.length - 1], scope };
+  }
+  if (expr.k === "invoke" || (expr.k === "call" && canonical(expr.name) === "LET")) {
+    // Curry: LAMBDA(x;LAMBDA(y;x+y))(1)(2) bzw. LET(…; LAMBDA(…)) als Ergebnis.
+    if (expr.k === "call") {
+      const local: Map<string, Binding> = new Map(scope ?? []);
+      const args = expr.args;
+      for (let index = 0; index + 1 < args.length; index += 2) {
+        const variable = args[index];
+        if (variable.k !== "name") return fail("#NAME?");
+        const lambda = lambdaOf(args[index + 1], resolver, local);
+        if (lambda && isError(lambda)) return lambda;
+        local.set(variable.v, lambda ?? evaluateArg(args[index + 1], resolver, local));
+      }
+      return args.length ? lambdaOf(args[args.length - 1], resolver, local) : null;
+    }
+    const outer = lambdaOf(expr.fn, resolver, scope);
+    if (!outer || isError(outer)) return outer;
+    if (expr.args.length > outer.params.length) return fail("#VALUE!");
+    const local: Map<string, Binding> = new Map(outer.scope ?? []);
+    outer.params.forEach((param, index) => {
+      const arg = expr.args[index];
+      local.set(param, !arg || (arg.k === "str" && arg.v === "") ? OMITTED : evaluateArg(arg, resolver, scope));
+    });
+    return lambdaOf(outer.body, resolver, local);
+  }
+  return null;
+}
+
+function callLambda(lambda: Lambda, values: (Arg | Omitted)[], resolver: Resolver): Arg {
+  if (values.length > lambda.params.length) return fail("#VALUE!");
+  // Schutz vor endloser Verschachtelung.
+  if (lambdaDepth > 400) return fail("#NUM!");
+  const local: Map<string, Binding> = new Map(lambda.scope ?? []);
+  lambda.params.forEach((param, index) => local.set(param, values[index] ?? OMITTED));
+  lambdaDepth += 1;
+  try {
+    return evaluateArg(lambda.body, resolver, local);
+  } finally {
+    lambdaDepth -= 1;
+  }
+}
+
+// Ergebnis eines LAMBDA als einzelner Wert (für Zellen von ZUORDNEN, MATRIXERSTELLEN …).
+const single = (value: Arg): Value =>
+  isGrid(value) ? (value.length === 1 && value[0].length === 1 ? value[0][0] : fail("#CALC!")) : value;
+
+// ZUORDNEN, REDUCE, SCAN, NACHZEILE, NACHSPALTE, MATRIXERSTELLEN: letzter Parameter ist ein LAMBDA.
+function lambdaHelper(name: string, args: Expr[], resolver: Resolver, scope: Scope): Arg {
+  if (!args.length) return fail("#VALUE!");
+  const lambda = lambdaOf(args[args.length - 1], resolver, scope);
+  if (!lambda) return fail("#VALUE!");
+  if (isError(lambda)) return lambda;
+  const values = args
+    .slice(0, -1)
+    .map((arg) => (arg.k === "str" && arg.v === "" ? null : evaluateArg(arg, resolver, scope)));
+  const grid = (value: Arg | null) => (value === null ? [[null]] : toGrid(value));
+  switch (name) {
+    case "MAP": {
+      if (!values.length || lambda.params.length !== values.length) return fail("#VALUE!");
+      const grids = values.map(grid);
+      const rows = Math.max(...grids.map((item) => item.length));
+      const cols = Math.max(...grids.map((item) => item[0]?.length ?? 0));
+      if (rows * cols > 200_000) return fail("#NUM!");
+      return Array.from({ length: rows }, (_, r) =>
+        Array.from({ length: cols }, (_, c) =>
+          single(
+            callLambda(
+              lambda,
+              grids.map((item) =>
+                item.length === 1 && item[0].length === 1 ? item[0][0] : (item[r]?.[c] ?? fail("#N/A")),
+              ),
+              resolver,
+            ),
+          ),
+        ),
+      );
+    }
+    case "REDUCE":
+    case "SCAN": {
+      if (values.length !== 2 || lambda.params.length !== 2) return fail("#VALUE!");
+      let accumulator: Arg = values[0] === null ? null : values[0];
+      const source = grid(values[1]);
+      const steps: Value[][] = [];
+      for (const line of source) {
+        const out: Value[] = [];
+        for (const value of line) {
+          accumulator = callLambda(lambda, [accumulator, value], resolver);
+          if (name === "SCAN") out.push(single(accumulator));
+        }
+        steps.push(out);
+      }
+      return name === "SCAN" ? steps : accumulator;
+    }
+    case "BYROW":
+    case "BYCOL": {
+      if (values.length !== 1 || lambda.params.length !== 1) return fail("#VALUE!");
+      const source = grid(values[0]);
+      const lines = name === "BYROW" ? source : (source[0] ?? []).map((_, c) => source.map((line) => line[c]));
+      const results = lines.map((line) =>
+        single(callLambda(lambda, [name === "BYROW" ? [line] : line.map((value) => [value])], resolver)),
+      );
+      return name === "BYROW" ? results.map((value) => [value]) : [results];
+    }
+    default: {
+      // MATRIXERSTELLEN(Zeilen; Spalten; LAMBDA(z; s; …))
+      if (values.length !== 2 || lambda.params.length !== 2) return fail("#VALUE!");
+      const rows = toNumber(scalar(values[0] ?? null));
+      const cols = toNumber(scalar(values[1] ?? null));
+      if (isError(rows)) return rows;
+      if (isError(cols)) return cols;
+      const [r, c] = [Math.trunc(rows), Math.trunc(cols)];
+      if (r < 1 || c < 1 || r * c > 200_000) return fail("#VALUE!");
+      return Array.from({ length: r }, (_, row) =>
+        Array.from({ length: c }, (_, col) => single(callLambda(lambda, [row + 1, col + 1], resolver))),
+      );
+    }
+  }
+}
+
 function evaluateArg(expr: Expr, resolver: Resolver, scope: Scope): Arg {
   switch (expr.k) {
     case "num":
@@ -3292,7 +3525,25 @@ function evaluateArg(expr: Expr, resolver: Resolver, scope: Scope): Arg {
       return fail(expr.code);
     case "name": {
       const bound = scope?.get(expr.v);
-      return bound === undefined ? fail("#NAME?") : bound;
+      if (bound === undefined) return fail("#NAME?");
+      if (!isBound(bound)) return bound;
+      // Ein LAMBDA als Wert ohne Aufruf ergibt #KALK! (wie Excel), ein ausgelassener Parameter ist leer.
+      return bound.kind === "lambda" ? fail("#CALC!") : null;
+    }
+    case "spillref": {
+      const reference = referenceOf(expr, resolver, scope);
+      if (!reference) return fail("#REF!");
+      return isError(reference) ? reference : materialize(reference, resolver);
+    }
+    case "invoke": {
+      const lambda = lambdaOf(expr.fn, resolver, scope);
+      if (!lambda) return fail("#VALUE!");
+      if (isError(lambda)) return lambda;
+      return callLambda(
+        lambda,
+        expr.args.map((arg) => (arg.k === "str" && arg.v === "" ? OMITTED : evaluateArg(arg, resolver, scope))),
+        resolver,
+      );
     }
     case "ref":
       if (expr.sheet !== undefined && !resolver.hasSheet(expr.sheet)) return fail("#REF!");
@@ -3332,8 +3583,16 @@ function evaluateArg(expr: Expr, resolver: Resolver, scope: Scope): Arg {
 }
 
 function evaluateCall(expr: Extract<Expr, { k: "call" }>, resolver: Resolver, scope: Scope): Arg {
-  const name = canonical(expr.name);
   const args = expr.args;
+  // Name aus LET, an den ein LAMBDA gebunden ist: aufrufen.
+  const local = scope?.get(expr.name.replace(/^_XLPM\./, ""));
+  if (isBound(local) && local.kind === "lambda")
+    return callLambda(
+      local,
+      args.map((arg) => (arg.k === "str" && arg.v === "" ? OMITTED : evaluateArg(arg, resolver, scope))),
+      resolver,
+    );
+  const name = canonical(expr.name);
   // Funktionen, die mit dem Bezug selbst arbeiten (nicht nur mit den Werten).
   switch (name) {
     case "ROW":
@@ -3418,14 +3677,39 @@ function evaluateCall(expr: Extract<Expr, { k: "call" }>, resolver: Resolver, sc
     }
     case "LET": {
       if (args.length < 3 || args.length % 2 === 0) return fail("#VALUE!");
-      const local = new Map(scope ?? []);
+      const local: Map<string, Binding> = new Map(scope ?? []);
       for (let index = 0; index < args.length - 1; index += 2) {
         const variable = args[index];
         if (variable.k !== "name") return fail("#NAME?");
-        local.set(variable.v, evaluateArg(args[index + 1], resolver, local));
+        // LAMBDA unter einem Namen merken (dann „name(…)“ aufrufbar).
+        const lambda = lambdaOf(args[index + 1], resolver, local);
+        if (lambda && isError(lambda)) return lambda;
+        local.set(variable.v, lambda ?? evaluateArg(args[index + 1], resolver, local));
       }
       return evaluateArg(args[args.length - 1], resolver, local);
     }
+    case "LAMBDA": {
+      // Ohne Aufruf ist ein LAMBDA kein Wert (Excel zeigt #KALK!).
+      const lambda = lambdaOf(expr, resolver, scope);
+      return lambda && isError(lambda) ? lambda : fail("#CALC!");
+    }
+    case "ISOMITTED": {
+      if (args.length !== 1 || args[0].k !== "name") return fail("#VALUE!");
+      const bound = scope?.get(args[0].v);
+      return isBound(bound) && bound.kind === "omitted";
+    }
+    case "ANCHORARRAY": {
+      const target = args[0];
+      if (args.length !== 1 || target.k !== "ref") return fail("#VALUE!");
+      return evaluateArg({ k: "spillref", sheet: target.sheet, col: target.col, row: target.row }, resolver, scope);
+    }
+    case "MAP":
+    case "REDUCE":
+    case "SCAN":
+    case "BYROW":
+    case "BYCOL":
+    case "MAKEARRAY":
+      return lambdaHelper(name, args, resolver, scope);
     case "IF": {
       if (args.length < 2 || args.length > 3) return fail("#VALUE!");
       const test = evaluateArg(args[0], resolver, scope);
@@ -3490,6 +3774,13 @@ const ARRAY_FUNCTIONS = new Set([
   "OFFSET",
   "MMULT",
   "FREQUENCY",
+  "MAP",
+  "REDUCE",
+  "SCAN",
+  "BYROW",
+  "BYCOL",
+  "MAKEARRAY",
+  "ANCHORARRAY",
 ]);
 const PASS_THROUGH = new Set(["IF", "IFS", "IFERROR", "IFNA", "CHOOSE", "SWITCH", "LET", "XLOOKUP", "INDEX"]);
 
@@ -3498,6 +3789,8 @@ export function mayReturnArray(expr: Expr): boolean {
   switch (expr.k) {
     case "range":
     case "name":
+    case "spillref":
+    case "invoke":
       return true;
     case "unary":
     case "percent":
@@ -3508,7 +3801,8 @@ export function mayReturnArray(expr: Expr): boolean {
       const name = canonical(expr.name);
       if (ARRAY_FUNCTIONS.has(name)) return true;
       if (PASS_THROUGH.has(name) || LIFTED.has(FUNCTIONS[name])) return expr.args.some(mayReturnArray);
-      return false;
+      // Unbekannter Name: kann ein LAMBDA aus LET sein.
+      return !isKnownFunction(name);
     }
     default:
       return false;
@@ -3517,43 +3811,83 @@ export function mayReturnArray(expr: Expr): boolean {
 
 // ---------- Umschreiben ----------
 
+const SPECIAL_FUNCTIONS = new Set(["ROW", "COLUMN", "ROWS", "COLUMNS"]);
+const isKnownFunction = (name: string) => {
+  const english = canonical(name);
+  return english in FUNCTIONS || SPECIAL_FUNCTIONS.has(english);
+};
+
 function rewrite(source: string, mapName: (name: string) => string, excel: boolean) {
   const tokens = tokenize(source);
-  return tokens
-    .map((token, index) => {
-      switch (token.t) {
-        case "num":
-          return String(token.v);
-        case "str":
-          return `"${token.v.replace(/"/g, '""')}"`;
-        case "ref":
-          return token.sheet !== undefined
-            ? `${/^[A-Za-z_][\w.]*$/.test(token.sheet) ? token.sheet : `'${token.sheet.replace(/'/g, "''")}'`}!${token.v}`
-            : token.v;
-        case "name": {
-          if (tokens[index + 1]?.t === "(") return mapName(token.v.toUpperCase());
-          const upper = token.v.toUpperCase();
-          if (upper === "WAHR" || upper === "TRUE") return excel ? "TRUE" : "WAHR";
-          if (upper === "FALSCH" || upper === "FALSE") return excel ? "FALSE" : "FALSCH";
-          // LET-Variablen: in der Datei mit „_xlpm.“.
-          const bare = token.v.replace(/^_xlpm\./i, "");
-          return excel ? `_xlpm.${bare}` : bare;
-        }
-        case "err":
-          return excel ? "#REF!" : "#BEZUG!";
-        case "cols":
-          return token.v;
-        case "op":
-          return token.v;
-        case "sep":
-          return excel ? "," : ";";
-        case "(":
-          return "(";
-        case ")":
-          return ")";
+  const sheetPrefix = (sheet: string | undefined) =>
+    sheet === undefined ? "" : `${/^[A-Za-z_][\w.]*$/.test(sheet) ? sheet : `'${sheet.replace(/'/g, "''")}'`}!`;
+  let out = "";
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    switch (token.t) {
+      case "num":
+        out += String(token.v);
+        break;
+      case "str":
+        out += `"${token.v.replace(/"/g, '""')}"`;
+        break;
+      case "ref": {
+        const ref = `${sheetPrefix(token.sheet)}${token.v}`;
+        // „A1#“ heisst in der Datei _xlfn.ANCHORARRAY(A1).
+        out += token.spill ? (excel ? `_xlfn.ANCHORARRAY(${ref})` : `${ref}#`) : ref;
+        break;
       }
-    })
-    .join("");
+      case "name": {
+        const next = tokens[index + 1];
+        if (next?.t === "(") {
+          const upper = token.v.toUpperCase();
+          const inner = tokens[index + 2];
+          // _xlfn.ANCHORARRAY(A1) → A1#
+          if (!excel && canonical(upper) === "ANCHORARRAY" && inner?.t === "ref" && tokens[index + 3]?.t === ")") {
+            out += `${sheetPrefix(inner.sheet)}${inner.v}#`;
+            index += 3;
+            break;
+          }
+          // Aufruf eines LAMBDA aus LET: in der Datei mit „_xlpm.“.
+          const bare = token.v.replace(/^_xlpm\./i, "");
+          if (/^_xlpm\./i.test(token.v) || !isKnownFunction(upper)) {
+            out += excel ? `_xlpm.${bare}` : bare;
+            break;
+          }
+          out += mapName(upper);
+          break;
+        }
+        const upper = token.v.toUpperCase();
+        if (upper === "WAHR" || upper === "TRUE") out += excel ? "TRUE" : "WAHR";
+        else if (upper === "FALSCH" || upper === "FALSE") out += excel ? "FALSE" : "FALSCH";
+        else {
+          // LET- und LAMBDA-Variablen: in der Datei mit „_xlpm.“.
+          const bare = token.v.replace(/^_xlpm\./i, "");
+          out += excel ? `_xlpm.${bare}` : bare;
+        }
+        break;
+      }
+      case "err":
+        out += excel ? "#REF!" : "#BEZUG!";
+        break;
+      case "cols":
+        out += token.v;
+        break;
+      case "op":
+        out += token.v;
+        break;
+      case "sep":
+        out += excel ? "," : ";";
+        break;
+      case "(":
+        out += "(";
+        break;
+      case ")":
+        out += ")";
+        break;
+    }
+  }
+  return out;
 }
 
 // Für die .xlsx-Datei: englische Namen und Komma (so speichert Excel Formeln intern).

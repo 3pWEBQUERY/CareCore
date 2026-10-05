@@ -180,3 +180,50 @@ test("Excel-Datei: überlaufende Formeln als dynamische Matrixformel, beim Öffn
   assert.equal(foreign.sheets[0].cells.E2, undefined);
   assert.equal(evaluateWorkbook(foreign).value(0, "E2"), "Ben");
 });
+
+test("LAMBDA: direkt aufrufen, über LET benennen, Parameter auslassen, Curry", () => {
+  assert.equal(run("LAMBDA(x;x*2)(21)"), 42);
+  assert.equal(run("LET(quadrat;LAMBDA(x;x^2);quadrat(5)+quadrat(2))"), 29);
+  assert.equal(run("LET(f;LAMBDA(a;b;WENN(ISTAUSGELASSEN(b);a;a+b));f(1)+f(1;10))"), 12);
+  assert.equal(run("LAMBDA(x;LAMBDA(y;x+y))(1)(2)"), 3);
+  assert.deepEqual(run("LAMBDA(x;x)"), { error: "#CALC!" });
+  assert.deepEqual(run("LAMBDA(x;x)(1;2)"), { error: "#VALUE!" });
+  assert.equal(run("LET(steuer;0.081;netto;LAMBDA(b;b/(1+steuer));RUNDEN(netto(108.1);2))"), 100);
+});
+
+test("ZUORDNEN (MAP), REDUCE, SCAN, NACHZEILE, NACHSPALTE, MATRIXERSTELLEN", () => {
+  assert.deepEqual(area({ ...team, E1: "=MAP(C2:C4;LAMBDA(h;h*10))" }, ["E1", "E2", "E3"]), [40, 80, 60]);
+  assert.deepEqual(area({ ...team, E1: '=ZUORDNEN(A2:A4;C2:C4;LAMBDA(n;h;n&": "&h))' }, ["E1", "E3"]), [
+    "Cem: 4",
+    "Ben: 6",
+  ]);
+  assert.equal(run("REDUCE(0;C2:C4;LAMBDA(summe;wert;summe+wert))", team), 18);
+  assert.equal(run("REDUCE(;C2:C4;LAMBDA(a;b;WENN(b>a;b;a)))", team), 8);
+  assert.deepEqual(area({ ...team, E1: "=SCAN(0;C2:C4;LAMBDA(a;b;a+b))" }, ["E1", "E2", "E3"]), [4, 12, 18]);
+  assert.deepEqual(
+    area({ A1: "1", B1: "2", A2: "3", B2: "4", E1: "=NACHZEILE(A1:B2;LAMBDA(z;SUMME(z)))" }, ["E1", "E2"]),
+    [3, 7],
+  );
+  assert.deepEqual(
+    area({ A1: "1", B1: "2", A2: "3", B2: "4", E1: "=NACHSPALTE(A1:B2;LAMBDA(s;MAX(s)))" }, ["E1", "F1"]),
+    [3, 4],
+  );
+  assert.deepEqual(area({ E1: "=MATRIXERSTELLEN(2;3;LAMBDA(z;s;z*s))" }, ["E1", "G1", "E2", "G2"]), [1, 3, 2, 6]);
+});
+
+test("Überlaufbezug A1#: ganzer Bereich, Rechnen damit, Datei", async () => {
+  const cells = { ...team, E1: "=SORTIEREN(C2:C4)", F1: "=SUMME(E1#)", G1: "=ZEILEN(E1#)", H1: "=E1#*2" };
+  assert.deepEqual(area(cells, ["F1", "G1", "H1", "H3"]), [18, 3, 8, 16]);
+  assert.equal(run("SUMME(C2#)", team), 4, "ohne Überlauf zählt nur die Zelle selbst");
+  assert.equal(toExcelFormula("SUMME(E1#)"), "SUM(_xlfn.ANCHORARRAY(E1))");
+  assert.equal(fromExcelFormula("SUM(_xlfn.ANCHORARRAY(E1))"), "SUMME(E1#)");
+  assert.equal(
+    toExcelFormula("LET(f;LAMBDA(x;x+1);f(2))"),
+    "_xlfn.LET(_xlpm.f,_xlfn.LAMBDA(_xlpm.x,_xlpm.x+1),_xlpm.f(2))",
+  );
+  assert.equal(
+    fromExcelFormula("_xlfn.LET(_xlpm.f,_xlfn.LAMBDA(_xlpm.x,_xlpm.x+1),_xlpm.f(2))"),
+    "LET(f;LAMBDA(x;x+1);f(2))",
+  );
+  assert.equal(toExcelFormula("MAP(A1:A3;LAMBDA(x;x*2))"), "_xlfn.MAP(A1:A3,_xlfn.LAMBDA(_xlpm.x,_xlpm.x*2))");
+});
