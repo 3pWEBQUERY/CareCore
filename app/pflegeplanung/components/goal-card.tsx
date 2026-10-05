@@ -75,18 +75,22 @@ export default function GoalCard({
                 <button type="button" onClick={() => actions.editIntervention(goal, intervention)}>
                   Bearbeiten
                 </button>
-                {intervention.status === "active" ? (
+                {intervention.status === "active" && (
                   <button type="button" onClick={() => actions.setInterventionStatus(intervention, "paused")}>
                     Pausieren
                   </button>
-                ) : (
+                )}
+                {intervention.status === "paused" && (
                   <button type="button" onClick={() => actions.setInterventionStatus(intervention, "active")}>
                     Fortsetzen
                   </button>
                 )}
-                <button type="button" onClick={() => actions.setInterventionStatus(intervention, "completed")}>
-                  Beenden
-                </button>
+                {/* Beendete oder abgebrochene Massnahmen lassen sich nur noch bearbeiten. */}
+                {(intervention.status === "active" || intervention.status === "paused") && (
+                  <button type="button" onClick={() => actions.setInterventionStatus(intervention, "completed")}>
+                    Beenden
+                  </button>
+                )}
               </span>
             )}
           </div>

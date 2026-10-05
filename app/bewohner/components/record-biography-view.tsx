@@ -70,7 +70,7 @@ export function RecordBiographyView({ r }: { r: ResidentRecordState }) {
           <strong>Personzentriert begleiten</strong>
           <p>
             Biografische Angaben werden nur für die Betreuung und Pflege verwendet. Ergänze nur Informationen, die für
-            den Alltag des {t.oneOblique} hilfreich sind.
+            den Alltag des {t.oneGenitive} hilfreich sind.
           </p>
         </div>
         <small>

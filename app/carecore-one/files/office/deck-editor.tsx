@@ -403,6 +403,27 @@ export default function DeckEditor({
   const [tableCell, setTableCell] = useState<{ row: number; col: number } | null>(null);
   const [dataDialog, setDataDialog] = useState<string | null>(null);
   const [freshText, setFreshText] = useState<string | null>(null);
+  // Tippen direkt nach „Textfeld einfügen“: Zeichen bis zum Fokus im neuen Feld sammeln und dann einfügen.
+  const typed = useRef<{ id: string; text: string; stop: () => void } | null>(null);
+  function collectTyping(id: string) {
+    typed.current?.stop();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || event.key.length !== 1) return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (target?.closest(".ProseMirror, input, textarea, [contenteditable]")) return;
+      event.preventDefault();
+      if (typed.current?.id === id) typed.current.text += event.key;
+    };
+    const stop = () => {
+      document.removeEventListener("keydown", onKey, true);
+      window.clearTimeout(timer);
+      if (typed.current?.id === id) typed.current = null;
+    };
+    const timer = window.setTimeout(stop, 3000);
+    document.addEventListener("keydown", onKey, true);
+    typed.current = { id, text: "", stop };
+  }
+  useEffect(() => () => typed.current?.stop(), []);
   // Kommentare je Folie (wie in PowerPoint): Seitenleiste offen, wenn es offene Kommentare gibt.
   const [showComments, setShowComments] = useState(() =>
     initial.slides.some((item) => item.comments?.some((thread) => !thread.resolved)),
@@ -869,7 +890,9 @@ export default function DeckEditor({
               icon={<TextT />}
               onClick={() => {
                 const created = addItem({ type: "text", w: 3_657_600, h: 914_400, body: emptyDoc() });
-                if (created) setFreshText(created.id);
+                if (!created) return;
+                setFreshText(created.id);
+                collectTyping(created.id);
               }}
             />
             <ToolPopover label="Form einfügen" trigger={<Shapes />}>
@@ -1225,6 +1248,10 @@ export default function DeckEditor({
                       setFocused(editor);
                       setSelectedItem(entry.id);
                       setFreshText(null);
+                      const pending = typed.current;
+                      if (pending?.id !== entry.id) return;
+                      pending.stop();
+                      if (pending.text) editor.commands.insertContent(pending.text);
                     }}
                     onChange={(node) =>
                       updateSlide(slide.id, (current) => ({

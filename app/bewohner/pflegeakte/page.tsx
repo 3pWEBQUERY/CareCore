@@ -82,7 +82,7 @@ export default function CareRecordsPage() {
             <div className="heading-copy">
               <p className="eyebrow">CareCore {t.many}</p>
               <h1 id="care-records-title">Pflegeakten</h1>
-              <p>Pflegeprofil, Ziele, Massnahmen und Evaluationen des {t.oneOblique} in der Kopfzeile.</p>
+              <p>Pflegeprofil, Ziele, Massnahmen und Evaluationen des {t.oneGenitive} in der Kopfzeile.</p>
             </div>
             {canWrite && (
               <button className="primary-button" type="button" onClick={() => setEditorOpen(true)}>
@@ -401,7 +401,7 @@ export default function CareRecordsPage() {
               <HeaderResidentHint
                 loading={overview.loading}
                 missing={missing}
-                text={`Die Pflegeakte zeigt Ziele, Massnahmen, Risiken und Verantwortliche des ${t.oneOblique} in der Kopfzeile.`}
+                text={`Die Pflegeakte zeigt Ziele, Massnahmen, Risiken und Verantwortliche des ${t.oneGenitive} in der Kopfzeile.`}
               />
             )}
           </div>

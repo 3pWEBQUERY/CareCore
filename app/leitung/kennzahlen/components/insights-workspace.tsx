@@ -53,7 +53,7 @@ const pages: Record<InsightsView, { child: string; title: string; description: s
 const residentsPage = (page: (typeof pages)["residents"], t: Terms) => ({
   ...page,
   title: `${t.prefix}übersicht`,
-  description: `Resident 360: der Stand jedes ${t.oneOblique} über alle Module – die dringendsten zuerst.`,
+  description: `Resident 360: der Stand jedes ${t.oneGenitive} über alle Module – die dringendsten zuerst.`,
 });
 
 const LOADING: Kpi[] = ["Kennzahl 1", "Kennzahl 2", "Kennzahl 3", "Kennzahl 4"].map((label) => ({

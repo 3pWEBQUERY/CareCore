@@ -106,7 +106,7 @@ export default function MeasurementDialog({
       id="vital-measurement"
       eyebrow="CareCore Vitalwerte"
       title="Vitalwerte erfassen"
-      description={`Nur ausgefüllte Felder werden gespeichert. Die Einstufung erfolgt anhand der Grenzwerte des ${t.oneOblique}.`}
+      description={`Nur ausgefüllte Felder werden gespeichert. Die Einstufung erfolgt anhand der Grenzwerte des ${t.oneGenitive}.`}
       onClose={onClose}
       onSubmit={save}
       saving={saving}

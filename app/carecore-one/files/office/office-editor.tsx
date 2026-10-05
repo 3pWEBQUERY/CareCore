@@ -161,7 +161,10 @@ export default function OfficeEditor({
 
   const save = useCallback(
     async (manual: boolean): Promise<void> => {
-      flushRef.current?.();
+      // Eine offene Eingabe (z. B. in einer Zelle) übernimmt nur das Speichern von Hand; das automatische Speichern
+      // liesse sonst mitten im Tippen das Eingabefeld zuklappen, und die nächsten Zeichen gingen verloren.
+      // Schliessen, Herunterladen und Drucken übernehmen sie selbst.
+      if (manual) flushRef.current?.();
       if (timer.current) {
         window.clearTimeout(timer.current);
         timer.current = null;
@@ -319,6 +322,8 @@ export default function OfficeEditor({
   // Fenster schliessen mit ungespeicherten Änderungen: Browser fragt nach.
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      // Offene Eingabe übernehmen, damit der Browser auch dann nachfragt.
+      flushRef.current?.();
       if (dirty.current || saving.current) event.preventDefault();
     };
     window.addEventListener("beforeunload", onBeforeUnload);

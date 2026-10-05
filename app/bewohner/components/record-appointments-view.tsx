@@ -42,7 +42,7 @@ export function RecordAppointmentsView({ r }: { r: ResidentRecordState }) {
       {!resident.id ? (
         <section className="record-card resident-appointment-empty">
           <CalendarDots />
-          <strong>Termine sind nach dem Speichern des {t.oneOblique} verfügbar.</strong>
+          <strong>Termine sind nach dem Speichern des {t.oneGenitive} verfügbar.</strong>
         </section>
       ) : appointmentsLoading ? (
         <div className="resident-appointment-loading" role="status">
