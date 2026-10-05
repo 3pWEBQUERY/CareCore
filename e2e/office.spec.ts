@@ -158,6 +158,15 @@ test("Tabelle: vertikale Ausrichtung, Funktionen, Rahmen, Filter und Auswahllist
   await expect(cell(5, 0)).toHaveText("6");
   await expect(cell(6, 0)).toHaveText("12");
   await expect(cell(7, 0)).toHaveText("04.10.2026");
+  // Überlaufende Formel füllt die Zellen darunter; die Formelleiste zeigt dort die Formel des Ursprungs.
+  await cell(10, 5).click();
+  await page.keyboard.type("=SEQUENZ(3;1;10;10)");
+  await page.keyboard.press("Enter");
+  await expect(cell(10, 5)).toHaveText("10");
+  await expect(cell(11, 5)).toHaveText("20");
+  await expect(cell(12, 5)).toHaveText("30");
+  await expect(page.getByLabel("Inhalt der Zelle")).toHaveValue("=SEQUENZ(3;1;10;10)");
+  await expect(page.locator(".sheet-spill")).toBeVisible();
 
   // Vertikal: oben, Mitte, unten.
   await cell(0, 0).click();

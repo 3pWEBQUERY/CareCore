@@ -10,7 +10,9 @@ import {
   type CellStyle,
   type RuleOp,
   type RuleStyle,
+  type SheetChart,
   type SheetRule,
+  type Spill,
   type NumberFormat,
   type Sheet,
   type SheetModel,
@@ -26,6 +28,7 @@ import {
   parseInput,
   shiftFormula,
   toExcelFormula,
+  type Area,
   type Value,
 } from "./formula";
 import {
@@ -37,6 +40,7 @@ import {
   coreProps,
   packModel,
   relationships,
+  relsPathOf,
   resolvePart,
   rootRels,
   sha256,
@@ -162,7 +166,21 @@ class StyleTable {
 const excelWidth = (px: number) => Math.round(((px - 5) / 7) * 100) / 100;
 const pxWidth = (chars: number) => Math.round(chars * 7 + 5);
 
-function cellXml(ref: string, raw: string, style: number, value: Value) {
+// Wert ohne Formel (auch Zellen, in die eine Formel übergelaufen ist).
+function valueXml(ref: string, style: string, value: Value) {
+  if (value === null) return `<c r="${ref}"${style}/>`;
+  if (typeof value === "number") return `<c r="${ref}"${style}><v>${value}</v></c>`;
+  if (typeof value === "boolean") return `<c r="${ref}"${style} t="b"><v>${value ? 1 : 0}</v></c>`;
+  if (isError(value))
+    return EXCEL_ERRORS.has(value.error)
+      ? `<c r="${ref}"${style} t="e"><v>${esc(value.error)}</v></c>`
+      : `<c r="${ref}"${style}/>`;
+  return `<c r="${ref}"${style} t="inlineStr"><is><t xml:space="preserve">${esc(value)}</t></is></c>`;
+}
+// Fehlerwerte, die jede Excel-Version kennt (neuere wie #ÜBERLAUF! werden beim Öffnen neu berechnet).
+const EXCEL_ERRORS = new Set(["#DIV/0!", "#NAME?", "#REF!", "#VALUE!", "#N/A", "#NUM!"]);
+
+function cellXml(ref: string, raw: string, style: number, value: Value, spill: string | null = null) {
   const s = style ? ` s="${style}"` : "";
   const input = parseInput(raw);
   if (input.type === "formula") {
@@ -171,7 +189,7 @@ function cellXml(ref: string, raw: string, style: number, value: Value) {
     let cached = "";
     let type = "";
     if (isError(value)) {
-      if (value.error !== "#CYCLE!") {
+      if (EXCEL_ERRORS.has(value.error)) {
         type = ' t="e"';
         cached = `<v>${esc(value.error)}</v>`;
       }
@@ -183,6 +201,8 @@ function cellXml(ref: string, raw: string, style: number, value: Value) {
       type = ' t="str"';
       cached = `<v>${esc(value)}</v>`;
     }
+    // Überlaufende Formel: dynamische Matrixformel (cm="1" verweist auf metadata.xml).
+    if (spill) return `<c r="${ref}"${s}${type} cm="1"><f t="array" ref="${spill}">${esc(formula)}</f>${cached}</c>`;
     return `<c r="${ref}"${s}${type}><f>${esc(formula)}</f>${cached}</c>`;
   }
   if (input.type === "empty") return `<c r="${ref}"${s}/>`;
@@ -246,7 +266,14 @@ function validationXml(item: { range: string; values: string[] }) {
   return `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" errorTitle="Ungültiger Wert" error="Bitte einen Wert aus der Liste wählen." sqref="${item.range}"><formula1>${esc(`"${list.replace(/"/g, '""')}"`)}</formula1></dataValidation>`;
 }
 
-function sheetXml(sheet: Sheet, index: number, styles: StyleTable, values: Map<string, Value>, drawing: string | null) {
+function sheetXml(
+  sheet: Sheet,
+  index: number,
+  styles: StyleTable,
+  values: Map<string, Value>,
+  drawing: string | null,
+  spills: Map<string, Spill>,
+) {
   const display = (col: number, row: number) => {
     const key = cellKey(col, row);
     return formatValue(values.get(key) ?? null, sheet.cells[key]?.s);
@@ -259,6 +286,15 @@ function sheetXml(sheet: Sheet, index: number, styles: StyleTable, values: Map<s
     if (!byRow.has(ref.row)) byRow.set(ref.row, []);
     byRow.get(ref.row)!.push({ col: ref.col, key });
   }
+  // Zellen, in die eine Formel überläuft, stehen mit ihrem Wert in der Datei.
+  for (const spill of spills.values())
+    for (let row = spill.area.r1; row <= spill.area.r2; row += 1)
+      for (let col = spill.area.c1; col <= spill.area.c2; col += 1) {
+        const key = cellKey(col, row);
+        if (sheet.cells[key]) continue;
+        if (!byRow.has(row)) byRow.set(row, []);
+        byRow.get(row)!.push({ col, key });
+      }
   for (const key of Object.keys(sheet.rows)) if (!byRow.has(Number(key))) byRow.set(Number(key), []);
   for (const row of hiddenRows) if (!byRow.has(row)) byRow.set(row, []);
   const rows = [...byRow.entries()].sort((a, b) => a[0] - b[0]);
@@ -269,8 +305,10 @@ function sheetXml(sheet: Sheet, index: number, styles: StyleTable, values: Map<s
         .sort((a, b) => a.col - b.col)
         .map(({ key }) => {
           const cell = sheet.cells[key];
+          if (!cell) return valueXml(key, "", values.get(key) ?? null);
           const raw = cell.s?.fmt === "text" && !cell.v.startsWith("=") ? `'${cell.v}` : cell.v;
-          return cellXml(key, raw, styles.id(cell.s), values.get(key) ?? null);
+          const spill = spills.get(key);
+          return cellXml(key, raw, styles.id(cell.s), values.get(key) ?? null, spill ? areaName(spill.area) : null);
         })
         .join("");
       return `<row r="${row + 1}"${height ? ` ht="${Math.round(height * 0.75 * 100) / 100}" customHeight="1"` : ""}${hiddenRows.has(row) ? ' hidden="1"' : ""}>${content}</row>`;
@@ -435,9 +473,26 @@ const checkOf = (files: Map<string, Buffer> | ZipEntry[]) => {
   );
 };
 
+// Kennzeichnung dynamischer Matrixformeln (damit Excel sie überlaufen lässt statt als {Matrixformel}).
+const DYNAMIC_METADATA = `${XML_HEAD}<metadata xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:xda="http://schemas.microsoft.com/office/spreadsheetml/2017/dynamicarray"><metadataTypes count="1"><metadataType name="XLDAPR" minSupportedVersion="120000" copy="1" pasteAll="1" pasteValues="1" merge="1" splitFirst="1" rowColShift="1" clearFormats="1" clearComments="1" assign="1" coerce="1" cellMeta="1"/></metadataTypes><futureMetadata name="XLDAPR" count="1"><bk><extLst><ext uri="{bdbb8cdc-fa1e-496e-a857-3c3f30c029c3}"><xda:dynamicArrayProperties fDynamic="1" fCollapsed="0"/></ext></extLst></bk></futureMetadata><cellMetadata count="1"><bk><rc t="1" v="0"/></bk></cellMetadata></metadata>`;
+
 export function buildXlsx(model: SheetModel, meta: { title: string; author: string }) {
   const styles = new StyleTable();
-  const results = evaluateWorkbook(model).all();
+  const evaluator = evaluateWorkbook(model);
+  const computed = evaluator.all();
+  // Werte je Blatt samt übergelaufener Zellen.
+  const results = computed.map((values, index) => {
+    const merged = new Map(values);
+    for (const spill of evaluator.spills(index).values())
+      spill.values.forEach((line, r) =>
+        line.forEach((value, c) => {
+          const key = cellKey(spill.area.c1 + c, spill.area.r1 + r);
+          if (r || c) merged.set(key, value);
+        }),
+      );
+    return merged;
+  });
+  const dynamic = model.sheets.some((_, index) => evaluator.spills(index).size > 0);
   const main = "application/vnd.openxmlformats-officedocument.spreadsheetml";
   const extra: ZipEntry[] = [];
   const types: [string, string][] = [];
@@ -455,7 +510,7 @@ export function buildXlsx(model: SheetModel, meta: { title: string; author: stri
       ]);
       return [{ chart, file: `chart${chartCount}.xml` }];
     });
-    if (!charts.length) return sheetXml(sheet, index, styles, results[index], null);
+    if (!charts.length) return sheetXml(sheet, index, styles, results[index], null, evaluator.spills(index));
     drawingCount += 1;
     const drawing = `drawing${drawingCount}.xml`;
     const linked = charts.map((item, position) => ({ rel: `rId${position + 1}`, chart: item.chart }));
@@ -485,7 +540,7 @@ export function buildXlsx(model: SheetModel, meta: { title: string; author: stri
       ),
     });
     types.push([`/xl/drawings/${drawing}`, "application/vnd.openxmlformats-officedocument.drawing+xml"]);
-    return sheetXml(sheet, index, styles, results[index], "rId1");
+    return sheetXml(sheet, index, styles, results[index], "rId1", evaluator.spills(index));
   });
   // Filterbereiche kennt Excel zusätzlich als versteckten Namen.
   const names = model.sheets
@@ -508,6 +563,15 @@ export function buildXlsx(model: SheetModel, meta: { title: string; author: stri
       target: `worksheets/sheet${index + 1}.xml`,
     })),
     { id: `rId${model.sheets.length + 1}`, type: REL.styles, target: "styles.xml" },
+    ...(dynamic
+      ? [
+          {
+            id: `rId${model.sheets.length + 2}`,
+            type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/sheetMetadata",
+            target: "metadata.xml",
+          },
+        ]
+      : []),
   ]);
   const sheetEntries = sheets.map((xml, index) => ({
     path: `xl/worksheets/sheet${index + 1}.xml`,
@@ -525,6 +589,7 @@ export function buildXlsx(model: SheetModel, meta: { title: string; author: stri
               (_, index) => [`/xl/worksheets/sheet${index + 1}.xml`, `${main}.worksheet+xml`] as [string, string],
             ),
             ...types,
+            ...(dynamic ? [["/xl/metadata.xml", `${main}.sheetMetadata+xml`] as [string, string]] : []),
           ],
           false,
         ),
@@ -539,6 +604,7 @@ export function buildXlsx(model: SheetModel, meta: { title: string; author: stri
     { path: "xl/styles.xml", content: Buffer.from(styles.xml()) },
     ...sheetEntries,
     ...extra,
+    ...(dynamic ? [{ path: "xl/metadata.xml", content: Buffer.from(DYNAMIC_METADATA) }] : []),
   ];
   entries.push({ path: MODEL_PART, content: packModel(model, checkOf(entries), new Map()) });
   return createZip(entries);
@@ -723,6 +789,8 @@ function readSheet(
   let maxRow = 0;
   let maxCol = 0;
   const hiddenRows: number[] = [];
+  // Bereiche von Matrixformeln: die übrigen Zellen darin sind nur berechnete Werte.
+  const arrays: { anchor: string; area: Area }[] = [];
   for (const row of findAll(find(root, "sheetData"), "row")) {
     const rowIndex = Number(row.attrs.r) - 1;
     if (row.attrs.hidden === "1" && rowIndex < 10_000) hiddenRows.push(rowIndex);
@@ -734,6 +802,21 @@ function readSheet(
       const style = styles[Number(c.attrs.s ?? 0)];
       const f = child(c, "f");
       const v = child(c, "v");
+      if (f?.attrs.t === "array" && f.attrs.ref) {
+        const area = parseArea(f.attrs.ref);
+        if (area) arrays.push({ anchor: cellKey(ref.col, ref.row), area });
+      }
+      // Zellen im Überlaufbereich: nur das Format übernehmen, der Wert entsteht wieder aus der Formel.
+      const spilled =
+        !f &&
+        arrays.some(
+          (item) =>
+            item.anchor !== cellKey(ref.col, ref.row) &&
+            ref.col >= item.area.c1 &&
+            ref.col <= item.area.c2 &&
+            ref.row >= item.area.r1 &&
+            ref.row <= item.area.r2,
+        );
       let raw = "";
       if (f) {
         let formula = textOf(f);
@@ -753,6 +836,7 @@ function readSheet(
         else if (type === "e") raw = asText(textOf(v));
         else raw = textOf(v);
       }
+      if (spilled) raw = "";
       const cleanStyle = style && Object.keys(style).length ? style : undefined;
       if (!raw && !cleanStyle) continue;
       sheet.cells[cellKey(ref.col, ref.row)] = cleanStyle ? { v: raw, s: cleanStyle } : { v: raw };
@@ -859,6 +943,121 @@ function readSheet(
   return { sheet, filterVisible };
 }
 
+// ---------- Diagramme aus Excel-Dateien ----------
+
+const CHART_KINDS: Record<string, SheetChart["type"]> = {
+  lineChart: "line",
+  line3DChart: "line",
+  areaChart: "line",
+  area3DChart: "line",
+  scatterChart: "line",
+  radarChart: "line",
+  pieChart: "pie",
+  pie3DChart: "pie",
+  doughnutChart: "pie",
+  ofPieChart: "pie",
+};
+const partRels = (files: Map<string, Buffer>, part: string) => {
+  const map = new Map<string, string>();
+  const xml = files.get(relsPathOf(part));
+  if (xml)
+    for (const rel of findAll(parseXml(xml.toString("utf8")), "Relationship"))
+      if (rel.attrs.TargetMode !== "External") map.set(rel.attrs.Id, resolvePart(part, rel.attrs.Target));
+  return map;
+};
+// Bezug in einer Diagrammreihe („'Tabelle 1'!$B$2:$B$5“) → Bereich auf dem eigenen Blatt.
+function chartRef(formula: string, sheetName: string): Area | null {
+  const match = /^(?:'((?:[^']|'')+)'|([^!]+))!(.+)$/.exec(formula.trim());
+  if (!match) return null;
+  const sheet = (match[1] ?? match[2]).replace(/''/g, "'");
+  if (sheet.toLocaleLowerCase("de-CH") !== sheetName.toLocaleLowerCase("de-CH")) return null;
+  return parseArea(match[3].replace(/\$/g, ""));
+}
+function readCharts(files: Map<string, Buffer>, sheetPath: string, sheet: Sheet): SheetChart[] {
+  const sheetRels = partRels(files, sheetPath);
+  const drawingId = find(parseXml(files.get(sheetPath)!.toString("utf8")), "drawing")?.attrs.id;
+  const drawingPath = drawingId ? sheetRels.get(drawingId) : undefined;
+  const drawingXml = drawingPath ? files.get(drawingPath) : undefined;
+  if (!drawingPath || !drawingXml) return [];
+  const drawingRels = partRels(files, drawingPath);
+  // Pixel aus Zelle + Versatz (EMU).
+  const left = (col: number) => {
+    let x = 0;
+    for (let index = 0; index < col; index += 1)
+      x += sheet.hiddenCols.includes(index) ? 0 : (sheet.cols[String(index)] ?? DEFAULT_COL_WIDTH);
+    return x;
+  };
+  const top = (row: number) => {
+    let y = 0;
+    for (let index = 0; index < row; index += 1)
+      y += sheet.hiddenRows.includes(index) ? 0 : (sheet.rows[String(index)] ?? DEFAULT_ROW_HEIGHT);
+    return y;
+  };
+  const point = (node: XmlNode | undefined) => {
+    const number = (name: string) => Number(textOf(child(node, name)) || 0);
+    return {
+      x: left(number("col")) + number("colOff") / 9525,
+      y: top(number("row")) + number("rowOff") / 9525,
+    };
+  };
+  const charts: SheetChart[] = [];
+  const anchors = parseXml(drawingXml.toString("utf8")).children.flatMap((root) =>
+    root.children.filter((node) => node.name === "twoCellAnchor" || node.name === "oneCellAnchor"),
+  );
+  for (const anchor of anchors) {
+    const chartId = find(anchor, "chart")?.attrs.id;
+    const chartPath = chartId ? drawingRels.get(chartId) : undefined;
+    const chartXml = chartPath ? files.get(chartPath) : undefined;
+    if (!chartXml) continue;
+    const root = parseXml(chartXml.toString("utf8"));
+    const plot = find(root, "plotArea");
+    const kind = plot?.children.find((node) => node.name.endsWith("Chart"));
+    if (!kind) continue;
+    const type: SheetChart["type"] =
+      CHART_KINDS[kind.name] ?? (child(kind, "barDir")?.attrs.val === "bar" ? "bar" : "column");
+    // Bereich aus allen Bezügen der Reihen (Namen, Beschriftungen, Werte).
+    let area: Area | null = null;
+    for (const series of findAll(kind, "ser"))
+      for (const ref of [...findAll(series, "f")]) {
+        const part = chartRef(textOf(ref), sheet.name);
+        if (!part) continue;
+        area = area
+          ? {
+              c1: Math.min(area.c1, part.c1),
+              r1: Math.min(area.r1, part.r1),
+              c2: Math.max(area.c2, part.c2),
+              r2: Math.max(area.r2, part.r2),
+            }
+          : part;
+      }
+    if (!area) continue;
+    const titleNode = find(root, "title");
+    const title = titleNode ? findAll(titleNode, "t").map(textOf).join("") : "";
+    const from = point(child(anchor, "from"));
+    let size = { w: 480, h: 300 };
+    const to = child(anchor, "to");
+    if (to) {
+      const end = point(to);
+      size = { w: end.x - from.x, h: end.y - from.y };
+    } else {
+      const extent = child(anchor, "ext");
+      if (extent) size = { w: Number(extent.attrs.cx) / 9525, h: Number(extent.attrs.cy) / 9525 };
+    }
+    charts.push({
+      id: `c${charts.length + 1}`,
+      type,
+      range: areaName(area),
+      title: title.slice(0, 200),
+      x: Math.max(0, Math.round(from.x)),
+      y: Math.max(0, Math.round(from.y)),
+      w: Math.min(2000, Math.max(160, Math.round(size.w))),
+      h: Math.min(1500, Math.max(120, Math.round(size.h))),
+    });
+    if (charts.length >= 20) break;
+  }
+  return charts;
+}
+
 export function readXlsx(bytes: Buffer): { model: SheetModel; imported: boolean } {
   const files = readZip(bytes);
   const workbookXml = files.get("xl/workbook.xml");
@@ -894,7 +1093,10 @@ export function readXlsx(bytes: Buffer): { model: SheetModel; imported: boolean 
   const read = findAll(parseXml(workbookXml.toString("utf8")), "sheet").flatMap((entry) => {
     const path = rels.get(entry.attrs.id ?? "");
     const xml = path ? files.get(path) : undefined;
-    return xml ? [readSheet(xml, entry.attrs.name ?? "Tabelle", shared, styles, dxfs)] : [];
+    if (!path || !xml) return [];
+    const result = readSheet(xml, entry.attrs.name ?? "Tabelle", shared, styles, dxfs);
+    result.sheet.charts = readCharts(files, path, result.sheet);
+    return [result];
   });
   const model = cleanModel("sheet", { kind: "sheet", sheets: read.map((item) => item.sheet) }) as SheetModel;
   // Filter: in der Datei stehen die sichtbaren Werte, im Modell die ausgeblendeten.

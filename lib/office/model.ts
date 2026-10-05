@@ -4,15 +4,18 @@
 import {
   ERROR_LABELS,
   cellKey,
-  evaluate,
+  evaluateCell,
+  mayReturnArray,
   isError,
   parseCellKey,
   parseFormula,
   parseInput,
   serialDate,
+  type Area,
   type Expr,
   type Value,
 } from "./formula";
+import { filteredRows } from "./sheet-features";
 
 export type OfficeKind = "document" | "sheet" | "deck";
 
@@ -213,56 +216,107 @@ export function formatValue(value: Value, style?: CellStyle): string {
   }
 }
 
-// Alle Formeln einer Arbeitsmappe berechnen (mit Zwischenspeicher und Erkennung von Zirkelbezügen).
+// Bereich, in den das Ergebnis einer Formel überläuft (FILTERN, SORTIEREN, A1:A5*2 …).
+export type Spill = { anchor: string; area: Area; values: Value[][] };
+
+// Alle Formeln einer Arbeitsmappe berechnen (mit Zwischenspeicher, Erkennung von Zirkelbezügen und Überlaufen
+// von Bereichs-Ergebnissen in leere Nachbarzellen).
 export function evaluateWorkbook(model: SheetModel, options: { today?: () => number } = {}) {
   const parsed = new Map<string, Expr | Error>();
-  const results = model.sheets.map(() => new Map<string, Value>());
+  let results = model.sheets.map(() => new Map<string, Value>());
+  const grids = new Map<string, Value[][]>();
   const visiting = new Set<string>();
   const byName = new Map(model.sheets.map((sheet, index) => [sheet.name.toLocaleLowerCase("de-CH"), index]));
   const rowsUsed = new Map<number, number>();
+  // Überlauf: abgedeckte Zellen (Wert und Ursprung) und Ursprünge, deren Bereich nicht frei ist.
+  let spillValues = model.sheets.map(() => new Map<string, Value>());
+  let spillOwner = model.sheets.map(() => new Map<string, string>());
+  let spillList = model.sheets.map(() => new Map<string, Spill>());
+  let blocked = new Set<string>();
+  let settled = false;
   const usedRows = (index: number) => {
     if (!rowsUsed.has(index)) rowsUsed.set(index, usedRange(model.sheets[index]).rows);
-    return rowsUsed.get(index)!;
+    let rows = rowsUsed.get(index)!;
+    for (const spill of spillList[index].values()) rows = Math.max(rows, spill.area.r2 + 1);
+    return rows;
   };
+  const sheetIndex = (index: number, sheet: string | undefined) =>
+    sheet === undefined ? index : byName.get(sheet.toLocaleLowerCase("de-CH"));
+  const filtered = new Map<number, Set<number> | null>();
+  function filteredOf(index: number) {
+    if (!filtered.has(index)) {
+      // Während der Berechnung des Filters selbst gilt noch nichts als gefiltert.
+      filtered.set(index, null);
+      const sheet = model.sheets[index];
+      filtered.set(
+        index,
+        filteredRows(sheet, (col, row) =>
+          formatValue(compute(index, cellKey(col, row)), sheet.cells[cellKey(col, row)]?.s),
+        ),
+      );
+    }
+    return filtered.get(index);
+  }
+  function parse(index: number, key: string): Expr | Error | null {
+    const cell = model.sheets[index].cells[key];
+    if (!cell || !cell.v.startsWith("=") || cell.v.length < 2 || cell.s?.fmt === "text") return null;
+    const id = `${index}!${key}`;
+    let expr = parsed.get(id);
+    if (!expr) {
+      try {
+        expr = parseFormula(cell.v.slice(1));
+      } catch (error) {
+        expr = error instanceof Error ? error : new Error("Formel ungültig");
+      }
+      parsed.set(id, expr);
+    }
+    return expr;
+  }
 
   function compute(index: number, key: string): Value {
     const cached = results[index].get(key);
     if (cached !== undefined) return cached;
     const cell = model.sheets[index].cells[key];
-    if (!cell || cell.v === "") return null;
+    if (!cell || cell.v === "") return spillValues[index].get(key) ?? null;
     const input =
       cell.s?.fmt === "text" && !cell.v.startsWith("=") ? { type: "text" as const, value: cell.v } : parseInput(cell.v);
     let value: Value;
     if (input.type === "formula") {
       const id = `${index}!${key}`;
       if (visiting.has(id)) return { error: "#CYCLE!" };
-      let expr = parsed.get(id);
-      if (!expr) {
-        try {
-          expr = parseFormula(input.formula);
-        } catch (error) {
-          expr = error instanceof Error ? error : new Error("Formel ungültig");
-        }
-        parsed.set(id, expr);
-      }
-      if (expr instanceof Error) value = { error: "#NAME?" };
+      const expr = parse(index, key);
+      if (!expr || expr instanceof Error) value = { error: "#NAME?" };
       else {
         visiting.add(id);
-        value = evaluate(expr, {
+        const result = evaluateCell(expr, {
           hasSheet: (name) => byName.has(name.toLocaleLowerCase("de-CH")),
           cell: (sheet, col, row) => {
-            const target = sheet === undefined ? index : byName.get(sheet.toLocaleLowerCase("de-CH"));
+            const target = sheetIndex(index, sheet);
             if (target === undefined) return { error: "#REF!" };
             return compute(target, cellKey(col, row));
+          },
+          raw: (sheet, col, row) => {
+            const target = sheetIndex(index, sheet);
+            return target === undefined ? "" : (model.sheets[target].cells[cellKey(col, row)]?.v ?? "");
+          },
+          rowHidden: (sheet, row, manual) => {
+            const target = sheetIndex(index, sheet);
+            if (target === undefined) return false;
+            if (manual && model.sheets[target].hiddenRows.includes(row)) return true;
+            return filteredOf(target)?.has(row) ?? false;
           },
           today: options.today,
           self: parseCellKey(key) ?? undefined,
           rows: (sheet) => {
-            const target = sheet === undefined ? index : byName.get(sheet.toLocaleLowerCase("de-CH"));
+            const target = sheetIndex(index, sheet);
             return target === undefined ? 0 : usedRows(target);
           },
         });
         visiting.delete(id);
+        if (Array.isArray(result)) {
+          grids.set(id, result);
+          value = blocked.has(id) ? { error: "#SPILL!" } : result[0][0];
+        } else value = result;
         if (value === null) value = 0;
       }
     } else if (input.type === "number" || input.type === "boolean") value = input.value;
@@ -272,11 +326,95 @@ export function evaluateWorkbook(model: SheetModel, options: { today?: () => num
     return value;
   }
 
+  // Überläufe bestimmen: alle Formeln, die einen Bereich liefern können, rechnen und ihre Bereiche eintragen –
+  // so oft, bis sich nichts mehr ändert (ein Überlauf kann von einem anderen abhängen).
+  function settle() {
+    if (settled) return;
+    settled = true;
+    const candidates: { index: number; key: string; col: number; row: number }[] = [];
+    model.sheets.forEach((sheet, index) => {
+      for (const key of Object.keys(sheet.cells)) {
+        const expr = parse(index, key);
+        const ref = parseCellKey(key);
+        if (expr && !(expr instanceof Error) && ref && mayReturnArray(expr)) candidates.push({ index, key, ...ref });
+      }
+    });
+    if (!candidates.length) return;
+    let previous = "";
+    for (let round = 0; round < 5; round += 1) {
+      results = model.sheets.map(() => new Map<string, Value>());
+      grids.clear();
+      rowsUsed.clear();
+      filtered.clear();
+      for (const candidate of candidates) compute(candidate.index, candidate.key);
+      const values = model.sheets.map(() => new Map<string, Value>());
+      const owner = model.sheets.map(() => new Map<string, string>());
+      const list = model.sheets.map(() => new Map<string, Spill>());
+      const stopped = new Set<string>();
+      for (const { index, key, col, row } of candidates) {
+        const id = `${index}!${key}`;
+        const grid = grids.get(id);
+        if (!grid || (grid.length === 1 && grid[0].length === 1)) continue;
+        const sheet = model.sheets[index];
+        const area = { c1: col, r1: row, c2: col + (grid[0]?.length ?? 1) - 1, r2: row + grid.length - 1 };
+        let free = area.r2 < sheet.rowCount && area.c2 < sheet.colCount;
+        for (let r = area.r1; free && r <= area.r2; r += 1)
+          for (let c = area.c1; free && c <= area.c2; c += 1) {
+            if (r === row && c === col) continue;
+            const target = cellKey(c, r);
+            if ((sheet.cells[target]?.v ?? "") !== "" || owner[index].has(target)) free = false;
+          }
+        if (!free) {
+          stopped.add(id);
+          continue;
+        }
+        grid.forEach((line, r) =>
+          line.forEach((item, c) => {
+            const target = cellKey(col + c, row + r);
+            if (r === 0 && c === 0) return;
+            values[index].set(target, item);
+            owner[index].set(target, key);
+          }),
+        );
+        list[index].set(key, { anchor: key, area, values: grid });
+      }
+      spillValues = values;
+      spillOwner = owner;
+      spillList = list;
+      blocked = stopped;
+      const state = JSON.stringify([
+        [...stopped],
+        list.map((map) => [...map.values()].map((spill) => [spill.anchor, spill.values])),
+      ]);
+      if (state === previous) break;
+      previous = state;
+    }
+    results = model.sheets.map(() => new Map<string, Value>());
+    grids.clear();
+    rowsUsed.clear();
+    filtered.clear();
+  }
+
   return {
-    value: (sheetIndex: number, key: string) => compute(sheetIndex, key),
+    value(sheetIndex: number, key: string) {
+      settle();
+      return compute(sheetIndex, key);
+    },
     all() {
+      settle();
       model.sheets.forEach((sheet, index) => Object.keys(sheet.cells).forEach((key) => compute(index, key)));
       return results;
+    },
+    // Überlaufbereiche eines Blatts (Ursprung → Bereich und Werte).
+    spills(sheetIndex: number) {
+      settle();
+      return spillList[sheetIndex];
+    },
+    // Ursprung der Zelle, wenn sie zu einem Überlauf gehört (auch der Ursprung selbst).
+    spillAnchor(sheetIndex: number, key: string) {
+      settle();
+      if (spillList[sheetIndex].has(key)) return key;
+      return spillOwner[sheetIndex].get(key) ?? null;
     },
   };
 }

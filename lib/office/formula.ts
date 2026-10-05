@@ -2,7 +2,8 @@
 // als Trennzeichen), Zellbezüge (auch auf andere Blätter), Bereiche, Fehlerwerte und Zirkelbezüge.
 // Läuft im Browser (Anzeige) und auf dem Server (berechnete Werte in der .xlsx-Datei).
 
-export type ErrorCode = "#DIV/0!" | "#NAME?" | "#REF!" | "#VALUE!" | "#N/A" | "#NUM!" | "#CYCLE!";
+export type ErrorCode =
+  "#DIV/0!" | "#NAME?" | "#REF!" | "#VALUE!" | "#N/A" | "#NUM!" | "#CYCLE!" | "#SPILL!" | "#CALC!";
 export type CellError = { error: ErrorCode };
 export type Value = number | string | boolean | null | CellError;
 
@@ -19,6 +20,8 @@ export const ERROR_LABELS: Record<ErrorCode, string> = {
   "#N/A": "#NV",
   "#NUM!": "#ZAHL!",
   "#CYCLE!": "#ZIRKELBEZUG!",
+  "#SPILL!": "#ÜBERLAUF!",
+  "#CALC!": "#KALK!",
 };
 export const ERROR_HINTS: Record<ErrorCode, string> = {
   "#DIV/0!": "Division durch null",
@@ -28,6 +31,8 @@ export const ERROR_HINTS: Record<ErrorCode, string> = {
   "#N/A": "Wert nicht gefunden",
   "#NUM!": "Ungültige Zahl",
   "#CYCLE!": "Die Formel bezieht sich (über Umwege) auf ihre eigene Zelle",
+  "#SPILL!": "Das Ergebnis braucht mehrere Zellen, aber dort steht schon etwas",
+  "#CALC!": "Das Ergebnis ist leer (z. B. FILTERN ohne Treffer)",
 };
 
 // ---------- Zellbezüge ----------
@@ -257,6 +262,8 @@ export type Expr =
   | { k: "percent"; arg: Expr }
   | { k: "binary"; op: string; left: Expr; right: Expr }
   | { k: "call"; name: string; args: Expr[] }
+  // Name ohne Klammer: Variable aus LET (sonst #NAME?).
+  | { k: "name"; v: string }
   | { k: "error"; code: ErrorCode };
 
 const PRECEDENCE: Record<string, number> = {
@@ -332,7 +339,8 @@ export function parseFormula(source: string): Expr {
       }
       if (upper === "WAHR" || upper === "TRUE") return { k: "bool", v: true };
       if (upper === "FALSCH" || upper === "FALSE") return { k: "bool", v: false };
-      return { k: "error", code: "#NAME?" };
+      // In der Datei tragen LET-Variablen die Vorsilbe „_xlpm.“.
+      return { k: "name", v: upper.replace(/^_XLPM\./, "") };
     }
     throw new SyntaxProblem("Unerwartetes Zeichen in der Formel");
   }
@@ -385,6 +393,10 @@ export type Resolver = {
   now?: () => number;
   // Die Zelle, deren Formel gerade berechnet wird (für ZEILE() und SPALTE() ohne Bezug).
   self?: { col: number; row: number };
+  // Eingabe einer Zelle (für ISTFORMEL, FORMELTEXT und TEILERGEBNIS).
+  raw?: (sheet: string | undefined, col: number, row: number) => string;
+  // Ausgeblendete Zeile (Filter immer, von Hand ausgeblendete nur mit „manual“), für TEILERGEBNIS.
+  rowHidden?: (sheet: string | undefined, row: number, manual: boolean) => boolean;
 };
 
 const isGrid = (value: Arg): value is Grid => Array.isArray(value);
@@ -498,10 +510,46 @@ const round = (value: number, digits: number, mode: "half" | "up" | "down") => {
   return (Math.sign(value) * rounded) / factor;
 };
 
-type Impl = (args: Arg[], resolver: Resolver) => Value;
+type Impl = (args: Arg[], resolver: Resolver) => Arg;
+
+// Werte paarweise verrechnen (wie Excel mit Bereichen: A1:A3*2, A1:A3>B1:B3); einzelne Werte, einzelne
+// Zeilen und Spalten werden aufgefüllt, fehlende Stellen ergeben #NV.
+function broadcast(args: Arg[], fn: (...values: Value[]) => Value): Arg {
+  if (!args.some((arg) => isGrid(arg) && !(arg.length === 1 && arg[0].length === 1)))
+    return fn(...args.map((arg) => (isGrid(arg) ? arg[0][0] : arg)));
+  let rows = 1;
+  let cols = 1;
+  for (const arg of args)
+    if (isGrid(arg)) {
+      rows = Math.max(rows, arg.length);
+      cols = Math.max(cols, arg[0]?.length ?? 0);
+    }
+  if (rows * cols > 200_000) return fail("#NUM!");
+  const pick = (arg: Arg, r: number, c: number): Value => {
+    if (!isGrid(arg)) return arg;
+    const line = arg.length === 1 ? arg[0] : arg[r];
+    if (!line) return fail("#N/A");
+    const value = line.length === 1 ? line[0] : line[c];
+    return value === undefined ? fail("#N/A") : value;
+  };
+  const out: Grid = [];
+  for (let r = 0; r < rows; r += 1) {
+    const line: Value[] = [];
+    for (let c = 0; c < cols; c += 1) line.push(fn(...args.map((arg) => pick(arg, r, c))));
+    out.push(line);
+  }
+  return out;
+}
+// Funktionen, die je Wert rechnen, werden mit Bereichen für jede Zelle einzeln berechnet (z. B. RUNDEN(A1:A3;0)).
+const LIFTED = new WeakSet<Impl>();
+const lifted = (impl: (args: Value[]) => Value): Impl => {
+  const wrapped: Impl = (args) => broadcast(args, (...values) => impl(values));
+  LIFTED.add(wrapped);
+  return wrapped;
+};
 
 function numeric(fn: (...values: number[]) => Value, arity: [number, number]): Impl {
-  return (args) => {
+  return lifted((args) => {
     if (args.length < arity[0] || args.length > arity[1]) return fail("#VALUE!");
     const values: number[] = [];
     for (const arg of args) {
@@ -512,10 +560,10 @@ function numeric(fn: (...values: number[]) => Value, arity: [number, number]): I
     const result = fn(...values);
     if (typeof result === "number" && !Number.isFinite(result)) return fail("#NUM!");
     return result;
-  };
+  });
 }
 function textual(fn: (text: string, ...rest: number[]) => Value, arity: [number, number]): Impl {
-  return (args) => {
+  return lifted((args) => {
     if (args.length < arity[0] || args.length > arity[1]) return fail("#VALUE!");
     const first = scalar(args[0]);
     if (isError(first)) return first;
@@ -526,7 +574,7 @@ function textual(fn: (text: string, ...rest: number[]) => Value, arity: [number,
       rest.push(number);
     }
     return fn(toText(first), ...rest);
-  };
+  });
 }
 const aggregate =
   (fn: (values: number[]) => number | CellError): Impl =>
@@ -1502,6 +1550,988 @@ Object.assign(FUNCTIONS, {
   },
 } satisfies Record<string, Impl>);
 
+// ---------- Bereiche als Ergebnis (überlaufen in die Nachbarzellen) ----------
+
+const transpose = (grid: Grid): Grid => (grid[0] ?? []).map((_, c) => grid.map((line) => line[c] ?? null));
+const integerArg = (arg: Arg | undefined, fallback: number): number | CellError => {
+  if (arg === undefined) return fallback;
+  const value = scalar(arg);
+  if (value === null || value === "") return fallback;
+  const number = toNumber(value);
+  return isError(number) ? number : Math.trunc(number);
+};
+const boolArg = (arg: Arg | undefined, fallback: boolean): boolean | CellError => {
+  if (arg === undefined) return fallback;
+  const value = scalar(arg);
+  return value === null || value === "" ? fallback : truthy(value);
+};
+// Sortierreihenfolge wie Excel: Zahlen, Text, Wahrheitswerte, Fehler; leere Zellen immer zuletzt.
+function sortValue(a: Value, b: Value): number {
+  const empty = (value: Value) => value === null || value === "";
+  if (empty(a) || empty(b)) return empty(a) === empty(b) ? 0 : empty(a) ? 1 : -1;
+  if (isError(a) || isError(b)) return isError(a) === isError(b) ? 0 : isError(a) ? 1 : -1;
+  return compare(a, b);
+}
+// Leere Zellen bleiben auch bei absteigender Sortierung am Ende.
+const ordered = (a: Value, b: Value, order: number) =>
+  a === null || a === "" || b === null || b === "" ? sortValue(a, b) : sortValue(a, b) * order;
+const uniqueKey = (line: Value[]) =>
+  line
+    .map((value) => (typeof value === "string" ? `s${value.toLocaleLowerCase("de-CH")}` : `v${toText(value)}`))
+    .join("\u0000");
+// Positionen für SPALTENWAHL/ZEILENWAHL (negativ = vom Ende).
+function pickIndexes(args: Arg[], count: number): number[] | CellError {
+  const out: number[] = [];
+  for (const arg of args)
+    for (const value of isGrid(arg) ? arg.flat() : [arg]) {
+      const number = toNumber(value);
+      if (isError(number)) return number;
+      const index = Math.trunc(number);
+      if (index === 0 || Math.abs(index) > count) return fail("#VALUE!");
+      out.push(index > 0 ? index - 1 : count + index);
+    }
+  return out;
+}
+// Zeilen oder Spalten am Anfang/Ende nehmen (ÜBERNEHMEN) oder weglassen (WEGLASSEN).
+function slice(grid: Grid, rows: number | null, cols: number | null, keep: boolean): Grid {
+  const cut = <T>(list: T[], amount: number | null) => {
+    if (amount === null) return list;
+    if (keep) return amount >= 0 ? list.slice(0, amount) : list.slice(Math.max(0, list.length + amount));
+    return amount >= 0 ? list.slice(amount) : list.slice(0, Math.max(0, list.length + amount));
+  };
+  return cut(grid, rows).map((line) => cut(line, cols));
+}
+// Gleich breite Zeilen (fehlende Stellen mit #NV, wie VSTAPELN/HSTAPELN).
+const padded = (grid: Grid, width: number): Grid =>
+  grid.map((line) => [...line, ...Array.from({ length: width - line.length }, () => fail("#N/A"))]);
+const emptyResult = (fallback: Arg | undefined): Arg => (fallback === undefined ? fail("#CALC!") : fallback);
+
+// XVERGLEICH/XVERWEIS: Position eines Suchwerts (0 genau, -1/1 nächstkleiner/-grösser, 2 Platzhalter).
+function lookupIndex(list: Value[], key: Value, mode: number, direction: number): number {
+  const indexes = list.map((_, index) => index);
+  if (direction < 0) indexes.reverse();
+  if (mode === 0 || mode === 2) {
+    const test = matcher(key, mode === 2);
+    return indexes.find((index) => test(list[index])) ?? -1;
+  }
+  let found = -1;
+  let best: Value = null;
+  for (const index of indexes) {
+    const value = list[index];
+    if (value === null || isError(value) || typeof value !== typeof key) continue;
+    const result = compare(value, key);
+    if (result === 0) return index;
+    if (
+      (mode < 0 ? result < 0 : result > 0) &&
+      (best === null || (mode < 0 ? compare(value, best) > 0 : compare(value, best) < 0))
+    ) {
+      best = value;
+      found = index;
+    }
+  }
+  return found;
+}
+
+// Zahlungen (Finanzmathematik wie Excel): Rate, Anzahl Perioden, Barwert, Endwert, Fälligkeit (0 Ende, 1 Anfang).
+function payment(rate: number, periods: number, present: number, future: number, type: number) {
+  if (rate === 0) return -(present + future) / periods;
+  const growth = (1 + rate) ** periods;
+  return (-(present * growth + future) * rate) / ((1 + rate * type) * (growth - 1));
+}
+function futureValue(rate: number, periods: number, pay: number, present: number, type: number) {
+  if (rate === 0) return -(present + pay * periods);
+  const growth = (1 + rate) ** periods;
+  return -(present * growth + (pay * (1 + rate * type) * (growth - 1)) / rate);
+}
+const numberList = (args: Arg[]): number[] | CellError => numbers(args);
+function percentile(values: number[], k: number, exclusive: boolean): number | CellError {
+  if (!values.length || k < 0 || k > 1) return fail("#NUM!");
+  const sorted = [...values].sort((a, b) => a - b);
+  const n = sorted.length;
+  const position = exclusive ? k * (n + 1) - 1 : k * (n - 1);
+  if (position < 0 || position > n - 1) return fail("#NUM!");
+  const lower = Math.floor(position);
+  const fraction = position - lower;
+  return sorted[lower] + (lower + 1 < n ? fraction * (sorted[lower + 1] - sorted[lower]) : 0);
+}
+function pairs(args: Arg[]): { xs: number[]; ys: number[] } | CellError {
+  if (args.length !== 2) return fail("#VALUE!");
+  const ys = isGrid(args[0]) ? args[0].flat() : [args[0]];
+  const xs = isGrid(args[1]) ? args[1].flat() : [args[1]];
+  if (ys.length !== xs.length) return fail("#N/A");
+  const out = { xs: [] as number[], ys: [] as number[] };
+  ys.forEach((y, index) => {
+    const x = xs[index];
+    if (typeof x === "number" && typeof y === "number") {
+      out.xs.push(x);
+      out.ys.push(y);
+    }
+  });
+  return out;
+}
+function regression(args: Arg[]) {
+  const data = pairs(args);
+  if (isError(data)) return data;
+  const n = data.xs.length;
+  if (n < 2) return fail("#DIV/0!");
+  const mx = data.xs.reduce((a, b) => a + b, 0) / n;
+  const my = data.ys.reduce((a, b) => a + b, 0) / n;
+  let sxy = 0;
+  let sxx = 0;
+  let syy = 0;
+  data.xs.forEach((x, index) => {
+    sxy += (x - mx) * (data.ys[index] - my);
+    sxx += (x - mx) ** 2;
+    syy += (data.ys[index] - my) ** 2;
+  });
+  if (sxx === 0) return fail("#DIV/0!");
+  return { slope: sxy / sxx, intercept: my - (sxy / sxx) * mx, sxy, sxx, syy };
+}
+const ROMAN: [number, string][] = [
+  [1000, "M"],
+  [900, "CM"],
+  [500, "D"],
+  [400, "CD"],
+  [100, "C"],
+  [90, "XC"],
+  [50, "L"],
+  [40, "XL"],
+  [10, "X"],
+  [9, "IX"],
+  [5, "V"],
+  [4, "IV"],
+  [1, "I"],
+];
+const factorial = (n: number) => {
+  let out = 1;
+  for (let i = 2; i <= n; i += 1) out *= i;
+  return out;
+};
+// Wochenende für NETTOARBEITSTAGE.INTL/ARBEITSTAG.INTL: Nummer (1 = Sa/So, 11 = nur So …) oder „0000011“.
+function weekendOf(arg: Arg | undefined): Set<number> | CellError {
+  if (arg === undefined) return new Set([0, 6]);
+  const value = scalar(arg);
+  if (typeof value === "string" && /^[01]{7}$/.test(value)) {
+    const days = new Set<number>();
+    [...value].forEach((flag, index) => flag === "1" && days.add((index + 1) % 7));
+    return days.size === 7 ? fail("#VALUE!") : days;
+  }
+  const number = toNumber(value);
+  if (isError(number)) return number;
+  const code = Math.trunc(number);
+  if (code >= 1 && code <= 7) return new Set([(code + 5) % 7, (code + 6) % 7]);
+  if (code >= 11 && code <= 17) return new Set([(code - 10) % 7]);
+  return fail("#NUM!");
+}
+
+Object.assign(FUNCTIONS, {
+  FILTER: (args) => {
+    if (args.length < 2 || args.length > 3) return fail("#VALUE!");
+    const grid = toGrid(args[0]);
+    const include = toGrid(args[1]);
+    const byRows = include.length === grid.length && (include[0]?.length ?? 0) === 1;
+    const byCols = include.length === 1 && (include[0]?.length ?? 0) === (grid[0]?.length ?? 0);
+    if (!byRows && !byCols) return fail("#VALUE!");
+    const keep: boolean[] = [];
+    for (const value of include.flat()) {
+      const test = truthy(value);
+      if (isError(test)) return test;
+      keep.push(test);
+    }
+    const result = byRows ? grid.filter((_, r) => keep[r]) : grid.map((line) => line.filter((_, c) => keep[c]));
+    return result.length && result[0]?.length ? result : emptyResult(args[2]);
+  },
+  SORT: (args) => {
+    if (args.length < 1 || args.length > 4) return fail("#VALUE!");
+    const index = integerArg(args[1], 1);
+    const order = integerArg(args[2], 1);
+    const byCol = boolArg(args[3], false);
+    if (isError(index)) return index;
+    if (isError(order)) return order;
+    if (isError(byCol)) return byCol;
+    const grid = byCol ? transpose(toGrid(args[0])) : toGrid(args[0]);
+    if (index < 1 || index > (grid[0]?.length ?? 0) || (order !== 1 && order !== -1)) return fail("#VALUE!");
+    const sorted = grid
+      .map((line, position) => ({ line, position }))
+      .sort((a, b) => ordered(a.line[index - 1], b.line[index - 1], order) || a.position - b.position)
+      .map((item) => item.line);
+    return byCol ? transpose(sorted) : sorted;
+  },
+  SORTBY: (args) => {
+    if (args.length < 2) return fail("#VALUE!");
+    const grid = toGrid(args[0]);
+    const keys: { values: Value[]; order: number }[] = [];
+    for (let index = 1; index < args.length; index += 2) {
+      const values = vector(args[index]);
+      const order = integerArg(args[index + 1], 1);
+      if (isError(order)) return order;
+      if (!values || values.length !== grid.length || (order !== 1 && order !== -1)) return fail("#VALUE!");
+      keys.push({ values, order });
+    }
+    return grid
+      .map((line, position) => ({ line, position }))
+      .sort((a, b) => {
+        for (const key of keys) {
+          const result = ordered(key.values[a.position], key.values[b.position], key.order);
+          if (result) return result;
+        }
+        return a.position - b.position;
+      })
+      .map((item) => item.line);
+  },
+  UNIQUE: (args) => {
+    if (args.length < 1 || args.length > 3) return fail("#VALUE!");
+    const byCol = boolArg(args[1], false);
+    const once = boolArg(args[2], false);
+    if (isError(byCol)) return byCol;
+    if (isError(once)) return once;
+    const grid = byCol ? transpose(toGrid(args[0])) : toGrid(args[0]);
+    const counts = new Map<string, number>();
+    for (const line of grid) counts.set(uniqueKey(line), (counts.get(uniqueKey(line)) ?? 0) + 1);
+    const seen = new Set<string>();
+    const result = grid.filter((line) => {
+      const key = uniqueKey(line);
+      if (seen.has(key) || (once && counts.get(key)! > 1)) return false;
+      seen.add(key);
+      return true;
+    });
+    if (!result.length) return fail("#CALC!");
+    return byCol ? transpose(result) : result;
+  },
+  SEQUENCE: (args) => {
+    if (args.length < 1 || args.length > 4) return fail("#VALUE!");
+    const values = [integerArg(args[0], 1), integerArg(args[1], 1)];
+    const start = args[2] === undefined || scalar(args[2]) === "" ? 1 : toNumber(scalar(args[2]));
+    const step = args[3] === undefined || scalar(args[3]) === "" ? 1 : toNumber(scalar(args[3]));
+    for (const value of [...values, start, step]) if (isError(value)) return value;
+    const [rows, cols] = values as number[];
+    if (rows < 1 || cols < 1) return fail("#CALC!");
+    if (rows * cols > 200_000) return fail("#NUM!");
+    return Array.from({ length: rows }, (_, r) =>
+      Array.from({ length: cols }, (_, c) => precise((start as number) + (r * cols + c) * (step as number))),
+    );
+  },
+  TRANSPOSE: (args) => (args.length === 1 ? transpose(toGrid(args[0])) : fail("#VALUE!")),
+  RANDARRAY: (args) => {
+    if (args.length > 5) return fail("#VALUE!");
+    const rows = integerArg(args[0], 1);
+    const cols = integerArg(args[1], 1);
+    const min = args[2] === undefined ? 0 : toNumber(scalar(args[2]));
+    const max = args[3] === undefined ? 1 : toNumber(scalar(args[3]));
+    const whole = boolArg(args[4], false);
+    for (const value of [rows, cols, min, max, whole]) if (isError(value)) return value;
+    const [r, c, lo, hi] = [rows, cols, min, max] as number[];
+    if (r < 1 || c < 1 || lo > hi || r * c > 200_000) return fail("#VALUE!");
+    return Array.from({ length: r }, () =>
+      Array.from({ length: c }, () =>
+        whole
+          ? Math.ceil(lo) + Math.floor(Math.random() * (Math.floor(hi) - Math.ceil(lo) + 1))
+          : lo + Math.random() * (hi - lo),
+      ),
+    );
+  },
+  XMATCH: (args) => {
+    if (args.length < 2 || args.length > 4) return fail("#VALUE!");
+    const key = scalar(args[0]);
+    if (isError(key)) return key;
+    const list = vector(args[1]);
+    const mode = integerArg(args[2], 0);
+    const direction = integerArg(args[3], 1);
+    if (!list) return fail("#VALUE!");
+    if (isError(mode)) return mode;
+    if (isError(direction)) return direction;
+    const found = lookupIndex(list, key, mode, direction);
+    return found < 0 ? fail("#N/A") : found + 1;
+  },
+  TEXTSPLIT: (args) => {
+    if (args.length < 2 || args.length > 6) return fail("#VALUE!");
+    const text = textArg(args[0]);
+    if (isError(text)) return text;
+    const delimiters = (arg: Arg | undefined) =>
+      arg === undefined ? [] : (isGrid(arg) ? arg.flat() : [arg]).map(toText).filter((item) => item !== "");
+    const colDelims = delimiters(args[1]);
+    const rowDelims = delimiters(args[2]);
+    const ignore = boolArg(args[3], false);
+    const caseless = integerArg(args[4], 0);
+    if (isError(ignore)) return ignore;
+    if (isError(caseless)) return caseless;
+    const pad = args[5] === undefined ? fail("#N/A") : scalar(args[5]);
+    const split = (value: string, list: string[]) => {
+      if (!list.length) return [value];
+      const pattern = new RegExp(
+        list.map((item) => item.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"),
+        caseless ? "i" : "",
+      );
+      const parts = value.split(pattern);
+      return ignore ? parts.filter((part) => part !== "") : parts;
+    };
+    const rows = split(text, rowDelims).map((line) => split(line, colDelims));
+    const width = Math.max(...rows.map((line) => line.length));
+    return rows.map((line) => [...line, ...Array.from({ length: width - line.length }, () => pad)]);
+  },
+  VSTACK: (args) => {
+    if (!args.length) return fail("#VALUE!");
+    const grids = args.map(toGrid);
+    const width = Math.max(...grids.map((grid) => grid[0]?.length ?? 0));
+    return grids.flatMap((grid) => padded(grid, width));
+  },
+  HSTACK: (args) => {
+    if (!args.length) return fail("#VALUE!");
+    const grids = args.map(toGrid);
+    const height = Math.max(...grids.map((grid) => grid.length));
+    return transpose(grids.flatMap((grid) => padded(transpose(grid), height)));
+  },
+  TAKE: (args) => {
+    if (args.length < 2 || args.length > 3) return fail("#VALUE!");
+    const rows = args[1] === undefined || scalar(args[1]) === "" ? null : integerArg(args[1], 0);
+    const cols = args[2] === undefined || scalar(args[2]) === "" ? null : integerArg(args[2], 0);
+    if (rows !== null && isError(rows)) return rows;
+    if (cols !== null && isError(cols)) return cols;
+    if (rows === 0 || cols === 0) return fail("#CALC!");
+    const result = slice(toGrid(args[0]), rows, cols, true);
+    return result.length && result[0]?.length ? result : fail("#CALC!");
+  },
+  DROP: (args) => {
+    if (args.length < 2 || args.length > 3) return fail("#VALUE!");
+    const rows = args[1] === undefined || scalar(args[1]) === "" ? null : integerArg(args[1], 0);
+    const cols = args[2] === undefined || scalar(args[2]) === "" ? null : integerArg(args[2], 0);
+    if (rows !== null && isError(rows)) return rows;
+    if (cols !== null && isError(cols)) return cols;
+    const result = slice(toGrid(args[0]), rows, cols, false);
+    return result.length && result[0]?.length ? result : fail("#CALC!");
+  },
+  CHOOSECOLS: (args) => {
+    if (args.length < 2) return fail("#VALUE!");
+    const grid = toGrid(args[0]);
+    const picked = pickIndexes(args.slice(1), grid[0]?.length ?? 0);
+    return isError(picked) ? picked : grid.map((line) => picked.map((index) => line[index]));
+  },
+  CHOOSEROWS: (args) => {
+    if (args.length < 2) return fail("#VALUE!");
+    const grid = toGrid(args[0]);
+    const picked = pickIndexes(args.slice(1), grid.length);
+    return isError(picked) ? picked : picked.map((index) => grid[index]);
+  },
+  TOCOL: (args) => {
+    if (args.length < 1 || args.length > 3) return fail("#VALUE!");
+    const ignore = integerArg(args[1], 0);
+    const byCol = boolArg(args[2], false);
+    if (isError(ignore)) return ignore;
+    if (isError(byCol)) return byCol;
+    const grid = toGrid(args[0]);
+    const values = (byCol ? transpose(grid) : grid)
+      .flat()
+      .filter(
+        (value) =>
+          !((ignore === 1 || ignore === 3) && (value === null || value === "")) &&
+          !((ignore === 2 || ignore === 3) && isError(value)),
+      );
+    return values.length ? values.map((value) => [value]) : fail("#CALC!");
+  },
+  TOROW: (args, resolver) => {
+    const column = FUNCTIONS.TOCOL(args, resolver);
+    return isGrid(column) ? transpose(column) : column;
+  },
+  EXPAND: (args) => {
+    if (args.length < 2 || args.length > 4) return fail("#VALUE!");
+    const grid = toGrid(args[0]);
+    const rows = integerArg(args[1], grid.length);
+    const cols = integerArg(args[2], grid[0]?.length ?? 0);
+    if (isError(rows)) return rows;
+    if (isError(cols)) return cols;
+    if (rows < grid.length || cols < (grid[0]?.length ?? 0)) return fail("#VALUE!");
+    const pad = args[3] === undefined ? fail("#N/A") : scalar(args[3]);
+    return Array.from({ length: rows }, (_, r) => Array.from({ length: cols }, (_, c) => grid[r]?.[c] ?? pad));
+  },
+  WRAPROWS: (args) => {
+    const list = vector(args[0] ?? null);
+    const width = integerArg(args[1], 0);
+    if (!list || args.length < 2) return fail("#VALUE!");
+    if (isError(width)) return width;
+    if (width < 1) return fail("#NUM!");
+    const pad = args[2] === undefined ? fail("#N/A") : scalar(args[2]);
+    const out: Grid = [];
+    for (let index = 0; index < list.length; index += width)
+      out.push(Array.from({ length: width }, (_, c) => (index + c < list.length ? list[index + c] : pad)));
+    return out;
+  },
+  WRAPCOLS: (args, resolver) => {
+    const rows = FUNCTIONS.WRAPROWS(args, resolver);
+    return isGrid(rows) ? transpose(rows) : rows;
+  },
+  MMULT: (args) => {
+    if (args.length !== 2) return fail("#VALUE!");
+    const [a, b] = [toGrid(args[0]), toGrid(args[1])];
+    if ((a[0]?.length ?? 0) !== b.length) return fail("#VALUE!");
+    if ([...a.flat(), ...b.flat()].some((value) => typeof value !== "number")) return fail("#VALUE!");
+    return a.map((line) =>
+      (b[0] ?? []).map((_, c) =>
+        line.reduce<number>((sum, value, k) => sum + (value as number) * (b[k][c] as number), 0),
+      ),
+    );
+  },
+  FREQUENCY: (args) => {
+    if (args.length !== 2) return fail("#VALUE!");
+    const data = numbers([args[0]]);
+    const bins = numbers([args[1]]);
+    if (isError(data)) return data;
+    if (isError(bins)) return bins;
+    const edges = [...bins].sort((a, b) => a - b);
+    const counts = Array.from({ length: edges.length + 1 }, () => 0);
+    for (const value of data) {
+      const at = edges.findIndex((edge) => value <= edge);
+      counts[at < 0 ? edges.length : at] += 1;
+    }
+    // Reihenfolge der Klassen wie angegeben.
+    return [...bins.map((bin) => [counts[edges.indexOf(bin)]]), [counts[edges.length]]];
+  },
+
+  // Finanzmathematik
+  PMT: numeric(
+    (rate, periods, present, future = 0, type = 0) =>
+      periods === 0 ? fail("#NUM!") : payment(rate, periods, present, future, type ? 1 : 0),
+    [3, 5],
+  ),
+  FV: numeric(
+    (rate, periods, pay, present = 0, type = 0) => futureValue(rate, periods, pay, present, type ? 1 : 0),
+    [3, 5],
+  ),
+  PV: numeric(
+    (rate, periods, pay, future = 0, type = 0) => {
+      if (rate === 0) return -(future + pay * periods);
+      const growth = (1 + rate) ** periods;
+      return -(future + (pay * (1 + rate * (type ? 1 : 0)) * (growth - 1)) / rate) / growth;
+    },
+    [3, 5],
+  ),
+  NPER: numeric(
+    (rate, pay, present, future = 0, type = 0) => {
+      if (rate === 0) return pay === 0 ? fail("#NUM!") : -(present + future) / pay;
+      const t = type ? 1 : 0;
+      const numerator = pay * (1 + rate * t) - future * rate;
+      const denominator = present * rate + pay * (1 + rate * t);
+      if (numerator / denominator <= 0) return fail("#NUM!");
+      return Math.log(numerator / denominator) / Math.log(1 + rate);
+    },
+    [3, 5],
+  ),
+  RATE: numeric(
+    (periods, pay, present, future = 0, type = 0, guess = 0.1) => {
+      // Nullstelle von „Endwert der Zahlungen + Endwert = 0“ (Newton-Verfahren).
+      const balance = (rate: number) => future - futureValue(rate, periods, pay, present, type ? 1 : 0);
+      let rate = guess;
+      for (let step = 0; step < 100; step += 1) {
+        const value = balance(rate);
+        const delta = 1e-7;
+        const slope = (balance(rate + delta) - value) / delta;
+        if (slope === 0 || !Number.isFinite(slope)) return fail("#NUM!");
+        const next = rate - value / slope;
+        if (Math.abs(next - rate) < 1e-10) return next;
+        rate = next;
+      }
+      return fail("#NUM!");
+    },
+    [3, 6],
+  ),
+  IPMT: numeric(
+    (rate, period, periods, present, future = 0, type = 0) => {
+      if (period < 1 || period > periods) return fail("#NUM!");
+      const t = type ? 1 : 0;
+      if (period === 1 && t === 1) return 0;
+      const pay = payment(rate, periods, present, future, t);
+      const balance = -futureValue(rate, period - 1, pay, present, t);
+      return -(t === 1 ? (balance - pay) * rate : balance * rate);
+    },
+    [4, 6],
+  ),
+  PPMT: numeric(
+    (rate, period, periods, present, future = 0, type = 0) => {
+      if (period < 1 || period > periods) return fail("#NUM!");
+      const t = type ? 1 : 0;
+      const pay = payment(rate, periods, present, future, t);
+      if (period === 1 && t === 1) return pay;
+      const balance = -futureValue(rate, period - 1, pay, present, t);
+      return pay + (t === 1 ? (balance - pay) * rate : balance * rate);
+    },
+    [4, 6],
+  ),
+  NPV: (args) => {
+    if (args.length < 2) return fail("#VALUE!");
+    const rate = toNumber(scalar(args[0]));
+    const values = numberList(args.slice(1));
+    if (isError(rate)) return rate;
+    if (isError(values)) return values;
+    return values.reduce((sum, value, index) => sum + value / (1 + rate) ** (index + 1), 0);
+  },
+  IRR: (args) => {
+    if (args.length < 1 || args.length > 2) return fail("#VALUE!");
+    const values = numberList([args[0]]);
+    const guess = args[1] === undefined ? 0.1 : toNumber(scalar(args[1]));
+    if (isError(values)) return values;
+    if (isError(guess)) return guess;
+    if (!values.some((value) => value > 0) || !values.some((value) => value < 0)) return fail("#NUM!");
+    let rate = guess;
+    for (let step = 0; step < 200; step += 1) {
+      let npv = 0;
+      let slope = 0;
+      values.forEach((value, index) => {
+        npv += value / (1 + rate) ** index;
+        slope -= (index * value) / (1 + rate) ** (index + 1);
+      });
+      if (slope === 0) return fail("#NUM!");
+      const next = rate - npv / slope;
+      if (Math.abs(next - rate) < 1e-12) return next;
+      rate = next;
+    }
+    return fail("#NUM!");
+  },
+
+  // Statistik
+  "PERCENTILE.INC": (args) => {
+    const values = numberList([args[0] ?? null]);
+    const k = numberArg(args[1]);
+    if (isError(values)) return values;
+    if (isError(k)) return k;
+    return args.length === 2 ? percentile(values, k, false) : fail("#VALUE!");
+  },
+  "PERCENTILE.EXC": (args) => {
+    const values = numberList([args[0] ?? null]);
+    const k = numberArg(args[1]);
+    if (isError(values)) return values;
+    if (isError(k)) return k;
+    return args.length === 2 ? percentile(values, k, true) : fail("#VALUE!");
+  },
+  "QUARTILE.INC": (args) => {
+    const values = numberList([args[0] ?? null]);
+    const q = numberArg(args[1]);
+    if (isError(values)) return values;
+    if (isError(q)) return q;
+    return args.length === 2 && q >= 0 && q <= 4 ? percentile(values, Math.trunc(q) / 4, false) : fail("#NUM!");
+  },
+  "RANK.AVG": (args) => {
+    if (args.length < 2 || args.length > 3 || !isGrid(args[1])) return fail("#VALUE!");
+    const value = numberArg(args[0]);
+    const order = numberArg(args[2], 0);
+    const values = numbers([args[1]]);
+    if (isError(value)) return value;
+    if (isError(order)) return order;
+    if (isError(values)) return values;
+    const same = values.filter((other) => other === value).length;
+    if (!same) return fail("#N/A");
+    const better = values.filter((other) => (order ? other < value : other > value)).length;
+    return better + (same + 1) / 2;
+  },
+  CORREL: (args) => {
+    const fit = regression(args);
+    if (isError(fit)) return fit;
+    return fit.syy === 0 ? fail("#DIV/0!") : fit.sxy / Math.sqrt(fit.sxx * fit.syy);
+  },
+  RSQ: (args) => {
+    const fit = regression(args);
+    if (isError(fit)) return fit;
+    return fit.syy === 0 ? fail("#DIV/0!") : fit.sxy ** 2 / (fit.sxx * fit.syy);
+  },
+  SLOPE: (args) => {
+    const fit = regression(args);
+    return isError(fit) ? fit : fit.slope;
+  },
+  INTERCEPT: (args) => {
+    const fit = regression(args);
+    return isError(fit) ? fit : fit.intercept;
+  },
+  "FORECAST.LINEAR": (args) => {
+    if (args.length !== 3) return fail("#VALUE!");
+    const x = numberArg(args[0]);
+    const fit = regression(args.slice(1));
+    if (isError(x)) return x;
+    return isError(fit) ? fit : fit.intercept + fit.slope * x;
+  },
+  "COVARIANCE.P": (args) => {
+    const data = pairs(args);
+    if (isError(data)) return data;
+    const n = data.xs.length;
+    if (!n) return fail("#DIV/0!");
+    const mx = data.xs.reduce((a, b) => a + b, 0) / n;
+    const my = data.ys.reduce((a, b) => a + b, 0) / n;
+    return data.xs.reduce((sum, x, index) => sum + (x - mx) * (data.ys[index] - my), 0) / n;
+  },
+  GEOMEAN: aggregate((values) =>
+    !values.length || values.some((value) => value <= 0)
+      ? fail("#NUM!")
+      : Math.exp(values.reduce((sum, value) => sum + Math.log(value), 0) / values.length),
+  ),
+  HARMEAN: aggregate((values) =>
+    !values.length || values.some((value) => value <= 0)
+      ? fail("#NUM!")
+      : values.length / values.reduce((sum, value) => sum + 1 / value, 0),
+  ),
+  AVEDEV: aggregate((values) => {
+    if (!values.length) return fail("#NUM!");
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    return values.reduce((sum, value) => sum + Math.abs(value - mean), 0) / values.length;
+  }),
+  AVERAGEA: (args) => {
+    const values = flat(args).filter((value) => value !== null);
+    if (!values.length) return fail("#DIV/0!");
+    let sum = 0;
+    for (const value of values) {
+      if (isError(value)) return value;
+      sum += typeof value === "number" ? value : value === true ? 1 : 0;
+    }
+    return sum / values.length;
+  },
+  MAXA: (args) => {
+    const values = flat(args).filter((value) => value !== null);
+    const problem = values.find(isError);
+    if (problem) return problem;
+    return values.length
+      ? Math.max(...values.map((value) => (typeof value === "number" ? value : value === true ? 1 : 0)))
+      : 0;
+  },
+  MINA: (args) => {
+    const values = flat(args).filter((value) => value !== null);
+    const problem = values.find(isError);
+    if (problem) return problem;
+    return values.length
+      ? Math.min(...values.map((value) => (typeof value === "number" ? value : value === true ? 1 : 0)))
+      : 0;
+  },
+  "NORM.DIST": numeric(
+    (x, mean, sd, cumulative) => {
+      if (sd <= 0) return fail("#NUM!");
+      const z = (x - mean) / sd;
+      if (!cumulative) return Math.exp((-z * z) / 2) / (sd * Math.sqrt(2 * Math.PI));
+      return 0.5 * (1 + erf(z / Math.SQRT2));
+    },
+    [4, 4],
+  ),
+
+  // Mathematik
+  FACT: numeric((value) => (value < 0 ? fail("#NUM!") : factorial(Math.trunc(value))), [1, 1]),
+  COMBIN: numeric(
+    (n, k) => {
+      const [a, b] = [Math.trunc(n), Math.trunc(k)];
+      if (a < 0 || b < 0 || b > a) return fail("#NUM!");
+      let out = 1;
+      for (let i = 1; i <= b; i += 1) out = (out * (a - b + i)) / i;
+      return Math.round(out);
+    },
+    [2, 2],
+  ),
+  PERMUT: numeric(
+    (n, k) => {
+      const [a, b] = [Math.trunc(n), Math.trunc(k)];
+      if (a < 0 || b < 0 || b > a) return fail("#NUM!");
+      let out = 1;
+      for (let i = 0; i < b; i += 1) out *= a - i;
+      return out;
+    },
+    [2, 2],
+  ),
+  "CEILING.MATH": numeric(
+    (value, step = 1, mode = 0) => {
+      if (step === 0) return 0;
+      const size = Math.abs(step);
+      if (value < 0 && mode) return -Math.ceil(precise(-value / size)) * size;
+      return precise(Math.ceil(precise(value / size)) * size);
+    },
+    [1, 3],
+  ),
+  "FLOOR.MATH": numeric(
+    (value, step = 1, mode = 0) => {
+      if (step === 0) return 0;
+      const size = Math.abs(step);
+      if (value < 0 && mode) return -Math.floor(precise(-value / size)) * size;
+      return precise(Math.floor(precise(value / size)) * size);
+    },
+    [1, 3],
+  ),
+  ASIN: numeric((value) => (Math.abs(value) > 1 ? fail("#NUM!") : Math.asin(value)), [1, 1]),
+  ACOS: numeric((value) => (Math.abs(value) > 1 ? fail("#NUM!") : Math.acos(value)), [1, 1]),
+  ATAN: numeric((value) => Math.atan(value), [1, 1]),
+  ATAN2: numeric((x, y) => (x === 0 && y === 0 ? fail("#DIV/0!") : Math.atan2(y, x)), [2, 2]),
+  ROMAN: numeric(
+    (value) => {
+      let rest = Math.trunc(value);
+      if (rest < 0 || rest > 3999) return fail("#VALUE!");
+      let out = "";
+      for (const [amount, letters] of ROMAN)
+        while (rest >= amount) {
+          out += letters;
+          rest -= amount;
+        }
+      return out;
+    },
+    [1, 2],
+  ),
+  ARABIC: textual(
+    (text) => {
+      const source = text.trim().toUpperCase();
+      if (!/^-?[MDCLXVI]*$/.test(source)) return fail("#VALUE!");
+      const sign = source.startsWith("-") ? -1 : 1;
+      const letters = source.replace("-", "");
+      const value: Record<string, number> = { M: 1000, D: 500, C: 100, L: 50, X: 10, V: 5, I: 1 };
+      let total = 0;
+      for (let i = 0; i < letters.length; i += 1) {
+        const current = value[letters[i]];
+        total += current < (value[letters[i + 1]] ?? 0) ? -current : current;
+      }
+      return sign * total;
+    },
+    [1, 1],
+  ),
+  BASE: numeric(
+    (value, radix, length = 0) => {
+      if (value < 0 || radix < 2 || radix > 36) return fail("#NUM!");
+      return Math.trunc(value).toString(Math.trunc(radix)).toUpperCase().padStart(Math.trunc(length), "0");
+    },
+    [2, 3],
+  ),
+  DECIMAL: (args) => {
+    if (args.length !== 2) return fail("#VALUE!");
+    const text = textArg(args[0]);
+    const radix = numberArg(args[1]);
+    if (isError(text)) return text;
+    if (isError(radix)) return radix;
+    const base = Math.trunc(radix);
+    if (base < 2 || base > 36) return fail("#NUM!");
+    const digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".slice(0, base);
+    const clean = text.trim().toUpperCase();
+    if (!clean || [...clean].some((char) => !digits.includes(char))) return fail("#NUM!");
+    return parseInt(clean, base);
+  },
+  DEC2BIN: numeric(
+    (value, places = 0) => {
+      if (value < -512 || value > 511) return fail("#NUM!");
+      const bits = (Math.trunc(value) >>> 0)
+        .toString(2)
+        .slice(-10)
+        .replace(/^0+(?=.)/, "");
+      return value < 0 ? bits : bits.padStart(Math.trunc(places), "0");
+    },
+    [1, 2],
+  ),
+  BIN2DEC: textual(
+    (text) =>
+      /^[01]{1,10}$/.test(text.trim())
+        ? text.trim().length === 10 && text.trim()[0] === "1"
+          ? parseInt(text.trim(), 2) - 1024
+          : parseInt(text.trim(), 2)
+        : fail("#NUM!"),
+    [1, 1],
+  ),
+  DEC2HEX: numeric(
+    (value, places = 0) =>
+      Math.trunc(value) >= 0
+        ? Math.trunc(value).toString(16).toUpperCase().padStart(Math.trunc(places), "0")
+        : fail("#NUM!"),
+    [1, 2],
+  ),
+  HEX2DEC: textual(
+    (text) => (/^[0-9A-Fa-f]{1,10}$/.test(text.trim()) ? parseInt(text.trim(), 16) : fail("#NUM!")),
+    [1, 1],
+  ),
+  TRUE: (args) => (args.length ? fail("#VALUE!") : true),
+  FALSE: (args) => (args.length ? fail("#VALUE!") : false),
+
+  // Text
+  FIXED: numeric(
+    (value, digits = 2, noCommas = 0) => {
+      const places = Math.trunc(digits);
+      const rounded = round(value, places, "half");
+      const text = new Intl.NumberFormat("de-CH", {
+        minimumFractionDigits: Math.max(0, places),
+        maximumFractionDigits: Math.max(0, places),
+        useGrouping: !noCommas,
+      }).format(rounded);
+      return text.replace(/['’  ]/g, "’");
+    },
+    [1, 3],
+  ),
+  UNICHAR: numeric(
+    (code) => (code < 1 || code > 0x10ffff ? fail("#VALUE!") : String.fromCodePoint(Math.trunc(code))),
+    [1, 1],
+  ),
+  UNICODE: textual((text) => (text ? (text.codePointAt(0) ?? 0) : fail("#VALUE!")), [1, 1]),
+  T: (args) => {
+    const value = scalar(args[0] ?? null);
+    return isError(value) ? value : typeof value === "string" ? value : "";
+  },
+  N: (args) => {
+    const value = scalar(args[0] ?? null);
+    return isError(value) ? value : typeof value === "number" ? value : value === true ? 1 : 0;
+  },
+  NUMBERVALUE: (args) => {
+    if (args.length < 1 || args.length > 3) return fail("#VALUE!");
+    const text = textArg(args[0]);
+    const decimal = textArg(args[1], ".");
+    const group = textArg(args[2], "’'");
+    if (isError(text)) return text;
+    if (isError(decimal)) return decimal;
+    if (isError(group)) return group;
+    let clean = text.replace(/\s/g, "");
+    for (const char of group) clean = clean.split(char).join("");
+    if (decimal) clean = clean.split(decimal[0]).join(".");
+    const percent = clean.endsWith("%");
+    const number = Number(percent ? clean.slice(0, -1) : clean);
+    return clean === "" ? 0 : Number.isFinite(number) ? (percent ? number / 100 : number) : fail("#VALUE!");
+  },
+  TEXTBEFORE: (args) => textAround(args, true),
+  TEXTAFTER: (args) => textAround(args, false),
+
+  // Datum
+  YEARFRAC: numeric(
+    (start, end, basis = 0) => {
+      const [a, b] = [Math.floor(Math.min(start, end)), Math.floor(Math.max(start, end))];
+      const kind = Math.trunc(basis);
+      if (kind === 1) {
+        const from = serialDate(a).year;
+        const to = serialDate(b).year;
+        let days = 0;
+        for (let year = from; year <= to; year += 1) days += dateSerial(year + 1, 1, 1) - dateSerial(year, 1, 1);
+        return (b - a) / (days / (to - from + 1));
+      }
+      if (kind === 2) return (b - a) / 360;
+      if (kind === 3) return (b - a) / 365;
+      if (kind !== 0 && kind !== 4) return fail("#NUM!");
+      return days360(a, b, kind === 4) / 360;
+    },
+    [2, 3],
+  ),
+  DAYS360: numeric(
+    (start, end, european = 0) => days360(Math.floor(start), Math.floor(end), Boolean(european)),
+    [2, 3],
+  ),
+  "NETWORKDAYS.INTL": (args) => {
+    if (args.length < 2 || args.length > 4) return fail("#VALUE!");
+    const start = numberArg(args[0]);
+    const end = numberArg(args[1]);
+    const weekend = weekendOf(args[2]);
+    const holidays = holidayList(args[3]);
+    if (isError(start)) return start;
+    if (isError(end)) return end;
+    if (isError(weekend)) return weekend;
+    if (isError(holidays)) return holidays;
+    const [from, to] = [Math.floor(Math.min(start, end)), Math.floor(Math.max(start, end))];
+    if (to - from > 200_000) return fail("#NUM!");
+    let count = 0;
+    for (let day = from; day <= to; day += 1) if (!weekend.has(dayOfWeek(day)) && !holidays.has(day)) count += 1;
+    return start > end ? -count : count;
+  },
+  "WORKDAY.INTL": (args) => {
+    if (args.length < 2 || args.length > 4) return fail("#VALUE!");
+    const start = numberArg(args[0]);
+    const days = numberArg(args[1]);
+    const weekend = weekendOf(args[2]);
+    const holidays = holidayList(args[3]);
+    if (isError(start)) return start;
+    if (isError(days)) return days;
+    if (isError(weekend)) return weekend;
+    if (isError(holidays)) return holidays;
+    let remaining = Math.trunc(days);
+    if (Math.abs(remaining) > 100_000) return fail("#NUM!");
+    let day = Math.floor(start);
+    const step = Math.sign(remaining);
+    while (remaining !== 0) {
+      day += step;
+      if (!weekend.has(dayOfWeek(day)) && !holidays.has(day)) remaining -= step;
+    }
+    return day;
+  },
+
+  // Information
+  TYPE: (args) => {
+    if (args.length !== 1) return fail("#VALUE!");
+    const value = args[0];
+    if (isGrid(value) && !(value.length === 1 && value[0].length === 1)) return 64;
+    const single = scalar(value);
+    if (isError(single)) return 16;
+    return typeof single === "number" || single === null ? 1 : typeof single === "string" ? 2 : 4;
+  },
+  "ERROR.TYPE": (args) => {
+    const value = scalar(args[0] ?? null);
+    const codes: Partial<Record<ErrorCode, number>> = {
+      "#DIV/0!": 2,
+      "#VALUE!": 3,
+      "#REF!": 4,
+      "#NAME?": 5,
+      "#NUM!": 6,
+      "#N/A": 7,
+      "#SPILL!": 9,
+      "#CALC!": 14,
+    };
+    return isError(value) ? (codes[value.error] ?? fail("#N/A")) : fail("#N/A");
+  },
+  // Für die Prüfung „gibt es die Funktion?“ – berechnet werden sie in evaluateCall.
+  INDIRECT: () => fail("#REF!"),
+  OFFSET: () => fail("#REF!"),
+  ISREF: () => false,
+  ISFORMULA: () => false,
+  FORMULATEXT: () => fail("#N/A"),
+  SUBTOTAL: () => fail("#VALUE!"),
+  LET: () => fail("#VALUE!"),
+} satisfies Record<string, Impl>);
+
+// Fehlerfunktion: Reihe für kleine Werte, Kettenbruch für grosse (Genauigkeit besser als 1e-12).
+function erf(x: number): number {
+  const a = Math.abs(x);
+  if (a < 3) {
+    let term = a;
+    let sum = a;
+    for (let n = 1; n < 200 && Math.abs(term) > 1e-17 * Math.abs(sum); n += 1) {
+      term *= (-a * a) / n;
+      sum += term / (2 * n + 1);
+    }
+    return Math.sign(x) * ((2 / Math.sqrt(Math.PI)) * sum);
+  }
+  let fraction = 0;
+  for (let n = 60; n >= 1; n -= 1) fraction = n / 2 / (a + fraction);
+  const erfc = Math.exp(-a * a) / Math.sqrt(Math.PI) / (a + fraction);
+  return Math.sign(x) * (1 - erfc);
+}
+
+// TEXTVOR/TEXTNACH: Text vor bzw. nach dem n-ten Trennzeichen (negativ = vom Ende).
+function textAround(args: Arg[], before: boolean): Value {
+  if (args.length < 2 || args.length > 6) return fail("#VALUE!");
+  const text = textArg(args[0]);
+  const delimiter = textArg(args[1]);
+  const instance = integerArg(args[2], 1);
+  const caseless = integerArg(args[3], 0);
+  if (isError(text)) return text;
+  if (isError(delimiter)) return delimiter;
+  if (isError(instance)) return instance;
+  if (isError(caseless)) return caseless;
+  if (instance === 0) return fail("#VALUE!");
+  const haystack = caseless ? text.toLocaleLowerCase("de-CH") : text;
+  const needle = caseless ? delimiter.toLocaleLowerCase("de-CH") : delimiter;
+  const positions: number[] = [];
+  for (let at = haystack.indexOf(needle); at >= 0 && needle; at = haystack.indexOf(needle, at + needle.length))
+    positions.push(at);
+  if (!needle) positions.push(...(instance > 0 ? [0] : [text.length]));
+  const at = instance > 0 ? positions[instance - 1] : positions[positions.length + instance];
+  if (at === undefined) return args[5] !== undefined ? scalar(args[5]) : fail("#N/A");
+  return before ? text.slice(0, at) : text.slice(at + needle.length);
+}
+// TAGE360: US-Methode (NASD) oder europäische Methode.
+function days360(start: number, end: number, european: boolean) {
+  const a = serialDate(start);
+  const b = serialDate(end);
+  let d1 = a.day;
+  let d2 = b.day;
+  if (european) {
+    if (d1 === 31) d1 = 30;
+    if (d2 === 31) d2 = 30;
+  } else {
+    const lastFeb = (date: { year: number; month: number; day: number }) =>
+      date.month === 2 && date.day === lastDayOfMonth(date.year, 2);
+    if (lastFeb(a) && lastFeb(b)) d2 = 30;
+    if (lastFeb(a)) d1 = 30;
+    if (d2 === 31 && d1 >= 30) d2 = 30;
+    if (d1 === 31) d1 = 30;
+  }
+  return (b.year - a.year) * 360 + (b.month - a.month) * 30 + (d2 - d1);
+}
+
 // Deutsche Namen (wie im deutschen Excel) → interne englische Namen; beide Schreibweisen funktionieren.
 const GERMAN: Record<string, string> = {
   SUMME: "SUM",
@@ -1619,6 +2649,89 @@ const GERMAN: Record<string, string> = {
   ISTKTEXT: "ISNONTEXT",
   ISTNV: "ISNA",
   ISTFEHL: "ISERR",
+  FILTERN: "FILTER",
+  SORTIEREN: "SORT",
+  SORTIERENNACH: "SORTBY",
+  EINDEUTIG: "UNIQUE",
+  SEQUENZ: "SEQUENCE",
+  MTRANS: "TRANSPOSE",
+  ZUFALLSMATRIX: "RANDARRAY",
+  XVERGLEICH: "XMATCH",
+  TEXTTEILEN: "TEXTSPLIT",
+  VSTAPELN: "VSTACK",
+  HSTAPELN: "HSTACK",
+  ÜBERNEHMEN: "TAKE",
+  WEGLASSEN: "DROP",
+  WAHLSPALTE: "CHOOSECOLS",
+  WAHLZEILE: "CHOOSEROWS",
+  ZUSPALTE: "TOCOL",
+  ZUZEILE: "TOROW",
+  ERWEITERN: "EXPAND",
+  ZEILENUMBRUCH: "WRAPROWS",
+  SPALTENUMBRUCH: "WRAPCOLS",
+  HÄUFIGKEIT: "FREQUENCY",
+  INDIREKT: "INDIRECT",
+  "BEREICH.VERSCHIEBEN": "OFFSET",
+  ISTBEZUG: "ISREF",
+  ISTFORMEL: "ISFORMULA",
+  FORMELTEXT: "FORMULATEXT",
+  TEILERGEBNIS: "SUBTOTAL",
+  RMZ: "PMT",
+  ZW: "FV",
+  BW: "PV",
+  ZZR: "NPER",
+  ZINS: "RATE",
+  ZINSZ: "IPMT",
+  KAPZ: "PPMT",
+  NBW: "NPV",
+  IKV: "IRR",
+  "QUANTIL.INKL": "PERCENTILE.INC",
+  "QUANTIL.EXKL": "PERCENTILE.EXC",
+  "QUARTILE.INKL": "QUARTILE.INC",
+  "RANG.MITTELW": "RANK.AVG",
+  KORREL: "CORREL",
+  BESTIMMTHEITSMASS: "RSQ",
+  STEIGUNG: "SLOPE",
+  ACHSENABSCHNITT: "INTERCEPT",
+  "PROGNOSE.LINEAR": "FORECAST.LINEAR",
+  "KOVARIANZ.P": "COVARIANCE.P",
+  GEOMITTEL: "GEOMEAN",
+  HARMITTEL: "HARMEAN",
+  MITTELABW: "AVEDEV",
+  MITTELWERTA: "AVERAGEA",
+  "NORM.VERT": "NORM.DIST",
+  FAKULTÄT: "FACT",
+  KOMBINATIONEN: "COMBIN",
+  VARIATIONEN: "PERMUT",
+  "OBERGRENZE.MATHEMATIK": "CEILING.MATH",
+  "UNTERGRENZE.MATHEMATIK": "FLOOR.MATH",
+  ARCSIN: "ASIN",
+  ARCCOS: "ACOS",
+  ARCTAN: "ATAN",
+  ARCTAN2: "ATAN2",
+  RÖMISCH: "ROMAN",
+  ARABISCH: "ARABIC",
+  BASIS: "BASE",
+  DEZIMAL: "DECIMAL",
+  DEZINBIN: "DEC2BIN",
+  BININDEZ: "BIN2DEC",
+  DEZINHEX: "DEC2HEX",
+  HEXINDEZ: "HEX2DEC",
+  WAHR: "TRUE",
+  FALSCH: "FALSE",
+  FEST: "FIXED",
+  UNIZEICHEN: "UNICHAR",
+  ZAHLENWERT: "NUMBERVALUE",
+  TEXTVOR: "TEXTBEFORE",
+  TEXTNACH: "TEXTAFTER",
+  BRTEILJAHRE: "YEARFRAC",
+  TAGE360: "DAYS360",
+  "NETTOARBEITSTAGE.INTL": "NETWORKDAYS.INTL",
+  "ARBEITSTAG.INTL": "WORKDAY.INTL",
+  TYP: "TYPE",
+  "FEHLER.TYP": "ERROR.TYPE",
+  QUANTIL: "PERCENTILE.INC",
+  PROGNOSE: "FORECAST.LINEAR",
 };
 const ENGLISH_ALIASES: Record<string, string> = {
   CONCATENATE: "CONCAT",
@@ -1626,6 +2739,10 @@ const ENGLISH_ALIASES: Record<string, string> = {
   "MODE.SNGL": "MODE",
   "STDEV.S": "STDEV",
   "VAR.S": "VAR",
+  PERCENTILE: "PERCENTILE.INC",
+  QUARTILE: "QUARTILE.INC",
+  FORECAST: "FORECAST.LINEAR",
+  COVAR: "COVARIANCE.P",
 };
 // Neuere Excel-Funktionen stehen in der Datei mit Vorsilbe „_xlfn.“ („_xlfn.XLOOKUP“).
 const canonical = (name: string) => {
@@ -1646,11 +2763,55 @@ const XLFN = new Set([
   "ISOWEEKNUM",
   "STDEV.P",
   "VAR.P",
+  "SORTBY",
+  "UNIQUE",
+  "SEQUENCE",
+  "RANDARRAY",
+  "XMATCH",
+  "TEXTSPLIT",
+  "VSTACK",
+  "HSTACK",
+  "TAKE",
+  "DROP",
+  "CHOOSECOLS",
+  "CHOOSEROWS",
+  "TOCOL",
+  "TOROW",
+  "EXPAND",
+  "WRAPROWS",
+  "WRAPCOLS",
+  "LET",
+  "TEXTBEFORE",
+  "TEXTAFTER",
+  "PERCENTILE.INC",
+  "PERCENTILE.EXC",
+  "QUARTILE.INC",
+  "RANK.AVG",
+  "FORECAST.LINEAR",
+  "COVARIANCE.P",
+  "NORM.DIST",
+  "CEILING.MATH",
+  "FLOOR.MATH",
+  "ARABIC",
+  "BASE",
+  "DECIMAL",
+  "UNICHAR",
+  "UNICODE",
+  "NUMBERVALUE",
+  "NETWORKDAYS.INTL",
+  "WORKDAY.INTL",
+  "ISFORMULA",
+  "FORMULATEXT",
 ]);
+// Arbeitsblatt-Funktionen mit doppelter Vorsilbe („_xlfn._xlws.FILTER“).
+const XLWS = new Set(["FILTER", "SORT"]);
 // Nur die üblichen deutschen Namen zurückübersetzen (nicht die Nebenformen).
 const GERMAN_OF = Object.fromEntries(
   Object.entries(GERMAN)
-    .filter(([german]) => !["TEXTKETTE", "RANG.GLEICH", "MODUS.EINF", "STABW.S", "VAR.S"].includes(german))
+    .filter(
+      ([german]) =>
+        !["TEXTKETTE", "RANG.GLEICH", "MODUS.EINF", "STABW.S", "VAR.S", "QUANTIL", "PROGNOSE"].includes(german),
+    )
     .map(([german, english]) => [english, german]),
 );
 
@@ -1821,14 +2982,305 @@ export const FUNCTION_HELP: { name: string; syntax: string; text: string }[] = [
   { name: "ISTKTEXT", syntax: "ISTKTEXT(Wert)", text: "WAHR, wenn kein Text" },
   { name: "ISTNV", syntax: "ISTNV(Wert)", text: "WAHR beim Fehler „nicht vorhanden“" },
   { name: "ISTFEHL", syntax: "ISTFEHL(Wert)", text: "WAHR bei Fehlern ausser „nicht vorhanden“" },
+  {
+    name: "FILTERN",
+    syntax: "FILTERN(Bereich; Einschliessen; [Wenn_leer])",
+    text: "Zeilen, die eine Bedingung erfüllen (läuft über)",
+  },
+  {
+    name: "SORTIEREN",
+    syntax: "SORTIEREN(Bereich; [Spalte]; [Reihenfolge]; [Nach_Spalte])",
+    text: "Bereich sortiert (läuft über)",
+  },
+  {
+    name: "SORTIERENNACH",
+    syntax: "SORTIERENNACH(Bereich; Nach_Bereich1; [Reihenfolge1]; …)",
+    text: "Nach anderen Spalten sortiert",
+  },
+  { name: "EINDEUTIG", syntax: "EINDEUTIG(Bereich; [Nach_Spalte]; [Genau_einmal])", text: "Werte ohne Doppelte" },
+  { name: "SEQUENZ", syntax: "SEQUENZ(Zeilen; [Spalten]; [Anfang]; [Schritt])", text: "Zahlenfolge" },
+  { name: "MTRANS", syntax: "MTRANS(Bereich)", text: "Zeilen und Spalten tauschen" },
+  {
+    name: "ZUFALLSMATRIX",
+    syntax: "ZUFALLSMATRIX([Zeilen]; [Spalten]; [Min]; [Max]; [Ganzzahl])",
+    text: "Bereich mit Zufallszahlen",
+  },
+  {
+    name: "XVERGLEICH",
+    syntax: "XVERGLEICH(Suchwert; Suchbereich; [Vergleichsmodus]; [Suchmodus])",
+    text: "Position eines Wertes (flexibel)",
+  },
+  {
+    name: "TEXTTEILEN",
+    syntax: "TEXTTEILEN(Text; Spaltentrennzeichen; [Zeilentrennzeichen]; [Leere_ignorieren])",
+    text: "Text in Zellen aufteilen",
+  },
+  { name: "VSTAPELN", syntax: "VSTAPELN(Bereich1; Bereich2; …)", text: "Bereiche untereinander" },
+  { name: "HSTAPELN", syntax: "HSTAPELN(Bereich1; Bereich2; …)", text: "Bereiche nebeneinander" },
+  { name: "ÜBERNEHMEN", syntax: "ÜBERNEHMEN(Bereich; Zeilen; [Spalten])", text: "Erste oder letzte Zeilen/Spalten" },
+  {
+    name: "WEGLASSEN",
+    syntax: "WEGLASSEN(Bereich; Zeilen; [Spalten])",
+    text: "Ohne die ersten oder letzten Zeilen/Spalten",
+  },
+  { name: "WAHLSPALTE", syntax: "WAHLSPALTE(Bereich; Spalte1; …)", text: "Ausgewählte Spalten" },
+  { name: "WAHLZEILE", syntax: "WAHLZEILE(Bereich; Zeile1; …)", text: "Ausgewählte Zeilen" },
+  { name: "ZUSPALTE", syntax: "ZUSPALTE(Bereich; [Ignorieren]; [Nach_Spalte])", text: "Bereich als eine Spalte" },
+  { name: "ZUZEILE", syntax: "ZUZEILE(Bereich; [Ignorieren]; [Nach_Spalte])", text: "Bereich als eine Zeile" },
+  { name: "ERWEITERN", syntax: "ERWEITERN(Bereich; Zeilen; [Spalten]; [Auffüllen_mit])", text: "Bereich vergrössern" },
+  { name: "ZEILENUMBRUCH", syntax: "ZEILENUMBRUCH(Liste; Anzahl; [Auffüllen_mit])", text: "Liste in Zeilen umbrechen" },
+  {
+    name: "SPALTENUMBRUCH",
+    syntax: "SPALTENUMBRUCH(Liste; Anzahl; [Auffüllen_mit])",
+    text: "Liste in Spalten umbrechen",
+  },
+  { name: "MMULT", syntax: "MMULT(Matrix1; Matrix2)", text: "Matrizen multiplizieren" },
+  { name: "HÄUFIGKEIT", syntax: "HÄUFIGKEIT(Daten; Klassen)", text: "Anzahl je Klasse" },
+  { name: "LET", syntax: "LET(Name1; Wert1; …; Berechnung)", text: "Zwischenergebnisse benennen" },
+  { name: "INDIREKT", syntax: "INDIREKT(Bezug_als_Text; [A1])", text: 'Bezug aus einem Text, z. B. "B"&A1' },
+  {
+    name: "BEREICH.VERSCHIEBEN",
+    syntax: "BEREICH.VERSCHIEBEN(Bezug; Zeilen; Spalten; [Höhe]; [Breite])",
+    text: "Verschobener Bereich",
+  },
+  { name: "ISTBEZUG", syntax: "ISTBEZUG(Wert)", text: "WAHR bei einem Zellbezug" },
+  { name: "ISTFORMEL", syntax: "ISTFORMEL(Bezug)", text: "WAHR, wenn die Zelle eine Formel enthält" },
+  { name: "FORMELTEXT", syntax: "FORMELTEXT(Bezug)", text: "Formel einer Zelle als Text" },
+  {
+    name: "TEILERGEBNIS",
+    syntax: "TEILERGEBNIS(Funktion; Bereich1; …)",
+    text: "Summe & Co. ohne gefilterte Zeilen (9 = Summe, 109 = auch ohne ausgeblendete)",
+  },
+  { name: "RMZ", syntax: "RMZ(Zins; Perioden; Barwert; [Endwert]; [Fällig])", text: "Regelmässige Zahlung (Rate)" },
+  { name: "ZW", syntax: "ZW(Zins; Perioden; Zahlung; [Barwert]; [Fällig])", text: "Endwert einer Anlage" },
+  { name: "BW", syntax: "BW(Zins; Perioden; Zahlung; [Endwert]; [Fällig])", text: "Barwert" },
+  { name: "ZZR", syntax: "ZZR(Zins; Zahlung; Barwert; [Endwert]; [Fällig])", text: "Anzahl Zahlungsperioden" },
+  {
+    name: "ZINS",
+    syntax: "ZINS(Perioden; Zahlung; Barwert; [Endwert]; [Fällig]; [Schätzwert])",
+    text: "Zinssatz je Periode",
+  },
+  {
+    name: "ZINSZ",
+    syntax: "ZINSZ(Zins; Periode; Perioden; Barwert; [Endwert]; [Fällig])",
+    text: "Zinsanteil einer Rate",
+  },
+  {
+    name: "KAPZ",
+    syntax: "KAPZ(Zins; Periode; Perioden; Barwert; [Endwert]; [Fällig])",
+    text: "Tilgungsanteil einer Rate",
+  },
+  { name: "NBW", syntax: "NBW(Zins; Wert1; …)", text: "Nettobarwert" },
+  { name: "IKV", syntax: "IKV(Werte; [Schätzwert])", text: "Interner Zinsfuss" },
+  { name: "QUANTIL.INKL", syntax: "QUANTIL.INKL(Bereich; k)", text: "Quantil (k zwischen 0 und 1)" },
+  { name: "QUANTIL.EXKL", syntax: "QUANTIL.EXKL(Bereich; k)", text: "Quantil ohne Randwerte" },
+  { name: "QUARTILE.INKL", syntax: "QUARTILE.INKL(Bereich; Quartil)", text: "Quartil (0 bis 4)" },
+  { name: "RANG.MITTELW", syntax: "RANG.MITTELW(Zahl; Bezug; [Reihenfolge])", text: "Rang, bei Gleichstand gemittelt" },
+  { name: "KORREL", syntax: "KORREL(Bereich1; Bereich2)", text: "Korrelation" },
+  { name: "BESTIMMTHEITSMASS", syntax: "BESTIMMTHEITSMASS(Y_Werte; X_Werte)", text: "Bestimmtheitsmass (R²)" },
+  { name: "STEIGUNG", syntax: "STEIGUNG(Y_Werte; X_Werte)", text: "Steigung der Trendgeraden" },
+  { name: "ACHSENABSCHNITT", syntax: "ACHSENABSCHNITT(Y_Werte; X_Werte)", text: "Achsenabschnitt der Trendgeraden" },
+  { name: "PROGNOSE.LINEAR", syntax: "PROGNOSE.LINEAR(X; Y_Werte; X_Werte)", text: "Wert auf der Trendgeraden" },
+  { name: "KOVARIANZ.P", syntax: "KOVARIANZ.P(Bereich1; Bereich2)", text: "Kovarianz" },
+  { name: "GEOMITTEL", syntax: "GEOMITTEL(Zahl1; …)", text: "Geometrisches Mittel" },
+  { name: "HARMITTEL", syntax: "HARMITTEL(Zahl1; …)", text: "Harmonisches Mittel" },
+  { name: "MITTELABW", syntax: "MITTELABW(Zahl1; …)", text: "Mittlere Abweichung" },
+  { name: "MITTELWERTA", syntax: "MITTELWERTA(Wert1; …)", text: "Durchschnitt (Text zählt als 0)" },
+  { name: "MAXA", syntax: "MAXA(Wert1; …)", text: "Grösster Wert (Wahrheitswerte zählen)" },
+  { name: "MINA", syntax: "MINA(Wert1; …)", text: "Kleinster Wert (Wahrheitswerte zählen)" },
+  { name: "NORM.VERT", syntax: "NORM.VERT(x; Mittelwert; Standardabweichung; Kumuliert)", text: "Normalverteilung" },
+  { name: "FAKULTÄT", syntax: "FAKULTÄT(Zahl)", text: "Fakultät" },
+  { name: "KOMBINATIONEN", syntax: "KOMBINATIONEN(n; k)", text: "Anzahl Kombinationen" },
+  { name: "VARIATIONEN", syntax: "VARIATIONEN(n; k)", text: "Anzahl Variationen" },
+  {
+    name: "OBERGRENZE.MATHEMATIK",
+    syntax: "OBERGRENZE.MATHEMATIK(Zahl; [Schritt]; [Modus])",
+    text: "Aufrunden auf ein Vielfaches",
+  },
+  {
+    name: "UNTERGRENZE.MATHEMATIK",
+    syntax: "UNTERGRENZE.MATHEMATIK(Zahl; [Schritt]; [Modus])",
+    text: "Abrunden auf ein Vielfaches",
+  },
+  { name: "ARCSIN", syntax: "ARCSIN(Zahl)", text: "Arkussinus" },
+  { name: "ARCCOS", syntax: "ARCCOS(Zahl)", text: "Arkuskosinus" },
+  { name: "ARCTAN", syntax: "ARCTAN(Zahl)", text: "Arkustangens" },
+  { name: "ARCTAN2", syntax: "ARCTAN2(x; y)", text: "Winkel aus Koordinaten" },
+  { name: "RÖMISCH", syntax: "RÖMISCH(Zahl)", text: "Römische Zahl" },
+  { name: "ARABISCH", syntax: "ARABISCH(Text)", text: "Römische Zahl in Zahl" },
+  { name: "BASIS", syntax: "BASIS(Zahl; Basis; [Länge])", text: "Zahl in anderem Zahlensystem" },
+  { name: "DEZIMAL", syntax: "DEZIMAL(Text; Basis)", text: "Zahl aus anderem Zahlensystem" },
+  { name: "DEZINBIN", syntax: "DEZINBIN(Zahl; [Stellen])", text: "Dezimal in binär" },
+  { name: "BININDEZ", syntax: "BININDEZ(Zahl)", text: "Binär in dezimal" },
+  { name: "DEZINHEX", syntax: "DEZINHEX(Zahl; [Stellen])", text: "Dezimal in hexadezimal" },
+  { name: "HEXINDEZ", syntax: "HEXINDEZ(Zahl)", text: "Hexadezimal in dezimal" },
+  { name: "WAHR", syntax: "WAHR()", text: "Wahrheitswert WAHR" },
+  { name: "FALSCH", syntax: "FALSCH()", text: "Wahrheitswert FALSCH" },
+  {
+    name: "FEST",
+    syntax: "FEST(Zahl; [Dezimalstellen]; [Ohne_Trennzeichen])",
+    text: "Zahl als Text mit festen Dezimalstellen",
+  },
+  { name: "UNIZEICHEN", syntax: "UNIZEICHEN(Zahl)", text: "Zeichen zu einem Unicode-Wert" },
+  { name: "UNICODE", syntax: "UNICODE(Text)", text: "Unicode-Wert des ersten Zeichens" },
+  { name: "T", syntax: "T(Wert)", text: "Text oder leer" },
+  { name: "N", syntax: "N(Wert)", text: "Wert als Zahl" },
+  {
+    name: "ZAHLENWERT",
+    syntax: "ZAHLENWERT(Text; [Dezimalzeichen]; [Gruppentrennzeichen])",
+    text: "Text in Zahl (mit Trennzeichen)",
+  },
+  { name: "TEXTVOR", syntax: "TEXTVOR(Text; Trennzeichen; [Vorkommen])", text: "Text vor einem Trennzeichen" },
+  { name: "TEXTNACH", syntax: "TEXTNACH(Text; Trennzeichen; [Vorkommen])", text: "Text nach einem Trennzeichen" },
+  { name: "BRTEILJAHRE", syntax: "BRTEILJAHRE(Start; Ende; [Basis])", text: "Anteil eines Jahres" },
+  { name: "TAGE360", syntax: "TAGE360(Start; Ende; [Methode])", text: "Tage auf Basis von 360 Tagen" },
+  {
+    name: "NETTOARBEITSTAGE.INTL",
+    syntax: "NETTOARBEITSTAGE.INTL(Start; Ende; [Wochenende]; [Freie_Tage])",
+    text: "Arbeitstage mit eigenem Wochenende",
+  },
+  {
+    name: "ARBEITSTAG.INTL",
+    syntax: "ARBEITSTAG.INTL(Start; Tage; [Wochenende]; [Freie_Tage])",
+    text: "Datum nach Arbeitstagen, eigenes Wochenende",
+  },
+  { name: "TYP", syntax: "TYP(Wert)", text: "Art des Wertes (1 Zahl, 2 Text, 4 Wahrheitswert, 16 Fehler)" },
+  { name: "FEHLER.TYP", syntax: "FEHLER.TYP(Fehlerwert)", text: "Nummer eines Fehlers" },
 ];
 
-export function evaluate(expr: Expr, resolver: Resolver): Value {
-  const result = evaluateArg(expr, resolver);
+type Scope = Map<string, Arg> | undefined;
+
+export function evaluate(expr: Expr, resolver: Resolver, scope?: Scope): Value {
+  const result = evaluateArg(expr, resolver, scope);
   return isGrid(result) ? (result.length === 1 && result[0].length === 1 ? result[0][0] : fail("#VALUE!")) : result;
 }
 
-function evaluateArg(expr: Expr, resolver: Resolver): Arg {
+// Ergebnis einer Zellformel: einzelner Wert oder ganzer Bereich (der dann in die Nachbarzellen „überläuft“).
+export function evaluateCell(expr: Expr, resolver: Resolver): Value | Value[][] {
+  const result = evaluateArg(expr, resolver, undefined);
+  if (!isGrid(result)) return result;
+  if (!result.length || !result[0]?.length) return fail("#CALC!");
+  return result.length === 1 && result[0].length === 1 ? result[0][0] : result;
+}
+
+const COMPARISONS = new Set(["=", "<>", "<", ">", "<=", ">="]);
+function binaryValue(op: string, left: Value, right: Value): Value {
+  if (isError(left)) return left;
+  if (isError(right)) return right;
+  if (op === "&") return toText(left) + toText(right);
+  if (COMPARISONS.has(op)) {
+    const result = compare(left, right);
+    if (op === "=") return result === 0;
+    if (op === "<>") return result !== 0;
+    if (op === "<") return result < 0;
+    if (op === ">") return result > 0;
+    if (op === "<=") return result <= 0;
+    return result >= 0;
+  }
+  const a = toNumber(left);
+  const b = toNumber(right);
+  if (isError(a)) return a;
+  if (isError(b)) return b;
+  if (op === "+") return a + b;
+  if (op === "-") return a - b;
+  if (op === "*") return a * b;
+  if (op === "/") return b === 0 ? fail("#DIV/0!") : a / b;
+  const power = a ** b;
+  return Number.isFinite(power) ? power : fail("#NUM!");
+}
+
+// Bezug als Text („B3“, „Tabelle2!A1:C4“, „'Mein Blatt'!D2“) für INDIREKT.
+function referenceFromText(text: string): { sheet?: string; area: Area } | null {
+  const trimmed = text.trim();
+  const match = /^(?:'((?:[^']|'')+)'!|([^!'"]+)!)?(\$?[A-Za-z]{1,3}\$?\d{1,6}(?::\$?[A-Za-z]{1,3}\$?\d{1,6})?)$/.exec(
+    trimmed,
+  );
+  if (match) {
+    const area = parseArea(match[3].replace(/\$/g, ""));
+    if (!area) return null;
+    const sheet = match[1] !== undefined ? match[1].replace(/''/g, "'") : match[2];
+    return { sheet, area };
+  }
+  // Ganze Spalten („A:C“).
+  const columns = /^(?:'((?:[^']|'')+)'!|([^!'"]+)!)?\$?([A-Za-z]{1,3}):\$?([A-Za-z]{1,3})$/.exec(trimmed);
+  if (!columns) return null;
+  const [a, b] = [columnIndex(columns[3]), columnIndex(columns[4])];
+  return {
+    sheet: columns[1] !== undefined ? columns[1].replace(/''/g, "'") : columns[2],
+    area: { c1: Math.min(a, b), r1: 0, c2: Math.max(a, b), r2: MAX_ROWS - 1 },
+  };
+}
+
+// Bezug eines Ausdrucks (Zelle, Bereich, INDIREKT, BEREICH.VERSCHIEBEN) – für Funktionen, die mit der Lage arbeiten.
+function referenceOf(expr: Expr, resolver: Resolver, scope: Scope): { sheet?: string; area: Area } | CellError | null {
+  if (expr.k === "ref") return { sheet: expr.sheet, area: { c1: expr.col, r1: expr.row, c2: expr.col, r2: expr.row } };
+  if (expr.k === "range") return { sheet: expr.sheet, area: expr.area };
+  if (expr.k !== "call") return null;
+  const name = canonical(expr.name);
+  if (name === "INDIRECT") {
+    if (expr.args.length < 1 || expr.args.length > 2) return fail("#VALUE!");
+    const text = evaluate(expr.args[0], resolver, scope);
+    if (isError(text)) return text;
+    if (expr.args[1] !== undefined) {
+      const a1 = truthy(evaluate(expr.args[1], resolver, scope));
+      if (isError(a1)) return a1;
+      // Z1S1-Schreibweise („Z2S3“).
+      if (!a1) {
+        const rc = /^[ZR](\d+)[SC](\d+)$/i.exec(toText(text).trim());
+        if (!rc) return fail("#REF!");
+        const row = Number(rc[1]) - 1;
+        const col = Number(rc[2]) - 1;
+        if (row < 0 || col < 0 || row >= MAX_ROWS || col >= MAX_COLS) return fail("#REF!");
+        return { area: { c1: col, r1: row, c2: col, r2: row } };
+      }
+    }
+    const reference = referenceFromText(toText(text));
+    if (!reference) return fail("#REF!");
+    if (reference.sheet !== undefined && !resolver.hasSheet(reference.sheet)) return fail("#REF!");
+    return reference;
+  }
+  if (name === "OFFSET") {
+    if (expr.args.length < 3 || expr.args.length > 5) return fail("#VALUE!");
+    const base = referenceOf(expr.args[0], resolver, scope);
+    if (!base) return fail("#VALUE!");
+    if (isError(base)) return base;
+    const numbersOf = expr.args
+      .slice(1)
+      .map((arg) => (arg.k === "str" && arg.v === "" ? null : toNumber(evaluate(arg, resolver, scope))));
+    const problem = numbersOf.find((value): value is CellError => value !== null && isError(value));
+    if (problem) return problem;
+    const [dRow, dCol, height, width] = numbersOf as (number | null)[];
+    const r1 = base.area.r1 + Math.trunc(dRow ?? 0);
+    const c1 = base.area.c1 + Math.trunc(dCol ?? 0);
+    const h = height === null || height === undefined ? base.area.r2 - base.area.r1 + 1 : Math.trunc(height);
+    const w = width === null || width === undefined ? base.area.c2 - base.area.c1 + 1 : Math.trunc(width);
+    if (h < 1 || w < 1) return fail("#REF!");
+    const area = { c1, r1, c2: c1 + w - 1, r2: r1 + h - 1 };
+    if (area.r1 < 0 || area.c1 < 0 || area.r2 >= MAX_ROWS || area.c2 >= MAX_COLS) return fail("#REF!");
+    return { sheet: base.sheet, area };
+  }
+  return null;
+}
+const materialize = (reference: { sheet?: string; area: Area }, resolver: Resolver) =>
+  evaluateArg({ k: "range", sheet: reference.sheet, area: reference.area }, resolver, undefined);
+
+// TEILERGEBNIS: Funktionsnummern 1–11 (ohne gefilterte Zeilen) und 101–111 (auch ohne ausgeblendete Zeilen).
+const SUBTOTAL_FUNCTIONS: Record<number, string> = {
+  1: "AVERAGE",
+  2: "COUNT",
+  3: "COUNTA",
+  4: "MAX",
+  5: "MIN",
+  6: "PRODUCT",
+  7: "STDEV",
+  8: "STDEV.P",
+  9: "SUM",
+  10: "VAR",
+  11: "VAR.P",
+};
+const SUBTOTAL_FORMULA = /^=\s*(?:_xlfn\.)?(TEILERGEBNIS|SUBTOTAL|AGGREGAT|AGGREGATE)\s*\(/i;
+
+function evaluateArg(expr: Expr, resolver: Resolver, scope: Scope): Arg {
   switch (expr.k) {
     case "num":
       return expr.v;
@@ -1838,6 +3290,10 @@ function evaluateArg(expr: Expr, resolver: Resolver): Arg {
       return expr.v;
     case "error":
       return fail(expr.code);
+    case "name": {
+      const bound = scope?.get(expr.v);
+      return bound === undefined ? fail("#NAME?") : bound;
+    }
     case "ref":
       if (expr.sheet !== undefined && !resolver.hasSheet(expr.sheet)) return fail("#REF!");
       return resolver.cell(expr.sheet, expr.col, expr.row);
@@ -1854,80 +3310,208 @@ function evaluateArg(expr: Expr, resolver: Resolver): Arg {
       }
       return grid;
     }
-    case "unary": {
-      const value = toNumber(evaluate(expr.arg, resolver));
-      if (isError(value)) return value;
-      return expr.op === "-" ? -value : value;
+    case "unary":
+      return broadcast([evaluateArg(expr.arg, resolver, scope)], (value) => {
+        const number = toNumber(value);
+        if (isError(number)) return number;
+        return expr.op === "-" ? -number : number;
+      });
+    case "percent":
+      return broadcast([evaluateArg(expr.arg, resolver, scope)], (value) => {
+        const number = toNumber(value);
+        return isError(number) ? number : number / 100;
+      });
+    case "binary":
+      return broadcast(
+        [evaluateArg(expr.left, resolver, scope), evaluateArg(expr.right, resolver, scope)],
+        (left, right) => binaryValue(expr.op, left, right),
+      );
+    case "call":
+      return evaluateCall(expr, resolver, scope);
+  }
+}
+
+function evaluateCall(expr: Extract<Expr, { k: "call" }>, resolver: Resolver, scope: Scope): Arg {
+  const name = canonical(expr.name);
+  const args = expr.args;
+  // Funktionen, die mit dem Bezug selbst arbeiten (nicht nur mit den Werten).
+  switch (name) {
+    case "ROW":
+    case "COLUMN":
+    case "ROWS":
+    case "COLUMNS": {
+      if (args.length > 1) return fail("#VALUE!");
+      if (!args[0]) {
+        if (!resolver.self || name === "ROWS" || name === "COLUMNS") return fail("#VALUE!");
+        return (name === "ROW" ? resolver.self.row : resolver.self.col) + 1;
+      }
+      const reference = referenceOf(args[0], resolver, scope);
+      if (reference && isError(reference)) return reference;
+      if (!reference) {
+        // ZEILEN/SPALTEN auch für berechnete Bereiche (z. B. ZEILEN(FILTERN(…))).
+        if (name !== "ROWS" && name !== "COLUMNS") return fail("#VALUE!");
+        const value = evaluateArg(args[0], resolver, scope);
+        if (isError(value)) return value;
+        if (!isGrid(value)) return 1;
+        return name === "ROWS" ? value.length : (value[0]?.length ?? 0);
+      }
+      const area = reference.area;
+      if (name === "ROW") return area.r1 + 1;
+      if (name === "COLUMN") return area.c1 + 1;
+      return name === "ROWS" ? area.r2 - area.r1 + 1 : area.c2 - area.c1 + 1;
     }
-    case "percent": {
-      const value = toNumber(evaluate(expr.arg, resolver));
-      return isError(value) ? value : value / 100;
+    case "INDIRECT":
+    case "OFFSET": {
+      const reference = referenceOf(expr, resolver, scope);
+      if (!reference) return fail("#REF!");
+      return isError(reference) ? reference : materialize(reference, resolver);
     }
-    case "binary": {
-      const left = evaluate(expr.left, resolver);
-      const right = evaluate(expr.right, resolver);
-      if (isError(left)) return left;
-      if (isError(right)) return right;
-      if (expr.op === "&") return toText(left) + toText(right);
-      if (["=", "<>", "<", ">", "<=", ">="].includes(expr.op)) {
-        const result = compare(left, right);
-        if (expr.op === "=") return result === 0;
-        if (expr.op === "<>") return result !== 0;
-        if (expr.op === "<") return result < 0;
-        if (expr.op === ">") return result > 0;
-        if (expr.op === "<=") return result <= 0;
-        return result >= 0;
-      }
-      const a = toNumber(left);
-      const b = toNumber(right);
-      if (isError(a)) return a;
-      if (isError(b)) return b;
-      if (expr.op === "+") return a + b;
-      if (expr.op === "-") return a - b;
-      if (expr.op === "*") return a * b;
-      if (expr.op === "/") return b === 0 ? fail("#DIV/0!") : a / b;
-      const power = a ** b;
-      return Number.isFinite(power) ? power : fail("#NUM!");
+    case "ISREF": {
+      if (args.length !== 1) return fail("#VALUE!");
+      const reference = referenceOf(args[0], resolver, scope);
+      return Boolean(reference) && !isError(reference);
     }
-    case "call": {
-      const name = canonical(expr.name);
-      // ZEILE/SPALTE/ZEILEN/SPALTEN brauchen den Bezug selbst, nicht dessen Werte.
-      if (name === "ROW" || name === "COLUMN" || name === "ROWS" || name === "COLUMNS") {
-        const target = expr.args[0];
-        if (expr.args.length > 1) return fail("#VALUE!");
-        if (!target) {
-          if (!resolver.self || name === "ROWS" || name === "COLUMNS") return fail("#VALUE!");
-          return (name === "ROW" ? resolver.self.row : resolver.self.col) + 1;
-        }
-        const area =
-          target.k === "ref"
-            ? { c1: target.col, r1: target.row, c2: target.col, r2: target.row }
-            : target.k === "range"
-              ? target.area
-              : null;
-        if (!area) return fail("#VALUE!");
-        if (name === "ROW") return area.r1 + 1;
-        if (name === "COLUMN") return area.c1 + 1;
-        return name === "ROWS" ? area.r2 - area.r1 + 1 : area.c2 - area.c1 + 1;
+    case "ISFORMULA":
+    case "FORMULATEXT": {
+      if (args.length !== 1) return fail("#VALUE!");
+      const reference = referenceOf(args[0], resolver, scope);
+      if (!reference) return fail("#VALUE!");
+      if (isError(reference)) return reference;
+      const raw = resolver.raw?.(reference.sheet, reference.area.c1, reference.area.r1) ?? "";
+      const formula = raw.startsWith("=") && raw.length > 1;
+      if (name === "ISFORMULA") return formula;
+      return formula ? raw : fail("#N/A");
+    }
+    case "SUBTOTAL": {
+      if (args.length < 2) return fail("#VALUE!");
+      const code = toNumber(evaluate(args[0], resolver, scope));
+      if (isError(code)) return code;
+      const kind = Math.trunc(code);
+      const target = SUBTOTAL_FUNCTIONS[kind > 100 ? kind - 100 : kind];
+      if (!target) return fail("#VALUE!");
+      const grids: Arg[] = [];
+      for (const arg of args.slice(1)) {
+        const reference = referenceOf(arg, resolver, scope);
+        if (!reference) return fail("#VALUE!");
+        if (isError(reference)) return reference;
+        const grid = materialize(reference, resolver);
+        if (!isGrid(grid)) return grid;
+        // Ausgeblendete Zeilen und andere Teilergebnisse zählen nicht mit.
+        grids.push(
+          grid
+            .map((line, r) =>
+              line.map((value, c) =>
+                SUBTOTAL_FORMULA.test(
+                  resolver.raw?.(reference.sheet, reference.area.c1 + c, reference.area.r1 + r) ?? "",
+                )
+                  ? null
+                  : value,
+              ),
+            )
+            .filter((_, r) => !resolver.rowHidden?.(reference.sheet, reference.area.r1 + r, kind > 100)),
+        );
       }
-      const impl = FUNCTIONS[name];
-      if (!impl) return fail("#NAME?");
-      // WENN und WENNFEHLER rechnen nur den gewählten Zweig (wie Excel).
-      if (name === "IF" && expr.args.length >= 2 && expr.args.length <= 3) {
-        const test = truthy(evaluate(expr.args[0], resolver));
-        if (isError(test)) return test;
-        if (test) return evaluate(expr.args[1], resolver);
-        return expr.args.length > 2 ? evaluate(expr.args[2], resolver) : false;
-      }
-      if (name === "IFERROR" && expr.args.length === 2) {
-        const value = evaluate(expr.args[0], resolver);
-        return isError(value) ? evaluate(expr.args[1], resolver) : value;
-      }
-      return impl(
-        expr.args.map((arg) => evaluateArg(arg, resolver)),
+      return FUNCTIONS[target](
+        grids.map((grid) => (isGrid(grid) && !grid.length ? [[null]] : grid)),
         resolver,
       );
     }
+    case "LET": {
+      if (args.length < 3 || args.length % 2 === 0) return fail("#VALUE!");
+      const local = new Map(scope ?? []);
+      for (let index = 0; index < args.length - 1; index += 2) {
+        const variable = args[index];
+        if (variable.k !== "name") return fail("#NAME?");
+        local.set(variable.v, evaluateArg(args[index + 1], resolver, local));
+      }
+      return evaluateArg(args[args.length - 1], resolver, local);
+    }
+    case "IF": {
+      if (args.length < 2 || args.length > 3) return fail("#VALUE!");
+      const test = evaluateArg(args[0], resolver, scope);
+      // Bedingung mit Bereich: je Zelle entscheiden (WENN(A1:A3>1;"ja";"nein")).
+      if (isGrid(test) && !(test.length === 1 && test[0].length === 1))
+        return broadcast(
+          [test, evaluateArg(args[1], resolver, scope), args[2] ? evaluateArg(args[2], resolver, scope) : false],
+          (condition, yes, no) => {
+            const decided = truthy(condition);
+            return isError(decided) ? decided : decided ? yes : no;
+          },
+        );
+      // Sonst nur den gewählten Zweig rechnen (wie Excel).
+      const decided = truthy(scalar(test));
+      if (isError(decided)) return decided;
+      if (decided) return evaluateArg(args[1], resolver, scope);
+      return args.length > 2 ? evaluateArg(args[2], resolver, scope) : false;
+    }
+    case "IFERROR":
+    case "IFNA": {
+      if (args.length !== 2) return fail("#VALUE!");
+      const value = evaluateArg(args[0], resolver, scope);
+      const catches = (item: Value) => isError(item) && (name === "IFERROR" || item.error === "#N/A");
+      if (isGrid(value) && !(value.length === 1 && value[0].length === 1)) {
+        const fallback = evaluateArg(args[1], resolver, scope);
+        return broadcast([value, fallback], (item, other) => (catches(item) ? other : item));
+      }
+      const single = scalar(value);
+      return catches(single) ? evaluateArg(args[1], resolver, scope) : value;
+    }
+  }
+  const impl = FUNCTIONS[name];
+  if (!impl) return fail("#NAME?");
+  return impl(
+    args.map((arg) => evaluateArg(arg, resolver, scope)),
+    resolver,
+  );
+}
+
+// Funktionen, die einen ganzen Bereich liefern können (für das Überlaufen in Nachbarzellen).
+const ARRAY_FUNCTIONS = new Set([
+  "FILTER",
+  "SORT",
+  "SORTBY",
+  "UNIQUE",
+  "SEQUENCE",
+  "TRANSPOSE",
+  "RANDARRAY",
+  "TEXTSPLIT",
+  "VSTACK",
+  "HSTACK",
+  "TAKE",
+  "DROP",
+  "CHOOSECOLS",
+  "CHOOSEROWS",
+  "TOCOL",
+  "TOROW",
+  "EXPAND",
+  "WRAPROWS",
+  "WRAPCOLS",
+  "INDIRECT",
+  "OFFSET",
+  "MMULT",
+  "FREQUENCY",
+]);
+const PASS_THROUGH = new Set(["IF", "IFS", "IFERROR", "IFNA", "CHOOSE", "SWITCH", "LET", "XLOOKUP", "INDEX"]);
+
+// Kann diese Formel einen Bereich liefern? (Nur dann wird geprüft, ob sie in Nachbarzellen überläuft.)
+export function mayReturnArray(expr: Expr): boolean {
+  switch (expr.k) {
+    case "range":
+    case "name":
+      return true;
+    case "unary":
+    case "percent":
+      return mayReturnArray(expr.arg);
+    case "binary":
+      return mayReturnArray(expr.left) || mayReturnArray(expr.right);
+    case "call": {
+      const name = canonical(expr.name);
+      if (ARRAY_FUNCTIONS.has(name)) return true;
+      if (PASS_THROUGH.has(name) || LIFTED.has(FUNCTIONS[name])) return expr.args.some(mayReturnArray);
+      return false;
+    }
+    default:
+      return false;
   }
 }
 
@@ -1951,7 +3535,9 @@ function rewrite(source: string, mapName: (name: string) => string, excel: boole
           const upper = token.v.toUpperCase();
           if (upper === "WAHR" || upper === "TRUE") return excel ? "TRUE" : "WAHR";
           if (upper === "FALSCH" || upper === "FALSE") return excel ? "FALSE" : "FALSCH";
-          return token.v;
+          // LET-Variablen: in der Datei mit „_xlpm.“.
+          const bare = token.v.replace(/^_xlpm\./i, "");
+          return excel ? `_xlpm.${bare}` : bare;
         }
         case "err":
           return excel ? "#REF!" : "#BEZUG!";
@@ -1977,7 +3563,7 @@ export function toExcelFormula(source: string) {
       source,
       (name) => {
         const english = canonical(name);
-        return XLFN.has(english) ? `_xlfn.${english}` : english;
+        return XLWS.has(english) ? `_xlfn._xlws.${english}` : XLFN.has(english) ? `_xlfn.${english}` : english;
       },
       true,
     );
@@ -1989,7 +3575,7 @@ export function toExcelFormula(source: string) {
 // Aus einer .xlsx-Datei: deutsche Namen und Semikolon wie in der Oberfläche.
 export function fromExcelFormula(source: string) {
   try {
-    return rewrite(source, (name) => GERMAN_OF[canonical(name)] ?? name, false);
+    return rewrite(source, (name) => GERMAN_OF[canonical(name)] ?? canonical(name), false);
   } catch {
     return source;
   }

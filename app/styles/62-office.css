@@ -1272,6 +1272,15 @@ body.office-open {
 .sheet-zoom {
   position: relative;
 }
+.sheet-spill {
+  position: absolute;
+  z-index: 3;
+  border: 1.5px dashed var(--brand);
+  pointer-events: none;
+}
+.sheet-formula-field textarea.ghost {
+  color: var(--muted);
+}
 .sheet-table.no-grid td {
   border-color: transparent;
 }

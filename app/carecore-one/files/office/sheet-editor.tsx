@@ -1725,7 +1725,16 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
   const bodyRows: number[] = [];
   for (let row = first; row <= last; row += 1) if (!hiddenRowSet.has(row)) bodyRows.push(row);
   const totalWidth = ROWHEAD_W + colLefts[sheet.colCount];
-  const focusRaw = editing ? editing.value : rawAt(range.focus);
+  // Überlauf: zur aktiven Zelle gehörender Bereich (Rahmen) und – in leeren Zellen darin – die Formel des Ursprungs
+  // (grau, wie in Excel).
+  const focusKey = cellKey(range.focus.col, range.focus.row);
+  const spillAnchor = evaluator.spillAnchor(active, focusKey);
+  const spillArea = spillAnchor ? (evaluator.spills(active).get(spillAnchor)?.area ?? null) : null;
+  const ghostFormula =
+    !editing && spillAnchor && spillAnchor !== focusKey && !rawAt(range.focus)
+      ? (sheet.cells[spillAnchor]?.v ?? "")
+      : "";
+  const focusRaw = editing ? editing.value : ghostFormula || rawAt(range.focus);
   const refLabel = sameArea(area, {
     c1: range.focus.col,
     r1: range.focus.row,
@@ -2263,6 +2272,8 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
             ref={barRef}
             rows={1}
             aria-label="Inhalt der Zelle"
+            className={ghostFormula ? "ghost" : undefined}
+            data-tip={ghostFormula ? `Ergebnis der Formel in ${spillAnchor}` : undefined}
             value={focusRaw}
             readOnly={readOnly}
             spellCheck={false}
@@ -2435,6 +2446,18 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
               )}
             </tbody>
           </table>
+          {spillArea && (
+            <div
+              className="sheet-spill"
+              aria-hidden="true"
+              style={{
+                left: ROWHEAD_W + colLefts[spillArea.c1],
+                top: HEADER_H + rowTops[spillArea.r1],
+                width: colLefts[spillArea.c2 + 1] - colLefts[spillArea.c1],
+                height: rowTops[spillArea.r2 + 1] - rowTops[spillArea.r1],
+              }}
+            />
+          )}
           {sheet.charts.map((chart) => {
             const box = chartDrag?.id === chart.id ? { ...chart, ...chartDrag } : chart;
             const chartArea = parseArea(chart.range);

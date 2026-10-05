@@ -288,6 +288,11 @@ test("Excel: Rahmen, Ausrichtung, Filter, Regeln, Auswahllisten, Diagramme und D
   );
   assert.deepEqual(back.print, sheet.print);
   assert.equal(back.showGrid, false);
+  // Diagramme kommen auch ohne CareCore-Modell zurück (wie aus Excel).
+  assert.deepEqual(
+    back.charts.map(({ type, range, title, x, y, w, h }) => ({ type, range, title, x, y, w, h })),
+    sheet.charts.map(({ type, range, title, x, y, w, h }) => ({ type, range, title, x, y, w, h })),
+  );
 });
 
 test("Tabelle: Einfügen und Löschen verschiebt Filter, Regeln, Auswahllisten und ausgeblendete Zeilen", () => {
