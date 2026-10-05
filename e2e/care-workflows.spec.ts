@@ -10,10 +10,10 @@ test("Ziele & Massnahmen: Massnahme planen, Filter, Pausieren, Fortsetzen und Be
   const stamp = Date.now();
   await page.goto("/c/pflegeplanung/ziele-massnahmen");
   await expect(page.getByRole("heading", { name: "Ziele & Massnahmen", level: 1 })).toBeVisible();
-  const goal = page.locator("article").filter({ has: page.getByRole("link", { name: "Anna Berger" }) });
+  const goal = page.locator("article").filter({ has: page.getByRole("link", { name: "Maria Keller" }) });
   await goal.getByRole("button", { name: "Massnahme", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Massnahme planen" });
-  await expect(dialog).toContainText("Geht mit Rollator");
+  await expect(dialog).toContainText("Blutzuckerwerte");
   await dialog.getByLabel("Massnahme", { exact: true }).fill(`Gehtraining ${stamp}`);
   await dialog.getByLabel("Häufigkeit").fill("2× täglich");
   await dialog.getByLabel("Durchführung").fill("Mit Rollator im Korridor, Begleitung durch Pflege.");
@@ -32,7 +32,7 @@ test("Ziele & Massnahmen: Massnahme planen, Filter, Pausieren, Fortsetzen und Be
   await page.reload();
   const reloaded = page
     .locator("article")
-    .filter({ has: page.getByRole("link", { name: "Anna Berger" }) })
+    .filter({ has: page.getByRole("link", { name: "Maria Keller" }) })
     .getByRole("region", { name: "Massnahmen" });
   await expect(reloaded).toContainText(`Gehtraining ${stamp}`);
   const row = reloaded.locator(".care-intervention").filter({ hasText: `Gehtraining ${stamp}` });
@@ -131,6 +131,20 @@ test("Pflegeakte: Status, Pflegebereiche und Weg in die Pflegeplanung", async ({
   const errors = watchErrors(page);
   await page.goto("/c/bewohner/pflegeakte");
   await expect(page.getByRole("heading", { name: "Pflegeakten", level: 1 })).toBeVisible();
+  // Person mit Pflegeplanung aus den Demodaten in der Kopfzeile wählen.
+  await page
+    .locator(".topbar")
+    .getByRole("button", { name: /^[A-ZÄÖÜ]{1,2} Bewohner / })
+    .click();
+  const picker = page.getByRole("dialog", { name: "Bewohner auswählen" });
+  await picker.getByRole("button", { name: "Alle Wohnbereiche" }).click();
+  await picker.getByLabel("Bewohner suchen").fill("Maria Keller");
+  await picker
+    .getByRole("button", { name: /Maria Keller/ })
+    .first()
+    .click();
+  await expect(picker).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 2 }).filter({ hasText: "Maria Keller" })).toBeVisible();
   const status = page.getByRole("region", { name: /^Status der Pflegeakte von / });
   await expect(status).toContainText("Aktive Pflegeziele");
   await expect(status).toContainText("Nächste Evaluation");

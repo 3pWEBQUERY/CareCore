@@ -361,7 +361,11 @@ test("Tabelle: Eingaben gehen nie verloren, Tooltips und Umbenennen", async ({ p
   await name.press("Enter");
   await expect(name).toHaveValue(`Eingaben neu ${stamp}.xlsx`);
   await cell(4, 0).click();
-  await page.keyboard.type("Beim Schliessen");
+  // Pause länger als das automatische Speichern (1,5 s nach der Formatierung): die Eingabe bleibt offen.
+  await page.keyboard.type("Beim");
+  await page.waitForTimeout(2500);
+  await expect(page.locator(".sheet-cell-editor")).toBeFocused();
+  await page.keyboard.type(" Schliessen");
   await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
   await page.getByText(`Eingaben neu ${stamp}.xlsx`, { exact: true }).dblclick();
   await expect(cell(4, 0)).toHaveText("Beim Schliessen");
