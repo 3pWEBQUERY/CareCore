@@ -14,6 +14,7 @@ import {
   type Area,
   type Expr,
   type Value,
+  parseArea,
 } from "./formula";
 import { filteredRows } from "./sheet-features";
 
@@ -107,9 +108,30 @@ export type SheetCell = { v: string; s?: CellStyle };
 
 // Bedingte Formatierung (wie „Regeln zum Hervorheben von Zellen“ in Excel).
 export type RuleOp =
-  "gt" | "lt" | "ge" | "le" | "eq" | "ne" | "between" | "contains" | "empty" | "notEmpty" | "duplicate";
+  | "gt"
+  | "lt"
+  | "ge"
+  | "le"
+  | "eq"
+  | "ne"
+  | "between"
+  | "contains"
+  | "empty"
+  | "notEmpty"
+  | "duplicate"
+  | "scale"
+  | "bar";
 export type RuleStyle = { fill?: string; color?: string; b?: boolean };
-export type SheetRule = { id: string; range: string; op: RuleOp; value: string; value2: string; style: RuleStyle };
+// Farbskala: Farben für kleinsten, (mittleren,) grössten Wert; Datenbalken: eine Farbe.
+export type SheetRule = {
+  id: string;
+  range: string;
+  op: RuleOp;
+  value: string;
+  value2: string;
+  style: RuleStyle;
+  colors?: string[];
+};
 export type ChartType = "column" | "bar" | "line" | "pie";
 export type SheetChart = {
   id: string;
@@ -120,9 +142,22 @@ export type SheetChart = {
   y: number;
   w: number;
   h: number;
+  // Achsentitel und Werte an den Säulen/Punkten (Datenbeschriftungen).
+  xTitle?: string;
+  yTitle?: string;
+  labels?: boolean;
 };
 export type SheetFilter = { range: string; hidden: Record<string, string[]> };
-export type PrintSetup = { orientation: "portrait" | "landscape"; fit: boolean; gridlines: boolean };
+export type PrintSetup = {
+  orientation: "portrait" | "landscape";
+  fit: boolean;
+  gridlines: boolean;
+  // Druckbereich („A1:F40“) sowie Kopf- und Fusszeile jeder Seite.
+  area?: string;
+  header?: string;
+  footer?: string;
+  pageNumbers?: boolean;
+};
 export type Sheet = {
   id: string;
   name: string;
@@ -142,7 +177,9 @@ export type Sheet = {
   print: PrintSetup;
   showGrid: boolean;
 };
-export type SheetModel = { kind: "sheet"; sheets: Sheet[] };
+// Benannter Bereich der Arbeitsmappe („Plätze“ → Tabelle1!B2:B20), in Formeln wie ein Bezug nutzbar.
+export type SheetName = { name: string; sheet: string; range: string };
+export type SheetModel = { kind: "sheet"; sheets: Sheet[]; names?: SheetName[] };
 
 export const DEFAULT_COL_WIDTH = 100;
 export const DEFAULT_ROW_HEIGHT = 24;
@@ -227,6 +264,13 @@ export function evaluateWorkbook(model: SheetModel, options: { today?: () => num
   const grids = new Map<string, Value[][]>();
   const visiting = new Set<string>();
   const byName = new Map(model.sheets.map((sheet, index) => [sheet.name.toLocaleLowerCase("de-CH"), index]));
+  // Benannte Bereiche (Gross-/Kleinschreibung egal, wie in Excel).
+  const defined = new Map(
+    (model.names ?? []).flatMap((entry) => {
+      const area = parseArea(entry.range);
+      return area ? [[entry.name.toUpperCase(), { sheet: entry.sheet, area }] as const] : [];
+    }),
+  );
   const rowsUsed = new Map<number, number>();
   // Überlauf: abgedeckte Zellen (Wert und Ursprung) und Ursprünge, deren Bereich nicht frei ist.
   let spillValues = model.sheets.map(() => new Map<string, Value>());
@@ -311,6 +355,7 @@ export function evaluateWorkbook(model: SheetModel, options: { today?: () => num
             return filteredOf(target)?.has(row) ?? false;
           },
           today: options.today,
+          name: (name) => defined.get(name.toUpperCase()) ?? null,
           self: parseCellKey(key) ?? undefined,
           rows: (sheet) => {
             const target = sheetIndex(index, sheet);
@@ -894,6 +939,18 @@ export function templateModel(templateId: string): OfficeModel {
 // ---------- Prüfen (Daten vom Browser) ----------
 
 const COLOR = /^#[0-9a-f]{6}$/i;
+
+// Gültiger Name für einen benannten Bereich (wie in Excel: kein Zellbezug, keine Leerzeichen).
+export function nameProblem(name: string): string | null {
+  if (!name) return "Bitte einen Namen eingeben.";
+  if (name.length > 100) return "Der Name ist zu lang (höchstens 100 Zeichen).";
+  if (!/^[A-Za-zÄÖÜäöü_][A-Za-zÄÖÜäöüß0-9_.]*$/.test(name))
+    return "Der Name beginnt mit einem Buchstaben und enthält nur Buchstaben, Ziffern, Punkt oder Unterstrich.";
+  if (/^[A-Za-z]{1,3}\d+$/.test(name) || /^[RrZz]\d*([CcSs]\d*)?$/.test(name) || /^[CcSs]\d*$/.test(name))
+    return "Der Name darf nicht wie ein Zellbezug aussehen.";
+  if (/^(wahr|falsch|true|false)$/i.test(name)) return "Dieser Name ist reserviert.";
+  return null;
+}
 const ALLOWED_NODES = new Set([
   "doc",
   "paragraph",
@@ -1006,7 +1063,21 @@ function cleanStyle(input: unknown): CellStyle | undefined {
 }
 
 const RANGE = /^[A-Z]{1,3}\d+(:[A-Z]{1,3}\d+)?$/;
-const RULE_OPS = new Set(["gt", "lt", "ge", "le", "eq", "ne", "between", "contains", "empty", "notEmpty", "duplicate"]);
+const RULE_OPS = new Set([
+  "gt",
+  "lt",
+  "ge",
+  "le",
+  "eq",
+  "ne",
+  "between",
+  "contains",
+  "empty",
+  "notEmpty",
+  "duplicate",
+  "scale",
+  "bar",
+]);
 const CHART_TYPES = new Set(["column", "bar", "line", "pie"]);
 const indexList = (input: unknown, limit: number) =>
   Array.isArray(input)
@@ -1101,6 +1172,13 @@ function cleanSheet(input: unknown, index: number): Sheet | null {
             ...(typeof style.color === "string" && COLOR.test(style.color) ? { color: style.color } : {}),
             ...(style.b === true ? { b: true } : {}),
           },
+          ...(entry.op === "scale" || entry.op === "bar"
+            ? {
+                colors: (Array.isArray(entry.colors) ? entry.colors : [])
+                  .filter((color): color is string => typeof color === "string" && COLOR.test(color))
+                  .slice(0, entry.op === "scale" ? 3 : 1),
+              }
+            : {}),
         },
       ];
     });
@@ -1119,6 +1197,9 @@ function cleanSheet(input: unknown, index: number): Sheet | null {
           y: clampInt(entry.y, 0, 400_000, 40),
           w: clampInt(entry.w, 160, 2000, 480),
           h: clampInt(entry.h, 120, 1500, 300),
+          ...(clip(entry.xTitle, 200) ? { xTitle: clip(entry.xTitle, 200) } : {}),
+          ...(clip(entry.yTitle, 200) ? { yTitle: clip(entry.yTitle, 200) } : {}),
+          ...(entry.labels === true ? { labels: true } : {}),
         },
       ];
     });
@@ -1127,6 +1208,10 @@ function cleanSheet(input: unknown, index: number): Sheet | null {
     orientation: print.orientation === "portrait" ? "portrait" : "landscape",
     fit: print.fit !== false,
     gridlines: print.gridlines !== false,
+    ...(typeof print.area === "string" && RANGE.test(print.area) ? { area: print.area } : {}),
+    ...(clip(print.header, 200) ? { header: clip(print.header, 200) } : {}),
+    ...(clip(print.footer, 200) ? { footer: clip(print.footer, 200) } : {}),
+    ...(print.pageNumbers === true ? { pageNumbers: true } : {}),
   };
   sheet.showGrid = raw.showGrid !== false;
   return sheet;
@@ -1248,7 +1333,32 @@ export function cleanModel(kind: OfficeKind, input: unknown): OfficeModel {
       sheet.name = name;
       seen.add(name.toLocaleLowerCase("de-CH"));
     }
-    return { kind, sheets: sheets.length ? sheets : [newSheet("Tabelle1")] };
+    const list = sheets.length ? sheets : [newSheet("Tabelle1")];
+    const sheetNames = new Set(list.map((sheet) => sheet.name.toLocaleLowerCase("de-CH")));
+    const seenNames = new Set<string>();
+    const names = (Array.isArray(raw.names) ? raw.names : []).slice(0, 200).flatMap((item): SheetName[] => {
+      const entry = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
+      const name = typeof entry.name === "string" ? entry.name.trim() : "";
+      const sheet = typeof entry.sheet === "string" ? entry.sheet : "";
+      const range = typeof entry.range === "string" ? entry.range.toUpperCase() : "";
+      const key = name.toLocaleUpperCase("de-CH");
+      if (
+        nameProblem(name) ||
+        seenNames.has(key) ||
+        !sheetNames.has(sheet.toLocaleLowerCase("de-CH")) ||
+        !RANGE.test(range)
+      )
+        return [];
+      seenNames.add(key);
+      return [
+        {
+          name,
+          sheet: list.find((item) => item.name.toLocaleLowerCase("de-CH") === sheet.toLocaleLowerCase("de-CH"))!.name,
+          range,
+        },
+      ];
+    });
+    return { kind, sheets: list, ...(names.length ? { names } : {}) };
   }
   const slides = (Array.isArray(raw.slides) ? raw.slides : []).slice(0, 200).flatMap((item): Slide[] => {
     if (!item || typeof item !== "object") return [];

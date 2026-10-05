@@ -1504,6 +1504,16 @@ body.office-open {
   fill: #5b6b6d;
   font-size: 11px;
 }
+.sheet-chart-axis-title {
+  fill: #1c2b2d;
+  font-size: 11px;
+  font-weight: 700;
+}
+.sheet-chart-label {
+  fill: #1c2b2d;
+  font-size: 10px;
+  font-weight: 700;
+}
 .sheet-chart-slice {
   fill: white;
   font-size: 11px;
@@ -1528,6 +1538,10 @@ body.office-open {
   display: flex;
   gap: 4px;
   cursor: default;
+}
+.sheet-chart-tools.below {
+  top: auto;
+  bottom: -36px;
 }
 .sheet-chart-tools button {
   min-height: 28px;
@@ -1769,6 +1783,43 @@ body.office-open {
   padding: 8px 4px 2px;
 }
 .sheet-filter-actions button,
+.sheet-rule-sample.graded {
+  display: inline-block;
+  width: 38px;
+  height: 20px;
+  padding: 0;
+  vertical-align: middle;
+}
+.sheet-dialog-inline {
+  display: flex;
+  gap: 8px;
+}
+.sheet-dialog-inline input {
+  flex: 1;
+  min-width: 0;
+}
+.sheet-dialog-inline button {
+  flex: none;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sheet-dialog-inline button:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.sheet-dialog-toggles {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+}
 .sheet-dialog footer button,
 .sheet-dialog-add {
   min-height: 32px;
@@ -1811,7 +1862,8 @@ body.office-open {
   width: min(440px, 100%);
   max-height: calc(100vh - 32px);
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  /* Inhalt scrollt, Kopf und Knöpfe bleiben immer ganz sichtbar. */
+  grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -2400,6 +2452,8 @@ textarea.deck-shape-text {
 .deck-item.type-chart .sheet-chart-title {
   fill: currentColor;
 }
+.deck-item.type-chart .sheet-chart-axis-title,
+.deck-item.type-chart .sheet-chart-label,
 .deck-item.type-chart .sheet-chart-axis,
 .deck-item.type-chart .sheet-chart-legend {
   fill: var(--deck-muted);

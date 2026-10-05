@@ -418,6 +418,8 @@ export type Resolver = {
   spill?: (sheet: string | undefined, col: number, row: number) => Area | null;
   // Ausgeblendete Zeile (Filter immer, von Hand ausgeblendete nur mit „manual“), für TEILERGEBNIS.
   rowHidden?: (sheet: string | undefined, row: number, manual: boolean) => boolean;
+  // Benannter Bereich („Plätze“ → Tabelle1!B2:B20), null wenn es den Namen nicht gibt.
+  name?: (name: string) => { sheet?: string; area: Area } | null;
 };
 
 const isGrid = (value: Arg): value is Grid => Array.isArray(value);
@@ -3338,8 +3340,20 @@ function referenceFromText(text: string): { sheet?: string; area: Area } | null 
   };
 }
 
+// Ein Name ohne LET-/LAMBDA-Bindung ist ein benannter Bereich der Arbeitsmappe.
+function namedReference(expr: Expr, resolver: Resolver, scope: Scope) {
+  if (expr.k !== "name" || scope?.has(expr.v)) return null;
+  return resolver.name?.(expr.v) ?? null;
+}
+const namedExpr = (reference: { sheet?: string; area: Area }): Expr =>
+  reference.area.c1 === reference.area.c2 && reference.area.r1 === reference.area.r2
+    ? { k: "ref", sheet: reference.sheet, col: reference.area.c1, row: reference.area.r1 }
+    : { k: "range", sheet: reference.sheet, area: reference.area };
+
 // Bezug eines Ausdrucks (Zelle, Bereich, INDIREKT, BEREICH.VERSCHIEBEN) – für Funktionen, die mit der Lage arbeiten.
 function referenceOf(expr: Expr, resolver: Resolver, scope: Scope): { sheet?: string; area: Area } | CellError | null {
+  const named = namedReference(expr, resolver, scope);
+  if (named) return named;
   if (expr.k === "ref") return { sheet: expr.sheet, area: { c1: expr.col, r1: expr.row, c2: expr.col, r2: expr.row } };
   if (expr.k === "range") return { sheet: expr.sheet, area: expr.area };
   if (expr.k === "spillref") {
@@ -3562,7 +3576,10 @@ function evaluateArg(expr: Expr, resolver: Resolver, scope: Scope): Arg {
       return fail(expr.code);
     case "name": {
       const bound = scope?.get(expr.v);
-      if (bound === undefined) return fail("#NAME?");
+      if (bound === undefined) {
+        const named = namedReference(expr, resolver, scope);
+        return named ? evaluateArg(namedExpr(named), resolver, scope) : fail("#NAME?");
+      }
       if (!isBound(bound)) return bound;
       // Ein LAMBDA als Wert ohne Aufruf ergibt #KALK! (wie Excel), ein ausgelassener Parameter ist leer.
       return bound.kind === "lambda" ? fail("#CALC!") : null;
@@ -3854,7 +3871,7 @@ const isKnownFunction = (name: string) => {
   return english in FUNCTIONS || SPECIAL_FUNCTIONS.has(english);
 };
 
-function rewrite(source: string, mapName: (name: string) => string, excel: boolean) {
+function rewrite(source: string, mapName: (name: string) => string, excel: boolean, defined?: Set<string>) {
   const tokens = tokenize(source);
   const sheetPrefix = (sheet: string | undefined) =>
     sheet === undefined ? "" : `${/^[A-Za-z_][\w.]*$/.test(sheet) ? sheet : `'${sheet.replace(/'/g, "''")}'`}!`;
@@ -3898,9 +3915,9 @@ function rewrite(source: string, mapName: (name: string) => string, excel: boole
         if (upper === "WAHR" || upper === "TRUE") out += excel ? "TRUE" : "WAHR";
         else if (upper === "FALSCH" || upper === "FALSE") out += excel ? "FALSE" : "FALSCH";
         else {
-          // LET- und LAMBDA-Variablen: in der Datei mit „_xlpm.“.
+          // LET- und LAMBDA-Variablen: in der Datei mit „_xlpm.“ (benannte Bereiche ohne).
           const bare = token.v.replace(/^_xlpm\./i, "");
-          out += excel ? `_xlpm.${bare}` : bare;
+          out += excel && !defined?.has(bare.toUpperCase()) ? `_xlpm.${bare}` : bare;
         }
         break;
       }
@@ -3927,9 +3944,49 @@ function rewrite(source: string, mapName: (name: string) => string, excel: boole
   return out;
 }
 
+// Namen, die eine Formel selbst mit LET oder LAMBDA vergibt (in Grossbuchstaben).
+function boundNames(expr: Expr, out = new Set<string>()): Set<string> {
+  switch (expr.k) {
+    case "call": {
+      const name = canonical(expr.name);
+      expr.args.forEach((arg, index) => {
+        const declares =
+          (name === "LET" && index % 2 === 0 && index < expr.args.length - 1) ||
+          (name === "LAMBDA" && index < expr.args.length - 1);
+        if (declares && arg.k === "name") out.add(arg.v.toUpperCase());
+        boundNames(arg, out);
+      });
+      break;
+    }
+    case "invoke":
+      boundNames(expr.fn, out);
+      expr.args.forEach((arg) => boundNames(arg, out));
+      break;
+    case "binary":
+      boundNames(expr.left, out);
+      boundNames(expr.right, out);
+      break;
+    case "unary":
+    case "percent":
+      boundNames(expr.arg, out);
+      break;
+  }
+  return out;
+}
+
 // Für die .xlsx-Datei: englische Namen und Komma (so speichert Excel Formeln intern).
-export function toExcelFormula(source: string) {
+// „defined“: benannte Bereiche der Arbeitsmappe (in Grossbuchstaben); Variablen aus LET/LAMBDA gehen vor.
+export function toExcelFormula(source: string, defined?: Set<string>) {
   try {
+    if (defined?.size) {
+      let bound = new Set<string>();
+      try {
+        bound = boundNames(parseFormula(source));
+      } catch {
+        // Fehlerhafte Formel: Namen wie geschrieben übernehmen.
+      }
+      if (bound.size) defined = new Set([...defined].filter((name) => !bound.has(name)));
+    }
     return rewrite(
       source,
       (name) => {
@@ -3937,6 +3994,7 @@ export function toExcelFormula(source: string) {
         return XLWS.has(english) ? `_xlfn._xlws.${english}` : XLFN.has(english) ? `_xlfn.${english}` : english;
       },
       true,
+      defined,
     );
   } catch {
     return null;

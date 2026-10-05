@@ -190,6 +190,8 @@ export const RULE_LABELS: Record<RuleOp, string> = {
   empty: "Ist leer",
   notEmpty: "Ist nicht leer",
   duplicate: "Doppelte Werte",
+  scale: "Farbskala",
+  bar: "Datenbalken",
 };
 export const RULE_NEEDS: Record<RuleOp, 0 | 1 | 2> = {
   gt: 1,
@@ -203,7 +205,22 @@ export const RULE_NEEDS: Record<RuleOp, 0 | 1 | 2> = {
   empty: 0,
   notEmpty: 0,
   duplicate: 0,
+  scale: 0,
+  bar: 0,
 };
+// Farben wie die Standard-Vorlagen in Excel (kleinster, mittlerer, grösster Wert).
+export const SCALE_PRESETS: { id: string; label: string; colors: string[] }[] = [
+  { id: "gruenGelbRot", label: "Grün – Gelb – Rot (hoch ist gut)", colors: ["#f8696b", "#ffeb84", "#63be7b"] },
+  { id: "rotGelbGruen", label: "Rot – Gelb – Grün (tief ist gut)", colors: ["#63be7b", "#ffeb84", "#f8696b"] },
+  { id: "weissGruen", label: "Weiss – Grün", colors: ["#ffffff", "#63be7b"] },
+  { id: "weissRot", label: "Weiss – Rot", colors: ["#ffffff", "#f8696b"] },
+];
+export const BAR_PRESETS: { id: string; label: string; colors: string[] }[] = [
+  { id: "blau", label: "Blau", colors: ["#638ec6"] },
+  { id: "gruen", label: "Grün", colors: ["#63c384"] },
+  { id: "rot", label: "Rot", colors: ["#ff555a"] },
+  { id: "orange", label: "Orange", colors: ["#ffb628"] },
+];
 export const RULE_PRESETS: { id: string; label: string; style: RuleStyle }[] = [
   { id: "rot", label: "Hellrote Füllung, dunkelroter Text", style: { fill: "#ffc7ce", color: "#9c0006" } },
   { id: "gelb", label: "Gelbe Füllung, dunkelgelber Text", style: { fill: "#ffeb9c", color: "#9c5700" } },
@@ -213,7 +230,7 @@ export const RULE_PRESETS: { id: string; label: string; style: RuleStyle }[] = [
 ];
 
 export function ruleMatches(op: RuleOp, value: Value, a: string, b: string, duplicates?: Set<string>): boolean {
-  if (isError(value)) return false;
+  if (isError(value) || op === "scale" || op === "bar") return false;
   const empty = value === null || value === "";
   if (op === "empty") return empty;
   if (op === "notEmpty") return !empty;
@@ -247,11 +264,52 @@ export function ruleMatches(op: RuleOp, value: Value, a: string, b: string, dupl
   }
 }
 
-// Regeln eines Blatts vorbereiten; liefert für jede Zelle die Formatierung der ersten zutreffenden Regel.
+// Darstellung einer Zelle aus allen Regeln: Hervorhebung, Farbe der Farbskala und Länge des Datenbalkens.
+export type RuleLook = RuleStyle & { bar?: { size: number; color: string } };
+
+const mix = (from: string, to: string, ratio: number) => {
+  const a = parseInt(from.slice(1), 16);
+  const b = parseInt(to.slice(1), 16);
+  const channel = (shift: number) =>
+    Math.round(((a >> shift) & 255) + (((b >> shift) & 255) - ((a >> shift) & 255)) * ratio);
+  return `#${[16, 8, 0].map((shift) => channel(shift).toString(16).padStart(2, "0")).join("")}`;
+};
+
+// Farbe der Farbskala für einen Wert: zwischen kleinstem und grösstem Wert, bei drei Farben über den Median.
+export function scaleColor(colors: string[], value: number, min: number, mid: number, max: number) {
+  if (max === min) return colors[colors.length - 1];
+  if (colors.length < 3) return mix(colors[0], colors[1] ?? colors[0], (value - min) / (max - min));
+  if (value <= mid) return mix(colors[0], colors[1], mid === min ? 1 : (value - min) / (mid - min));
+  return mix(colors[1], colors[2], max === mid ? 1 : (value - mid) / (max - mid));
+}
+
+// Länge des Datenbalkens wie in Excel: kleinster Wert 10 %, grösster 90 % der Zellbreite.
+export const barSize = (value: number, min: number, max: number) =>
+  max === min ? 0.9 : 0.1 + (0.8 * (value - min)) / (max - min);
+
+// Regeln eines Blatts vorbereiten; liefert für jede Zelle die Darstellung aus allen zutreffenden Regeln.
 export function ruleStyler(sheet: Sheet, valueAt: (col: number, row: number) => Value) {
   const rules = sheet.rules.flatMap((rule) => {
     const area = parseArea(rule.range);
     if (!area) return [];
+    let numbers: { min: number; mid: number; max: number } | undefined;
+    if (rule.op === "scale" || rule.op === "bar") {
+      const list: number[] = [];
+      const lastRow = Math.min(area.r2, sheet.rowCount - 1);
+      for (let row = area.r1; row <= lastRow; row += 1)
+        for (let col = area.c1; col <= area.c2; col += 1) {
+          const value = valueAt(col, row);
+          if (typeof value === "number") list.push(value);
+        }
+      if (!list.length) return [];
+      list.sort((a, b) => a - b);
+      const half = Math.floor(list.length / 2);
+      numbers = {
+        min: list[0],
+        max: list[list.length - 1],
+        mid: list.length % 2 ? list[half] : (list[half - 1] + list[half]) / 2,
+      };
+    }
     let duplicates: Set<string> | undefined;
     if (rule.op === "duplicate") {
       const counts = new Map<string, number>();
@@ -265,13 +323,33 @@ export function ruleStyler(sheet: Sheet, valueAt: (col: number, row: number) => 
         }
       duplicates = new Set([...counts].filter(([, count]) => count > 1).map(([key]) => key));
     }
-    return [{ rule, area, duplicates }];
+    return [{ rule, area, duplicates, numbers }];
   });
-  return (col: number, row: number): RuleStyle | undefined => {
-    for (const { rule, area, duplicates } of rules)
-      if (inside(area, col, row) && ruleMatches(rule.op, valueAt(col, row), rule.value, rule.value2, duplicates))
-        return rule.style;
-    return undefined;
+  return (col: number, row: number): RuleLook | undefined => {
+    let look: RuleLook | undefined;
+    let highlighted = false;
+    for (const { rule, area, duplicates, numbers } of rules) {
+      if (!inside(area, col, row)) continue;
+      const value = valueAt(col, row);
+      if (numbers && typeof value === "number") {
+        const colors = rule.colors?.length
+          ? rule.colors
+          : rule.op === "bar"
+            ? ["#638ec6"]
+            : ["#f8696b", "#ffeb84", "#63be7b"];
+        if (rule.op === "scale" && !look?.fill)
+          look = { ...look, fill: scaleColor(colors, value, numbers.min, numbers.mid, numbers.max) };
+        if (rule.op === "bar" && !look?.bar)
+          look = { ...look, bar: { size: barSize(value, numbers.min, numbers.max), color: colors[0] } };
+        continue;
+      }
+      // Die erste zutreffende Hervorhebung gilt (wie bisher), sie geht der Farbskala vor.
+      if (!highlighted && ruleMatches(rule.op, value, rule.value, rule.value2, duplicates)) {
+        highlighted = true;
+        look = { ...look, ...rule.style };
+      }
+    }
+    return look;
   };
 }
 

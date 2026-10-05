@@ -28,6 +28,7 @@ import {
   Sigma,
   Snowflake,
   SortAscending,
+  Tag,
   SortDescending,
   SquareHalf,
   Swatches,
@@ -71,10 +72,10 @@ import {
   type BorderWeight,
   type CellStyle,
   type NumberFormat,
-  type RuleStyle,
   type Sheet,
   type SheetCell,
   type SheetChart,
+  type SheetName,
   type SheetModel,
 } from "@/lib/office/model";
 import {
@@ -98,6 +99,7 @@ import {
   type BorderPreset,
   type Edges,
   type FindOptions,
+  type RuleLook,
 } from "@/lib/office/sheet-features";
 import {
   areaOf,
@@ -130,7 +132,17 @@ import {
   ToolSeparator,
   type MenuItem,
 } from "./office-ui";
-import { ChartDialog, ChartSvg, FilterMenu, FindBar, RulesDialog, ValidationDialog } from "./sheet-panels";
+import {
+  ChartDialog,
+  ChartSvg,
+  FilterMenu,
+  FindBar,
+  NamesDialog,
+  PageDialog,
+  RulesDialog,
+  ValidationDialog,
+  type ChartValues,
+} from "./sheet-panels";
 
 const HEADER_H = 26;
 const ROWHEAD_W = 48;
@@ -150,7 +162,13 @@ type Clip = {
 };
 type Menu = { x: number; y: number; kind: "cell" | "tab"; sheet?: number } | null;
 type Drag = { kind: "select" | "rows" | "cols" | "fill" | "point"; start: Pos } | null;
-type Dialog = { kind: "rules" } | { kind: "validation" } | { kind: "chart"; chart: SheetChart | null } | null;
+type Dialog =
+  | { kind: "rules" }
+  | { kind: "validation" }
+  | { kind: "chart"; chart: SheetChart | null }
+  | { kind: "names" }
+  | { kind: "page" }
+  | null;
 type Find = { replace: boolean; hits: Pos[]; index: number; query: string; options: FindOptions } | null;
 
 // Rahmenlinien als innere Schatten (sie verschieben das Raster nicht).
@@ -548,12 +566,15 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
   }
 
   const context = editing ? formulaContext(editing.value) : { typing: null, inside: null };
-  const suggestions = editing && context.typing ? suggestFunctions(context.typing) : [];
+  // Vorschläge: benannte Bereiche zuerst, dann Funktionen.
+  const suggestions = editing && context.typing ? formulaSuggestions(model.names, context.typing) : [];
   const signature = context.inside ? functionHelp(context.inside) : null;
 
   function acceptSuggestion(name: string) {
     if (!editing || !context.typing) return;
-    const value = `${editing.value.slice(0, editing.value.length - context.typing.length)}${name}(`;
+    // Benannte Bereiche ohne Klammer, Funktionen mit.
+    const isName = (model.names ?? []).some((entry) => entry.name === name);
+    const value = `${editing.value.slice(0, editing.value.length - context.typing.length)}${name}${isName ? "" : "("}`;
     setEditing({ ...editing, value, mode: "edit" });
     setSuggestIndex(0);
     requestAnimationFrame(() =>
@@ -769,7 +790,7 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
     setDialog({ kind: "chart", chart: null });
     setRange({ anchor: { col: region.c1, row: region.r1 }, focus: { col: region.c2, row: region.r2 } });
   }
-  function saveChart(chart: SheetChart | null, values: { type: SheetChart["type"]; range: string; title: string }) {
+  function saveChart(chart: SheetChart | null, values: ChartValues) {
     if (chart) {
       commitSheet((current) => ({
         ...current,
@@ -1457,7 +1478,13 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
   }
   function deleteSheet(index: number) {
     if (model.sheets.length < 2) return;
-    commit({ ...modelRef.current, sheets: modelRef.current.sheets.filter((_, position) => position !== index) });
+    const removed = modelRef.current.sheets[index]?.name;
+    const names = modelRef.current.names?.filter((entry) => entry.sheet !== removed);
+    commit({
+      ...modelRef.current,
+      sheets: modelRef.current.sheets.filter((_, position) => position !== index),
+      ...(names ? { names } : {}),
+    });
     setActive(Math.max(0, Math.min(index, model.sheets.length - 2)));
     setConfirmDelete(null);
   }
@@ -1515,13 +1542,14 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
   })();
 
   // ---------- Zellen ----------
-  const cellStyle = (style: CellStyle | undefined, value: Value, rule?: RuleStyle): CSSProperties => ({
+  const cellStyle = (style: CellStyle | undefined, value: Value, rule?: RuleLook): CSSProperties => ({
     fontWeight: style?.b || rule?.b ? 700 : undefined,
     fontStyle: style?.i ? "italic" : undefined,
     textDecoration:
       [style?.u ? "underline" : "", style?.s ? "line-through" : ""].filter(Boolean).join(" ") || undefined,
     color: isError(value) ? "var(--critical)" : (rule?.color ?? style?.color),
-    background: rule?.fill ?? style?.fill,
+    backgroundColor: rule?.fill ?? style?.fill,
+    ...barStyle(rule),
     textAlign:
       style?.align ??
       (typeof value === "number" ? "right" : typeof value === "boolean" || isError(value) ? "center" : "left"),
@@ -1733,14 +1761,20 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
       ? (sheet.cells[spillAnchor]?.v ?? "")
       : "";
   const focusRaw = editing ? editing.value : ghostFormula || rawAt(range.focus);
-  const refLabel = sameArea(area, {
-    c1: range.focus.col,
-    r1: range.focus.row,
-    c2: range.focus.col,
-    r2: range.focus.row,
-  })
-    ? cellKey(range.focus.col, range.focus.row)
-    : areaName(area);
+  // Wie Excel: deckt die Auswahl genau einen benannten Bereich ab, steht dessen Name im Feld.
+  const namedSelection = (model.names ?? []).find(
+    (entry) => entry.sheet === sheet.name && entry.range === areaName(area),
+  );
+  const refLabel =
+    namedSelection?.name ??
+    (sameArea(area, {
+      c1: range.focus.col,
+      r1: range.focus.row,
+      c2: range.focus.col,
+      r2: range.focus.row,
+    })
+      ? cellKey(range.focus.col, range.focus.row)
+      : areaName(area));
   const fmtLabel = NUMBER_FORMATS.find((item) => item.value === (activeStyle.fmt ?? "general"))?.label ?? "Standard";
 
   const cellMenu: (MenuItem | "separator")[] = [
@@ -2111,6 +2145,7 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
               onClick={() => setDialog({ kind: "rules" })}
             />
             <ToolButton label="Diagramm einfügen" icon={<ChartBar />} onClick={addChart} />
+            <ToolButton label="Namen verwalten" icon={<Tag />} onClick={() => setDialog({ kind: "names" })} />
           </ToolGroup>
           <ToolSeparator />
           <ToolGroup label="Bearbeiten">
@@ -2249,6 +2284,20 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
                           print: { ...current.print, gridlines: !current.print.gridlines },
                         })),
                     },
+                    "separator",
+                    {
+                      label: "Druckbereich festlegen",
+                      hint: areaName(area),
+                      onSelect: () =>
+                        commitSheet((current) => ({ ...current, print: { ...current.print, area: areaName(area) } })),
+                    },
+                    {
+                      label: "Druckbereich aufheben",
+                      disabled: !sheet.print.area,
+                      onSelect: () =>
+                        commitSheet((current) => ({ ...current, print: { ...current.print, area: undefined } })),
+                    },
+                    { label: "Kopf- und Fusszeile …", onSelect: () => setDialog({ kind: "page" }) },
                     "separator",
                     { label: "Drucken …", hint: "Ctrl+P", onSelect: () => window.setTimeout(() => window.print(), 50) },
                   ]}
@@ -2482,11 +2531,18 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
                     title={chart.title}
                     width={box.w}
                     height={box.h}
+                    xTitle={chart.xTitle}
+                    yTitle={chart.yTitle}
+                    labels={chart.labels}
                   />
                 )}
                 {selectedNow && !readOnly && (
                   <>
-                    <div className="sheet-chart-tools" onMouseDown={(event) => event.stopPropagation()}>
+                    <div
+                      // Ganz oben im Blatt läge die Leiste unter den Spaltenköpfen: dann unter dem Diagramm.
+                      className={`sheet-chart-tools ${box.y < 40 ? "below" : ""}`}
+                      onMouseDown={(event) => event.stopPropagation()}
+                    >
                       <button type="button" onClick={() => setDialog({ kind: "chart", chart })}>
                         Bearbeiten
                       </button>
@@ -2758,6 +2814,24 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
           }
         />
       )}
+      {dialog?.kind === "names" && (
+        <NamesDialog
+          names={model.names ?? []}
+          sheets={model.sheets.map((item) => item.name)}
+          sheet={sheet.name}
+          selection={area}
+          onClose={() => setDialog(null)}
+          onSave={(names) => commit({ ...modelRef.current, names })}
+        />
+      )}
+      {dialog?.kind === "page" && (
+        <PageDialog
+          print={sheet.print}
+          selection={area}
+          onClose={() => setDialog(null)}
+          onSave={(print) => commitSheet((current) => ({ ...current, print }))}
+        />
+      )}
       {dialog?.kind === "chart" && (
         <ChartDialog
           chart={dialog.chart}
@@ -2784,6 +2858,31 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
   );
 }
 
+function formulaSuggestions(names: SheetName[] | undefined, typed: string) {
+  const upper = typed.toUpperCase();
+  const named = (names ?? [])
+    .filter((entry) => entry.name.toUpperCase().startsWith(upper))
+    .slice(0, 4)
+    .map((entry) => ({
+      name: entry.name,
+      text: `Benannter Bereich: ${entry.sheet}!${entry.range}`,
+      english: undefined,
+    }));
+  return [...named, ...suggestFunctions(typed)].slice(0, 8);
+}
+
+// Datenbalken der bedingten Formatierung als Hintergrund der Zelle (wie in Excel, Text bleibt darüber lesbar).
+function barStyle(rule: RuleLook | undefined): CSSProperties {
+  if (!rule?.bar) return {};
+  const percent = Math.round(rule.bar.size * 1000) / 10;
+  return {
+    backgroundImage: `linear-gradient(to right, ${rule.bar.color} 0, ${rule.bar.color}99 ${percent}%, transparent ${percent}%)`,
+    backgroundSize: "100% 72%",
+    backgroundPosition: "left center",
+    backgroundRepeat: "no-repeat",
+  };
+}
+
 // Zeile als eigener Baustein: die Maus- und Tastaturhandler darin greifen erst bei Ereignissen auf den Zustand zu.
 function RowSlot({
   render,
@@ -2808,9 +2907,12 @@ function SheetPrint({
   hiddenRows: Set<number>;
   valueOf: (col: number, row: number) => Value;
   textOf: (col: number, row: number) => string;
-  ruleStyle: (col: number, row: number) => RuleStyle | undefined;
+  ruleStyle: (col: number, row: number) => RuleLook | undefined;
 }) {
   const used = usedRange(sheet);
+  // Druckbereich: nur diese Zellen (ohne Druckbereich das ganze benutzte Blatt).
+  const printArea = sheet.print.area ? parseArea(sheet.print.area) : null;
+  const bounds = printArea ?? { c1: 0, r1: 0, c2: used.cols - 1, r2: used.rows - 1 };
   const merges = mergesOf(sheet);
   const hiddenCols = new Set(sheet.hiddenCols);
   const covered = new Set<string>();
@@ -2818,11 +2920,13 @@ function SheetPrint({
     for (let row = merge.r1; row <= merge.r2; row += 1)
       for (let col = merge.c1; col <= merge.c2; col += 1)
         if (row !== merge.r1 || col !== merge.c1) covered.add(cellKey(col, row));
-  const visibleCols = Array.from({ length: used.cols }, (_, col) => col).filter((col) => !hiddenCols.has(col));
+  const visibleCols = Array.from({ length: Math.max(0, bounds.c2 - bounds.c1 + 1) }, (_, at) => bounds.c1 + at).filter(
+    (col) => !hiddenCols.has(col),
+  );
   const line = (edge: { width: number; color: string } | null) =>
     edge ? `${Math.max(1, edge.width)}px solid ${edge.color}` : undefined;
   const rows = [];
-  for (let row = 0; row < used.rows; row += 1) {
+  for (let row = bounds.r1; row <= bounds.r2; row += 1) {
     if (hiddenRows.has(row)) continue;
     const cells = [];
     for (const col of visibleCols) {
@@ -2845,7 +2949,8 @@ function SheetPrint({
             textDecoration:
               [style?.u ? "underline" : "", style?.s ? "line-through" : ""].filter(Boolean).join(" ") || undefined,
             color: rule?.color ?? style?.color,
-            background: rule?.fill ?? style?.fill,
+            backgroundColor: rule?.fill ?? style?.fill,
+            ...barStyle(rule),
             textAlign: style?.align ?? (typeof value === "number" ? "right" : "left"),
             verticalAlign: style?.valign === "top" ? "top" : style?.valign === "middle" ? "middle" : "bottom",
             whiteSpace: style?.wrap ? "pre-wrap" : "pre",
@@ -2868,7 +2973,14 @@ function SheetPrint({
       </tr>,
     );
   }
-  const { orientation, fit, gridlines } = sheet.print;
+  const { orientation, fit, gridlines, header, footer, pageNumbers } = sheet.print;
+  // Kopf- und Fusszeile in den Seitenrändern jeder gedruckten Seite (mit „Seite 1 von 3“).
+  const cssText = (text: string) => JSON.stringify(text.replace(/[\r\n\u2028\u2029]+/g, " "));
+  const marginBoxes = [
+    header ? `@top-center { content: ${cssText(header)}; }` : "",
+    footer ? `@bottom-left { content: ${cssText(footer)}; }` : "",
+    pageNumbers ? '@bottom-right { content: "Seite " counter(page) " von " counter(pages); }' : "",
+  ].join(" ");
   return (
     <div className={`office-print-only sheet-print ${gridlines ? "gridlines" : ""} ${fit ? "fit" : ""}`}>
       <h1>{sheet.name}</h1>
@@ -2880,7 +2992,8 @@ function SheetPrint({
         </colgroup>
         <tbody>{rows}</tbody>
       </table>
-      {sheet.charts.map((chart) => {
+      {/* Mit Druckbereich nur die Zellen, sonst auch die Diagramme des Blatts. */}
+      {(printArea ? [] : sheet.charts).map((chart) => {
         const area = parseArea(chart.range);
         return area ? (
           <div key={chart.id} className="sheet-print-chart">
@@ -2890,11 +3003,16 @@ function SheetPrint({
               title={chart.title}
               width={chart.w}
               height={chart.h}
+              xTitle={chart.xTitle}
+              yTitle={chart.yTitle}
+              labels={chart.labels}
             />
           </div>
         ) : null;
       })}
-      <style>{`@media print { @page { size: A4 ${orientation}; margin: 12mm; } }`}</style>
+      <style>
+        {`@media print { @page { size: A4 ${orientation}; margin: ${header ? 16 : 12}mm 12mm ${footer || pageNumbers ? 16 : 12}mm; font-family: Arial, Helvetica, sans-serif; font-size: 9pt; color: #5b6b6d; ${marginBoxes} } }`}
+      </style>
     </div>
   );
 }
