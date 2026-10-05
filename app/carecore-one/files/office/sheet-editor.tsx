@@ -45,7 +45,8 @@ import {
 } from "@phosphor-icons/react";
 import {
   ERROR_HINTS,
-  FUNCTION_HELP,
+  functionHelp,
+  suggestFunctions,
   areaName,
   cellKey,
   columnName,
@@ -547,11 +548,8 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
   }
 
   const context = editing ? formulaContext(editing.value) : { typing: null, inside: null };
-  const suggestions =
-    editing && context.typing
-      ? FUNCTION_HELP.filter((item) => item.name.startsWith(context.typing!.toUpperCase())).slice(0, 8)
-      : [];
-  const signature = context.inside ? FUNCTION_HELP.find((item) => item.name === context.inside) : null;
+  const suggestions = editing && context.typing ? suggestFunctions(context.typing) : [];
+  const signature = context.inside ? functionHelp(context.inside) : null;
 
   function acceptSuggestion(name: string) {
     if (!editing || !context.typing) return;
@@ -2307,7 +2305,10 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
                         acceptSuggestion(item.name);
                       }}
                     >
-                      <strong>{item.name}</strong>
+                      <strong>
+                        {item.name}
+                        {item.english && <small className="sheet-suggest-alias">auch {item.english}</small>}
+                      </strong>
                       <span>{item.text}</span>
                     </button>
                   ))
@@ -2315,6 +2316,7 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
                     <p>
                       <strong>{signature.syntax}</strong>
                       <span>{signature.text}</span>
+                      {signature.example && <em className="sheet-suggest-example">Beispiel: {signature.example}</em>}
                     </p>
                   )}
             </div>

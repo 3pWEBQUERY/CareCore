@@ -2870,8 +2870,27 @@ const GERMAN_OF = Object.fromEntries(
     .map(([german, english]) => [english, german]),
 );
 
+// Beispiele für die Hilfe (vor allem für Funktionen mit LAMBDA, die ohne Beispiel schwer verständlich sind).
+const EXAMPLES: Record<string, string> = {
+  NACHZEILE: "=NACHZEILE(B2:D10;LAMBDA(zeile;SUMME(zeile))) – Summe je Zeile, z. B. Stunden je Person",
+  NACHSPALTE: "=NACHSPALTE(B2:D10;LAMBDA(spalte;MAX(spalte))) – Höchstwert je Spalte",
+  MAP: "=MAP(C2:C10;LAMBDA(stunden;stunden*45)) – jeden Wert umrechnen",
+  REDUCE: "=REDUCE(0;C2:C10;LAMBDA(summe;wert;summe+wert)) – alles zusammenzählen",
+  SCAN: "=SCAN(0;C2:C10;LAMBDA(summe;wert;summe+wert)) – laufende Summe",
+  MATRIXERSTELLEN: "=MATRIXERSTELLEN(3;4;LAMBDA(z;s;z*s)) – Einmaleins 3 × 4",
+  LAMBDA: "=LET(netto;LAMBDA(betrag;betrag/1.081);netto(108.1)) – eigene Funktion mit Namen",
+  ISTAUSGELASSEN: "=LET(f;LAMBDA(a;b;WENN(ISTAUSGELASSEN(b);a;a+b));f(5)) – zweiter Wert ist freiwillig",
+  LET: "=LET(stunden;C2;satz;45;stunden*satz) – Zwischenwerte benennen",
+  FILTERN: '=FILTERN(A2:C10;B2:B10="Pflege") – nur Zeilen aus der Pflege',
+  SORTIEREN: "=SORTIEREN(A2:C10;3;-1) – nach der 3. Spalte absteigend",
+  EINDEUTIG: "=EINDEUTIG(B2:B10) – jede Abteilung einmal",
+  XVERWEIS: '=XVERWEIS("Anna";A2:A10;C2:C10;"nicht gefunden")',
+  SUMMEWENNS: '=SUMMEWENNS(C2:C10;B2:B10;"Pflege";C2:C10;">4")',
+};
+
 // Funktionen für die Hilfe in der Formelleiste (deutsche Namen, kurze Beschreibung).
-export const FUNCTION_HELP: { name: string; syntax: string; text: string }[] = [
+export type FunctionHelp = { name: string; syntax: string; text: string; example?: string };
+export const FUNCTION_HELP: FunctionHelp[] = [
   { name: "SUMME", syntax: "SUMME(Zahl1; Zahl2; …)", text: "Addiert Zahlen oder Bereiche" },
   { name: "MITTELWERT", syntax: "MITTELWERT(Zahl1; …)", text: "Durchschnitt" },
   { name: "MIN", syntax: "MIN(Zahl1; …)", text: "Kleinster Wert" },
@@ -3230,6 +3249,24 @@ export const FUNCTION_HELP: { name: string; syntax: string; text: string }[] = [
   },
   { name: "ISTAUSGELASSEN", syntax: "ISTAUSGELASSEN(Parameter)", text: "WAHR, wenn ein LAMBDA-Parameter fehlt" },
 ];
+for (const item of FUNCTION_HELP) if (EXAMPLES[item.name]) item.example = EXAMPLES[item.name];
+
+// Hilfe zu einer Funktion – unter dem deutschen oder dem englischen Namen (BYROW → NACHZEILE).
+export function functionHelp(name: string): FunctionHelp | null {
+  const english = canonical(name.toUpperCase());
+  const german = GERMAN_OF[english] ?? english;
+  return FUNCTION_HELP.find((item) => item.name === german) ?? null;
+}
+// Vorschläge beim Tippen: deutsche Namen zuerst, dann Treffer über den englischen Namen.
+export function suggestFunctions(prefix: string, limit = 8): (FunctionHelp & { english?: string })[] {
+  const typed = prefix.toUpperCase();
+  const german = FUNCTION_HELP.filter((item) => item.name.startsWith(typed));
+  const byEnglish = FUNCTION_HELP.filter((item) => {
+    const english = canonical(item.name);
+    return english !== item.name && english.startsWith(typed) && !german.includes(item);
+  }).map((item) => ({ ...item, english: canonical(item.name) }));
+  return [...german, ...byEnglish].slice(0, limit);
+}
 
 // LAMBDA mit den Variablen, die beim Erstellen sichtbar waren.
 type Lambda = { kind: "lambda"; params: string[]; body: Expr; scope: Scope };
