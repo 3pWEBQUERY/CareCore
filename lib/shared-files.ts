@@ -25,6 +25,7 @@ import { createZip, uniquePath, type ZipEntry } from "@/lib/zip";
 import { buildDocx, readDocx } from "@/lib/office/docx";
 import { buildPptx, readPptx } from "@/lib/office/pptx";
 import { buildXlsx, readXlsx } from "@/lib/office/xlsx";
+import { stampModelComments } from "@/lib/office/comments";
 import {
   OFFICE_TEMPLATES,
   OFFICE_TYPES,
@@ -33,6 +34,7 @@ import {
   templateModel,
   type DeckModel,
   type DocumentModel,
+  type OfficeKind,
   type OfficeModel,
   type SheetModel,
 } from "@/lib/office/model";
@@ -624,7 +626,24 @@ export async function readOffice(actor: CarecoreActor, fileId: string) {
     imported: read.imported,
     revision: Number(rows[0]?.revision ?? 0),
     canEdit: index.canEditFile(file),
+    // Name für neue Kommentare (der Server setzt ihn beim Speichern ohnehin selbst).
+    user: authorName(actor),
   };
+}
+
+const authorName = (actor: CarecoreActor) => String(actor.display_name || actor.username || "").slice(0, 120);
+
+// Bisheriger Stand der Datei als Modell (für den Abgleich der Kommentare), null wenn er nicht lesbar ist.
+async function storedModel(fileId: string, kind: OfficeKind): Promise<OfficeModel | null> {
+  const rows = (await carecoreDb()`
+    SELECT content_base64, storage_key FROM carecore_cloud_files WHERE id = ${fileId}`) as Row[];
+  const bytes = await mediaContent(rows[0]?.storage_key, rows[0]?.content_base64);
+  if (!bytes) return null;
+  try {
+    return (kind === "document" ? readDocx(bytes) : kind === "sheet" ? readXlsx(bytes) : readPptx(bytes)).model;
+  } catch {
+    return null;
+  }
 }
 
 // Speichern aus dem Editor: schreibt eine echte .docx/.xlsx/.pptx-Datei. Automatisches Speichern („auto“) fasst
@@ -637,7 +656,13 @@ export async function saveOffice(actor: CarecoreActor, fileId: string, body: Rec
   if (!kind) throw new ApiError("Diese Datei ist kein Dokument, keine Tabelle und keine Präsentation.");
   const revision = Number(body.revision);
   if (!Number.isInteger(revision)) throw new ApiError("Stand der Datei fehlt. Bitte neu öffnen.");
-  const model = cleanModel(kind, body.model);
+  // Kommentare: Name und Zeit neuer Einträge vom Server, fremde Einträge bleiben unverändert.
+  const model = stampModelComments(
+    await storedModel(fileId, kind),
+    cleanModel(kind, body.model),
+    authorName(actor),
+    new Date().toISOString(),
+  );
   const bytes =
     kind === "document"
       ? buildDocx(model as DocumentModel, {

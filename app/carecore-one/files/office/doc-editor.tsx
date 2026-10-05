@@ -18,6 +18,8 @@ import {
   ArrowsMerge,
   ArrowsSplit,
   Asterisk,
+  ChatCircleText,
+  ChatsCircle,
   ColumnsPlusLeft,
   ColumnsPlusRight,
   Eraser,
@@ -51,10 +53,13 @@ import {
   TextUnderline,
   Trash,
 } from "@phosphor-icons/react";
-import { DEFAULT_PAGE, MARGINS_MM, type DocNode, type DocumentModel, type PageSetup } from "@/lib/office/model";
+import { DEFAULT_PAGE, MARGINS_MM, newId, type DocNode, type DocumentModel, type PageSetup } from "@/lib/office/model";
+import type { CommentThread } from "@/lib/office/comments";
+import { CommentsPanel, newComment } from "./office-comments";
 import type { EditorProps } from "./editor-props";
 import { alignText, toggleList } from "./text-commands";
 import {
+  CommentMark,
   DEFAULT_LINE_SPACING,
   Footnote,
   LINE_SPACINGS,
@@ -62,8 +67,12 @@ import {
   Subscript,
   Superscript,
   TableOfContents,
+  addCommentMark,
+  commentRanges,
+  commentsAt,
   footnotesOf,
   insertTableOfContents,
+  removeCommentMark,
   removeFootnote,
   setFootnoteText,
   setLineSpacing,
@@ -401,7 +410,7 @@ function PagePanel({ page, onChange }: { page: PageSetup; onChange: (page: PageS
   );
 }
 
-export default function DocEditor({ model, onChange, readOnly, title }: EditorProps<DocumentModel>) {
+export default function DocEditor({ model, onChange, readOnly, title, user }: EditorProps<DocumentModel>) {
   const [page, setPage] = useState<PageSetup>({ ...DEFAULT_PAGE, ...model.page });
   const [zoom, setZoom] = useState(100);
   const pageRef = useRef(page);
@@ -410,6 +419,18 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
   const emit = useRef(onChange);
   // Erst nach dem ersten Klick in den Text zählen Änderungen (beim Öffnen gleicht der Editor die Datei nur an).
   const touched = useRef(false);
+  // Kommentare: Liste im Modell, Markierungen im Text; Seitenleiste offen, solange es offene Kommentare gibt.
+  const [comments, setComments] = useState<CommentThread[]>(model.comments ?? []);
+  const commentsRef = useRef(comments);
+  const [showComments, setShowComments] = useState(Boolean(model.comments?.some((item) => !item.resolved)));
+  const [draft, setDraft] = useState<string | null>(null);
+  const [activeComment, setActiveComment] = useState<string | null>(null);
+  const withComments = (content: DocNode, nextPage: PageSetup, threads = commentsRef.current): DocumentModel => ({
+    kind: "document",
+    page: nextPage,
+    content,
+    ...(threads.length ? { comments: threads } : {}),
+  });
   useEffect(() => {
     emit.current = onChange;
   }, [onChange]);
@@ -437,6 +458,7 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
       PageBreak,
       TableOfContents,
       Footnote,
+      CommentMark,
       CharacterCount,
       Placeholder.configure({ placeholder: "Hier schreiben …" }),
     ],
@@ -461,8 +483,9 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
     },
     onUpdate: ({ editor: current }) => {
       if (!touched.current) return;
-      emit.current({ kind: "document", page: pageRef.current, content: current.getJSON() as DocNode });
+      emit.current(withComments(current.getJSON() as DocNode, pageRef.current));
     },
+    onSelectionUpdate: ({ editor: current }) => setActiveComment(commentsAt(current)[0] ?? null),
   });
 
   useEffect(() => {
@@ -472,7 +495,31 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
   function changePage(next: PageSetup) {
     setPage(next);
     pageRef.current = next;
-    if (editor) emit.current({ kind: "document", page: next, content: editor.getJSON() as DocNode });
+    if (editor) emit.current(withComments(editor.getJSON() as DocNode, next));
+  }
+
+  // ---------- Kommentare ----------
+  function updateComments(next: CommentThread[]) {
+    commentsRef.current = next;
+    setComments(next);
+    touched.current = true;
+    if (editor) emit.current(withComments(editor.getJSON() as DocNode, pageRef.current, next));
+  }
+  function startComment() {
+    if (!editor || readOnly) return;
+    if (draft) removeCommentMark(editor, draft);
+    const id = newId();
+    touched.current = true;
+    if (!addCommentMark(editor, id)) return;
+    setDraft(id);
+    setActiveComment(id);
+    setShowComments(true);
+  }
+  function selectComment(id: string) {
+    setActiveComment(id);
+    const [first] = editor ? commentRanges(editor, id) : [];
+    if (!editor || !first) return;
+    editor.chain().focus().setTextSelection(first.from).scrollIntoView().run();
   }
 
   const state = useEditorState({
@@ -522,6 +569,7 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
         canSplit: current.can().splitCell(),
         canSink: current.can().sinkListItem("listItem") || current.can().sinkListItem("taskItem"),
         canLift: current.can().liftListItem("listItem") || current.can().liftListItem("taskItem"),
+        hasSelection: !current.state.selection.empty,
         words: current.storage.characterCount.words(),
         characters: current.storage.characterCount.characters(),
       };
@@ -555,9 +603,19 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
   const sheetHeight = page.orientation === "portrait" ? 297 : 210;
   const margin = MARGINS_MM[page.margins];
   const currentStyle = STYLES.find((item) => item.id === state.style) ?? STYLES[0];
+  const openCount = comments.filter((item) => !item.resolved).length;
 
   return (
-    <div className="office-doc">
+    <div
+      className="office-doc"
+      onKeyDown={(event) => {
+        // Ctrl+Alt+M wie in Word: Kommentar zur markierten Stelle.
+        if ((event.ctrlKey || event.metaKey) && event.altKey && event.code === "KeyM") {
+          event.preventDefault();
+          startComment();
+        }
+      }}
+    >
       {!readOnly && (
         <div className="office-ribbon" role="toolbar" aria-label="Formatierung">
           <ToolGroup label="Rückgängig">
@@ -816,6 +874,22 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
               {() => <PagePanel page={page} onChange={changePage} />}
             </ToolPopover>
           </ToolGroup>
+          <ToolSeparator />
+          <ToolGroup label="Überprüfen">
+            <ToolButton
+              label="Neuer Kommentar"
+              shortcut="Ctrl+Alt+M"
+              icon={<ChatCircleText />}
+              disabled={!state.hasSelection}
+              onClick={startComment}
+            />
+            <ToolButton
+              label="Kommentare anzeigen"
+              icon={<ChatsCircle />}
+              active={showComments}
+              onClick={() => setShowComments((value) => !value)}
+            />
+          </ToolGroup>
           <input
             ref={imageInput}
             type="file"
@@ -895,78 +969,126 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
           {imageError}
         </p>
       )}
-      <div className="office-canvas">
-        <div
-          className="office-page"
-          style={{
-            width: `${sheetWidth}mm`,
-            minHeight: `${sheetHeight}mm`,
-            padding: `${margin}mm`,
-            zoom: zoom / 100,
-          }}
-        >
-          {page.header && (
-            <div
-              className="office-page-header"
-              style={{ top: `${Math.min(12, margin / 2)}mm`, left: `${margin}mm`, right: `${margin}mm` }}
-            >
-              {page.header}
-            </div>
-          )}
-          <EditorContent editor={editor} />
-          {state.footnotes.length > 0 && (
-            <section className="office-footnotes" aria-label="Fussnoten">
-              <ol>
-                {state.footnotes.map((note, index) => (
-                  <li key={index}>
-                    {readOnly ? (
-                      <span>{note.text}</span>
-                    ) : (
-                      <>
-                        <input
-                          value={note.text}
-                          maxLength={2000}
-                          aria-label={`Fussnote ${index + 1}`}
-                          placeholder="Text der Fussnote"
-                          onFocus={() => {
-                            touched.current = true;
-                          }}
-                          onChange={(event) => setFootnoteText(editor, note.pos, event.target.value)}
-                        />
-                        <button
-                          type="button"
-                          aria-label={`Fussnote ${index + 1} löschen`}
-                          title="Fussnote löschen"
-                          onClick={() => {
-                            touched.current = true;
-                            removeFootnote(editor, note.pos);
-                          }}
-                        >
-                          <Trash />
-                        </button>
-                      </>
-                    )}
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
-          {(page.footer || page.pageNumbers) && (
-            <div
-              className="office-page-footer"
-              style={{ bottom: `${Math.min(10, margin / 2)}mm`, left: `${margin}mm`, right: `${margin}mm` }}
-            >
-              {page.footer}
-              {page.footer && page.pageNumbers ? "   ·   " : ""}
-              {page.pageNumbers ? "Seite 1 von …" : ""}
-            </div>
-          )}
+      <div className="office-main">
+        <div className="office-canvas">
+          <div
+            className="office-page"
+            style={{
+              width: `${sheetWidth}mm`,
+              minHeight: `${sheetHeight}mm`,
+              padding: `${margin}mm`,
+              zoom: zoom / 100,
+            }}
+          >
+            {page.header && (
+              <div
+                className="office-page-header"
+                style={{ top: `${Math.min(12, margin / 2)}mm`, left: `${margin}mm`, right: `${margin}mm` }}
+              >
+                {page.header}
+              </div>
+            )}
+            <EditorContent editor={editor} />
+            {state.footnotes.length > 0 && (
+              <section className="office-footnotes" aria-label="Fussnoten">
+                <ol>
+                  {state.footnotes.map((note, index) => (
+                    <li key={index}>
+                      {readOnly ? (
+                        <span>{note.text}</span>
+                      ) : (
+                        <>
+                          <input
+                            value={note.text}
+                            maxLength={2000}
+                            aria-label={`Fussnote ${index + 1}`}
+                            placeholder="Text der Fussnote"
+                            onFocus={() => {
+                              touched.current = true;
+                            }}
+                            onChange={(event) => setFootnoteText(editor, note.pos, event.target.value)}
+                          />
+                          <button
+                            type="button"
+                            aria-label={`Fussnote ${index + 1} löschen`}
+                            title="Fussnote löschen"
+                            onClick={() => {
+                              touched.current = true;
+                              removeFootnote(editor, note.pos);
+                            }}
+                          >
+                            <Trash />
+                          </button>
+                        </>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
+            {(page.footer || page.pageNumbers) && (
+              <div
+                className="office-page-footer"
+                style={{ bottom: `${Math.min(10, margin / 2)}mm`, left: `${margin}mm`, right: `${margin}mm` }}
+              >
+                {page.footer}
+                {page.footer && page.pageNumbers ? "   ·   " : ""}
+                {page.pageNumbers ? "Seite 1 von …" : ""}
+              </div>
+            )}
+          </div>
         </div>
+        {showComments && (
+          <CommentsPanel
+            threads={comments.map((thread) => {
+              const ranges = commentRanges(editor, thread.id);
+              const text = ranges
+                .map((range) => range.text)
+                .join("")
+                .trim();
+              return {
+                thread,
+                label: text ? `„${text.length > 60 ? `${text.slice(0, 57)}…` : text}“` : "Textstelle",
+                missing: !ranges.length,
+              };
+            })}
+            user={user}
+            readOnly={readOnly}
+            draft={draft ? "Kommentar zur markierten Textstelle" : null}
+            active={activeComment}
+            onCreate={(text) => {
+              if (!draft) return;
+              updateComments([...commentsRef.current, { ...newComment(user, text), id: draft }]);
+              setDraft(null);
+            }}
+            onCancelDraft={() => {
+              if (draft) removeCommentMark(editor, draft);
+              setDraft(null);
+            }}
+            onChange={(thread) =>
+              updateComments(commentsRef.current.map((item) => (item.id === thread.id ? thread : item)))
+            }
+            onDelete={(id) => {
+              removeCommentMark(editor, id);
+              updateComments(commentsRef.current.filter((item) => item.id !== id));
+            }}
+            onSelect={selectComment}
+            onClose={() => setShowComments(false)}
+          />
+        )}
       </div>
       <footer className="office-statusbar">
         <span>
           {state.words.toLocaleString("de-CH")} {state.words === 1 ? "Wort" : "Wörter"} ·{" "}
           {state.characters.toLocaleString("de-CH")} Zeichen
+          {comments.length > 0 && (
+            <>
+              {" · "}
+              <button type="button" className="office-status-link" onClick={() => setShowComments((value) => !value)}>
+                {openCount} {openCount === 1 ? "offener Kommentar" : "offene Kommentare"}
+              </button>
+            </>
+          )}
         </span>
         <span className="office-zoom" role="group" aria-label="Zoom">
           {ZOOMS.map((value) => (
@@ -983,6 +1105,10 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
         </span>
       </footer>
       <style>{`@media print { @page { size: A4 ${page.orientation}; margin: ${margin}mm; } }`}</style>
+      {/* Aktiver Kommentar im Text kräftiger hervorgehoben. */}
+      {activeComment && (
+        <style>{`.office-prose [data-comment="${CSS.escape(activeComment)}"] { background: rgba(245, 158, 11, 0.42); }`}</style>
+      )}
     </div>
   );
 }

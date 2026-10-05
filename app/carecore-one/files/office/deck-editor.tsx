@@ -15,6 +15,8 @@ import {
   ArrowUUpLeft,
   ArrowUUpRight,
   ChartBar,
+  ChatCircleText,
+  ChatsCircle,
   CopySimple,
   HighlighterCircle,
   Image as ImageIcon,
@@ -65,6 +67,8 @@ import {
 import { CHART_LABELS } from "@/lib/office/sheet-features";
 import { CHART_ICONS, ChartDataDialog, ItemBar, ItemLayer, SHAPE_ICONS, StaticItems } from "./deck-items";
 import type { EditorProps } from "./editor-props";
+import { CommentsPanel, newComment } from "./office-comments";
+import type { CommentThread } from "@/lib/office/comments";
 import { alignText, toggleList } from "./text-commands";
 import {
   ColorPicker,
@@ -357,7 +361,7 @@ function Presenter({
   );
 }
 
-export default function DeckEditor({ model: initial, onChange, readOnly }: EditorProps<DeckModel>) {
+export default function DeckEditor({ model: initial, onChange, readOnly, user }: EditorProps<DeckModel>) {
   const [model, setModel] = useState(initial);
   const modelRef = useRef(initial);
   const [current, setCurrent] = useState(0);
@@ -372,6 +376,12 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
   const [tableCell, setTableCell] = useState<{ row: number; col: number } | null>(null);
   const [dataDialog, setDataDialog] = useState<string | null>(null);
   const [freshText, setFreshText] = useState<string | null>(null);
+  // Kommentare je Folie (wie in PowerPoint): Seitenleiste offen, wenn es offene Kommentare gibt.
+  const [showComments, setShowComments] = useState(() =>
+    initial.slides.some((item) => item.comments?.some((thread) => !thread.resolved)),
+  );
+  const [commentDraft, setCommentDraft] = useState<string | null>(null);
+  const [activeComment, setActiveComment] = useState<string | null>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const emit = useRef(onChange);
   useEffect(() => {
@@ -454,7 +464,15 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
   function duplicate(at: number) {
     const now = modelRef.current;
     const slides = [...now.slides];
-    slides.splice(at + 1, 0, { ...structuredClone(now.slides[at]), id: newId() });
+    const copy = { ...structuredClone(now.slides[at]), id: newId() };
+    // Kopierte Kommentare bekommen eigene Nummern, sonst wären sie zweimal dieselben.
+    if (copy.comments)
+      copy.comments = copy.comments.map((thread) => ({
+        ...thread,
+        id: newId(),
+        replies: thread.replies.map((reply) => ({ ...reply, id: newId() })),
+      }));
+    slides.splice(at + 1, 0, copy);
     update({ ...now, slides });
     setCurrent(at + 1);
   }
@@ -475,6 +493,23 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
     update({ ...now, slides });
     setCurrent(to);
   }
+  // ---------- Kommentare ----------
+  function startComment() {
+    setShowComments(true);
+    if (!readOnly) setCommentDraft(slide.id);
+  }
+  function changeComments(slideId: string, change: (threads: CommentThread[]) => CommentThread[]) {
+    updateSlide(slideId, (item) => {
+      const comments = change(item.comments ?? []);
+      return { ...item, comments: comments.length ? comments : undefined };
+    });
+  }
+  const openComments = model.slides.reduce(
+    (sum, item) => sum + (item.comments ?? []).filter((thread) => !thread.resolved).length,
+    0,
+  );
+  const commentSlide = (id: string) => model.slides.findIndex((item) => item.comments?.some((c) => c.id === id));
+
   async function pickImage(file: File) {
     try {
       setError("");
@@ -574,7 +609,16 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
   const layoutLabel = SLIDE_LAYOUTS.find((item) => item.value === slide.layout)?.label ?? "";
 
   return (
-    <div className="office-deck">
+    <div
+      className="office-deck"
+      onKeyDown={(event) => {
+        // Ctrl+Alt+M wie in PowerPoint: Kommentar zur aktuellen Folie.
+        if ((event.ctrlKey || event.metaKey) && event.altKey && event.code === "KeyM") {
+          event.preventDefault();
+          startComment();
+        }
+      }}
+    >
       {!readOnly && (
         <div className="office-ribbon" role="toolbar" aria-label="Präsentation bearbeiten">
           <ToolGroup label="Rückgängig">
@@ -838,6 +882,21 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
             )}
           </ToolGroup>
           <ToolSeparator />
+          <ToolGroup label="Überprüfen">
+            <ToolButton
+              label="Neuer Kommentar"
+              shortcut="Ctrl+Alt+M"
+              icon={<ChatCircleText />}
+              onClick={startComment}
+            />
+            <ToolButton
+              label="Kommentare anzeigen"
+              icon={<ChatsCircle />}
+              active={showComments}
+              onClick={() => setShowComments((value) => !value)}
+            />
+          </ToolGroup>
+          <ToolSeparator />
           <ToolButton
             label="Ab aktueller Folie vorführen"
             icon={<Play weight="fill" />}
@@ -885,7 +944,7 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
           {error}
         </p>
       )}
-      <div className="deck-workspace">
+      <div className={`deck-workspace ${showComments ? "with-comments" : ""}`}>
         <ol
           className="deck-rail"
           aria-label="Folien"
@@ -935,7 +994,19 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
                   setDropIndex(null);
                 }}
               >
-                <span className="deck-thumb-number">{position + 1}</span>
+                <span className="deck-thumb-number">
+                  {position + 1}
+                  {item.comments?.some((thread) => !thread.resolved) && (
+                    <span
+                      className="deck-thumb-comments"
+                      role="img"
+                      aria-label={`${item.comments.filter((thread) => !thread.resolved).length} offene Kommentare`}
+                      data-tip="Offene Kommentare"
+                    >
+                      <ChatCircleText weight="fill" aria-hidden="true" />
+                    </span>
+                  )}
+                </span>
                 <button
                   type="button"
                   className="deck-thumb-button"
@@ -1120,10 +1191,60 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
             />
           </label>
         </div>
+        {showComments && (
+          <CommentsPanel
+            threads={model.slides.flatMap((item, position) =>
+              (item.comments ?? []).map((thread) => ({ thread, label: `Folie ${position + 1}` })),
+            )}
+            user={user}
+            readOnly={readOnly}
+            draft={commentDraft === slide.id ? `Folie ${index + 1}` : null}
+            active={activeComment}
+            onCreate={(value) => {
+              const created = newComment(user, value);
+              changeComments(slide.id, (threads) => [...threads, created]);
+              setActiveComment(created.id);
+              setCommentDraft(null);
+            }}
+            onCancelDraft={() => setCommentDraft(null)}
+            onChange={(thread) => {
+              const at = commentSlide(thread.id);
+              if (at >= 0)
+                changeComments(model.slides[at].id, (threads) =>
+                  threads.map((item) => (item.id === thread.id ? thread : item)),
+                );
+            }}
+            onDelete={(id) => {
+              const at = commentSlide(id);
+              if (at >= 0) changeComments(model.slides[at].id, (threads) => threads.filter((item) => item.id !== id));
+            }}
+            onSelect={(id) => {
+              const at = commentSlide(id);
+              setActiveComment(id);
+              if (at >= 0 && at !== index) {
+                setCurrent(at);
+                setFocused(null);
+                setSelectedItem(null);
+              }
+            }}
+            onClose={() => {
+              setShowComments(false);
+              setCommentDraft(null);
+            }}
+          />
+        )}
       </div>
       <footer className="office-statusbar">
         <span>
           Folie {index + 1} von {model.slides.length} · {DECK_THEMES[model.theme].label}
+          {openComments > 0 && (
+            <>
+              {" · "}
+              <button type="button" className="office-status-link" onClick={() => setShowComments((value) => !value)}>
+                {openComments} {openComments === 1 ? "offener Kommentar" : "offene Kommentare"}
+              </button>
+            </>
+          )}
         </span>
         {undo && (
           <span className="office-undo" role="status">

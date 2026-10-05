@@ -466,3 +466,97 @@ test("Tabelle: vertikale Ausrichtung, Funktionen, Rahmen, Filter und Auswahllist
   await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
   expect(errors).toEqual([]);
 });
+
+// Kommentare wie in Word, Excel und PowerPoint: an Textstelle, Zelle und Folie; Antworten, erledigt, gespeichert.
+test("Kommentare in Dokument, Tabelle und Präsentation", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  const stamp = Date.now();
+  await page.goto("/c/carecore-one/ablage");
+  const panel = page.getByRole("complementary", { name: "Kommentare" });
+  const newText = page.getByRole("textbox", { name: "Neuer Kommentar" });
+
+  // Dokument: Text markieren, kommentieren, antworten, nach dem Öffnen wieder da, erledigt.
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Dokument/ }).click();
+  const gallery = page.getByRole("dialog", { name: "Neues Dokument (Word)" });
+  await gallery.getByLabel("Name").fill(`Kommentiert ${stamp}`);
+  await gallery.getByRole("button", { name: "Erstellen und öffnen" }).click();
+  const editor = page.locator(".office-prose");
+  await editor.click();
+  await page.keyboard.type("Blutdruck morgens messen");
+  await page.keyboard.press("Shift+Home");
+  await page.keyboard.press("Control+Alt+m");
+  await expect(panel).toBeVisible();
+  await newText.fill("Auch abends?");
+  await page.getByRole("button", { name: "Kommentar senden" }).click();
+  await expect(editor.locator(".office-comment-mark")).toHaveText("Blutdruck morgens messen");
+  await expect(panel.getByRole("button", { name: "„Blutdruck morgens messen“" })).toBeVisible();
+  await panel.getByRole("button", { name: "Antworten" }).click();
+  await panel.getByRole("textbox", { name: "Antwort" }).fill("Ja, zweimal täglich.");
+  await panel.getByRole("button", { name: "Antworten" }).last().click();
+  await expect(panel).toContainText("Ja, zweimal täglich.");
+  await expect(page.locator(".office-statusbar")).toContainText("1 offener Kommentar");
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  await page.getByText(`Kommentiert ${stamp}.docx`, { exact: true }).dblclick();
+  await expect(panel).toContainText("Auch abends?");
+  await expect(panel).toContainText("Ja, zweimal täglich.");
+  await expect(page.locator(".office-prose .office-comment-mark")).toHaveText("Blutdruck morgens messen");
+  await panel.getByRole("button", { name: "Erledigt" }).click();
+  await expect(panel).toContainText("Alle Kommentare sind erledigt.");
+  await panel.getByRole("button", { name: "Erledigte anzeigen (1)" }).click();
+  await expect(panel.getByRole("button", { name: "Wieder öffnen" })).toBeVisible();
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+
+  // Tabelle: Kommentar an Zelle A1 (Ctrl+Alt+M), wandert beim Einfügen einer Zeile mit nach A2.
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Tabelle/ }).click();
+  const sheetGallery = page.getByRole("dialog", { name: "Neue Tabelle (Excel)" });
+  await sheetGallery.getByLabel("Name").fill(`Notizen ${stamp}`);
+  await sheetGallery.getByRole("button", { name: "Erstellen und öffnen" }).click();
+  const grid = page.getByRole("grid", { name: "Blatt Tabelle1" });
+  await grid.focus();
+  await page.keyboard.type("Ahorn");
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("ArrowUp");
+  await page.keyboard.press("Control+Alt+m");
+  await expect(panel.getByText("Zelle A1")).toBeVisible();
+  await newText.fill("Belegung prüfen");
+  await page.getByRole("button", { name: "Kommentar senden" }).click();
+  await expect(grid.locator(".sheet-comment-flag")).toHaveCount(1);
+  await expect(panel.getByRole("button", { name: "Zelle A1" })).toBeVisible();
+  await grid
+    .locator("td")
+    .filter({ hasText: /^Ahorn$/ })
+    .click({ button: "right" });
+  await page.getByRole("menuitemradio", { name: "Zeilen oberhalb einfügen" }).click();
+  await expect(panel.getByRole("button", { name: "Zelle A2" })).toBeVisible();
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  await page.getByText(`Notizen ${stamp}.xlsx`, { exact: true }).dblclick();
+  await expect(panel.getByRole("button", { name: "Zelle A2" })).toBeVisible();
+  await expect(panel).toContainText("Belegung prüfen");
+  await expect(page.getByRole("grid", { name: "Blatt Tabelle1" }).locator(".sheet-comment-flag")).toHaveCount(1);
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+
+  // Präsentation: Kommentar zur Folie, Kennzeichen in der Folienleiste.
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Präsentation/ }).click();
+  const deckGallery = page.getByRole("dialog", { name: "Neue Präsentation (PowerPoint)" });
+  await deckGallery.getByLabel("Name").fill(`Folien ${stamp}`);
+  await deckGallery.getByRole("button", { name: "Erstellen und öffnen" }).click();
+  await expect(page.locator(".deck-stage")).toBeVisible();
+  await page.getByRole("button", { name: "Neuer Kommentar" }).click();
+  await expect(panel.getByText("Folie 1", { exact: true })).toBeVisible();
+  await newText.fill("Titel kürzer fassen");
+  await page.getByRole("button", { name: "Kommentar senden" }).click();
+  await expect(page.locator(".deck-thumb-comments")).toHaveCount(1);
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  await page.getByText(`Folien ${stamp}.pptx`, { exact: true }).dblclick();
+  await expect(panel).toContainText("Titel kürzer fassen");
+  await expect(panel.getByRole("button", { name: "Folie 1" })).toBeVisible();
+  await panel.getByRole("button", { name: /Kommentar von .* löschen/ }).click();
+  await expect(panel).toContainText("Noch keine Kommentare.");
+  await expect(page.locator(".deck-thumb-comments")).toHaveCount(0);
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  expect(errors).toEqual([]);
+});
