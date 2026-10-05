@@ -71,6 +71,7 @@ import { CommentsPanel, newComment } from "./office-comments";
 import { initials, type CommentThread } from "@/lib/office/comments";
 import { REMOTE_META, alignText, applyContent, toggleList } from "./text-commands";
 import { collaboratorColor } from "@/lib/office/presence";
+import { stableKey } from "@/lib/office/merge";
 import {
   ColorPicker,
   MenuList,
@@ -223,7 +224,9 @@ function BodyEditor({
   const emit = useRef(onChange);
   const focus = useRef(onFocus);
   // Zuletzt selbst gemeldeter Inhalt: ein anderer Wert stammt von anderen Personen und wird übernommen.
-  const emitted = useRef<DocNode | null>(null);
+  // Verglichen wird der Inhalt (ein leeres Textfeld bekommt bei jedem Zeichnen ein neues leeres Dokument); der
+  // Anfangsinhalt gilt als bekannt, sonst überschriebe er beim Erstellen schon Getipptes.
+  const emitted = useRef(stableKey(value));
   useEffect(() => {
     emit.current = onChange;
     focus.current = onFocus;
@@ -260,13 +263,17 @@ function BodyEditor({
       // Änderungen anderer (beim Zusammenführen übernommen) nicht als eigene melden.
       if (transaction.getMeta(REMOTE_META)) return;
       const json = current.getJSON() as DocNode;
-      emitted.current = json;
+      emitted.current = stableKey(json);
       emit.current(json);
     },
     onFocus: ({ editor: current }) => focus.current(current),
   });
   useEffect(() => {
-    if (editor && value !== emitted.current) applyContent(editor, value);
+    if (!editor) return;
+    const key = stableKey(value);
+    if (key === emitted.current) return;
+    emitted.current = key;
+    applyContent(editor, value);
   }, [editor, value]);
   return <EditorContent editor={editor} />;
 }

@@ -1702,7 +1702,6 @@ button.office-comment-anchor:hover {
 .sheet-table td.filter-head {
   padding-right: 24px;
 }
-.sheet-filter-button,
 /* Andere Personen in der Tabelle: farbiger Rahmen um ihre Zelle, Name darüber (in der ersten Zeile darunter) */
 .sheet-remote {
   position: absolute;
@@ -1745,6 +1744,7 @@ button.office-comment-anchor:hover {
 .sheet-comment-flag.resolved {
   border-top-color: #94a3b8;
 }
+.sheet-filter-button,
 .sheet-list-button {
   position: absolute;
   z-index: 4;

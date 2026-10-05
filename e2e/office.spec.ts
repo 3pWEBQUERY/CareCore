@@ -442,6 +442,8 @@ test("Tabelle: vertikale Ausrichtung, Funktionen, Rahmen, Filter und Auswahllist
   await page.getByRole("button", { name: "Rahmen", exact: true }).click();
   await page.getByRole("menuitemradio", { name: "Rahmenlinie unten" }).click();
   await page.getByRole("button", { name: "Filter", exact: true }).click();
+  // Filterknopf in seiner eigenen Gestalt (nicht von anderen Regeln überdeckt).
+  await expect(page.getByRole("button", { name: "Filter B" })).toHaveCSS("width", "18px");
   await page.getByRole("button", { name: "Filter B" }).click();
   await page.locator(".sheet-filter-menu").getByRole("checkbox", { name: "Küche" }).click();
   await page.locator(".sheet-filter-menu").getByRole("button", { name: "OK" }).click();

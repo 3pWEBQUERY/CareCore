@@ -88,6 +88,8 @@ export default function OfficeEditor({
   const revision = useRef(0);
   const dirty = useRef(false);
   const saving = useRef<Promise<void> | null>(null);
+  // Zählt jedes Speichern: eine Antwort auf ein Lebenszeichen, während der gespeichert wurde, ist veraltet.
+  const saves = useRef(0);
   const timer = useRef<number | null>(null);
   const changed = useRef(false);
   const forceVersion = useRef(false);
@@ -99,7 +101,11 @@ export default function OfficeEditor({
   const remoteRef = useRef<((model: OfficeModel) => void) | null>(null);
   const [session] = useState(() => crypto.randomUUID().replace(/-/g, ""));
   const place = useRef<OfficePlace | null>(null);
-  const [people, setPeople] = useState<Collaborator[]>([]);
+  const [people, setPeopleState] = useState<Collaborator[]>([]);
+  // Nur bei Änderung neu zeichnen (die Liste kommt bei jedem Lebenszeichen neu).
+  const setPeople = useCallback((next: Collaborator[]) => {
+    setPeopleState((current) => (JSON.stringify(current) === JSON.stringify(next) ? current : next));
+  }, []);
 
   useEffect(() => {
     call<Loaded>(`/api/cloud/files/${file.id}?office=1`)
@@ -124,7 +130,8 @@ export default function OfficeEditor({
 
   // Neuer Stand anderer: mit den eigenen, noch nicht gespeicherten Änderungen zusammenführen und im Editor zeigen.
   const takeRemote = useCallback((live: Live) => {
-    if (!live.model || live.revision === revision.current || !base.current || !model.current) return false;
+    // Nur neuere Stände anderer (eine ältere oder gleiche Antwort stammt von vor dem eigenen Speichern).
+    if (!live.model || live.revision <= revision.current || !base.current || !model.current) return false;
     const merged = mergeModels(base.current, model.current, live.model);
     base.current = live.model;
     revision.current = live.revision;
@@ -163,6 +170,7 @@ export default function OfficeEditor({
       if (!model.current || (!dirty.current && !manual)) return;
       const snapshot = model.current;
       dirty.current = false;
+      saves.current += 1;
       setStatus("saving");
       const task = (async () => {
         try {
@@ -206,7 +214,7 @@ export default function OfficeEditor({
       await task;
       saving.current = null;
     },
-    [file.id, live, setStatus, takeRemote],
+    [file.id, live, setPeople, setStatus, takeRemote],
   );
 
   // Lebenszeichen: eigene Stelle melden, andere Personen und ihren neuesten Stand holen.
@@ -219,9 +227,12 @@ export default function OfficeEditor({
       // Während des Speicherns warten (der Stand ändert sich gerade); Fehler beim Lebenszeichen nicht melden.
       if (!saving.current) {
         try {
+          const before = saves.current;
           const result = await live();
           if (stopped) return;
           setPeople(result.people);
+          // Inzwischen selbst gespeichert: der mitgeschickte Stand ist überholt.
+          if (saves.current !== before || saving.current) delete result.model;
           // Eigene, noch nicht gespeicherte Änderungen wurden mit dem neuen Stand zusammengeführt: gleich speichern.
           if (takeRemote(result) && dirty.current && statusRef.current !== "conflict") void save(false);
         } catch {
@@ -236,7 +247,7 @@ export default function OfficeEditor({
       window.clearTimeout(timer);
       void live(true).catch(() => undefined);
     };
-  }, [loaded, live, save, setStatus, takeRemote]);
+  }, [loaded, live, save, setPeople, setStatus, takeRemote]);
 
   const onPlace = useCallback((next: OfficePlace) => {
     place.current = next;
