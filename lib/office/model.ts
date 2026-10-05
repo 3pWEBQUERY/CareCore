@@ -883,6 +883,8 @@ const ALLOWED_NODES = new Set([
   "horizontalRule",
   "image",
   "pageBreak",
+  "tableOfContents",
+  "footnote",
 ]);
 const ALLOWED_MARKS = new Set([
   "bold",

@@ -891,6 +891,120 @@ body.office-open {
 .office-page-break.ProseMirror-selectednode {
   border-top-color: #2563eb;
 }
+.office-prose {
+  counter-reset: footnote;
+}
+.office-footnote {
+  color: #1d4ed8;
+  font-size: 0.75em;
+  line-height: 0;
+  vertical-align: super;
+  cursor: default;
+}
+.office-footnote::after {
+  counter-increment: footnote;
+  content: counter(footnote);
+}
+.office-footnote.ProseMirror-selectednode {
+  outline: 2px solid #2563eb;
+  border-radius: 2px;
+}
+.office-footnotes {
+  margin-top: 18pt;
+  padding-top: 6pt;
+  border-top: 1px solid #a0aeb0;
+  font-size: 9pt;
+}
+.office-footnotes ol {
+  margin: 0;
+  padding-left: 18pt;
+  list-style: decimal;
+}
+.office-footnotes li {
+  margin: 0 0 3pt;
+}
+.office-footnotes li input {
+  width: calc(100% - 28px);
+  padding: 1px 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #111827;
+  font: inherit;
+}
+.office-footnotes li input:hover,
+.office-footnotes li input:focus {
+  border-color: #bfc9ca;
+  outline: none;
+}
+.office-footnotes li button {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  margin-left: 4px;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #5f6f86;
+  vertical-align: middle;
+  cursor: pointer;
+}
+.office-footnotes li button:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.office-toc {
+  margin: 6pt 0 12pt;
+  padding: 6pt 10pt;
+  border: 1px solid #dbe3ec;
+  border-radius: 6px;
+  background: #f8fafc;
+  user-select: none;
+}
+.office-toc.ProseMirror-selectednode {
+  outline: 2px solid #2563eb;
+}
+.office-toc-title {
+  margin: 0 0 4pt;
+  color: #1d4ed8;
+  font-size: 14pt;
+  font-weight: 700;
+}
+.office-toc-empty {
+  margin: 0;
+  color: #5f6f86;
+  font-style: italic;
+}
+.office-toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.office-toc li {
+  margin: 0;
+}
+.office-toc li button {
+  display: block;
+  width: 100%;
+  padding: 1pt 0;
+  border: 0;
+  background: none;
+  color: #111827;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.office-toc li button:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+.office-toc-level2 {
+  padding-left: 12pt;
+}
+.office-toc-level3 {
+  padding-left: 24pt;
+}
 .office-prose p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
@@ -2623,6 +2737,18 @@ body.office-open {
   .office-prose table,
   .office-prose img {
     break-inside: avoid;
+  }
+  .office-toc {
+    border: 0;
+    background: none;
+    padding: 0;
+  }
+  .office-footnotes li button {
+    display: none;
+  }
+  .office-footnotes li input {
+    border: 0;
+    padding: 0;
   }
   .sheet-print h1 {
     margin: 0 0 8px;
