@@ -142,7 +142,9 @@ export default function DevelopmentView() {
                 <p className="eyebrow">Klinische Einordnung</p>
                 <h2 className="card-title">Werte mit Aufmerksamkeit</h2>
               </div>
-              <span className="status-badge attention">{abnormalValues(residents).length} Hinweise</span>
+              <span className="status-badge attention">
+                {abnormalValues(residents).length} {abnormalValues(residents).length === 1 ? "Hinweis" : "Hinweise"}
+              </span>
             </div>
             {abnormalValues(residents)
               .slice(0, 8)

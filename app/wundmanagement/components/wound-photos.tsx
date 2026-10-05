@@ -247,7 +247,7 @@ function PhotoUploadDialog({
       </label>
       <label className="form-checkbox area-editor-wide">
         <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-        Die Einwilligung des {t.oneOblique} bzw. der Vertretung zur Fotodokumentation liegt vor.
+        Die Einwilligung des {t.oneGenitive} bzw. der Vertretung zur Fotodokumentation liegt vor.
       </label>
     </EditorDialog>
   );
