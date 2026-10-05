@@ -225,6 +225,108 @@ test("Präsentation: Textfeld, Form, Tabelle und Diagramm auf der Folie", async 
   expect(errors).toEqual([]);
 });
 
+// Tabelle: Farbskala, Datenbalken, benannter Bereich, Achsentitel/Datenbeschriftungen, Druckbereich mit Kopf-/Fusszeile.
+test("Tabelle: Farbskala, Datenbalken, Namen, Achsentitel und Druckbereich", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  const stamp = Date.now();
+  await page.goto("/c/carecore-one/ablage");
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Tabelle/ }).click();
+  const gallery = page.getByRole("dialog", { name: "Neue Tabelle (Excel)" });
+  await gallery.getByLabel("Name").fill(`Kennzahlen ${stamp}`);
+  await gallery.getByRole("button", { name: "Erstellen und öffnen" }).click();
+  const cell = (row: number, col: number) => page.locator(".sheet-table tbody tr").nth(row).locator("td").nth(col);
+  const data = [
+    ["Wohnbereich", "Plätze"],
+    ["Ahorn", "24"],
+    ["Linde", "18"],
+    ["Eiche", "30"],
+  ];
+  for (const [row, values] of data.entries())
+    for (const [col, value] of values.entries()) {
+      await cell(row, col).click();
+      await page.keyboard.type(value);
+      await page.keyboard.press("Enter");
+    }
+
+  // Benannter Bereich und Formel mit dem Namen (Vorschlag mit Tab übernehmen).
+  await page.getByRole("button", { name: "Namen verwalten" }).click();
+  const names = page.getByRole("dialog", { name: "Namen verwalten" });
+  await names.getByLabel("Name", { exact: true }).fill("B2");
+  await names.getByRole("button", { name: "Name hinzufügen" }).click();
+  await expect(names.getByRole("alert")).toContainText("Zellbezug");
+  await names.getByLabel("Name", { exact: true }).fill("Plätze");
+  await names.getByLabel("Bereich").fill("B2:B4");
+  await names.getByRole("button", { name: "Name hinzufügen" }).click();
+  await expect(names.getByRole("list", { name: "Namen" })).toContainText("Plätze");
+  await names.getByRole("button", { name: "Übernehmen" }).click();
+  await cell(0, 3).click();
+  await page.keyboard.type("=SUMME(Plä");
+  await expect(page.getByRole("option", { name: /Plätze/ })).toBeVisible();
+  await page.keyboard.press("Tab");
+  await page.keyboard.type(")");
+  await page.keyboard.press("Enter");
+  await expect(cell(0, 3)).toHaveText("72");
+
+  // Farbskala und Datenbalken.
+  await page.getByRole("button", { name: "Bedingte Formatierung" }).click();
+  const rules = page.getByRole("dialog", { name: "Bedingte Formatierung" });
+  await rules.getByLabel("Bereich").fill("B2:B4");
+  await rules.getByRole("combobox", { name: "Regel" }).click();
+  await page.getByRole("option", { name: "Farbskala" }).click();
+  await rules.getByRole("button", { name: "Regel hinzufügen" }).click();
+  await rules.getByRole("combobox", { name: "Regel" }).click();
+  await page.getByRole("option", { name: "Datenbalken" }).click();
+  await rules.getByLabel("Bereich").fill("B2:B4");
+  await rules.getByRole("button", { name: "Regel hinzufügen" }).click();
+  await rules.getByRole("button", { name: "Übernehmen" }).click();
+  await expect(cell(2, 1)).toHaveCSS("background-color", "rgb(248, 105, 107)");
+  await expect(cell(3, 1)).toHaveCSS("background-color", "rgb(99, 190, 123)");
+  await expect(cell(3, 1)).toHaveCSS("background-image", /linear-gradient/);
+
+  // Diagramm mit Achsentiteln und Werten.
+  await cell(0, 0).click();
+  await cell(3, 1).click({ modifiers: ["Shift"] });
+  await page.getByRole("button", { name: "Diagramm einfügen" }).click();
+  const chart = page.getByRole("dialog", { name: "Diagramm einfügen" });
+  await chart.getByLabel("Titel der waagrechten Achse").fill("Wohnbereich");
+  await chart.getByLabel("Titel der senkrechten Achse").fill("Anzahl");
+  await chart.getByRole("button", { name: "Werte an den Datenpunkten anzeigen" }).click();
+  await chart.getByRole("button", { name: "Einfügen" }).click();
+  const svg = page.locator(".sheet-chart-svg").first();
+  await expect(svg.locator(".sheet-chart-axis-title")).toHaveText(["Anzahl", "Wohnbereich"]);
+  await expect(svg.locator(".sheet-chart-label")).toHaveText(["24", "18", "30"]);
+
+  // Druckbereich, Kopf- und Fusszeile.
+  await page.getByRole("button", { name: "Seite einrichten" }).click();
+  await page.getByRole("menuitemradio", { name: /Kopf- und Fusszeile/ }).click();
+  const setup = page.getByRole("dialog", { name: "Seite einrichten" });
+  await setup.getByLabel("Druckbereich").fill("A1:B4");
+  await setup.getByLabel("Kopfzeile").fill("Haus Ahorn");
+  await setup.getByRole("button", { name: /Seitenzahlen/ }).click();
+  await setup.getByRole("button", { name: "Übernehmen", exact: true }).click();
+  await page.emulateMedia({ media: "print" });
+  await page.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
+  const print = page.locator(".sheet-print");
+  await expect(print.locator("tr")).toHaveCount(4);
+  await expect(print.locator("tr").first().locator("td")).toHaveCount(2);
+  const pageStyle = await print.locator("style").textContent();
+  expect(pageStyle).toContain('@top-center { content: "Haus Ahorn"; }');
+  expect(pageStyle).toContain("counter(pages)");
+  await page.evaluate(() => window.dispatchEvent(new Event("afterprint")));
+  await page.emulateMedia({ media: "screen" });
+
+  await expect(page.locator(".office-status")).toContainText("Gespeichert um");
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  await page.getByText(`Kennzahlen ${stamp}.xlsx`, { exact: true }).dblclick();
+  await expect(cell(0, 3)).toHaveText("72");
+  await expect(cell(3, 1)).toHaveCSS("background-color", "rgb(99, 190, 123)");
+  await expect(page.locator(".sheet-chart-svg .sheet-chart-axis-title")).toHaveCount(2);
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  expect(errors).toEqual([]);
+});
+
 // Tabelle: eingegebener Text bleibt stehen – auch beim Klick ausserhalb, auf „Fett“ oder beim Schliessen;
 // Knöpfe zeigen einen eigenen Tooltip; Umbenennen im Titel.
 test("Tabelle: Eingaben gehen nie verloren, Tooltips und Umbenennen", async ({ page }) => {

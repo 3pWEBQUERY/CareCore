@@ -5,13 +5,24 @@ import { createPortal } from "react-dom";
 import { Check, X } from "@phosphor-icons/react";
 import { CareOptionSelect } from "@/app/components/care-form-controls";
 import { areaName, parseArea, type Area } from "@/lib/office/formula";
-import type { ChartType, RuleOp, RuleStyle, SheetChart, SheetRule } from "@/lib/office/model";
 import {
+  nameProblem,
+  type ChartType,
+  type PrintSetup,
+  type RuleOp,
+  type RuleStyle,
+  type SheetChart,
+  type SheetName,
+  type SheetRule,
+} from "@/lib/office/model";
+import {
+  BAR_PRESETS,
   CHART_COLORS,
   CHART_LABELS,
   RULE_LABELS,
   RULE_NEEDS,
   RULE_PRESETS,
+  SCALE_PRESETS,
   type ChartData,
   type FindOptions,
 } from "@/lib/office/sheet-features";
@@ -45,13 +56,22 @@ export function ChartSvg({
   title,
   width,
   height,
+  xTitle = "",
+  yTitle = "",
+  labels = false,
 }: {
   data: ChartData;
   type: ChartType;
   title: string;
   width: number;
   height: number;
+  xTitle?: string;
+  yTitle?: string;
+  labels?: boolean;
 }) {
+  // Achsentitel: bei Balken liegt die Kategorienachse links, die Werteachse unten.
+  const horizontalTitle = type === "pie" ? "" : type === "bar" ? yTitle : xTitle;
+  const verticalTitle = type === "pie" ? "" : type === "bar" ? xTitle : yTitle;
   const top = title ? 34 : 12;
   const legendItems = type === "pie" ? data.categories : data.series.map((item) => item.name);
   const legend = legendItems.length > 1 || type === "pie" ? 26 : 0;
@@ -99,7 +119,7 @@ export function ChartSvg({
                 textAnchor="middle"
                 className="sheet-chart-slice"
               >
-                {Math.round((value / total) * 100)}%
+                {labels ? short(value) : `${Math.round((value / total) * 100)}%`}
               </text>
             )}
           </g>
@@ -119,9 +139,9 @@ export function ChartSvg({
     const labelWidth = horizontal
       ? Math.min(110, 8 + 6.5 * Math.max(...data.categories.map((item) => clipLabel(item, 16).length)))
       : Math.min(70, 10 + 6.5 * Math.max(...ticks.map((tick) => short(tick).length)));
-    const left = labelWidth + 6;
+    const left = labelWidth + 6 + (verticalTitle ? 18 : 0);
     const right = width - 14;
-    const bottom = height - legend - (horizontal ? 22 : 24);
+    const bottom = height - legend - (horizontal ? 22 : 24) - (horizontalTitle ? 18 : 0);
     const plotW = Math.max(10, right - left);
     const plotH = Math.max(10, bottom - top);
     const scale = (value: number) => (value - min) / (max - min);
@@ -180,6 +200,12 @@ export function ChartSvg({
                 <title>{`${item.name} – ${data.categories[index]}: ${short(item.values[index])}`}</title>
               </circle>
             ))}
+            {labels &&
+              points.map(([x, y], index) => (
+                <text key={`l${index}`} x={x} y={y - 8} textAnchor="middle" className="sheet-chart-label">
+                  {short(item.values[index])}
+                </text>
+              ))}
           </g>
         );
       });
@@ -207,9 +233,21 @@ export function ChartSvg({
                 height: Math.max(0, (b - a) * plotH),
               };
           return (
-            <rect key={`${s}-${index}`} {...box} fill={color} rx={1.5}>
-              <title>{`${item.name} – ${data.categories[index]}: ${short(value)}`}</title>
-            </rect>
+            <g key={`${s}-${index}`}>
+              <rect {...box} fill={color} rx={1.5}>
+                <title>{`${item.name} – ${data.categories[index]}: ${short(value)}`}</title>
+              </rect>
+              {labels && (
+                <text
+                  x={horizontal ? (value < 0 ? box.x - 4 : box.x + box.width + 4) : box.x + box.width / 2}
+                  y={horizontal ? box.y + box.height / 2 + 4 : value < 0 ? box.y + box.height + 12 : box.y - 4}
+                  textAnchor={horizontal ? (value < 0 ? "end" : "start") : "middle"}
+                  className="sheet-chart-label"
+                >
+                  {short(value)}
+                </text>
+              )}
+            </g>
           );
         }),
       );
@@ -230,6 +268,22 @@ export function ChartSvg({
           />
         )}
         {categoryLabels}
+        {verticalTitle && (
+          <text
+            x={14}
+            y={(top + bottom) / 2}
+            textAnchor="middle"
+            transform={`rotate(-90 14 ${(top + bottom) / 2})`}
+            className="sheet-chart-axis-title"
+          >
+            {clipLabel(verticalTitle, Math.floor((bottom - top) / 7))}
+          </text>
+        )}
+        {horizontalTitle && (
+          <text x={(left + right) / 2} y={height - legend - 6} textAnchor="middle" className="sheet-chart-axis-title">
+            {clipLabel(horizontalTitle, Math.floor((right - left) / 7))}
+          </text>
+        )}
       </>
     );
   })();
@@ -339,6 +393,20 @@ function Field({ label, children, hint }: { label: string; children: ReactNode; 
 
 // ---------- Bedingte Formatierung ----------
 
+// Vorschau einer Farbskala (Verlauf) oder eines Datenbalkens.
+function RuleSample({ op, colors }: { op: RuleOp; colors: string[] }) {
+  const style =
+    op === "scale"
+      ? { background: `linear-gradient(to right, ${colors.join(", ")})` }
+      : {
+          backgroundImage: `linear-gradient(to right, ${colors[0]} 0, ${colors[0]}99 70%, transparent 70%)`,
+          backgroundSize: "100% 70%",
+          backgroundPosition: "left center",
+          backgroundRepeat: "no-repeat",
+        };
+  return <span className="sheet-rule-sample graded" style={style} aria-hidden="true" />;
+}
+
 export function RulesDialog({
   rules,
   selection,
@@ -356,14 +424,23 @@ export function RulesDialog({
   const [value, setValue] = useState("");
   const [value2, setValue2] = useState("");
   const [preset, setPreset] = useState(RULE_PRESETS[0].id);
+  const [scalePreset, setScalePreset] = useState(SCALE_PRESETS[0].id);
+  const [barPreset, setBarPreset] = useState(BAR_PRESETS[0].id);
   const [problem, setProblem] = useState("");
   const needs = RULE_NEEDS[op];
+  const graded = op === "scale" || op === "bar";
   function add() {
     const normalized = normalizeRange(range);
     if (!normalized) return setProblem("Bitte einen gültigen Bereich angeben, z. B. B2:B20.");
     if (needs >= 1 && !value.trim()) return setProblem("Bitte einen Vergleichswert angeben.");
     if (needs === 2 && !value2.trim()) return setProblem("Bitte beide Werte angeben.");
-    const style: RuleStyle = RULE_PRESETS.find((item) => item.id === preset)!.style;
+    const style: RuleStyle = graded ? {} : RULE_PRESETS.find((item) => item.id === preset)!.style;
+    const colors =
+      op === "scale"
+        ? SCALE_PRESETS.find((item) => item.id === scalePreset)!.colors
+        : op === "bar"
+          ? BAR_PRESETS.find((item) => item.id === barPreset)!.colors
+          : undefined;
     setList([
       ...list,
       {
@@ -373,6 +450,7 @@ export function RulesDialog({
         value: needs ? value.trim() : "",
         value2: needs === 2 ? value2.trim() : "",
         style,
+        ...(colors ? { colors } : {}),
       },
     ]);
     setValue("");
@@ -405,7 +483,8 @@ export function RulesDialog({
       }
     >
       <p className="sheet-dialog-text">
-        Zellen werden hervorgehoben, wenn ihr Wert die Regel erfüllt. Die erste zutreffende Regel gilt.
+        Zellen werden hervorgehoben, wenn ihr Wert die Regel erfüllt; die erste zutreffende Hervorhebung gilt. Farbskala
+        und Datenbalken zeigen Zahlen im Vergleich zu den anderen Zahlen im Bereich.
       </p>
       <div className="sheet-dialog-grid">
         <Field label="Bereich">
@@ -431,7 +510,27 @@ export function RulesDialog({
           </Field>
         )}
       </div>
-      <div className="sheet-dialog-presets" role="radiogroup" aria-label="Formatierung">
+      {graded && (
+        <div className="sheet-dialog-presets" role="radiogroup" aria-label="Farben">
+          {(op === "scale" ? SCALE_PRESETS : BAR_PRESETS).map((item) => {
+            const active = (op === "scale" ? scalePreset : barPreset) === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                className={active ? "active" : ""}
+                onClick={() => (op === "scale" ? setScalePreset(item.id) : setBarPreset(item.id))}
+              >
+                <RuleSample op={op} colors={item.colors} />
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      <div className="sheet-dialog-presets" role="radiogroup" aria-label="Formatierung" hidden={graded}>
         {RULE_PRESETS.map((item) => (
           <button
             key={item.id}
@@ -463,12 +562,16 @@ export function RulesDialog({
         {list.length === 0 && <li className="empty">Noch keine Regeln auf diesem Blatt.</li>}
         {list.map((rule, index) => (
           <li key={rule.id}>
-            <span
-              className="sheet-rule-sample"
-              style={{ background: rule.style.fill, color: rule.style.color, fontWeight: rule.style.b ? 700 : 500 }}
-            >
-              123
-            </span>
+            {rule.op === "scale" || rule.op === "bar" ? (
+              <RuleSample op={rule.op} colors={rule.colors ?? []} />
+            ) : (
+              <span
+                className="sheet-rule-sample"
+                style={{ background: rule.style.fill, color: rule.style.color, fontWeight: rule.style.b ? 700 : 500 }}
+              >
+                123
+              </span>
+            )}
             <span className="grow">
               <strong>{rule.range}</strong> · {describe(rule)}
             </span>
@@ -584,6 +687,8 @@ export function ValidationDialog({
 
 // ---------- Diagramm einfügen / bearbeiten ----------
 
+export type ChartValues = Pick<SheetChart, "type" | "range" | "title" | "xTitle" | "yTitle" | "labels">;
+
 export function ChartDialog({
   chart,
   selection,
@@ -592,12 +697,15 @@ export function ChartDialog({
 }: {
   chart: SheetChart | null;
   selection: Area;
-  onSave: (values: { type: ChartType; range: string; title: string }) => void;
+  onSave: (values: ChartValues) => void;
   onClose: () => void;
 }) {
   const [type, setType] = useState<ChartType>(chart?.type ?? "column");
   const [range, setRange] = useState(chart?.range ?? areaName(selection));
   const [title, setTitle] = useState(chart?.title ?? "");
+  const [xTitle, setXTitle] = useState(chart?.xTitle ?? "");
+  const [yTitle, setYTitle] = useState(chart?.yTitle ?? "");
+  const [labels, setLabels] = useState(chart?.labels ?? false);
   const [problem, setProblem] = useState("");
   return (
     <SheetDialog
@@ -614,7 +722,14 @@ export function ChartDialog({
             onClick={() => {
               const normalized = normalizeRange(range);
               if (!normalized) return setProblem("Bitte einen gültigen Datenbereich angeben, z. B. A1:C10.");
-              onSave({ type, range: normalized, title: title.trim().slice(0, 200) });
+              onSave({
+                type,
+                range: normalized,
+                title: title.trim().slice(0, 200),
+                xTitle: type === "pie" ? undefined : xTitle.trim().slice(0, 200) || undefined,
+                yTitle: type === "pie" ? undefined : yTitle.trim().slice(0, 200) || undefined,
+                labels: labels || undefined,
+              });
               onClose();
             }}
           >
@@ -644,6 +759,258 @@ export function ChartDialog({
       <Field label="Titel">
         <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} />
       </Field>
+      {type !== "pie" && (
+        <div className="sheet-dialog-grid">
+          <Field
+            label={type === "bar" ? "Titel der senkrechten Achse (Beschriftungen)" : "Titel der waagrechten Achse"}
+          >
+            <input value={xTitle} onChange={(event) => setXTitle(event.target.value)} maxLength={200} />
+          </Field>
+          <Field label={type === "bar" ? "Titel der waagrechten Achse (Werte)" : "Titel der senkrechten Achse"}>
+            <input value={yTitle} onChange={(event) => setYTitle(event.target.value)} maxLength={200} />
+          </Field>
+        </div>
+      )}
+      <button
+        type="button"
+        className={`office-toggle ${labels ? "active" : ""}`}
+        aria-pressed={labels}
+        onClick={() => setLabels((value) => !value)}
+      >
+        Werte an den Datenpunkten anzeigen
+      </button>
+      {problem && (
+        <p className="office-inline-error" role="alert">
+          {problem}
+        </p>
+      )}
+    </SheetDialog>
+  );
+}
+
+// ---------- Benannte Bereiche ----------
+
+export function NamesDialog({
+  names,
+  sheets,
+  sheet,
+  selection,
+  onSave,
+  onClose,
+}: {
+  names: SheetName[];
+  sheets: string[];
+  sheet: string;
+  selection: Area;
+  onSave: (names: SheetName[]) => void;
+  onClose: () => void;
+}) {
+  const [list, setList] = useState(names);
+  const [name, setName] = useState("");
+  const [target, setTarget] = useState(sheet);
+  const [range, setRange] = useState(areaName(selection));
+  const [problem, setProblem] = useState("");
+  function add() {
+    const trimmed = name.trim();
+    const issue = nameProblem(trimmed);
+    if (issue) return setProblem(issue);
+    if (list.some((entry) => entry.name.toUpperCase() === trimmed.toUpperCase()))
+      return setProblem("Diesen Namen gibt es schon.");
+    const normalized = normalizeRange(range);
+    if (!normalized) return setProblem("Bitte einen gültigen Bereich angeben, z. B. B2:B20.");
+    setList([...list, { name: trimmed, sheet: target, range: normalized }]);
+    setName("");
+    setProblem("");
+  }
+  return (
+    <SheetDialog
+      title="Namen verwalten"
+      onClose={onClose}
+      wide
+      footer={
+        <>
+          <button type="button" onClick={onClose}>
+            Abbrechen
+          </button>
+          <button
+            type="button"
+            className="primary"
+            onClick={() => {
+              onSave(list);
+              onClose();
+            }}
+          >
+            Übernehmen
+          </button>
+        </>
+      }
+    >
+      <p className="sheet-dialog-text">
+        Ein Name steht für einen Bereich und kann in Formeln statt des Bezugs stehen, z. B. =SUMME(Plätze).
+      </p>
+      <div className="sheet-dialog-grid">
+        <Field label="Name">
+          <input
+            value={name}
+            maxLength={100}
+            placeholder="z. B. Plätze"
+            spellCheck={false}
+            onChange={(event) => {
+              setName(event.target.value);
+              setProblem("");
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                add();
+              }
+            }}
+          />
+        </Field>
+        <Field label="Blatt">
+          <CareOptionSelect
+            label="Blatt"
+            value={target}
+            menuZIndex={MENU_Z}
+            options={sheets.map((item) => ({ value: item, label: item }))}
+            onChange={(next) => setTarget(next)}
+          />
+        </Field>
+        <Field label="Bereich">
+          <input value={range} onChange={(event) => setRange(event.target.value)} spellCheck={false} />
+        </Field>
+      </div>
+      {problem && (
+        <p className="office-inline-error" role="alert">
+          {problem}
+        </p>
+      )}
+      <button type="button" className="sheet-dialog-add" onClick={add}>
+        Name hinzufügen
+      </button>
+      <ul className="sheet-dialog-list" aria-label="Namen">
+        {list.length === 0 && <li className="empty">Noch keine Namen in dieser Arbeitsmappe.</li>}
+        {list.map((entry) => (
+          <li key={entry.name}>
+            <span className="grow">
+              <strong>{entry.name}</strong> · {entry.sheet}!{entry.range}
+            </span>
+            <button
+              type="button"
+              className="danger"
+              aria-label={`Name ${entry.name} entfernen`}
+              data-tip="Name entfernen"
+              onClick={() => setList(list.filter((item) => item.name !== entry.name))}
+            >
+              <X aria-hidden="true" />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </SheetDialog>
+  );
+}
+
+// ---------- Seite einrichten (Druckbereich, Kopf- und Fusszeile) ----------
+
+export function PageDialog({
+  print,
+  selection,
+  onSave,
+  onClose,
+}: {
+  print: PrintSetup;
+  selection: Area;
+  onSave: (print: PrintSetup) => void;
+  onClose: () => void;
+}) {
+  const [orientation, setOrientation] = useState(print.orientation);
+  const [fit, setFit] = useState(print.fit);
+  const [gridlines, setGridlines] = useState(print.gridlines);
+  const [area, setArea] = useState(print.area ?? "");
+  const [header, setHeader] = useState(print.header ?? "");
+  const [footer, setFooter] = useState(print.footer ?? "");
+  const [pageNumbers, setPageNumbers] = useState(print.pageNumbers ?? false);
+  const [problem, setProblem] = useState("");
+  const toggle = (active: boolean, label: string, onClick: () => void) => (
+    <button type="button" className={`office-toggle ${active ? "active" : ""}`} aria-pressed={active} onClick={onClick}>
+      {label}
+    </button>
+  );
+  return (
+    <SheetDialog
+      title="Seite einrichten"
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" onClick={onClose}>
+            Abbrechen
+          </button>
+          <button
+            type="button"
+            className="primary"
+            onClick={() => {
+              const normalized = area.trim() ? normalizeRange(area) : "";
+              if (normalized === null) return setProblem("Bitte einen gültigen Druckbereich angeben, z. B. A1:F40.");
+              onSave({
+                orientation,
+                fit,
+                gridlines,
+                ...(normalized ? { area: normalized } : {}),
+                ...(header.trim() ? { header: header.trim() } : {}),
+                ...(footer.trim() ? { footer: footer.trim() } : {}),
+                ...(pageNumbers ? { pageNumbers: true } : {}),
+              });
+              onClose();
+            }}
+          >
+            Übernehmen
+          </button>
+        </>
+      }
+    >
+      <div className="sheet-dialog-presets" role="radiogroup" aria-label="Ausrichtung">
+        {(["portrait", "landscape"] as const).map((value) => (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={orientation === value}
+            className={orientation === value ? "active" : ""}
+            onClick={() => setOrientation(value)}
+          >
+            {orientation === value && <Check aria-hidden="true" />}
+            {value === "portrait" ? "Hochformat" : "Querformat"}
+          </button>
+        ))}
+      </div>
+      <Field label="Druckbereich" hint="Leer lassen, um das ganze Blatt zu drucken">
+        <span className="sheet-dialog-inline">
+          <input
+            value={area}
+            placeholder="z. B. A1:F40"
+            spellCheck={false}
+            onChange={(event) => {
+              setArea(event.target.value);
+              setProblem("");
+            }}
+          />
+          <button type="button" onClick={() => setArea(areaName(selection))}>
+            Auswahl übernehmen
+          </button>
+        </span>
+      </Field>
+      <Field label="Kopfzeile" hint="Steht oben auf jeder Seite">
+        <input value={header} maxLength={200} onChange={(event) => setHeader(event.target.value)} />
+      </Field>
+      <Field label="Fusszeile" hint="Steht unten auf jeder Seite">
+        <input value={footer} maxLength={200} onChange={(event) => setFooter(event.target.value)} />
+      </Field>
+      <div className="sheet-dialog-toggles">
+        {toggle(pageNumbers, "Seitenzahlen in der Fusszeile („Seite 1 von 3“)", () => setPageNumbers(!pageNumbers))}
+        {toggle(fit, "Auf Seitenbreite anpassen", () => setFit(!fit))}
+        {toggle(gridlines, "Gitternetz drucken", () => setGridlines(!gridlines))}
+      </div>
       {problem && (
         <p className="office-inline-error" role="alert">
           {problem}

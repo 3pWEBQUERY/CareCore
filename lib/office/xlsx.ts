@@ -48,7 +48,7 @@ import {
 } from "./package";
 import { child, childrenOf, esc, find, findAll, parseXml, textOf, type XmlNode } from "./xml";
 import { DEFAULT_BORDER_COLOR, chartData, filteredRows, sidesOf } from "./sheet-features";
-import { CHART_KINDS, chartSpaceXml } from "./chart-xml";
+import { CHART_KINDS, chartSpaceXml, chartTexts } from "./chart-xml";
 
 // Excel-Arbeitsmappe (.xlsx) aus der Tabelle der Ablage schreiben und wieder lesen.
 
@@ -181,11 +181,18 @@ function valueXml(ref: string, style: string, value: Value) {
 // Fehlerwerte, die jede Excel-Version kennt (neuere wie #ÜBERLAUF! werden beim Öffnen neu berechnet).
 const EXCEL_ERRORS = new Set(["#DIV/0!", "#NAME?", "#REF!", "#VALUE!", "#N/A", "#NUM!"]);
 
-function cellXml(ref: string, raw: string, style: number, value: Value, spill: string | null = null) {
+function cellXml(
+  ref: string,
+  raw: string,
+  style: number,
+  value: Value,
+  spill: string | null = null,
+  defined?: Set<string>,
+) {
   const s = style ? ` s="${style}"` : "";
   const input = parseInput(raw);
   if (input.type === "formula") {
-    const formula = toExcelFormula(input.formula);
+    const formula = toExcelFormula(input.formula, defined);
     if (formula === null) return `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${esc(raw)}</t></is></c>`;
     let cached = "";
     let type = "";
@@ -228,9 +235,50 @@ const operand = (value: string) => {
   return parsed.type === "number" ? String(parsed.value) : `"${value.replace(/"/g, '""')}"`;
 };
 
+// Kopf- und Fusszeile im Code von Excel: &C Mitte, &L links, &R rechts, &P Seite, &N Seitenzahl.
+const headerText = (text: string) => text.replace(/&/g, "&&");
+function headerFooterXml(print: Sheet["print"]) {
+  const header = print.header ? `&C${headerText(print.header)}` : "";
+  const footer = `${print.footer ? `&L${headerText(print.footer)}` : ""}${print.pageNumbers ? "&RSeite &P von &N" : ""}`;
+  if (!header && !footer) return "";
+  return `<headerFooter>${header ? `<oddHeader>${esc(header)}</oddHeader>` : ""}${footer ? `<oddFooter>${esc(footer)}</oddFooter>` : ""}</headerFooter>`;
+}
+
+// Text einer Kopf-/Fusszeile aus Excel (ohne Schrift-Codes); Seitenzahlen werden zur Einstellung „Seitenzahlen“.
+function readHeaderFooter(code: string) {
+  const sections = code.split(/&[LCR]/).filter((part) => part.trim());
+  const pageNumbers = /&[PN]/.test(code);
+  const text = sections
+    .filter((part) => !/&[PN]/.test(part))
+    .map((part) =>
+      part
+        .replace(/&"[^"]*"/g, "")
+        .replace(/&\d+/g, "")
+        .replace(/&[BIUSXYEKDTFAGHZ]/g, "")
+        .replace(/&&/g, "&")
+        .trim(),
+    )
+    .filter(Boolean)
+    .join(" ");
+  return { text: text.slice(0, 200), pageNumbers };
+}
+
 function ruleXml(rule: SheetRule, priority: number, styles: StyleTable) {
   const area = parseArea(rule.range);
   if (!area) return "";
+  // Farbskala und Datenbalken brauchen keine Formatierung (dxf), nur Farben.
+  if (rule.op === "scale" || rule.op === "bar") {
+    const colors = rule.colors?.length
+      ? rule.colors
+      : rule.op === "bar"
+        ? ["#638ec6"]
+        : ["#f8696b", "#ffeb84", "#63be7b"];
+    const body =
+      rule.op === "scale"
+        ? `<colorScale><cfvo type="min"/>${colors.length > 2 ? '<cfvo type="percentile" val="50"/>' : ""}<cfvo type="max"/>${colors.map((color) => `<color rgb="${argb(color)}"/>`).join("")}</colorScale>`
+        : `<dataBar><cfvo type="min"/><cfvo type="max"/><color rgb="${argb(colors[0])}"/></dataBar>`;
+    return `<conditionalFormatting sqref="${rule.range}"><cfRule type="${rule.op === "scale" ? "colorScale" : "dataBar"}" priority="${priority}">${body}</cfRule></conditionalFormatting>`;
+  }
   const dxf = styles.dxf(rule.style);
   const first = cellKey(area.c1, area.r1);
   const head = `<cfRule dxfId="${dxf}" priority="${priority}"`;
@@ -274,6 +322,7 @@ function sheetXml(
   values: Map<string, Value>,
   drawing: string | null,
   spills: Map<string, Spill>,
+  defined: Set<string>,
 ) {
   const display = (col: number, row: number) => {
     const key = cellKey(col, row);
@@ -309,7 +358,14 @@ function sheetXml(
           if (!cell) return valueXml(key, "", values.get(key) ?? null);
           const raw = cell.s?.fmt === "text" && !cell.v.startsWith("=") ? `'${cell.v}` : cell.v;
           const spill = spills.get(key);
-          return cellXml(key, raw, styles.id(cell.s), values.get(key) ?? null, spill ? areaName(spill.area) : null);
+          return cellXml(
+            key,
+            raw,
+            styles.id(cell.s),
+            values.get(key) ?? null,
+            spill ? areaName(spill.area) : null,
+            defined,
+          );
         })
         .join("");
       return `<row r="${row + 1}"${height ? ` ht="${Math.round(height * 0.75 * 100) / 100}" customHeight="1"` : ""}${hiddenRows.has(row) ? ' hidden="1"' : ""}>${content}</row>`;
@@ -360,7 +416,7 @@ function sheetXml(
     : "";
   const print = sheet.print;
   const sheetPr = print.fit ? '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' : "";
-  const pageSetup = `<pageSetup paperSize="9" orientation="${print.orientation}"${print.fit ? ' fitToWidth="1" fitToHeight="0"' : ""}/>`;
+  const pageSetup = `<pageSetup paperSize="9" orientation="${print.orientation}"${print.fit ? ' fitToWidth="1" fitToHeight="0"' : ""}/>${headerFooterXml(print)}`;
   return `${XML_HEAD}<worksheet ${MAIN}>${sheetPr}<sheetViews><sheetView${sheet.showGrid ? "" : ' showGridLines="0"'} workbookViewId="0"${index === 0 ? ' tabSelected="1"' : ""}>${pane}</sheetView></sheetViews><sheetFormatPr defaultColWidth="${excelWidth(DEFAULT_COL_WIDTH)}" defaultRowHeight="${DEFAULT_ROW_HEIGHT * 0.75}"/>${cols ? `<cols>${cols}</cols>` : ""}<sheetData>${data}</sheetData>${autoFilter}${merges}${conditional}${validations}${print.gridlines ? '<printOptions gridLines="1"/>' : ""}<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>${pageSetup}${drawing ? `<drawing r:id="${drawing}"/>` : ""}</worksheet>`;
 }
 
@@ -383,6 +439,9 @@ function chartXml(sheet: Sheet, chart: Sheet["charts"][number], values: Map<stri
   return chartSpaceXml({
     type: chart.type,
     title: chart.title,
+    xTitle: chart.xTitle,
+    yTitle: chart.yTitle,
+    labels: chart.labels,
     categories: data.categories,
     catRef: labelCol ? absolute(sheet.name, area.c1, firstRow, area.c1, area.r2) : undefined,
     series: data.series.map((item) => ({
@@ -444,6 +503,7 @@ export function buildXlsx(model: SheetModel, meta: { title: string; author: stri
   const styles = new StyleTable();
   const evaluator = evaluateWorkbook(model);
   const computed = evaluator.all();
+  const defined = new Set((model.names ?? []).map((entry) => entry.name.toUpperCase()));
   // Werte je Blatt samt übergelaufener Zellen.
   const results = computed.map((values, index) => {
     const merged = new Map(values);
@@ -474,7 +534,7 @@ export function buildXlsx(model: SheetModel, meta: { title: string; author: stri
       ]);
       return [{ chart, file: `chart${chartCount}.xml` }];
     });
-    if (!charts.length) return sheetXml(sheet, index, styles, results[index], null, evaluator.spills(index));
+    if (!charts.length) return sheetXml(sheet, index, styles, results[index], null, evaluator.spills(index), defined);
     drawingCount += 1;
     const drawing = `drawing${drawingCount}.xml`;
     const linked = charts.map((item, position) => ({ rel: `rId${position + 1}`, chart: item.chart }));
@@ -504,17 +564,31 @@ export function buildXlsx(model: SheetModel, meta: { title: string; author: stri
       ),
     });
     types.push([`/xl/drawings/${drawing}`, "application/vnd.openxmlformats-officedocument.drawing+xml"]);
-    return sheetXml(sheet, index, styles, results[index], "rId1", evaluator.spills(index));
+    return sheetXml(sheet, index, styles, results[index], "rId1", evaluator.spills(index), defined);
   });
-  // Filterbereiche kennt Excel zusätzlich als versteckten Namen.
-  const names = model.sheets
-    .map((sheet, index) => {
+  // Filterbereiche kennt Excel zusätzlich als versteckten Namen, den Druckbereich als „Print_Area“.
+  const names = [
+    ...(model.names ?? []).flatMap((entry) => {
+      const area = parseArea(entry.range);
+      return area
+        ? [
+            `<definedName name="${esc(entry.name)}">${esc(absolute(entry.sheet, area.c1, area.r1, area.c2, area.r2))}</definedName>`,
+          ]
+        : [];
+    }),
+    ...model.sheets.map((sheet, index) => {
       const area = sheet.filter ? parseArea(sheet.filter.range) : null;
       return area
         ? `<definedName name="_xlnm._FilterDatabase" localSheetId="${index}" hidden="1">${esc(absolute(sheet.name, area.c1, area.r1, area.c2, area.r2))}</definedName>`
         : "";
-    })
-    .join("");
+    }),
+    ...model.sheets.map((sheet, index) => {
+      const area = sheet.print.area ? parseArea(sheet.print.area) : null;
+      return area
+        ? `<definedName name="_xlnm.Print_Area" localSheetId="${index}">${esc(absolute(sheet.name, area.c1, area.r1, area.c2, area.r2))}</definedName>`
+        : "";
+    }),
+  ].join("");
   const workbook = `${XML_HEAD}<workbook ${MAIN}><bookViews><workbookView/></bookViews><sheets>${model.sheets
     .map((sheet, index) => `<sheet name="${esc(sheet.name)}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`)
     .join(
@@ -857,6 +931,24 @@ function readSheet(
     const area = parseArea(range);
     if (!area) continue;
     for (const rule of childrenOf(block, "cfRule")) {
+      // Farbskala und Datenbalken: Farben aus der Regel (Designfarben ohne RGB → Standardfarben).
+      if (rule.attrs.type === "colorScale" || rule.attrs.type === "dataBar") {
+        const scale = rule.attrs.type === "colorScale";
+        const colors = childrenOf(child(rule, scale ? "colorScale" : "dataBar"), "color")
+          .map((color) => color.attrs.rgb ?? "")
+          .filter((rgb) => /^([0-9a-f]{2})?[0-9a-f]{6}$/i.test(rgb))
+          .map((rgb) => `#${rgb.slice(-6).toLowerCase()}`);
+        sheet.rules.push({
+          id: `r${sheet.rules.length + 1}`,
+          range: areaName(area),
+          op: scale ? "scale" : "bar",
+          value: "",
+          value2: "",
+          style: {},
+          ...(colors.length ? { colors: colors.slice(0, scale ? 3 : 1) } : {}),
+        });
+        continue;
+      }
       const style = dxfs[Number(rule.attrs.dxfId ?? -1)];
       if (!style || !Object.keys(style).length) continue;
       const formulas = childrenOf(rule, "formula").map(textOf);
@@ -904,6 +996,14 @@ function readSheet(
     fit: find(find(root, "sheetPr"), "pageSetUpPr")?.attrs.fitToPage === "1",
     gridlines: find(root, "printOptions")?.attrs.gridLines === "1",
   };
+  const headerFooter = find(root, "headerFooter");
+  if (headerFooter) {
+    const header = readHeaderFooter(textOf(child(headerFooter, "oddHeader")));
+    const footer = readHeaderFooter(textOf(child(headerFooter, "oddFooter")));
+    if (header.text) sheet.print.header = header.text;
+    if (footer.text) sheet.print.footer = footer.text;
+    if (header.pageNumbers || footer.pageNumbers) sheet.print.pageNumbers = true;
+  }
   return { sheet, filterVisible };
 }
 
@@ -983,8 +1083,7 @@ function readCharts(files: Map<string, Buffer>, sheetPath: string, sheet: Sheet)
           : part;
       }
     if (!area) continue;
-    const titleNode = find(root, "title");
-    const title = titleNode ? findAll(titleNode, "t").map(textOf).join("") : "";
+    const texts = chartTexts(root);
     const from = point(child(anchor, "from"));
     let size = { w: 480, h: 300 };
     const to = child(anchor, "to");
@@ -999,7 +1098,10 @@ function readCharts(files: Map<string, Buffer>, sheetPath: string, sheet: Sheet)
       id: `c${charts.length + 1}`,
       type,
       range: areaName(area),
-      title: title.slice(0, 200),
+      title: texts.title.slice(0, 200),
+      ...(texts.xTitle ? { xTitle: texts.xTitle.slice(0, 200) } : {}),
+      ...(texts.yTitle ? { yTitle: texts.yTitle.slice(0, 200) } : {}),
+      ...(texts.labels ? { labels: true } : {}),
       x: Math.max(0, Math.round(from.x)),
       y: Math.max(0, Math.round(from.y)),
       w: Math.min(2000, Math.max(160, Math.round(size.w))),
@@ -1050,7 +1152,32 @@ export function readXlsx(bytes: Buffer): { model: SheetModel; imported: boolean 
     result.sheet.charts = readCharts(files, path, result.sheet);
     return [result];
   });
-  const model = cleanModel("sheet", { kind: "sheet", sheets: read.map((item) => item.sheet) }) as SheetModel;
+  // Benannte Bereiche und Druckbereiche (Namen mit Formeln oder mehreren Bereichen bleiben weg).
+  const names: { name: string; sheet: string; range: string }[] = [];
+  for (const entry of findAll(parseXml(workbookXml.toString("utf8")), "definedName")) {
+    const name = entry.attrs.name ?? "";
+    const target = /^(?:'((?:[^']|'')+)'|([^!'",()]+))!(\$?[A-Z]{1,3}\$?\d+(?::\$?[A-Z]{1,3}\$?\d+)?)$/i.exec(
+      textOf(entry).trim(),
+    );
+    if (!target) continue;
+    const sheet = (target[1] ?? target[2]).replace(/''/g, "'");
+    const area = parseArea(target[3].replace(/\$/g, "").toUpperCase());
+    if (!area) continue;
+    if (name === "_xlnm.Print_Area") {
+      const index = Number(entry.attrs.localSheetId);
+      const owner = read[index]?.sheet;
+      if (owner && owner.name.toLocaleLowerCase("de-CH") === sheet.toLocaleLowerCase("de-CH"))
+        owner.print.area = areaName(area);
+      continue;
+    }
+    if (entry.attrs.hidden === "1" || name.startsWith("_xlnm.")) continue;
+    names.push({ name, sheet, range: areaName(area) });
+  }
+  const model = cleanModel("sheet", {
+    kind: "sheet",
+    sheets: read.map((item) => item.sheet),
+    names,
+  }) as SheetModel;
   // Filter: in der Datei stehen die sichtbaren Werte, im Modell die ausgeblendeten.
   if (read.some((item) => item.filterVisible?.size)) {
     const results = evaluateWorkbook(model).all();

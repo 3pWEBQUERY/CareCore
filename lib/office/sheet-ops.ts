@@ -222,6 +222,9 @@ export function renameSheet(model: SheetModel, sheetIndex: number, name: string)
           : cell;
       return position === sheetIndex ? { ...sheet, name, cells } : { ...sheet, cells };
     }),
+    ...(model.names
+      ? { names: model.names.map((entry) => (entry.sheet === old ? { ...entry, sheet: name } : entry)) }
+      : {}),
   };
 }
 
