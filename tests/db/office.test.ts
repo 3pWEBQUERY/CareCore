@@ -2,7 +2,15 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ApiError } from "@/lib/api-context";
 import type { CarecoreActor } from "@/lib/server-data";
-import { createDocument, listVersions, officeLive, readOffice, saveOffice, uploadFile } from "@/lib/shared-files";
+import {
+  createDocument,
+  listVersions,
+  officeLive,
+  officeLiveStream,
+  readOffice,
+  saveOffice,
+  uploadFile,
+} from "@/lib/shared-files";
 import { readableFile } from "@/lib/file-access";
 import { createZip, readZip } from "@/lib/zip";
 import { buildDocx } from "@/lib/office/docx";
@@ -174,10 +182,23 @@ test("Gleichzeitiges Bearbeiten: wer ist in der Datei, wo, und neuester Stand nu
   const cleaned = await officeLive(anna, file.id, { session: sessionA, revision: saved.revision });
   assert.equal(cleaned.people[0].place, null);
 
+  // Laufende Verbindung: Stand und Personen ohne Inhalt, mit derselben Zugriffsprüfung.
+  const stream = await officeLiveStream(anna, file.id, sessionA);
+  const streamed = await stream();
+  assert.equal(streamed.revision, saved.revision);
+  assert.deepEqual(
+    streamed.people.map((person) => person.session),
+    [sessionL],
+  );
+  assert.equal("model" in streamed, false);
+  assert.equal(await status(officeLiveStream(anna, file.id, "x")), 400);
+
   // Verlassen: nicht mehr in der Liste. Ohne Sitzung oder ohne Zugriff kein Lebenszeichen.
   await officeLive(lead, file.id, { session: sessionL, leave: true });
   assert.deepEqual((await officeLive(anna, file.id, { session: sessionA, revision: saved.revision })).people, []);
   assert.equal(await status(officeLive(anna, file.id, { session: "x", revision: 0 })), 400);
   const own = await createDocument(anna, { action: "document", scope: "personal", template: "sheet-order" });
   assert.equal(await status(officeLive(max, own.id, { session: "maxfenster01", revision: 0 })), 404);
+  assert.equal(await status(officeLiveStream(max, own.id, "maxfenster01")), 404);
+  assert.equal(await status(officeLiveStream(max, "keine-kennung", "maxfenster01")), 404);
 });
