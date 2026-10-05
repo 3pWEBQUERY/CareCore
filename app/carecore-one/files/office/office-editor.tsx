@@ -37,9 +37,12 @@ const SheetEditor = dynamic(() => import("./sheet-editor"), { ssr: false, loadin
 const DeckEditor = dynamic(() => import("./deck-editor"), { ssr: false, loading: () => <EditorLoading /> });
 
 const AUTOSAVE_MS = 1500;
-// Abstand der Lebenszeichen (neuer Stand anderer, wer ist wo); im Hintergrund seltener.
+// Abstand der Lebenszeichen: mit laufender Verbindung selten (sie meldet Änderungen sofort), ohne Verbindung öfter,
+// im Hintergrund am seltensten; eigene Bewegungen gehen nach kurzer Sammelzeit.
+const HEARTBEAT_MS = 10_000;
 const LIVE_MS = 2500;
 const LIVE_HIDDEN_MS = 15_000;
+const PLACE_MS = 600;
 type Live = { revision: number; people: Collaborator[]; model?: OfficeModel };
 
 function EditorLoading() {
@@ -217,15 +220,31 @@ export default function OfficeEditor({
     [file.id, live, setPeople, setStatus, takeRemote],
   );
 
-  // Lebenszeichen: eigene Stelle melden, andere Personen und ihren neuesten Stand holen.
+  // Gleichzeitiges Bearbeiten: Eine laufende Verbindung (Server-Sent Events) meldet sofort, wenn jemand anderes
+  // gespeichert hat oder sich bewegt; dann wird der neue Stand geholt. Das Lebenszeichen (eigene Stelle) geht bei
+  // jeder Bewegung und sonst alle 10 s. Ohne Verbindung fragt der Editor alle 2,5 s selbst nach.
+  const kick = useRef<() => void>(() => undefined);
   useEffect(() => {
     if (!loaded) return;
     let stopped = false;
     let timer = 0;
+    let running = false;
+    let again = false;
+    let streaming = false;
+    const schedule = (ms: number) => {
+      window.clearTimeout(timer);
+      if (!stopped) timer = window.setTimeout(tick, ms);
+    };
     const tick = async () => {
       if (stopped) return;
-      // Während des Speicherns warten (der Stand ändert sich gerade); Fehler beim Lebenszeichen nicht melden.
-      if (!saving.current) {
+      if (running) {
+        again = true;
+        return;
+      }
+      running = true;
+      // Während des Speicherns kurz warten (der Stand ändert sich gerade); Fehler beim Lebenszeichen nicht melden.
+      if (saving.current) again = true;
+      else
         try {
           const before = saves.current;
           const result = await live();
@@ -238,19 +257,48 @@ export default function OfficeEditor({
         } catch {
           // Nächster Versuch beim nächsten Lebenszeichen.
         }
-      }
-      if (!stopped) timer = window.setTimeout(tick, document.hidden ? LIVE_HIDDEN_MS : LIVE_MS);
+      running = false;
+      if (again) {
+        again = false;
+        schedule(500);
+      } else schedule(document.hidden ? LIVE_HIDDEN_MS : streaming ? HEARTBEAT_MS : LIVE_MS);
     };
-    timer = window.setTimeout(tick, 400);
+    // Eigene Stelle geändert: kurz sammeln, dann melden.
+    kick.current = () => {
+      if (!running) schedule(PLACE_MS);
+    };
+    let source: EventSource | null = null;
+    if (typeof EventSource !== "undefined") {
+      source = new EventSource(`/api/cloud/files/${file.id}/live?session=${session}`);
+      source.addEventListener("state", (event) => {
+        streaming = true;
+        const state = JSON.parse((event as MessageEvent<string>).data) as Live;
+        setPeople(state.people);
+        if (state.revision > revision.current) schedule(0);
+      });
+      source.addEventListener("gone", () => {
+        source?.close();
+        streaming = false;
+        schedule(0);
+      });
+      source.onerror = () => {
+        if (source?.readyState === EventSource.CLOSED) streaming = false;
+      };
+    }
+    schedule(400);
     return () => {
       stopped = true;
       window.clearTimeout(timer);
+      kick.current = () => undefined;
+      source?.close();
       void live(true).catch(() => undefined);
     };
-  }, [loaded, live, save, setPeople, setStatus, takeRemote]);
+  }, [file.id, loaded, live, save, session, setPeople, setStatus, takeRemote]);
 
   const onPlace = useCallback((next: OfficePlace) => {
+    if (JSON.stringify(next) === JSON.stringify(place.current)) return;
     place.current = next;
+    kick.current();
   }, []);
 
   const onChange = useCallback(

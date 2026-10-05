@@ -708,11 +708,53 @@ function cleanPlace(input: unknown): OfficePlace | null {
   return Object.keys(place).length ? place : null;
 }
 
-export async function officeLive(actor: CarecoreActor, fileId: string, body: Record<string, unknown>) {
-  const { file } = await locateFile(actor, fileId);
-  if (file.deletedAt) throw new ApiError("Die Datei liegt im Papierkorb.", 409);
-  const kind = officeKindOf(file.name);
+// Leichte Zugriffsprüfung für das gleichzeitige Bearbeiten (läuft sekündlich): dieselben Regeln wie locateFile –
+// gemeinsame Ablage für die ganze Einrichtung, persönliche Ablage nur für die eigene Person –, ohne die ganze
+// Ablage zu laden.
+async function liveFile(actor: CarecoreActor, fileId: string) {
+  if (!UUID.test(fileId)) throw new ApiError("Datei nicht gefunden.", 404);
+  const rows = (await carecoreDb()`
+    SELECT name, purpose, uploaded_by, deleted_at FROM carecore_cloud_files
+    WHERE id = ${fileId} AND organization_id = ${org(actor)} AND purpose IN ('cloud', 'shared')`) as Row[];
+  const row = rows[0];
+  if (!row || (row.purpose === "cloud" && row.uploaded_by !== actor.id))
+    throw new ApiError("Datei nicht gefunden.", 404);
+  if (row.deleted_at) throw new ApiError("Die Datei liegt im Papierkorb.", 409);
+  const kind = officeKindOf(String(row.name));
   if (!kind) throw new ApiError("Diese Datei ist kein Dokument, keine Tabelle und keine Präsentation.");
+  return kind;
+}
+
+// Stand der Datei und die anderen Personen darin (eine Abfrage).
+async function liveState(actor: CarecoreActor, fileId: string, session: string) {
+  const rows = (await carecoreDb()`
+    SELECT f.revision, f.deleted_at,
+      COALESCE((
+        SELECT json_agg(json_build_object('session', p.session_id, 'user', p.user_id, 'name', p.display_name,
+          'place', p.place) ORDER BY p.display_name, p.session_id)
+        FROM carecore_office_presence p
+        WHERE p.file_id = f.id AND p.session_id <> ${session}
+          AND p.seen_at > NOW() - make_interval(secs => ${PRESENCE_SECONDS})
+      ), '[]'::json) AS people
+    FROM carecore_cloud_files f WHERE f.id = ${fileId}`) as Row[];
+  const row = rows[0];
+  if (!row || row.deleted_at) throw new ApiError("Die Datei liegt im Papierkorb.", 409);
+  const people = (typeof row.people === "string" ? JSON.parse(row.people) : row.people) as Row[];
+  return {
+    revision: Number(row.revision ?? 0),
+    people: people.map((person) => ({
+      session: String(person.session),
+      name: String(person.name),
+      self: person.user === actor.id,
+      place: cleanPlace(person.place),
+    })),
+  };
+}
+
+// Lebenszeichen: eigene Stelle melden, andere Personen und – wenn sich die Datei seit dem Stand des Editors
+// geändert hat – den neuesten Stand holen.
+export async function officeLive(actor: CarecoreActor, fileId: string, body: Record<string, unknown>) {
+  const kind = await liveFile(actor, fileId);
   const session = String(body.session ?? "");
   if (!SESSION.test(session)) throw new ApiError("Sitzung fehlt. Bitte neu öffnen.");
   const sql = carecoreDb();
@@ -729,32 +771,26 @@ export async function officeLive(actor: CarecoreActor, fileId: string, body: Rec
   await sql`
     DELETE FROM carecore_office_presence
     WHERE file_id = ${fileId} AND seen_at < NOW() - make_interval(secs => ${PRESENCE_SECONDS * 4})`;
-  const people = (await sql`
-    SELECT session_id, user_id, display_name, place FROM carecore_office_presence
-    WHERE file_id = ${fileId} AND session_id <> ${session}
-      AND seen_at > NOW() - make_interval(secs => ${PRESENCE_SECONDS})
-    ORDER BY display_name, session_id`) as Row[];
+  const result = await liveState(actor, fileId, session);
+  if (Number(body.revision) === result.revision) return result;
   const rows = (await sql`
     SELECT content_base64, storage_key, revision FROM carecore_cloud_files WHERE id = ${fileId}`) as Row[];
-  const revision = Number(rows[0]?.revision ?? 0);
-  const result = {
-    revision,
-    people: people.map((row) => ({
-      session: String(row.session_id),
-      name: String(row.display_name),
-      self: row.user_id === actor.id,
-      place: cleanPlace(row.place),
-    })),
-  };
-  if (Number(body.revision) === revision) return result;
   const bytes = await mediaContent(rows[0]?.storage_key, rows[0]?.content_base64);
   if (!bytes) return result;
   try {
     const read = kind === "document" ? readDocx(bytes) : kind === "sheet" ? readXlsx(bytes) : readPptx(bytes);
-    return { ...result, model: read.model };
+    // Stand passend zum mitgeschickten Inhalt (zwischen den Abfragen kann gespeichert worden sein).
+    return { ...result, revision: Number(rows[0]?.revision ?? result.revision), model: read.model };
   } catch {
     return result;
   }
+}
+
+// Für die laufende Verbindung des Editors (Server-Sent Events): einmal prüfen, dann nur noch den Stand abfragen.
+export async function officeLiveStream(actor: CarecoreActor, fileId: string, session: string) {
+  await liveFile(actor, fileId);
+  if (!SESSION.test(session)) throw new ApiError("Sitzung fehlt. Bitte neu öffnen.");
+  return () => liveState(actor, fileId, session);
 }
 
 // Text zum Bearbeiten (UTF-8) mit aktueller Version für die Kontrolle beim Speichern.
