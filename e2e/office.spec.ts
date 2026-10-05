@@ -167,6 +167,14 @@ test("Tabelle: vertikale Ausrichtung, Funktionen, Rahmen, Filter und Auswahllist
   await expect(cell(12, 5)).toHaveText("30");
   await expect(page.getByLabel("Inhalt der Zelle")).toHaveValue("=SEQUENZ(3;1;10;10)");
   await expect(page.locator(".sheet-spill")).toBeVisible();
+  // Überlaufbezug und LAMBDA.
+  await cell(14, 5).click();
+  await page.keyboard.type("=SUMME(F11#)");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("=LET(doppelt;LAMBDA(x;x*2);doppelt(21))");
+  await page.keyboard.press("Enter");
+  await expect(cell(14, 5)).toHaveText("60");
+  await expect(cell(15, 5)).toHaveText("42");
 
   // Vertikal: oben, Mitte, unten.
   await cell(0, 0).click();
