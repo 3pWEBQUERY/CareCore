@@ -1,18 +1,28 @@
 import { createZip, readZip, type ZipEntry } from "@/lib/zip";
 import {
   DECK_THEMES,
+  ITEM_TEXT_SIZE,
+  TABLE_TEXT_SIZE,
   SLIDE_BODY_SIZE,
   SLIDE_BOXES,
   SLIDE_SIZE,
+  cellKey,
   cleanModel,
+  contrastText,
   emptyDoc,
+  newId,
+  newSheet,
   newSlide,
   type DeckModel,
   type DocMark,
   type DocNode,
   type Slide,
   type SlideBox,
+  type SlideItem,
+  type SlideShape,
 } from "./model";
+import { chartSpaceXml, readChartSpace } from "./chart-xml";
+import { buildXlsx } from "./xlsx";
 import {
   MODEL_PART,
   REL,
@@ -123,11 +133,105 @@ function textShape(id: number, name: string, box: SlideBox, paragraphs: string, 
   return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${esc(name)}"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr>${xfrm(box)}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></p:spPr><p:txBody><a:bodyPr wrap="square" lIns="91440" tIns="45720" rIns="91440" bIns="45720" anchor="${anchor}"><a:normAutofit/></a:bodyPr><a:lstStyle/>${paragraphs}</p:txBody></p:sp>`;
 }
 
+// ---------- Freie Objekte (Textfeld, Form, Tabelle, Diagramm) ----------
+
+const fillXml = (color: string) =>
+  color ? `<a:solidFill><a:srgbClr val="${rgb(color)}"/></a:solidFill>` : "<a:noFill/>";
+const lineXml = (color: string, width = 12700) =>
+  color ? `<a:ln w="${width}">${fillXml(color)}</a:ln>` : "<a:ln><a:noFill/></a:ln>";
+const frameXfrm = (item: SlideBox) =>
+  `<p:xfrm><a:off x="${item.x}" y="${item.y}"/><a:ext cx="${item.w}" cy="${item.h}"/></p:xfrm>`;
+
+function itemXml(item: SlideItem, id: number, colors: Colors & { background: string }, chartRel: () => string) {
+  switch (item.type) {
+    case "text":
+      return textShape(id, `Textfeld ${id}`, item, bodyParagraphs(item.body.content, ITEM_TEXT_SIZE, colors), "t");
+    case "shape": {
+      if (item.shape === "line")
+        return `<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="${id}" name="Linie ${id}"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr><p:spPr>${xfrm(item)}<a:prstGeom prst="line"><a:avLst/></a:prstGeom>${lineXml(item.line || colors.accent, 28575)}</p:spPr></p:cxnSp>`;
+      const textColor = item.fill ? contrastText(item.fill) : colors.text;
+      const text = item.text
+        .split("\n")
+        .map(
+          (line) =>
+            `<a:p><a:pPr algn="ctr"><a:buNone/></a:pPr>${line ? runXml(line, undefined, ITEM_TEXT_SIZE, textColor) : ""}<a:endParaRPr lang="de-CH" sz="${ITEM_TEXT_SIZE * 100}"/></a:p>`,
+        )
+        .join("");
+      return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="Form ${id}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>${xfrm(item)}<a:prstGeom prst="${item.shape}"><a:avLst/></a:prstGeom>${fillXml(item.fill)}${lineXml(item.line)}</p:spPr><p:txBody><a:bodyPr wrap="square" lIns="91440" tIns="45720" rIns="91440" bIns="45720" anchor="ctr"><a:normAutofit/></a:bodyPr><a:lstStyle/>${text}</p:txBody></p:sp>`;
+    }
+    case "table": {
+      const cols = item.rows[0]?.length ?? 1;
+      const width = Math.floor(item.w / cols);
+      const height = Math.floor(item.h / Math.max(1, item.rows.length));
+      const border = (side: string) =>
+        `<a:${side} w="9525"><a:solidFill><a:srgbClr val="${rgb(colors.muted)}"/></a:solidFill></a:${side}>`;
+      const rows = item.rows
+        .map((row, index) => {
+          const head = item.header && index === 0;
+          const cells = row
+            .map(
+              (cell) =>
+                `<a:tc><a:txBody><a:bodyPr/><a:lstStyle/>${cell
+                  .split("\n")
+                  .map(
+                    (line) =>
+                      `<a:p>${line ? runXml(line, undefined, TABLE_TEXT_SIZE, head ? contrastText(colors.accent) : colors.text, head) : ""}<a:endParaRPr lang="de-CH" sz="${TABLE_TEXT_SIZE * 100}"/></a:p>`,
+                  )
+                  .join(
+                    "",
+                  )}</a:txBody><a:tcPr marL="91440" marR="91440" marT="45720" marB="45720">${border("lnL")}${border("lnR")}${border("lnT")}${border("lnB")}${head ? fillXml(colors.accent) : "<a:noFill/>"}</a:tcPr></a:tc>`,
+            )
+            .join("");
+          return `<a:tr h="${height}">${cells}</a:tr>`;
+        })
+        .join("");
+      return `<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="${id}" name="Tabelle ${id}"/><p:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1"/></p:cNvGraphicFramePr><p:nvPr/></p:nvGraphicFramePr>${frameXfrm(item)}<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl><a:tblPr firstRow="${item.header ? 1 : 0}" bandRow="0"/><a:tblGrid>${Array.from({ length: cols }, () => `<a:gridCol w="${width}"/>`).join("")}</a:tblGrid>${rows}</a:tbl></a:graphicData></a:graphic></p:graphicFrame>`;
+    }
+    case "chart":
+      return `<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="${id}" name="Diagramm ${id}"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>${frameXfrm(item)}<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="${chartRel()}"/></a:graphicData></a:graphic></p:graphicFrame>`;
+  }
+}
+
+// Daten des Diagramms als kleine Arbeitsmappe (PowerPoint öffnet sie mit „Daten bearbeiten“).
+function chartWorkbook(item: Extract<SlideItem, { type: "chart" }>) {
+  const sheet = newSheet("Tabelle1");
+  item.series.forEach((series, col) => {
+    sheet.cells[cellKey(col + 1, 0)] = { v: series.name, s: { b: true } };
+    series.values.forEach((value, row) => {
+      sheet.cells[cellKey(col + 1, row + 1)] = { v: String(value) };
+    });
+  });
+  item.categories.forEach((category, row) => {
+    sheet.cells[cellKey(0, row + 1)] = { v: /^[-+\d.,\s]+$/.test(category) ? `'${category}` : category };
+  });
+  return buildXlsx({ kind: "sheet", sheets: [sheet] }, { title: item.title || "Diagramm", author: "" });
+}
+
+const columnLetter = (index: number) => String.fromCharCode(65 + index);
+
+function chartPart(item: Extract<SlideItem, { type: "chart" }>, workbookRel: string) {
+  const last = item.categories.length + 1;
+  return chartSpaceXml({
+    type: item.chart,
+    title: item.title,
+    categories: item.categories,
+    catRef: item.categories.length ? `Tabelle1!$A$2:$A$${last}` : undefined,
+    series: item.series.map((series, index) => ({
+      name: series.name,
+      values: series.values,
+      nameRef: `Tabelle1!$${columnLetter(index + 1)}$1`,
+      valRef: `Tabelle1!$${columnLetter(index + 1)}$2:$${columnLetter(index + 1)}$${last}`,
+    })),
+    externalRel: workbookRel,
+  });
+}
+
 function slideXml(
   slide: Slide,
   model: DeckModel,
   imageRel: string | null,
   picture: { width: number; height: number } | null,
+  chartRel: () => string = () => "",
 ) {
   const theme = DECK_THEMES[model.theme];
   const section = slide.layout === "section";
@@ -184,6 +288,7 @@ function slideXml(
       `<p:pic><p:nvPicPr><p:cNvPr id="${id++}" name="Bild"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="${imageRel}"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr>${xfrm(box)}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>`,
     );
   }
+  for (const item of slide.items) shapes.push(itemXml(item, id++, { ...colors, background }, chartRel));
   return `${XML_HEAD}<p:sld ${NS}><p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val="${rgb(background)}"/></a:solidFill><a:effectLst/></p:bgPr></p:bg><p:spTree>${GROUP}${shapes.join("")}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`;
 }
 
@@ -203,7 +308,12 @@ const checkOf = (files: Map<string, Buffer> | ZipEntry[]) => {
   return sha256(
     Buffer.concat(
       list
-        .filter(([path]) => path === "ppt/presentation.xml" || /^ppt\/slides\/slide\d+\.xml$/.test(path))
+        .filter(
+          ([path]) =>
+            path === "ppt/presentation.xml" ||
+            /^ppt\/slides\/slide\d+\.xml$/.test(path) ||
+            /^ppt\/charts\/chart\d+\.xml$/.test(path),
+        )
         .sort((a, b) => a[0].localeCompare(b[0]))
         .map(([, content]) => content),
     ),
@@ -216,6 +326,7 @@ export function buildPptx(model: DeckModel, meta: { title: string; author: strin
   const overrides: [string, string][] = [];
   const pml = "application/vnd.openxmlformats-officedocument.presentationml";
   let images = false;
+  let charts = 0;
   const media = new Map<string, string>();
   model.slides.forEach((slide, index) => {
     const number = index + 1;
@@ -241,9 +352,38 @@ export function buildPptx(model: DeckModel, meta: { title: string; author: strin
       });
       overrides.push([`/ppt/notesSlides/notesSlide${number}.xml`, `${pml}.notesSlide+xml`]);
     }
+    // Diagramme: eigener Teil je Diagramm mit eingebetteter Arbeitsmappe.
+    const chartItems = slide.items.filter((item) => item.type === "chart");
+    let nextChart = 0;
+    const chartRel = () => {
+      const item = chartItems[nextChart];
+      nextChart += 1;
+      charts += 1;
+      const rel = `rId${10 + nextChart}`;
+      rels.push({ id: rel, type: REL.chart, target: `../charts/chart${charts}.xml` });
+      entries.push({ path: `ppt/charts/chart${charts}.xml`, content: Buffer.from(chartPart(item, "rId1")) });
+      entries.push({
+        path: `ppt/charts/_rels/chart${charts}.xml.rels`,
+        content: Buffer.from(
+          relationships([
+            { id: "rId1", type: REL.package, target: `../embeddings/Microsoft_Excel_Worksheet${charts}.xlsx` },
+          ]),
+        ),
+      });
+      entries.push({ path: `ppt/embeddings/Microsoft_Excel_Worksheet${charts}.xlsx`, content: chartWorkbook(item) });
+      overrides.push([
+        `/ppt/charts/chart${charts}.xml`,
+        "application/vnd.openxmlformats-officedocument.drawingml.chart+xml",
+      ]);
+      overrides.push([
+        `/ppt/embeddings/Microsoft_Excel_Worksheet${charts}.xlsx`,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ]);
+      return rel;
+    };
     entries.push({
       path: `ppt/slides/slide${number}.xml`,
-      content: Buffer.from(slideXml(slide, model, picture ? "rId2" : null, picture)),
+      content: Buffer.from(slideXml(slide, model, picture ? "rId2" : null, picture, chartRel)),
     });
     entries.push({ path: `ppt/slides/_rels/slide${number}.xml.rels`, content: Buffer.from(relationships(rels)) });
     overrides.push([`/ppt/slides/slide${number}.xml`, `${pml}.slide+xml`]);
@@ -384,6 +524,87 @@ function readParagraphs(body: XmlNode | undefined): DocNode {
   return content.length ? { type: "doc", content } : emptyDoc();
 }
 
+const SHAPE_OF: Record<string, SlideShape> = {
+  rect: "rect",
+  roundRect: "roundRect",
+  snipRect: "roundRect",
+  ellipse: "ellipse",
+  triangle: "triangle",
+  rtTriangle: "triangle",
+  rightArrow: "rightArrow",
+  leftArrow: "rightArrow",
+  line: "line",
+};
+
+// Formen auch aus Gruppen holen (Reihenfolge = Stapelreihenfolge).
+function shapesOf(tree: XmlNode): XmlNode[] {
+  return tree.children.flatMap((node) => (node.name === "grpSp" ? shapesOf(node) : [node]));
+}
+
+function frameOf(props: XmlNode | undefined) {
+  const transform = child(props, "xfrm");
+  const off = child(transform, "off");
+  const ext = child(transform, "ext");
+  if (!off || !ext) return null;
+  const x = Math.max(0, Math.min(SLIDE_SIZE.width, Number(off.attrs.x) || 0));
+  const y = Math.max(0, Math.min(SLIDE_SIZE.height, Number(off.attrs.y) || 0));
+  return {
+    id: newId(),
+    x,
+    y,
+    w: Math.max(0, Math.min(SLIDE_SIZE.width - x, Number(ext.attrs.cx) || 0)),
+    h: Math.max(0, Math.min(SLIDE_SIZE.height - y, Number(ext.attrs.cy) || 0)),
+  };
+}
+
+const colorOf = (node: XmlNode | undefined) => {
+  const value = child(child(node, "solidFill"), "srgbClr")?.attrs.val;
+  return value && /^[0-9a-f]{6}$/i.test(value) ? `#${value.toLowerCase()}` : "";
+};
+
+const isLayoutBar = (frame: SlideBox) =>
+  Object.values(SLIDE_BOXES).some(
+    (layout) =>
+      layout.bar &&
+      Math.abs(layout.bar.x - frame.x) < 2 &&
+      Math.abs(layout.bar.y - frame.y) < 2 &&
+      Math.abs(layout.bar.w - frame.w) < 2 &&
+      Math.abs(layout.bar.h - frame.h) < 2,
+  );
+
+function readFrame(
+  shape: XmlNode,
+  slideRels: Map<string, { target: string; type: string }>,
+  files: Map<string, Buffer>,
+): SlideItem | null {
+  const transform = child(shape, "xfrm");
+  const frame = frameOf({ ...shape, children: transform ? [transform] : [] });
+  if (!frame) return null;
+  const table = find(shape, "tbl");
+  if (table) {
+    const rows = childrenOf(table, "tr").map((tr) =>
+      childrenOf(tr, "tc")
+        .filter((tc) => tc.attrs.hMerge !== "1" && tc.attrs.vMerge !== "1")
+        .map((tc) => childrenOf(child(tc, "txBody"), "p").map(textOf).join("\n").slice(0, 500)),
+    );
+    if (!rows.length) return null;
+    return { ...frame, type: "table", rows, header: child(table, "tblPr")?.attrs.firstRow === "1" };
+  }
+  const chartId = find(shape, "chart")?.attrs.id;
+  const chartPath = chartId ? slideRels.get(chartId)?.target : undefined;
+  const chartXml = chartPath ? files.get(chartPath) : undefined;
+  const chart = chartXml ? readChartSpace(chartXml.toString("utf8")) : null;
+  if (!chart) return null;
+  return {
+    ...frame,
+    type: "chart",
+    chart: chart.type,
+    title: chart.title,
+    categories: chart.categories,
+    series: chart.series,
+  };
+}
+
 export function readPptx(bytes: Buffer): { model: DeckModel; imported: boolean } {
   const files = readZip(bytes);
   const presentationXml = files.get("ppt/presentation.xml");
@@ -415,18 +636,61 @@ export function readPptx(bytes: Buffer): { model: DeckModel; imported: boolean }
     const root = parseXml(xml.toString("utf8"));
     const slide = newSlide("content");
     const bodies: XmlNode[] = [];
-    for (const shape of findAll(root, "sp")) {
-      const placeholder = find(child(shape, "nvSpPr"), "ph");
+    const tree = find(root, "spTree");
+    for (const shape of tree ? shapesOf(tree) : []) {
+      if (shape.name === "graphicFrame") {
+        const item = readFrame(shape, slideRels, files);
+        if (item) slide.items.push(item);
+        continue;
+      }
+      if (shape.name === "cxnSp") {
+        const frame = frameOf(child(shape, "spPr"));
+        if (frame)
+          slide.items.push({
+            ...frame,
+            type: "shape",
+            shape: "line",
+            fill: "",
+            line: colorOf(child(child(shape, "spPr"), "ln")) || "#2563eb",
+            text: "",
+          });
+        continue;
+      }
+      if (shape.name !== "sp") continue;
+      const nv = child(shape, "nvSpPr");
+      const placeholder = find(nv, "ph");
       const type = placeholder?.attrs.type;
+      const name = child(nv, "cNvPr")?.attrs.name ?? "";
       const body = child(shape, "txBody");
       const text = childrenOf(body, "p").map(textOf).join("\n").trim();
+      const props = child(shape, "spPr");
+      const geometry = child(props, "prstGeom")?.attrs.prst ?? "rect";
+      const fill = colorOf(props);
+      const frame = frameOf(props);
+      // Farbige Fläche oder besondere Form: als Form übernehmen (die Akzentlinie unter dem Titel gehört zum Layout).
+      const filled = Boolean(fill) || (geometry !== "rect" && Boolean(colorOf(child(props, "ln"))));
+      if (!placeholder && frame && filled && !isLayoutBar(frame)) {
+        slide.items.push({
+          ...frame,
+          type: "shape",
+          shape: SHAPE_OF[geometry] ?? "rect",
+          fill,
+          line: colorOf(child(props, "ln")),
+          text: text.slice(0, 2000),
+        });
+        continue;
+      }
       if (!body || !text) continue;
       if ((type === "title" || type === "ctrTitle") && !slide.title) {
         slide.title = text.replace(/\n/g, " ");
         if (type === "ctrTitle") slide.layout = "title";
       } else if (type === "subTitle" && !slide.subtitle) slide.subtitle = text.replace(/\n/g, " ");
-      else if (!slide.title && !placeholder && bodies.length === 0 && text.length < 120 && !text.includes("\n"))
+      else if (name === "Titel" && !slide.title) slide.title = text.replace(/\n/g, " ");
+      else if (name === "Untertitel" && !slide.subtitle) slide.subtitle = text.replace(/\n/g, " ");
+      else if (placeholder || name === "Inhalt" || name === "Inhalt 2") bodies.push(body);
+      else if (!slide.title && bodies.length === 0 && text.length < 120 && !text.includes("\n") && !frame)
         slide.title = text;
+      else if (frame) slide.items.push({ ...frame, type: "text", body: readParagraphs(body) });
       else bodies.push(body);
     }
     if (bodies[0]) slide.body = readParagraphs(bodies[0]);

@@ -68,7 +68,16 @@ import {
   setFootnoteText,
   setLineSpacing,
 } from "./doc-extensions";
-import { ColorPicker, MenuList, ToolButton, ToolGroup, ToolPopover, ToolSeparator, imageToDataUrl } from "./office-ui";
+import {
+  ColorPicker,
+  MenuList,
+  TablePicker,
+  ToolButton,
+  ToolGroup,
+  ToolPopover,
+  ToolSeparator,
+  imageToDataUrl,
+} from "./office-ui";
 
 // Seitenumbruch wie in Word (Ctrl+Enter); erscheint im Editor als gestrichelte Linie.
 const PageBreak = Node.create({
@@ -291,30 +300,6 @@ function LinkPanel({ editor, close }: { editor: Editor; close: () => void }) {
           </button>
         )}
       </div>
-    </div>
-  );
-}
-
-function TablePicker({ onPick }: { onPick: (rows: number, cols: number) => void }) {
-  const [hover, setHover] = useState({ rows: 0, cols: 0 });
-  return (
-    <div className="office-table-picker">
-      <div className="office-table-grid" onMouseLeave={() => setHover({ rows: 0, cols: 0 })}>
-        {Array.from({ length: 8 }, (_, row) =>
-          Array.from({ length: 10 }, (_, col) => (
-            <button
-              key={`${row}-${col}`}
-              type="button"
-              aria-label={`${row + 1} Zeilen, ${col + 1} Spalten`}
-              className={row < hover.rows && col < hover.cols ? "active" : ""}
-              onMouseEnter={() => setHover({ rows: row + 1, cols: col + 1 })}
-              onFocus={() => setHover({ rows: row + 1, cols: col + 1 })}
-              onClick={() => onPick(row + 1, col + 1)}
-            />
-          )),
-        )}
-      </div>
-      <p>{hover.rows ? `${hover.rows} × ${hover.cols} Tabelle` : "Grösse wählen"}</p>
     </div>
   );
 }

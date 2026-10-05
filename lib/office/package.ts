@@ -38,6 +38,8 @@ export const REL = {
   viewProps: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/viewProps",
   tableStyles: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles",
   footnotes: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
+  chart: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart",
+  package: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package",
 };
 
 export const relationships = (rels: Rel[]) =>

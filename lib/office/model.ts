@@ -448,6 +448,15 @@ export function usedRange(sheet: Sheet) {
 // ---------- Präsentation ----------
 
 export type SlideLayout = "title" | "content" | "two" | "image" | "section" | "blank";
+// Freie Objekte auf der Folie (wie in PowerPoint): Lage und Grösse in EMU wie die Folie selbst.
+export type SlideShape = "rect" | "roundRect" | "ellipse" | "triangle" | "rightArrow" | "line";
+export type ChartSeries = { name: string; values: number[] };
+export type SlideItem = { id: string; x: number; y: number; w: number; h: number } & (
+  | { type: "text"; body: DocNode }
+  | { type: "shape"; shape: SlideShape; fill: string; line: string; text: string }
+  | { type: "table"; rows: string[][]; header: boolean }
+  | { type: "chart"; chart: ChartType; title: string; categories: string[]; series: ChartSeries[] }
+);
 export type Slide = {
   id: string;
   layout: SlideLayout;
@@ -457,6 +466,7 @@ export type Slide = {
   body2: DocNode;
   image: string;
   notes: string;
+  items: SlideItem[];
 };
 export type DeckTheme = "carecore" | "hell" | "dunkel" | "wald" | "sand";
 export type DeckModel = { kind: "deck"; theme: DeckTheme; slides: Slide[] };
@@ -471,6 +481,25 @@ export const DECK_THEMES: Record<
   wald: { label: "Wald", background: "#eef5ef", text: "#1d3324", accent: "#2f7d4f", muted: "#4d6655" },
   sand: { label: "Sand", background: "#fbf6ee", text: "#3b2f22", accent: "#b45309", muted: "#76634c" },
 };
+
+export const SLIDE_SHAPES: { value: SlideShape; label: string }[] = [
+  { value: "rect", label: "Rechteck" },
+  { value: "roundRect", label: "Abgerundetes Rechteck" },
+  { value: "ellipse", label: "Ellipse" },
+  { value: "triangle", label: "Dreieck" },
+  { value: "rightArrow", label: "Pfeil" },
+  { value: "line", label: "Linie" },
+];
+export const ITEM_TEXT_SIZE = 18;
+export const TABLE_TEXT_SIZE = 14;
+// Schrift auf farbiger Fläche: hell oder dunkel, je nachdem, was besser lesbar ist.
+export function contrastText(fill: string) {
+  const value = /^#([0-9a-f]{6})$/i.exec(fill)?.[1];
+  if (!value) return "#111827";
+  const [r, g, b] = [0, 2, 4].map((at) => parseInt(value.slice(at, at + 2), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.6 ? "#111827" : "#ffffff";
+}
+export const ITEM_LIMITS = { items: 40, rows: 30, cols: 12, cell: 500, categories: 40, series: 8 };
 
 export const SLIDE_LAYOUTS: { value: SlideLayout; label: string }[] = [
   { value: "title", label: "Titelfolie" },
@@ -657,6 +686,7 @@ export function newSlide(layout: SlideLayout, title = "", body: string[] = [], s
     body2: emptyDoc(),
     image: "",
     notes: "",
+    items: [],
   };
 }
 
@@ -1103,6 +1133,84 @@ function cleanSheet(input: unknown, index: number): Sheet | null {
 }
 
 const LAYOUTS = new Set(SLIDE_LAYOUTS.map((item) => item.value));
+const SHAPES = new Set(SLIDE_SHAPES.map((item) => item.value));
+function cleanSlideItem(input: unknown): SlideItem | null {
+  if (!input || typeof input !== "object") return null;
+  const raw = input as Record<string, unknown>;
+  const emu = (value: unknown, max: number) =>
+    typeof value === "number" && Number.isFinite(value) ? Math.round(Math.min(max, Math.max(0, value))) : 0;
+  const x = emu(raw.x, SLIDE_SIZE.width);
+  const y = emu(raw.y, SLIDE_SIZE.height);
+  const frame = {
+    id: typeof raw.id === "string" && raw.id.length <= 40 ? raw.id : newId(),
+    x,
+    y,
+    w: emu(raw.w, SLIDE_SIZE.width - x),
+    h: emu(raw.h, SLIDE_SIZE.height - y),
+  };
+  const textOf = (value: unknown, max: number) => (typeof value === "string" ? value.slice(0, max) : "");
+  const color = (value: unknown) => (typeof value === "string" && COLOR.test(value) ? value.toLowerCase() : "");
+  switch (raw.type) {
+    case "text":
+      return { ...frame, type: "text", body: asDoc(raw.body) };
+    case "shape":
+      return {
+        ...frame,
+        type: "shape",
+        shape: SHAPES.has(raw.shape as SlideShape) ? (raw.shape as SlideShape) : "rect",
+        fill: color(raw.fill),
+        line: color(raw.line),
+        text: textOf(raw.text, 2000),
+      };
+    case "table": {
+      const rows = (Array.isArray(raw.rows) ? raw.rows : [])
+        .slice(0, ITEM_LIMITS.rows)
+        .map((row) =>
+          (Array.isArray(row) ? row : []).slice(0, ITEM_LIMITS.cols).map((cell) => textOf(cell, ITEM_LIMITS.cell)),
+        );
+      const cols = Math.max(1, ...rows.map((row) => row.length));
+      if (!rows.length) return null;
+      // Alle Zeilen gleich lang (fehlende Zellen leer).
+      return {
+        ...frame,
+        type: "table",
+        rows: rows.map((row) => Array.from({ length: cols }, (_, col) => row[col] ?? "")),
+        header: raw.header !== false,
+      };
+    }
+    case "chart": {
+      const categories = (Array.isArray(raw.categories) ? raw.categories : [])
+        .slice(0, ITEM_LIMITS.categories)
+        .map((item) => textOf(item, 200));
+      const series = (Array.isArray(raw.series) ? raw.series : [])
+        .slice(0, ITEM_LIMITS.series)
+        .flatMap((item): ChartSeries[] => {
+          if (!item || typeof item !== "object") return [];
+          const entry = item as Record<string, unknown>;
+          const values = Array.isArray(entry.values) ? entry.values : [];
+          return [
+            {
+              name: textOf(entry.name, 200),
+              values: categories.map((_, index) => {
+                const value = values[index];
+                return typeof value === "number" && Number.isFinite(value) ? value : 0;
+              }),
+            },
+          ];
+        });
+      return {
+        ...frame,
+        type: "chart",
+        chart: CHART_TYPES.has(raw.chart as ChartType) ? (raw.chart as ChartType) : "column",
+        title: textOf(raw.title, 200),
+        categories,
+        series,
+      };
+    }
+    default:
+      return null;
+  }
+}
 
 // Inhalt immer als ganzes Dokument (ein einzelner Absatz oder eine Liste wird eingepackt).
 function asDoc(input: unknown): DocNode {
@@ -1159,6 +1267,10 @@ export function cleanModel(kind: OfficeKind, input: unknown): OfficeModel {
         body2: asDoc(slide.body2),
         image,
         notes: typeof slide.notes === "string" ? slide.notes.slice(0, 10_000) : "",
+        items: (Array.isArray(slide.items) ? slide.items : [])
+          .slice(0, ITEM_LIMITS.items)
+          .map(cleanSlideItem)
+          .filter((entry): entry is SlideItem => entry !== null),
       },
     ];
   });

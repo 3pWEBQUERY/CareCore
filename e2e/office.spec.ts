@@ -144,6 +144,87 @@ test("Dokument: Inhaltsverzeichnis, Zeilenabstand, hoch-/tiefgestellt und Fussno
   expect(errors).toEqual([]);
 });
 
+// Präsentation: freie Objekte (Textfeld, Form, Tabelle, Diagramm) einfügen, verschieben und gespeichert wiederfinden.
+test("Präsentation: Textfeld, Form, Tabelle und Diagramm auf der Folie", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  const stamp = Date.now();
+  await page.goto("/c/carecore-one/ablage");
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Präsentation/ }).click();
+  const gallery = page.getByRole("dialog", { name: "Neue Präsentation (PowerPoint)" });
+  await gallery.getByLabel("Name").fill(`Objekte ${stamp}`);
+  await gallery.getByRole("button", { name: "Erstellen und öffnen" }).click();
+  const stage = page.locator(".deck-stage");
+  await expect(stage).toBeVisible();
+
+  await page.getByRole("button", { name: "Textfeld einfügen" }).click();
+  await page.keyboard.type("Freies Textfeld");
+  await expect(stage.locator(".deck-item.type-text")).toContainText("Freies Textfeld");
+
+  await page.getByRole("button", { name: "Form einfügen" }).click();
+  await page.getByRole("menuitemradio", { name: "Ellipse" }).click();
+  const shape = stage.locator(".deck-item.type-shape");
+  await shape.dblclick();
+  await page.getByLabel("Text der Form").fill("Wichtig");
+  await page.keyboard.press("Escape");
+  // Verschieben mit der Maus und mit den Pfeiltasten.
+  const before = await shape.boundingBox();
+  await page.mouse.move(before!.x + before!.width / 2, before!.y + before!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(before!.x + before!.width / 2 - 200, before!.y + before!.height / 2 + 80, { steps: 5 });
+  await page.mouse.up();
+  const after = await shape.boundingBox();
+  expect(Math.round(before!.x - after!.x)).toBeGreaterThan(150);
+  await shape.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("toolbar", { name: "Form" })).toBeVisible();
+  await page.getByRole("button", { name: "Füllfarbe" }).click();
+  await page.getByRole("button", { name: "Rot", exact: true }).click();
+
+  await page.getByRole("button", { name: "Tabelle einfügen" }).click();
+  await page.getByRole("button", { name: "2 Zeilen, 2 Spalten" }).click();
+  await page.getByLabel("Zelle 1/1").fill("Wohnbereich");
+  await page.getByLabel("Zelle 2/1").fill("Ahorn");
+  await page.getByRole("button", { name: "Zeile unterhalb einfügen" }).click();
+  await expect(stage.locator(".deck-item.type-table tr")).toHaveCount(3);
+
+  await page.getByRole("button", { name: "Diagramm einfügen" }).click();
+  await page.getByRole("menuitemradio", { name: "Kreis" }).click();
+  const dialog = page.getByRole("dialog", { name: "Daten des Diagramms" });
+  await dialog.getByLabel("Titel").fill("Verteilung");
+  await dialog.getByLabel("Beschriftung 1").fill("Ahorn");
+  await dialog.getByLabel("Wert 1 in Reihe 1").fill("24");
+  await dialog.getByLabel("Beschriftung 2").fill("Linde");
+  await dialog.getByLabel("Wert 2 in Reihe 1").fill("abc");
+  await dialog.getByRole("button", { name: "Übernehmen" }).click();
+  await expect(dialog.getByRole("alert")).toContainText("nur Zahlen");
+  await dialog.getByLabel("Wert 2 in Reihe 1").fill("18,5");
+  await dialog.getByRole("button", { name: "Übernehmen" }).click();
+  await expect(stage.locator(".deck-item.type-chart svg")).toHaveAttribute("aria-label", "Verteilung");
+
+  // Löschen mit Entf und rückgängig machen.
+  await stage.locator(".deck-item.type-chart").focus();
+  await page.keyboard.press("Delete");
+  await expect(stage.locator(".deck-item.type-chart")).toHaveCount(0);
+  await page.getByRole("button", { name: "Rückgängig", exact: true }).last().click();
+  await expect(stage.locator(".deck-item.type-chart")).toHaveCount(1);
+
+  await expect(page.locator(".office-status")).toContainText("Gespeichert um");
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  await page.getByText(`Objekte ${stamp}.pptx`, { exact: true }).dblclick();
+  const reopened = page.locator(".deck-stage");
+  await expect(reopened.locator(".deck-item")).toHaveCount(4);
+  await expect(reopened.locator(".deck-item.type-text")).toContainText("Freies Textfeld");
+  await expect(reopened.locator(".deck-item.type-shape")).toContainText("Wichtig");
+  await expect(reopened.locator(".deck-item.type-shape svg")).toHaveAttribute("fill", /^#[0-9a-f]{6}$/);
+  await expect(reopened.getByLabel("Zelle 2/1")).toHaveValue("Ahorn");
+  await expect(reopened.locator(".deck-item.type-chart path")).toHaveCount(2);
+  await expect(page.locator(".deck-thumb").first().locator(".deck-item")).toHaveCount(4);
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  expect(errors).toEqual([]);
+});
+
 // Tabelle: eingegebener Text bleibt stehen – auch beim Klick ausserhalb, auf „Fett“ oder beim Schliessen;
 // Knöpfe zeigen einen eigenen Tooltip; Umbenennen im Titel.
 test("Tabelle: Eingaben gehen nie verloren, Tooltips und Umbenennen", async ({ page }) => {
