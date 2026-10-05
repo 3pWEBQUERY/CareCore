@@ -65,7 +65,14 @@ export type PageSetup = {
   pageNumbers: boolean;
 };
 // Kommentare: im Dokument an Textstellen (Markierung „comment“), in der Tabelle je Zelle, in der Präsentation je Folie.
-export type DocumentModel = { kind: "document"; page: PageSetup; content: DocNode; comments?: CommentThread[] };
+// Änderungen nachverfolgen: „track“ schaltet das Nachverfolgen ein (Markierungen „insertion“ und „deletion“ im Text).
+export type DocumentModel = {
+  kind: "document";
+  page: PageSetup;
+  content: DocNode;
+  comments?: CommentThread[];
+  track?: boolean;
+};
 
 export const DEFAULT_PAGE: PageSetup = {
   orientation: "portrait",
@@ -988,6 +995,8 @@ const ALLOWED_MARKS = new Set([
   "subscript",
   "superscript",
   "comment",
+  "insertion",
+  "deletion",
 ]);
 
 function cleanAttrs(attrs: unknown): Record<string, unknown> | undefined {
@@ -1338,6 +1347,7 @@ export function cleanModel(kind: OfficeKind, input: unknown): OfficeModel {
       },
       content: asDoc(raw.content),
       ...(cleanThreads(raw.comments).length ? { comments: cleanThreads(raw.comments) } : {}),
+      ...(raw.track === true ? { track: true } : {}),
     };
   }
   if (kind === "sheet") {

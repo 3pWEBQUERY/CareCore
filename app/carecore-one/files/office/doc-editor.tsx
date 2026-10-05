@@ -18,8 +18,11 @@ import {
   ArrowsMerge,
   ArrowsSplit,
   Asterisk,
+  CaretLeft,
+  CaretRight,
   ChatCircleText,
   ChatsCircle,
+  CheckCircle,
   ColumnsPlusLeft,
   ColumnsPlusRight,
   Eraser,
@@ -35,6 +38,7 @@ import {
   MagnifyingGlass,
   Minus,
   PaintBucket,
+  PencilLine,
   RowsPlusBottom,
   RowsPlusTop,
   Table,
@@ -52,12 +56,25 @@ import {
   TextSuperscript,
   TextUnderline,
   Trash,
+  XCircle,
 } from "@phosphor-icons/react";
 import { DEFAULT_PAGE, MARGINS_MM, newId, type DocNode, type DocumentModel, type PageSetup } from "@/lib/office/model";
 import type { CommentThread } from "@/lib/office/comments";
 import { CommentsPanel, newComment } from "./office-comments";
 import type { EditorProps } from "./editor-props";
 import { REMOTE_META, alignText, applyContent, toggleList } from "./text-commands";
+import {
+  Deletion,
+  Insertion,
+  TrackChanges,
+  changeCounts,
+  setTracking,
+  changesAt,
+  changesOf,
+  goToChange,
+  resolveChanges,
+  type TrackedChange,
+} from "./track-changes";
 import { collaboratorColor } from "@/lib/office/presence";
 import {
   CommentMark,
@@ -435,11 +452,16 @@ export default function DocEditor({
   const [showComments, setShowComments] = useState(Boolean(model.comments?.some((item) => !item.resolved)));
   const [draft, setDraft] = useState<string | null>(null);
   const [activeComment, setActiveComment] = useState<string | null>(null);
+  // Änderungen nachverfolgen: Einstellung gehört zur Datei (wie in Word), Name für neue Änderungen.
+  const [track, setTrack] = useState(Boolean(model.track));
+  const trackOn = useRef(Boolean(model.track));
+  // Gemeinsamer Stand für die Erweiterung (liest ihn erst beim Tippen, nicht beim Zeichnen).
   const withComments = (content: DocNode, nextPage: PageSetup, threads = commentsRef.current): DocumentModel => ({
     kind: "document",
     page: nextPage,
     content,
     ...(threads.length ? { comments: threads } : {}),
+    ...(trackOn.current ? { track: true } : {}),
   });
   useEffect(() => {
     emit.current = onChange;
@@ -469,6 +491,9 @@ export default function DocEditor({
       TableOfContents,
       Footnote,
       CommentMark,
+      Insertion,
+      Deletion,
+      TrackChanges,
       CharacterCount,
       Placeholder.configure({ placeholder: "Hier schreiben …" }),
     ],
@@ -516,6 +541,9 @@ export default function DocEditor({
       pageRef.current = nextPage;
       commentsRef.current = next.comments ?? [];
       setComments(next.comments ?? []);
+      trackOn.current = Boolean(next.track);
+      setTrack(Boolean(next.track));
+      if (editor) setTracking(editor, { on: trackOn.current });
       if (editor) applyContent(editor, next.content);
     };
     return () => {
@@ -531,6 +559,26 @@ export default function DocEditor({
     setPage(next);
     pageRef.current = next;
     if (editor) emit.current(withComments(editor.getJSON() as DocNode, next));
+  }
+
+  // ---------- Änderungen nachverfolgen ----------
+  function toggleTrack() {
+    if (readOnly) return;
+    const on = !trackOn.current;
+    trackOn.current = on;
+    setTrack(on);
+    if (editor) setTracking(editor, { on });
+    touched.current = true;
+    if (editor) emit.current(withComments(editor.getJSON() as DocNode, pageRef.current));
+  }
+  useEffect(() => {
+    if (editor) setTracking(editor, { on: trackOn.current, author: user, toggle: toggleTrack });
+  });
+  function resolve(changes: TrackedChange[], accept: boolean) {
+    if (!editor || readOnly) return;
+    touched.current = true;
+    resolveChanges(editor, changes, accept);
+    editor.commands.focus();
   }
 
   // ---------- Kommentare ----------
@@ -605,6 +653,7 @@ export default function DocEditor({
         canSink: current.can().sinkListItem("listItem") || current.can().sinkListItem("taskItem"),
         canLift: current.can().liftListItem("listItem") || current.can().liftListItem("taskItem"),
         hasSelection: !current.state.selection.empty,
+        ...changeCounts(current),
         words: current.storage.characterCount.words(),
         characters: current.storage.characterCount.characters(),
       };
@@ -923,6 +972,62 @@ export default function DocEditor({
               icon={<ChatsCircle />}
               active={showComments}
               onClick={() => setShowComments((value) => !value)}
+            />
+            <ToolButton
+              label="Änderungen nachverfolgen"
+              shortcut="Ctrl+Shift+E"
+              icon={<PencilLine />}
+              active={track}
+              onClick={toggleTrack}
+            />
+            <ToolPopover label="Annehmen" trigger={<CheckCircle />} disabled={!state.changesTotal}>
+              {(close) => (
+                <MenuList
+                  close={close}
+                  items={[
+                    {
+                      label: "Diese Änderung annehmen",
+                      disabled: !state.changesHere,
+                      onSelect: () => editor && resolve(changesAt(editor), true),
+                    },
+                    {
+                      label: "Alle Änderungen annehmen",
+                      onSelect: () => editor && resolve(changesOf(editor.state.doc), true),
+                    },
+                  ]}
+                />
+              )}
+            </ToolPopover>
+            <ToolPopover label="Ablehnen" trigger={<XCircle />} disabled={!state.changesTotal}>
+              {(close) => (
+                <MenuList
+                  close={close}
+                  items={[
+                    {
+                      label: "Diese Änderung ablehnen",
+                      disabled: !state.changesHere,
+                      onSelect: () => editor && resolve(changesAt(editor), false),
+                    },
+                    {
+                      label: "Alle Änderungen ablehnen",
+                      danger: true,
+                      onSelect: () => editor && resolve(changesOf(editor.state.doc), false),
+                    },
+                  ]}
+                />
+              )}
+            </ToolPopover>
+            <ToolButton
+              label="Vorherige Änderung"
+              icon={<CaretLeft />}
+              disabled={!state.changesTotal}
+              onClick={() => editor && goToChange(editor, -1)}
+            />
+            <ToolButton
+              label="Nächste Änderung"
+              icon={<CaretRight />}
+              disabled={!state.changesTotal}
+              onClick={() => editor && goToChange(editor, 1)}
             />
           </ToolGroup>
           <input

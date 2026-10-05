@@ -694,3 +694,82 @@ test("Gleichzeitiges Bearbeiten in der Präsentation", async ({ page, browser })
   expect(otherErrors).toEqual([]);
   await other.context().close();
 });
+
+// Änderungen nachverfolgen wie in Word: Eingefügtes unterstrichen, Gelöschtes durchgestrichen, mit Name; annehmen
+// und ablehnen einzeln oder alle; die Einstellung und die Änderungen bleiben in der Datei erhalten.
+test("Dokument: Änderungen nachverfolgen, annehmen und ablehnen", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  const stamp = Date.now();
+  await page.goto("/c/carecore-one/ablage");
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Dokument/ }).click();
+  const gallery = page.getByRole("dialog", { name: "Neues Dokument (Word)" });
+  await gallery.getByLabel("Name").fill(`Änderungen ${stamp}`);
+  await gallery.getByRole("button", { name: "Erstellen und öffnen" }).click();
+  const editor = page.locator(".office-prose");
+  await editor.click();
+  await page.keyboard.type("Dosis 5 mg täglich.");
+  const inserted = editor.locator("ins.office-ins");
+  const deleted = editor.locator("del.office-del");
+  await expect(inserted).toHaveCount(0);
+
+  const toggle = page.getByRole("button", { name: "Änderungen nachverfolgen" });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  // „5“ markieren und überschreiben.
+  await editor.click();
+  await page.keyboard.press("Home");
+  for (let step = 0; step < 6; step += 1) await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Shift+ArrowRight");
+  await page.keyboard.type("2,5");
+  await expect(deleted).toHaveText("5");
+  await expect(inserted).toHaveText("2,5");
+  await expect(inserted).toHaveAttribute("data-tip", /^Eingefügt: .+/);
+  await expect(editor.locator("p").first()).toHaveText("Dosis 52,5 mg täglich.");
+  // Rücktaste am Ende: der Punkt bleibt durchgestrichen stehen und der Cursor davor (wie in Word);
+  // eigene neue Eingaben verschwinden beim Löschen ganz.
+  await page.keyboard.press("End");
+  await page.keyboard.press("Backspace");
+  await expect(deleted.nth(1)).toHaveText(".");
+  await page.keyboard.type("!x");
+  await page.keyboard.press("Backspace");
+  await expect(editor.locator("p").first()).toHaveText("Dosis 52,5 mg täglich!.");
+  await expect(inserted.nth(1)).toHaveText("!");
+  await expect(page.locator(".office-status")).toContainText("Gespeichert um");
+
+  // Nach Schliessen und erneutem Öffnen ist alles noch da.
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  await page.getByText(`Änderungen ${stamp}.docx`, { exact: true }).dblclick();
+  await expect(editor.locator("p").first()).toHaveText("Dosis 52,5 mg täglich!.");
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(deleted).toHaveCount(2);
+  await expect(inserted).toHaveCount(2);
+
+  // Von Änderung zu Änderung springen und die vierte (gelöschter Punkt) ablehnen: der Punkt bleibt.
+  await editor.click();
+  await page.keyboard.press("Home");
+  const next = page.getByRole("button", { name: "Nächste Änderung" });
+  for (let step = 0; step < 4; step += 1) await next.click();
+  await page.getByRole("button", { name: "Ablehnen" }).click();
+  await page.getByRole("menuitemradio", { name: "Diese Änderung ablehnen" }).click();
+  await expect(deleted).toHaveCount(1);
+  await expect(inserted).toHaveCount(2);
+  // Alle übrigen annehmen.
+  await page.getByRole("button", { name: "Annehmen" }).click();
+  await page.getByRole("menuitemradio", { name: "Alle Änderungen annehmen" }).click();
+  await expect(editor.locator("p").first()).toHaveText("Dosis 2,5 mg täglich!.");
+  await expect(inserted).toHaveCount(0);
+  await expect(deleted).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Annehmen" })).toBeDisabled();
+
+  // Ausschalten mit Ctrl+Shift+E: danach wird nicht mehr nachverfolgt.
+  await editor.click();
+  await page.keyboard.press("End");
+  await page.keyboard.press("Control+Shift+E");
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  await page.keyboard.type(" Ende");
+  await expect(inserted).toHaveCount(0);
+  await expect(page.locator(".office-status")).toContainText("Gespeichert um");
+  expect(errors).toEqual([]);
+});

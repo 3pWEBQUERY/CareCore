@@ -253,6 +253,18 @@ button.office-comment-anchor:hover {
   background: rgba(250, 204, 21, 0.32);
   border-bottom: 2px solid rgba(217, 119, 6, 0.75);
 }
+/* Änderungen nachverfolgen: in der Farbe der Person, eingefügt unterstrichen, gelöscht durchgestrichen. */
+.office-prose .office-ins {
+  color: var(--change-color);
+  text-decoration: underline;
+  text-decoration-color: var(--change-color);
+  text-underline-offset: 2px;
+}
+.office-prose .office-del {
+  color: var(--change-color);
+  text-decoration: line-through;
+  text-decoration-color: var(--change-color);
+}
 .office-canvas {
   min-height: 0;
   flex: 1;

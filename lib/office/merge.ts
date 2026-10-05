@@ -355,6 +355,7 @@ function mergeDocument(base: DocumentModel, mine: DocumentModel, theirs: Documen
     page: mergeFields(base.page, mine.page, theirs.page),
     content: mergeDocNode(base.content, mine.content, theirs.content),
     ...(comments ? { comments } : {}),
+    ...(mergeValue(base.track, mine.track, theirs.track) ? { track: true } : {}),
   };
 }
 
