@@ -598,8 +598,9 @@ export default function SheetEditor({
     const start = target.selectionStart ?? current.value.length;
     const end = target.selectionEnd ?? start;
     const value = current.value.slice(0, start) + text + current.value.slice(end);
-    setEditing({ ...current, value, mode: "edit" });
-    requestAnimationFrame(() => target.setSelectionRange(start + text.length, start + text.length));
+    // Sofort übernehmen und den Cursor setzen: sonst landet ein schnell nachgetipptes Zeichen an der alten Stelle.
+    flushSync(() => setEditing({ ...current, value, mode: "edit" }));
+    target.setSelectionRange(start + text.length, start + text.length);
   }
   const todayText = () => {
     const now = new Date();
