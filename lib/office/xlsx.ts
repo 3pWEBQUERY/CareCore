@@ -48,6 +48,7 @@ import {
 } from "./package";
 import { child, childrenOf, esc, find, findAll, parseXml, textOf, type XmlNode } from "./xml";
 import { DEFAULT_BORDER_COLOR, chartData, filteredRows, sidesOf } from "./sheet-features";
+import { CHART_KINDS, chartSpaceXml } from "./chart-xml";
 
 // Excel-Arbeitsmappe (.xlsx) aus der Tabelle der Ablage schreiben und wieder lesen.
 
@@ -365,18 +366,12 @@ function sheetXml(
 
 // ---------- Diagramme ----------
 
-const CHART_NS =
-  'xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
 const EMU = 9525;
 const absolute = (sheetName: string, c1: number, r1: number, c2: number, r2: number) => {
   const name = /^[A-Za-z_][A-Za-z0-9_.]*$/.test(sheetName) ? sheetName : `'${sheetName.replace(/'/g, "''")}'`;
   const start = `$${columnName(c1)}$${r1 + 1}`;
   return c1 === c2 && r1 === r2 ? `${name}!${start}` : `${name}!${start}:$${columnName(c2)}$${r2 + 1}`;
 };
-const solid = (color: string) =>
-  `<c:spPr><a:solidFill><a:srgbClr val="${color.slice(1).toUpperCase()}"/></a:solidFill></c:spPr>`;
-const lineFill = (color: string) =>
-  `<c:spPr><a:ln w="28575" cap="rnd"><a:solidFill><a:srgbClr val="${color.slice(1).toUpperCase()}"/></a:solidFill><a:round/></a:ln></c:spPr>`;
 
 function chartXml(sheet: Sheet, chart: Sheet["charts"][number], values: Map<string, Value>) {
   const area = parseArea(chart.range);
@@ -385,49 +380,18 @@ function chartXml(sheet: Sheet, chart: Sheet["charts"][number], values: Map<stri
   const text = (col: number, row: number) => formatValue(valueAt(col, row), sheet.cells[cellKey(col, row)]?.s);
   const data = chartData(area, valueAt, text);
   const { headerRow, labelCol, firstRow } = data.layout;
-  const colors = ["#2563eb", "#0f766e", "#f97316", "#7c3aed", "#be185d", "#a16207", "#15803d", "#5b6b6d"];
-  const strCache = (items: string[]) =>
-    `<c:strCache><c:ptCount val="${items.length}"/>${items.map((item, index) => `<c:pt idx="${index}"><c:v>${esc(item)}</c:v></c:pt>`).join("")}</c:strCache>`;
-  const numCache = (items: number[]) =>
-    `<c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="${items.length}"/>${items.map((item, index) => `<c:pt idx="${index}"><c:v>${item}</c:v></c:pt>`).join("")}</c:numCache>`;
-  const series = (chart.type === "pie" ? data.series.slice(0, 1) : data.series).map((item, index) => {
-    const col = item.col;
-    const tx = headerRow
-      ? `<c:tx><c:strRef><c:f>${esc(absolute(sheet.name, col, area.r1, col, area.r1))}</c:f>${strCache([item.name])}</c:strRef></c:tx>`
-      : `<c:tx><c:v>${esc(item.name)}</c:v></c:tx>`;
-    const cat = labelCol
-      ? `<c:cat><c:strRef><c:f>${esc(absolute(sheet.name, area.c1, firstRow, area.c1, area.r2))}</c:f>${strCache(data.categories)}</c:strRef></c:cat>`
-      : "";
-    const val = `<c:val><c:numRef><c:f>${esc(absolute(sheet.name, col, firstRow, col, area.r2))}</c:f>${numCache(item.values)}</c:numRef></c:val>`;
-    const color = colors[index % colors.length];
-    const head = `<c:idx val="${index}"/><c:order val="${index}"/>${tx}`;
-    if (chart.type === "pie") {
-      const points = item.values
-        .map(
-          (_, point) =>
-            `<c:dPt><c:idx val="${point}"/><c:bubble3D val="0"/>${solid(colors[point % colors.length])}</c:dPt>`,
-        )
-        .join("");
-      return `<c:ser>${head}${points}${cat}${val}</c:ser>`;
-    }
-    if (chart.type === "line")
-      return `<c:ser>${head}${lineFill(color)}<c:marker><c:symbol val="circle"/><c:size val="5"/></c:marker>${cat}${val}<c:smooth val="0"/></c:ser>`;
-    return `<c:ser>${head}${solid(color)}<c:invertIfNegative val="0"/>${cat}${val}</c:ser>`;
+  return chartSpaceXml({
+    type: chart.type,
+    title: chart.title,
+    categories: data.categories,
+    catRef: labelCol ? absolute(sheet.name, area.c1, firstRow, area.c1, area.r2) : undefined,
+    series: data.series.map((item) => ({
+      name: item.name,
+      values: item.values,
+      nameRef: headerRow ? absolute(sheet.name, item.col, area.r1, item.col, area.r1) : undefined,
+      valRef: absolute(sheet.name, item.col, firstRow, item.col, area.r2),
+    })),
   });
-  const axes = (horizontal: boolean) =>
-    `<c:catAx><c:axId val="500000001"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="${horizontal ? "l" : "b"}"/><c:numFmt formatCode="General" sourceLinked="1"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="500000002"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/><c:noMultiLvlLbl val="0"/></c:catAx><c:valAx><c:axId val="500000002"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="${horizontal ? "b" : "l"}"/><c:majorGridlines/><c:numFmt formatCode="General" sourceLinked="1"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="500000001"/><c:crosses val="autoZero"/><c:crossBetween val="between"/></c:valAx>`;
-  const ids = '<c:axId val="500000001"/><c:axId val="500000002"/>';
-  let plot: string;
-  if (chart.type === "pie")
-    plot = `<c:pieChart><c:varyColors val="1"/>${series.join("")}<c:firstSliceAng val="0"/></c:pieChart>`;
-  else if (chart.type === "line")
-    plot = `<c:lineChart><c:grouping val="standard"/><c:varyColors val="0"/>${series.join("")}<c:marker val="1"/>${ids}</c:lineChart>${axes(false)}`;
-  else
-    plot = `<c:barChart><c:barDir val="${chart.type === "bar" ? "bar" : "col"}"/><c:grouping val="clustered"/><c:varyColors val="0"/>${series.join("")}<c:gapWidth val="150"/>${ids}</c:barChart>${axes(chart.type === "bar")}`;
-  const title = chart.title
-    ? `<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1400" b="1"/></a:pPr><a:r><a:rPr lang="de-CH" sz="1400" b="1"/><a:t>${esc(chart.title)}</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title><c:autoTitleDeleted val="0"/>`
-    : '<c:autoTitleDeleted val="1"/>';
-  return `${XML_HEAD}<c:chartSpace ${CHART_NS}><c:roundedCorners val="0"/><c:chart>${title}<c:plotArea><c:layout/>${plot}</c:plotArea><c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend><c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart></c:chartSpace>`;
 }
 
 // Pixelposition im Blatt → Zelle und Versatz (für die Verankerung des Diagramms).
@@ -945,18 +909,6 @@ function readSheet(
 
 // ---------- Diagramme aus Excel-Dateien ----------
 
-const CHART_KINDS: Record<string, SheetChart["type"]> = {
-  lineChart: "line",
-  line3DChart: "line",
-  areaChart: "line",
-  area3DChart: "line",
-  scatterChart: "line",
-  radarChart: "line",
-  pieChart: "pie",
-  pie3DChart: "pie",
-  doughnutChart: "pie",
-  ofPieChart: "pie",
-};
 const partRels = (files: Map<string, Buffer>, part: string) => {
   const map = new Map<string, string>();
   const xml = files.get(relsPathOf(part));

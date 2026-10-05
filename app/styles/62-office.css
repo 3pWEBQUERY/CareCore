@@ -2269,6 +2269,319 @@ body.office-open {
   opacity: 0.4;
   pointer-events: none;
 }
+/* Freie Objekte auf der Folie (Textfeld, Form, Tabelle, Diagramm) */
+.deck-item-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.deck-item {
+  position: absolute;
+  box-sizing: border-box;
+  outline: none;
+}
+.deck-item-layer .deck-item {
+  pointer-events: auto;
+}
+.deck-item.type-shape,
+.deck-item.type-chart {
+  cursor: move;
+}
+.deck-item.is-line {
+  min-height: 6px;
+  margin-top: -3px;
+}
+.deck-item-layer .deck-item:hover {
+  outline: 1px dashed rgba(95, 111, 134, 0.65);
+}
+.deck-item-layer .deck-item.selected,
+.deck-item-layer .deck-item:focus-visible {
+  outline: 1.5px solid var(--brand);
+}
+.deck-shape-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.deck-shape-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4cqw 0.8cqw;
+  overflow: hidden;
+  line-height: 1.2;
+  text-align: center;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+textarea.deck-shape-text {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  resize: none;
+  outline: none;
+  cursor: text;
+  padding-top: calc(50% - 1em);
+}
+.deck-item-text {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.deck-item-text.editable > div,
+.deck-item-text.editable .tiptap {
+  height: 100%;
+}
+.deck-item-text.editable .tiptap {
+  padding: 0.2cqw 0.4cqw;
+  outline: none;
+  overflow: hidden;
+}
+.deck-table {
+  width: 100%;
+  height: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  line-height: 1.2;
+}
+.deck-table td {
+  padding: 0.25cqw 0.5cqw;
+  border: 1px solid;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.deck-table td.head {
+  font-weight: 700;
+}
+.deck-table textarea {
+  display: block;
+  width: 100%;
+  min-height: 1.2em;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  resize: none;
+  overflow: hidden;
+  outline: none;
+  field-sizing: content;
+}
+.deck-chart-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.5cqw;
+  border: 2px dashed rgba(95, 111, 134, 0.45);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.35);
+  color: var(--deck-muted);
+  font-size: 1.4cqw;
+  font-weight: 700;
+}
+.deck-chart-empty svg {
+  width: 3.2cqw;
+  height: 3.2cqw;
+}
+/* Diagramm übernimmt die Farben des Folien-Designs (auch dunkle Designs). */
+.deck-item.type-chart .sheet-chart-svg > rect:first-child {
+  fill: transparent;
+}
+.deck-item.type-chart .sheet-chart-title {
+  fill: currentColor;
+}
+.deck-item.type-chart .sheet-chart-axis,
+.deck-item.type-chart .sheet-chart-legend {
+  fill: var(--deck-muted);
+}
+.deck-item.type-chart .sheet-chart-grid {
+  stroke: color-mix(in srgb, var(--deck-muted) 28%, transparent);
+}
+.deck-item.type-chart > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.deck-item-edge {
+  position: absolute;
+  z-index: 2;
+  cursor: move;
+}
+.deck-item-edge.top,
+.deck-item-edge.bottom {
+  left: 0;
+  right: 0;
+  height: 8px;
+}
+.deck-item-edge.top {
+  top: -5px;
+}
+.deck-item-edge.bottom {
+  bottom: -5px;
+}
+.deck-item-edge.left,
+.deck-item-edge.right {
+  top: 0;
+  bottom: 0;
+  width: 8px;
+}
+.deck-item-edge.left {
+  left: -5px;
+}
+.deck-item-edge.right {
+  right: -5px;
+}
+.deck-item-handle {
+  position: absolute;
+  z-index: 3;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border: 1.5px solid var(--brand);
+  border-radius: 2px;
+  background: #ffffff;
+}
+.deck-item-handle.nw,
+.deck-item-handle.w,
+.deck-item-handle.sw {
+  left: 0;
+}
+.deck-item-handle.n,
+.deck-item-handle.s {
+  left: 50%;
+}
+.deck-item-handle.ne,
+.deck-item-handle.e,
+.deck-item-handle.se {
+  left: 100%;
+}
+.deck-item-handle.nw,
+.deck-item-handle.n,
+.deck-item-handle.ne {
+  top: 0;
+}
+.deck-item-handle.w,
+.deck-item-handle.e {
+  top: 50%;
+}
+.deck-item-handle.sw,
+.deck-item-handle.s,
+.deck-item-handle.se {
+  top: 100%;
+}
+.deck-item-handle.nw,
+.deck-item-handle.se {
+  cursor: nwse-resize;
+}
+.deck-item-handle.ne,
+.deck-item-handle.sw {
+  cursor: nesw-resize;
+}
+.deck-item-handle.n,
+.deck-item-handle.s {
+  cursor: ns-resize;
+}
+.deck-item-handle.e,
+.deck-item-handle.w {
+  cursor: ew-resize;
+}
+.deck-chart-grid {
+  max-height: 46vh;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.deck-chart-grid table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.deck-chart-grid th,
+.deck-chart-grid td {
+  padding: 4px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.deck-chart-grid th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+}
+.deck-chart-grid input {
+  width: 100%;
+  min-width: 90px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+}
+.deck-chart-grid input:focus {
+  border-color: var(--brand);
+  outline: 2px solid rgba(37, 99, 235, 0.18);
+}
+.deck-chart-head {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.deck-chart-grid button {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.deck-chart-grid button:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.deck-chart-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.deck-chart-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.deck-chart-actions button:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.deck-chart-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 .deck-notes {
   width: min(100%, calc((100vh - 330px) * 16 / 9));
   min-width: 320px;

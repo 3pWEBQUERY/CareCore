@@ -14,6 +14,7 @@ import {
   ArrowUp,
   ArrowUUpLeft,
   ArrowUUpRight,
+  ChartBar,
   CopySimple,
   HighlighterCircle,
   Image as ImageIcon,
@@ -23,6 +24,8 @@ import {
   Palette,
   Play,
   Plus,
+  Shapes,
+  Table,
   TextAUnderline,
   TextAlignCenter,
   TextAlignLeft,
@@ -32,30 +35,47 @@ import {
   TextItalic,
   TextOutdent,
   TextStrikethrough,
+  TextT,
   TextUnderline,
   Trash,
   X,
 } from "@phosphor-icons/react";
 import {
   DECK_THEMES,
+  ITEM_LIMITS,
   SLIDE_BODY_SIZE,
   SLIDE_BOXES,
   SLIDE_LAYOUTS,
+  SLIDE_SHAPES,
   SLIDE_SIZE,
   emptyDoc,
   newId,
   newSlide,
+  type ChartType,
   type DeckModel,
   type DeckTheme,
   type DocMark,
   type DocNode,
   type Slide,
   type SlideBox,
+  type SlideItem,
   type SlideLayout,
+  type SlideShape,
 } from "@/lib/office/model";
+import { CHART_LABELS } from "@/lib/office/sheet-features";
+import { CHART_ICONS, ChartDataDialog, ItemBar, ItemLayer, SHAPE_ICONS, StaticItems } from "./deck-items";
 import type { EditorProps } from "./editor-props";
 import { alignText, toggleList } from "./text-commands";
-import { ColorPicker, MenuList, ToolButton, ToolGroup, ToolPopover, ToolSeparator, imageToDataUrl } from "./office-ui";
+import {
+  ColorPicker,
+  MenuList,
+  TablePicker,
+  ToolButton,
+  ToolGroup,
+  ToolPopover,
+  ToolSeparator,
+  imageToDataUrl,
+} from "./office-ui";
 
 // Masse in Prozent der Folie, Schriftgrössen relativ zur Folienbreite (Folie 960 pt breit wie in PowerPoint).
 const box = (value: SlideBox): CSSProperties => ({
@@ -72,6 +92,9 @@ function slideColors(slide: Slide, theme: DeckTheme) {
     ? { background: colors.accent, text: "#ffffff", accent: "#ffffff", muted: "rgba(255,255,255,0.86)" }
     : { background: colors.background, text: colors.text, accent: colors.accent, muted: colors.muted };
 }
+
+// Neues Objekt ohne Lage (die vergibt der Editor) – je Art getrennt, damit die Felder geprüft bleiben.
+type NewItem = SlideItem extends infer Item ? (Item extends SlideItem ? Omit<Item, "id" | "x" | "y"> : never) : never;
 
 // ---------- Anzeige ohne Bearbeitung (Übersicht, Vorführen, Drucken) ----------
 
@@ -168,6 +191,7 @@ function SlideView({
               <NextImage src={slide.image} alt="" fill unoptimized sizes="50vw" style={{ objectFit: "contain" }} />
             </div>
           )}
+          <StaticItems items={slide.items} colors={colors} textView={(item) => <DocView node={item.body} />} />
         </>
       )}
     </div>
@@ -180,12 +204,14 @@ function BodyEditor({
   value,
   placeholder,
   readOnly,
+  autofocus,
   onChange,
   onFocus,
 }: {
   value: DocNode;
   placeholder: string;
   readOnly: boolean;
+  autofocus?: boolean;
   onChange: (node: DocNode) => void;
   onFocus: (editor: Editor) => void;
 }) {
@@ -220,6 +246,7 @@ function BodyEditor({
     extensions,
     content: value,
     editable: !readOnly,
+    autofocus: autofocus ? "end" : false,
     immediatelyRender: false,
     editorProps,
     onUpdate: ({ editor: current }) => emit.current(current.getJSON() as DocNode),
@@ -341,6 +368,10 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [tableCell, setTableCell] = useState<{ row: number; col: number } | null>(null);
+  const [dataDialog, setDataDialog] = useState<string | null>(null);
+  const [freshText, setFreshText] = useState<string | null>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const emit = useRef(onChange);
   useEffect(() => {
@@ -380,6 +411,8 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
   const slide = model.slides[index];
   const boxes = SLIDE_BOXES[slide.layout];
   const colors = slideColors(slide, model.theme);
+  const item = slide.items.find((entry) => entry.id === selectedItem) ?? null;
+  const chartToEdit = slide.items.find((entry) => entry.id === dataDialog && entry.type === "chart");
 
   const state = useEditorState({
     editor: focused,
@@ -454,6 +487,88 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Das Bild konnte nicht eingefügt werden.");
     }
+  }
+
+  // ---------- Freie Objekte ----------
+  const changeItem = (next: SlideItem) =>
+    updateSlide(slide.id, (current) => ({
+      ...current,
+      items: current.items.map((entry) => (entry.id === next.id ? next : entry)),
+    }));
+  function addItem(entry: NewItem) {
+    const count = slide.items.length;
+    if (count >= ITEM_LIMITS.items) return setError(`Höchstens ${ITEM_LIMITS.items} Objekte pro Folie.`);
+    // Fokus aus der zuletzt bearbeiteten Tabellenzelle lösen (Menüs lassen ihn dort stehen).
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    // Neue Objekte mittig und leicht versetzt, damit sie nicht genau aufeinander liegen.
+    const offset = (count % 6) * 182_880;
+    const created = {
+      ...entry,
+      id: newId(),
+      x: Math.min(SLIDE_SIZE.width - entry.w, Math.round((SLIDE_SIZE.width - entry.w) / 2) + offset),
+      y: Math.min(SLIDE_SIZE.height - entry.h, Math.round((SLIDE_SIZE.height - entry.h) / 2) + offset),
+    } as SlideItem;
+    updateSlide(slide.id, (current) => ({ ...current, items: [...current.items, created] }));
+    setSelectedItem(created.id);
+    setTableCell(null);
+    if (created.type !== "text" && created.type !== "chart") focusItem(created.id);
+    return created;
+  }
+  // Nach dem Schliessen von Menü oder Dialog den Fokus aufs Objekt (sonst holt ihn das zuvor bearbeitete Feld zurück).
+  function focusItem(id: string) {
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLElement>(`.deck-item[data-item="${CSS.escape(id)}"]`)?.focus(),
+    );
+  }
+  function addShape(shape: SlideShape) {
+    addItem(
+      shape === "line"
+        ? { type: "shape", shape, w: 3_048_000, h: 0, fill: "", line: colors.accent, text: "" }
+        : { type: "shape", shape, w: 2_286_000, h: 1_371_600, fill: colors.accent, line: "", text: "" },
+    );
+  }
+  function addChart(chart: ChartType) {
+    const created = addItem({
+      type: "chart",
+      chart,
+      w: 5_486_400,
+      h: 3_200_400,
+      title: "",
+      categories: [],
+      series: [],
+    });
+    if (created) setDataDialog(created.id);
+  }
+  function removeItem(id: string) {
+    const now = modelRef.current;
+    const label = slide.items.find((entry) => entry.id === id);
+    if (!label) return;
+    setUndo({ text: "Objekt gelöscht", model: now });
+    updateSlide(slide.id, (current) => ({ ...current, items: current.items.filter((entry) => entry.id !== id) }));
+    setSelectedItem(null);
+    setFocused(null);
+  }
+  function duplicateItem(id: string) {
+    const source = slide.items.find((entry) => entry.id === id);
+    if (!source || slide.items.length >= ITEM_LIMITS.items) return;
+    const copy = {
+      ...structuredClone(source),
+      id: newId(),
+      x: Math.min(SLIDE_SIZE.width - source.w, source.x + 182_880),
+      y: Math.min(SLIDE_SIZE.height - source.h, source.y + 182_880),
+    };
+    updateSlide(slide.id, (current) => ({ ...current, items: [...current.items, copy] }));
+    setSelectedItem(copy.id);
+  }
+  function moveLayer(id: string, direction: 1 | -1) {
+    updateSlide(slide.id, (current) => {
+      const items = [...current.items];
+      const at = items.findIndex((entry) => entry.id === id);
+      const to = at + direction;
+      if (at < 0 || to < 0 || to >= items.length) return current;
+      [items[at], items[to]] = [items[to], items[at]];
+      return { ...current, items };
+    });
   }
 
   const layoutLabel = SLIDE_LAYOUTS.find((item) => item.value === slide.layout)?.label ?? "";
@@ -661,6 +776,54 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
           <ToolSeparator />
           <ToolGroup label="Einfügen">
             <ToolButton
+              label="Textfeld einfügen"
+              icon={<TextT />}
+              onClick={() => {
+                const created = addItem({ type: "text", w: 3_657_600, h: 914_400, body: emptyDoc() });
+                if (created) setFreshText(created.id);
+              }}
+            />
+            <ToolPopover label="Form einfügen" trigger={<Shapes />}>
+              {(close) => (
+                <MenuList
+                  close={close}
+                  items={SLIDE_SHAPES.map((shape) => ({
+                    label: shape.label,
+                    icon: SHAPE_ICONS[shape.value],
+                    onSelect: () => addShape(shape.value),
+                  }))}
+                />
+              )}
+            </ToolPopover>
+            <ToolPopover label="Tabelle einfügen" trigger={<Table />}>
+              {(close) => (
+                <TablePicker
+                  onPick={(rows, cols) => {
+                    close();
+                    addItem({
+                      type: "table",
+                      w: Math.min(10_972_800, cols * 1_828_800),
+                      h: Math.min(5_029_200, rows * 411_480),
+                      header: true,
+                      rows: Array.from({ length: rows }, () => Array<string>(cols).fill("")),
+                    });
+                  }}
+                />
+              )}
+            </ToolPopover>
+            <ToolPopover label="Diagramm einfügen" trigger={<ChartBar />}>
+              {(close) => (
+                <MenuList
+                  close={close}
+                  items={(Object.keys(CHART_LABELS) as ChartType[]).map((type) => ({
+                    label: CHART_LABELS[type],
+                    icon: CHART_ICONS[type],
+                    onSelect: () => addChart(type),
+                  }))}
+                />
+              )}
+            </ToolPopover>
+            <ToolButton
               label={slide.image ? "Bild ersetzen" : "Bild einfügen"}
               icon={<ImageIcon />}
               text={slide.image ? "Bild ersetzen" : "Bild"}
@@ -705,6 +868,17 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
             onClick={() => setPresenting(0)}
           />
         </div>
+      )}
+      {!readOnly && item && (
+        <ItemBar
+          item={item}
+          cell={tableCell}
+          onChange={changeItem}
+          onRemove={() => removeItem(item.id)}
+          onDuplicate={() => duplicateItem(item.id)}
+          onLayer={(direction) => moveLayer(item.id, direction)}
+          onEditData={() => setDataDialog(item.id)}
+        />
       )}
       {error && (
         <p className="office-inline-error" role="alert">
@@ -811,7 +985,12 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
           )}
         </ol>
         <div className="deck-stage-wrap">
-          <div className="deck-stage">
+          <div
+            className="deck-stage"
+            onPointerDown={(event) => {
+              if (!(event.target as HTMLElement).closest(".deck-item")) setSelectedItem(null);
+            }}
+          >
             <SlideView slide={slide} theme={model.theme} className="editing">
               <div
                 className={`deck-box deck-title anchor-${boxes.anchor}`}
@@ -892,6 +1071,42 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
                   )}
                 </div>
               )}
+              <ItemLayer
+                items={slide.items}
+                colors={colors}
+                selected={item?.id ?? null}
+                readOnly={readOnly}
+                onSelect={(id) => {
+                  setSelectedItem(id);
+                  if (id !== selectedItem) setTableCell(null);
+                }}
+                onChange={changeItem}
+                onRemove={removeItem}
+                onEditData={setDataDialog}
+                onTableCell={setTableCell}
+                textEditor={(entry) => (
+                  <BodyEditor
+                    key={`${slide.id}-${entry.id}`}
+                    value={entry.body.content?.length ? entry.body : emptyDoc()}
+                    placeholder="Text eingeben"
+                    readOnly={readOnly}
+                    autofocus={freshText === entry.id}
+                    onFocus={(editor) => {
+                      setFocused(editor);
+                      setSelectedItem(entry.id);
+                      setFreshText(null);
+                    }}
+                    onChange={(node) =>
+                      updateSlide(slide.id, (current) => ({
+                        ...current,
+                        items: current.items.map((other) =>
+                          other.id === entry.id && other.type === "text" ? { ...other, body: node } : other,
+                        ),
+                      }))
+                    }
+                  />
+                )}
+              />
             </SlideView>
           </div>
           <label className="deck-notes">
@@ -925,6 +1140,20 @@ export default function DeckEditor({ model: initial, onChange, readOnly }: Edito
           </span>
         )}
       </footer>
+      {chartToEdit?.type === "chart" && (
+        <ChartDataDialog
+          item={chartToEdit}
+          onClose={() => {
+            setDataDialog(null);
+            focusItem(chartToEdit.id);
+          }}
+          onSave={(next) => {
+            changeItem(next);
+            setDataDialog(null);
+            focusItem(next.id);
+          }}
+        />
+      )}
       {presenting !== null && (
         <Presenter slides={model.slides} theme={model.theme} start={presenting} onExit={() => setPresenting(null)} />
       )}

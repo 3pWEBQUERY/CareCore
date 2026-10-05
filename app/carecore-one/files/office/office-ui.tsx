@@ -304,3 +304,28 @@ export async function imageToDataUrl(file: File, maxSide = 1600): Promise<string
     URL.revokeObjectURL(url);
   }
 }
+
+// Tabellengrösse wählen wie in Word/PowerPoint (Raster mit Vorschau).
+export function TablePicker({ onPick }: { onPick: (rows: number, cols: number) => void }) {
+  const [hover, setHover] = useState({ rows: 0, cols: 0 });
+  return (
+    <div className="office-table-picker">
+      <div className="office-table-grid" onMouseLeave={() => setHover({ rows: 0, cols: 0 })}>
+        {Array.from({ length: 8 }, (_, row) =>
+          Array.from({ length: 10 }, (_, col) => (
+            <button
+              key={`${row}-${col}`}
+              type="button"
+              aria-label={`${row + 1} Zeilen, ${col + 1} Spalten`}
+              className={row < hover.rows && col < hover.cols ? "active" : ""}
+              onMouseEnter={() => setHover({ rows: row + 1, cols: col + 1 })}
+              onFocus={() => setHover({ rows: row + 1, cols: col + 1 })}
+              onClick={() => onPick(row + 1, col + 1)}
+            />
+          )),
+        )}
+      </div>
+      <p>{hover.rows ? `${hover.rows} × ${hover.cols} Tabelle` : "Grösse wählen"}</p>
+    </div>
+  );
+}

@@ -458,6 +458,169 @@ test("PowerPoint: Folien, Layouts, Design, Bild und Notizen in der .pptx-Datei",
   assert.match(slides[2].image, /^data:image\/png;base64,/);
 });
 
+const objectsDeck = (): DeckModel => {
+  const slide = newSlide("blank", "Kennzahlen");
+  slide.items = [
+    {
+      id: "t1",
+      type: "text",
+      x: 609_600,
+      y: 1_645_920,
+      w: 3_657_600,
+      h: 914_400,
+      body: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Freies Textfeld" }] }] },
+    },
+    {
+      id: "s1",
+      type: "shape",
+      shape: "roundRect",
+      x: 4_572_000,
+      y: 1_645_920,
+      w: 2_286_000,
+      h: 1_371_600,
+      fill: "#2563eb",
+      line: "",
+      text: "Wichtig",
+    },
+    {
+      id: "s2",
+      type: "shape",
+      shape: "line",
+      x: 609_600,
+      y: 3_200_400,
+      w: 3_000_000,
+      h: 0,
+      fill: "",
+      line: "#be185d",
+      text: "",
+    },
+    {
+      id: "tb",
+      type: "table",
+      x: 609_600,
+      y: 3_657_600,
+      w: 5_486_400,
+      h: 1_371_600,
+      header: true,
+      rows: [
+        ["Wohnbereich", "Plätze"],
+        ["Ahorn", "24"],
+        ["Linde", "18"],
+      ],
+    },
+    {
+      id: "c1",
+      type: "chart",
+      chart: "column",
+      x: 6_400_800,
+      y: 3_200_400,
+      w: 5_181_600,
+      h: 3_200_400,
+      title: "Belegung",
+      categories: ["Jan", "Feb", "Mär"],
+      series: [
+        { name: "Ahorn", values: [22, 23, 24] },
+        { name: "Linde", values: [17, 18, 16.5] },
+      ],
+    },
+  ];
+  return { kind: "deck", theme: "carecore", slides: [slide] };
+};
+
+test("PowerPoint: Textfelder, Formen, Tabellen und Diagramme auf der Folie", () => {
+  const model = objectsDeck();
+  const bytes = buildPptx(model, meta);
+  const files = readZip(bytes);
+  const slide = xml(bytes, "ppt/slides/slide1.xml");
+  const geometries = findAll(slide, "prstGeom").map((node) => node.attrs.prst);
+  assert.ok(geometries.includes("roundRect"));
+  assert.ok(geometries.includes("line"));
+  assert.equal(findAll(slide, "cxnSp").length, 1);
+  const table = findAll(slide, "tbl")[0];
+  assert.equal(findAll(table, "tr").length, 3);
+  assert.deepEqual(findAll(findAll(table, "tr")[1], "t").map(textOf), ["Ahorn", "24"]);
+  assert.equal(findAll(slide, "chart").length, 1);
+  // Diagramm als eigener Teil mit den Werten und einer Arbeitsmappe zum Bearbeiten der Daten.
+  const chart = xml(bytes, "ppt/charts/chart1.xml");
+  assert.equal(findAll(chart, "barDir")[0].attrs.val, "col");
+  assert.deepEqual(
+    findAll(findAll(chart, "ser")[1], "val").flatMap((node) => findAll(node, "v").map(textOf)),
+    ["17", "18", "16.5"],
+  );
+  assert.equal(textOf(findAll(chart, "f")[0]), "Tabelle1!$B$1");
+  assert.ok(findAll(chart, "externalData").length === 1);
+  assert.match(files.get("ppt/charts/_rels/chart1.xml.rels")!.toString(), /Microsoft_Excel_Worksheet1\.xlsx/);
+  const workbook = readXlsx(files.get("ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")!).model.sheets[0];
+  assert.equal(workbook.cells.B1.v, "Ahorn");
+  assert.equal(workbook.cells.A2.v, "Jan");
+  assert.equal(workbook.cells.C4.v, "16.5");
+  assert.match(files.get("[Content_Types].xml")!.toString(), /drawingml\.chart\+xml/);
+  assert.deepEqual(readPptx(bytes).model, cleanModel("deck", model));
+});
+
+test("PowerPoint: fremde Datei mit Textfeld, Form, Linie, Tabelle und Diagramm wird gelesen", () => {
+  const { model, imported } = readPptx(foreign(buildPptx(objectsDeck(), meta)));
+  assert.equal(imported, true);
+  const [slide] = model.slides;
+  assert.equal(slide.title, "Kennzahlen");
+  const items = slide.items;
+  assert.deepEqual(
+    items.map((item) => item.type),
+    ["text", "shape", "shape", "table", "chart"],
+  );
+  const [text, shape, line, table, chart] = items;
+  assert.equal(text.type === "text" && text.body.content?.[0].content?.[0].text, "Freies Textfeld");
+  assert.deepEqual(
+    shape.type === "shape" && { shape: shape.shape, fill: shape.fill, text: shape.text, x: shape.x, w: shape.w },
+    { shape: "roundRect", fill: "#2563eb", text: "Wichtig", x: 4_572_000, w: 2_286_000 },
+  );
+  assert.deepEqual(line.type === "shape" && [line.shape, line.line], ["line", "#be185d"]);
+  assert.deepEqual(table.type === "table" && [table.header, table.rows[2]], [true, ["Linde", "18"]]);
+  assert.deepEqual(
+    chart.type === "chart" && {
+      chart: chart.chart,
+      title: chart.title,
+      categories: chart.categories,
+      series: chart.series,
+    },
+    {
+      chart: "column",
+      title: "Belegung",
+      categories: ["Jan", "Feb", "Mär"],
+      series: [
+        { name: "Ahorn", values: [22, 23, 24] },
+        { name: "Linde", values: [17, 18, 16.5] },
+      ],
+    },
+  );
+});
+
+test("Präsentation: Objekte vom Browser werden geprüft (Grenzen, Farben, unbekannte Arten)", () => {
+  const deck = cleanModel("deck", {
+    slides: [
+      {
+        items: [
+          { type: "shape", shape: "star", x: -5, y: 99_999_999, w: 50_000_000, h: 10, fill: "red", line: "#ABCDEF" },
+          { type: "table", rows: [["a"], ["b", "c"]] },
+          { type: "script", x: 0 },
+          { type: "chart", chart: "radar", categories: ["x", "y"], series: [{ name: "n", values: [1, "2"] }] },
+        ],
+      },
+    ],
+  }) as DeckModel;
+  const [shape, table, chart] = deck.slides[0].items;
+  assert.equal(deck.slides[0].items.length, 3);
+  assert.deepEqual(
+    shape.type === "shape" && [shape.shape, shape.x, shape.y, shape.w, shape.h, shape.fill, shape.line],
+    ["rect", 0, 6_858_000, 12_192_000, 0, "", "#abcdef"],
+  );
+  assert.deepEqual(table.type === "table" && table.rows, [
+    ["a", ""],
+    ["b", "c"],
+  ]);
+  assert.deepEqual(chart.type === "chart" && [chart.chart, chart.series[0].values], ["column", [1, 0]]);
+});
+
 test("Prüfen: fremde Daten vom Browser werden bereinigt (Skript-Links, fremde Bilder, unbekannte Knoten)", () => {
   const dirty = cleanModel("document", {
     content: {
