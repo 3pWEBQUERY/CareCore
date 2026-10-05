@@ -11,6 +11,8 @@ import {
   ArrowsMerge,
   CaretDown,
   ChartBar,
+  ChatCircleText,
+  ChatsCircle,
   Columns,
   DownloadSimple,
   Eraser,
@@ -54,10 +56,12 @@ import {
   formulaProblem,
   isError,
   parseArea,
+  parseCellKey,
   parseInput,
   type Area,
   type Value,
 } from "@/lib/office/formula";
+import type { CommentThread } from "@/lib/office/comments";
 import {
   DEFAULT_COL_WIDTH,
   DEFAULT_ROW_HEIGHT,
@@ -122,6 +126,7 @@ import {
   type Range,
 } from "@/lib/office/sheet-ops";
 import type { EditorProps } from "./editor-props";
+import { CommentsPanel, newComment } from "./office-comments";
 import {
   ColorPicker,
   MenuList,
@@ -216,7 +221,14 @@ function formulaContext(value: string) {
   return { typing, inside: stack[stack.length - 1] ?? null };
 }
 
-export default function SheetEditor({ model: initial, onChange, readOnly, title, flushRef }: EditorProps<SheetModel>) {
+export default function SheetEditor({
+  model: initial,
+  onChange,
+  readOnly,
+  title,
+  flushRef,
+  user,
+}: EditorProps<SheetModel>) {
   const [model, setModel] = useState(initial);
   const modelRef = useRef(initial);
   const [active, setActive] = useState(0);
@@ -250,6 +262,11 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
   const [chartDrag, setChartDrag] = useState<{ id: string; x: number; y: number; w: number; h: number } | null>(null);
   const [borderWeight, setBorderWeight] = useState<BorderWeight>("thin");
   const [borderColor, setBorderColor] = useState<string>(DEFAULT_BORDER_COLOR);
+  // Kommentare an Zellen: Seitenleiste offen, wenn die Datei offene Kommentare hat; Entwurf gehört zu Blatt und Zelle.
+  const [showComments, setShowComments] = useState(() =>
+    initial.sheets.some((item) => Object.values(item.comments ?? {}).some((thread) => !thread.resolved)),
+  );
+  const [commentDraft, setCommentDraft] = useState<{ sheet: string; key: string } | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLTextAreaElement>(null);
   const drag = useRef<Drag>(null);
@@ -1229,6 +1246,12 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
 
   function onGridKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     if (event.target !== gridRef.current) return;
+    // Ctrl+Alt+M wie in Word: Kommentar zur aktiven Zelle.
+    if ((event.ctrlKey || event.metaKey) && event.altKey && event.code === "KeyM") {
+      event.preventDefault();
+      startComment();
+      return;
+    }
     // Eingabe läuft schon, das Eingabefeld hat aber (noch) keinen Fokus: Tasten trotzdem in die Zelle schreiben.
     const pending = editingRef.current;
     if (pending) {
@@ -1461,6 +1484,33 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
     if (taken) setNotice("Diesen Blattnamen gibt es bereits");
     setRenaming(null);
   }
+  // ---------- Kommentare ----------
+  // Eine Zelle hat höchstens einen Kommentar (mit Antworten), wie in Excel: hat sie schon einen, wird er gezeigt.
+  function startComment() {
+    if (editing && !commitEdit()) return;
+    setShowComments(true);
+    const key = cellKey(range.focus.col, range.focus.row);
+    if (!readOnly && !sheet.comments?.[key]) setCommentDraft({ sheet: sheet.id, key });
+  }
+  function updateComment(id: string, thread: CommentThread | null) {
+    commitSheet((current) => {
+      const comments = { ...current.comments };
+      const key = Object.keys(comments).find((item) => comments[item].id === id);
+      if (!key) return current;
+      if (thread) comments[key] = thread;
+      else delete comments[key];
+      return { ...current, comments };
+    });
+  }
+  function selectComment(id: string) {
+    const key = Object.keys(sheet.comments ?? {}).find((item) => sheet.comments?.[item].id === id);
+    const at = key ? parseCellKey(key) : null;
+    if (!at) return;
+    if (editing && !commitEdit()) return;
+    select(at);
+    focusGrid();
+  }
+
   function switchSheet(index: number) {
     if (editing && !commitEdit()) return;
     setActive(index);
@@ -1599,6 +1649,7 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
       const edges = edgeShadow(edgesFor(col, row, merge));
       const filterHead = filterArea && row === filterArea.r1 && col >= filterArea.c1 && col <= filterArea.c2;
       const filtered = filterHead && (sheet.filter?.hidden[String(col)]?.length ?? 0) > 0;
+      const comment = sheet.comments?.[key];
       const classes = [
         selected ? "selected" : "",
         focus ? "focus" : "",
@@ -1621,7 +1672,13 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
             ...(frozen ? { ...stickyTop, zIndex: 3 } : {}),
             ...(frozenCol ? { position: "sticky", left: ROWHEAD_W + colLefts[col], zIndex: frozen ? 4 : 2 } : {}),
           }}
-          data-tip={isError(value) ? ERROR_HINTS[value.error] : undefined}
+          data-tip={
+            isError(value)
+              ? ERROR_HINTS[value.error]
+              : comment
+                ? `${comment.author || "Kommentar"}: ${comment.text}`
+                : undefined
+          }
           onMouseDown={(event) => onCellMouseDown(event, { col, row })}
           onMouseEnter={() => onCellMouseEnter({ col, row })}
           onDoubleClick={() => startEdit("edit")}
@@ -1654,6 +1711,14 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
             />
           ) : (
             <span className="sheet-cell-text">{formatValue(value, cell?.s)}</span>
+          )}
+          {comment && (
+            <span
+              className={`sheet-comment-flag ${comment.resolved ? "resolved" : ""}`}
+              role="img"
+              aria-label={`Kommentar: ${comment.text}`}
+              onMouseDown={() => setShowComments(true)}
+            />
           )}
           {filterHead && (
             <button
@@ -1777,6 +1842,9 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
       : areaName(area));
   const fmtLabel = NUMBER_FORMATS.find((item) => item.value === (activeStyle.fmt ?? "general"))?.label ?? "Standard";
 
+  const focusComment = sheet.comments?.[cellKey(range.focus.col, range.focus.row)];
+  const sheetComments = Object.entries(sheet.comments ?? {});
+  const openComments = sheetComments.filter(([, thread]) => !thread.resolved).length;
   const cellMenu: (MenuItem | "separator")[] = [
     { label: "Ausschneiden", hint: "Ctrl+X", disabled: readOnly, onSelect: () => copy(true) },
     { label: "Kopieren", hint: "Ctrl+C", onSelect: () => copy(false) },
@@ -1794,6 +1862,10 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
     },
     { label: "Nur Werte einfügen", disabled: readOnly || !hasClip, onSelect: () => pasteSpecial("values") },
     { label: "Nur Formate einfügen", disabled: readOnly || !hasClip, onSelect: () => pasteSpecial("formats") },
+    "separator",
+    focusComment
+      ? { label: "Kommentar anzeigen", onSelect: startComment }
+      : { label: "Neuer Kommentar", hint: "Ctrl+Alt+M", disabled: readOnly, onSelect: startComment },
     "separator",
     { label: "Zeilen oberhalb einfügen", disabled: readOnly, onSelect: () => insert("row", true) },
     { label: "Zeilen unterhalb einfügen", disabled: readOnly, onSelect: () => insert("row", false) },
@@ -2306,6 +2378,21 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
             </ToolPopover>
           </ToolGroup>
           <ToolSeparator />
+          <ToolGroup label="Überprüfen">
+            <ToolButton
+              label={focusComment ? "Kommentar anzeigen" : "Neuer Kommentar"}
+              shortcut="Ctrl+Alt+M"
+              icon={<ChatCircleText />}
+              onClick={startComment}
+            />
+            <ToolButton
+              label="Kommentare anzeigen"
+              icon={<ChatsCircle />}
+              active={showComments}
+              onClick={() => setShowComments((value) => !value)}
+            />
+          </ToolGroup>
+          <ToolSeparator />
           <ToolButton label="Blatt als CSV herunterladen" icon={<DownloadSimple />} text="CSV" onClick={downloadCsv} />
         </div>
       )}
@@ -2393,193 +2480,229 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
           {formulaError}
         </p>
       )}
-      <div
-        ref={gridRef}
-        className={`sheet-grid ${pointMode ? "point-mode" : ""}`}
-        tabIndex={0}
-        role="grid"
-        aria-label={`Blatt ${sheet.name}`}
-        aria-rowcount={sheet.rowCount}
-        aria-colcount={sheet.colCount}
-        onKeyDown={onGridKeyDown}
-        onCopy={(event) => {
-          if (editing) return;
-          event.preventDefault();
-          copy(false, event.clipboardData);
-        }}
-        onCut={(event) => {
-          if (editing || readOnly) return;
-          event.preventDefault();
-          copy(true, event.clipboardData);
-        }}
-        onPaste={(event) => {
-          if (editing || readOnly) return;
-          event.preventDefault();
-          pasteHandled.current = true;
-          // Leere Zwischenablage (z. B. ohne Zugriffsrecht): zuletzt in der Tabelle Kopiertes verwenden.
-          paste(event.clipboardData.getData("text/plain") || clip.current?.text || "");
-        }}
-      >
-        <div className="sheet-zoom" style={{ zoom: scale, width: totalWidth }}>
-          <table
-            className={`sheet-table ${sheet.showGrid ? "" : "no-grid"} ${painter ? "painting" : ""}`}
-            style={{ width: totalWidth }}
-          >
-            <colgroup>
-              <col style={{ width: ROWHEAD_W }} />
-              {columns.map((col) => (
-                <col key={col} style={{ width: colWidths[col] }} />
-              ))}
-            </colgroup>
-            <thead>
-              <tr style={{ height: HEADER_H }}>
-                <th
-                  className="sheet-corner"
-                  aria-label="Alles auswählen"
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                    select({ col: 0, row: 0 }, { col: sheet.colCount - 1, row: sheet.rowCount - 1 });
-                    focusGrid();
-                  }}
-                />
+      <div className="office-main">
+        <div
+          ref={gridRef}
+          className={`sheet-grid ${pointMode ? "point-mode" : ""}`}
+          tabIndex={0}
+          role="grid"
+          aria-label={`Blatt ${sheet.name}`}
+          aria-rowcount={sheet.rowCount}
+          aria-colcount={sheet.colCount}
+          onKeyDown={onGridKeyDown}
+          onCopy={(event) => {
+            if (editing) return;
+            event.preventDefault();
+            copy(false, event.clipboardData);
+          }}
+          onCut={(event) => {
+            if (editing || readOnly) return;
+            event.preventDefault();
+            copy(true, event.clipboardData);
+          }}
+          onPaste={(event) => {
+            if (editing || readOnly) return;
+            event.preventDefault();
+            pasteHandled.current = true;
+            // Leere Zwischenablage (z. B. ohne Zugriffsrecht): zuletzt in der Tabelle Kopiertes verwenden.
+            paste(event.clipboardData.getData("text/plain") || clip.current?.text || "");
+          }}
+        >
+          <div className="sheet-zoom" style={{ zoom: scale, width: totalWidth }}>
+            <table
+              className={`sheet-table ${sheet.showGrid ? "" : "no-grid"} ${painter ? "painting" : ""}`}
+              style={{ width: totalWidth }}
+            >
+              <colgroup>
+                <col style={{ width: ROWHEAD_W }} />
                 {columns.map((col) => (
-                  <th
-                    key={col}
-                    scope="col"
-                    className={`sheet-colhead ${col >= area.c1 && col <= area.c2 ? "selected" : ""} ${col > 0 && hiddenColSet.has(col - 1) ? "after-hidden" : ""}`}
-                    style={col < freezeCols ? { left: ROWHEAD_W + colLefts[col], zIndex: 8 } : undefined}
-                    onMouseDown={(event) => {
-                      if (event.button !== 0) return;
-                      event.preventDefault();
-                      if (editing && !commitEdit()) return;
-                      focusGrid();
-                      if (event.shiftKey) select({ col: range.anchor.col, row: 0 }, { col, row: sheet.rowCount - 1 });
-                      else select({ col, row: 0 }, { col, row: sheet.rowCount - 1 });
-                      drag.current = { kind: "cols", start: { col, row: 0 } };
-                    }}
-                    onMouseEnter={() => onCellMouseEnter({ col, row: 0 })}
-                    onContextMenu={(event) => {
-                      event.preventDefault();
-                      if (!(col >= area.c1 && col <= area.c2))
-                        select({ col, row: 0 }, { col, row: sheet.rowCount - 1 });
-                      setMenu({ x: event.clientX, y: event.clientY, kind: "cell" });
-                    }}
-                  >
-                    {columnName(col)}
-                    {!readOnly && (
-                      <span
-                        className="sheet-col-resize"
-                        aria-hidden="true"
-                        onMouseDown={(event) => startResize(event, "col", col)}
-                        onDoubleClick={() => autoFit(col)}
-                      />
-                    )}
-                  </th>
+                  <col key={col} style={{ width: colWidths[col] }} />
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {frozenRowsRendered.map((row) => (
-                <RowSlot key={row} render={renderRow} row={row} frozenTop={HEADER_H + rowTops[row]} />
-              ))}
-              {first > freezeRows && (
-                <tr aria-hidden="true" style={{ height: rowTops[first] - rowTops[freezeRows] }}>
-                  <td colSpan={columns.length + 1} className="sheet-spacer" />
-                </tr>
-              )}
-              {bodyRows.map((row) => (
-                <RowSlot key={row} render={renderRow} row={row} />
-              ))}
-              {last < sheet.rowCount - 1 && (
-                <tr aria-hidden="true" style={{ height: rowTops[sheet.rowCount] - rowTops[last + 1] }}>
-                  <td colSpan={columns.length + 1} className="sheet-spacer" />
-                </tr>
-              )}
-            </tbody>
-          </table>
-          {spillArea && (
-            <div
-              className="sheet-spill"
-              aria-hidden="true"
-              style={{
-                left: ROWHEAD_W + colLefts[spillArea.c1],
-                top: HEADER_H + rowTops[spillArea.r1],
-                width: colLefts[spillArea.c2 + 1] - colLefts[spillArea.c1],
-                height: rowTops[spillArea.r2 + 1] - rowTops[spillArea.r1],
-              }}
-            />
-          )}
-          {sheet.charts.map((chart) => {
-            const box = chartDrag?.id === chart.id ? { ...chart, ...chartDrag } : chart;
-            const chartArea = parseArea(chart.range);
-            const selectedNow = selectedChart === chart.id;
-            return (
-              <div
-                key={chart.id}
-                className={`sheet-chart ${selectedNow ? "selected" : ""}`}
-                style={{ left: ROWHEAD_W + box.x, top: HEADER_H + box.y, width: box.w, height: box.h }}
-                role="figure"
-                aria-label={chart.title ? `Diagramm ${chart.title}` : "Diagramm"}
-                onMouseDown={(event) => startChartDrag(event, chart, "move")}
-                onClick={() => setSelectedChart(chart.id)}
-                onDoubleClick={() => !readOnly && setDialog({ kind: "chart", chart })}
-              >
-                {chartArea && (
-                  <ChartSvg
-                    data={chartData(chartArea, valueAt, textAt)}
-                    type={chart.type}
-                    title={chart.title}
-                    width={box.w}
-                    height={box.h}
-                    xTitle={chart.xTitle}
-                    yTitle={chart.yTitle}
-                    labels={chart.labels}
+              </colgroup>
+              <thead>
+                <tr style={{ height: HEADER_H }}>
+                  <th
+                    className="sheet-corner"
+                    aria-label="Alles auswählen"
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      select({ col: 0, row: 0 }, { col: sheet.colCount - 1, row: sheet.rowCount - 1 });
+                      focusGrid();
+                    }}
                   />
-                )}
-                {selectedNow && !readOnly && (
-                  <>
-                    <div
-                      // Ganz oben im Blatt läge die Leiste unter den Spaltenköpfen: dann unter dem Diagramm.
-                      className={`sheet-chart-tools ${box.y < 40 ? "below" : ""}`}
-                      onMouseDown={(event) => event.stopPropagation()}
+                  {columns.map((col) => (
+                    <th
+                      key={col}
+                      scope="col"
+                      className={`sheet-colhead ${col >= area.c1 && col <= area.c2 ? "selected" : ""} ${col > 0 && hiddenColSet.has(col - 1) ? "after-hidden" : ""}`}
+                      style={col < freezeCols ? { left: ROWHEAD_W + colLefts[col], zIndex: 8 } : undefined}
+                      onMouseDown={(event) => {
+                        if (event.button !== 0) return;
+                        event.preventDefault();
+                        if (editing && !commitEdit()) return;
+                        focusGrid();
+                        if (event.shiftKey) select({ col: range.anchor.col, row: 0 }, { col, row: sheet.rowCount - 1 });
+                        else select({ col, row: 0 }, { col, row: sheet.rowCount - 1 });
+                        drag.current = { kind: "cols", start: { col, row: 0 } };
+                      }}
+                      onMouseEnter={() => onCellMouseEnter({ col, row: 0 })}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        if (!(col >= area.c1 && col <= area.c2))
+                          select({ col, row: 0 }, { col, row: sheet.rowCount - 1 });
+                        setMenu({ x: event.clientX, y: event.clientY, kind: "cell" });
+                      }}
                     >
-                      <button type="button" onClick={() => setDialog({ kind: "chart", chart })}>
-                        Bearbeiten
-                      </button>
-                      <button type="button" className="danger" onClick={() => deleteChart(chart.id)}>
-                        Löschen
-                      </button>
-                    </div>
-                    <span
-                      className="sheet-chart-resize"
-                      aria-hidden="true"
-                      onMouseDown={(event) => startChartDrag(event, chart, "resize")}
-                    />
-                  </>
+                      {columnName(col)}
+                      {!readOnly && (
+                        <span
+                          className="sheet-col-resize"
+                          aria-hidden="true"
+                          onMouseDown={(event) => startResize(event, "col", col)}
+                          onDoubleClick={() => autoFit(col)}
+                        />
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {frozenRowsRendered.map((row) => (
+                  <RowSlot key={row} render={renderRow} row={row} frozenTop={HEADER_H + rowTops[row]} />
+                ))}
+                {first > freezeRows && (
+                  <tr aria-hidden="true" style={{ height: rowTops[first] - rowTops[freezeRows] }}>
+                    <td colSpan={columns.length + 1} className="sheet-spacer" />
+                  </tr>
                 )}
-              </div>
-            );
-          })}
-        </div>
-        {!readOnly && (
-          <div className="sheet-more" style={{ width: totalWidth }}>
-            <button
-              type="button"
-              disabled={sheet.rowCount >= 10_000}
-              onClick={() =>
-                commitSheet((current) => ({ ...current, rowCount: Math.min(10_000, current.rowCount + 100) }))
-              }
-            >
-              <Plus aria-hidden="true" /> 100 weitere Zeilen
-            </button>
-            <button
-              type="button"
-              disabled={sheet.colCount >= 200}
-              onClick={() => commitSheet((current) => ({ ...current, colCount: Math.min(200, current.colCount + 10) }))}
-            >
-              <Columns aria-hidden="true" /> 10 weitere Spalten
-            </button>
+                {bodyRows.map((row) => (
+                  <RowSlot key={row} render={renderRow} row={row} />
+                ))}
+                {last < sheet.rowCount - 1 && (
+                  <tr aria-hidden="true" style={{ height: rowTops[sheet.rowCount] - rowTops[last + 1] }}>
+                    <td colSpan={columns.length + 1} className="sheet-spacer" />
+                  </tr>
+                )}
+              </tbody>
+            </table>
+            {spillArea && (
+              <div
+                className="sheet-spill"
+                aria-hidden="true"
+                style={{
+                  left: ROWHEAD_W + colLefts[spillArea.c1],
+                  top: HEADER_H + rowTops[spillArea.r1],
+                  width: colLefts[spillArea.c2 + 1] - colLefts[spillArea.c1],
+                  height: rowTops[spillArea.r2 + 1] - rowTops[spillArea.r1],
+                }}
+              />
+            )}
+            {sheet.charts.map((chart) => {
+              const box = chartDrag?.id === chart.id ? { ...chart, ...chartDrag } : chart;
+              const chartArea = parseArea(chart.range);
+              const selectedNow = selectedChart === chart.id;
+              return (
+                <div
+                  key={chart.id}
+                  className={`sheet-chart ${selectedNow ? "selected" : ""}`}
+                  style={{ left: ROWHEAD_W + box.x, top: HEADER_H + box.y, width: box.w, height: box.h }}
+                  role="figure"
+                  aria-label={chart.title ? `Diagramm ${chart.title}` : "Diagramm"}
+                  onMouseDown={(event) => startChartDrag(event, chart, "move")}
+                  onClick={() => setSelectedChart(chart.id)}
+                  onDoubleClick={() => !readOnly && setDialog({ kind: "chart", chart })}
+                >
+                  {chartArea && (
+                    <ChartSvg
+                      data={chartData(chartArea, valueAt, textAt)}
+                      type={chart.type}
+                      title={chart.title}
+                      width={box.w}
+                      height={box.h}
+                      xTitle={chart.xTitle}
+                      yTitle={chart.yTitle}
+                      labels={chart.labels}
+                    />
+                  )}
+                  {selectedNow && !readOnly && (
+                    <>
+                      <div
+                        // Ganz oben im Blatt läge die Leiste unter den Spaltenköpfen: dann unter dem Diagramm.
+                        className={`sheet-chart-tools ${box.y < 40 ? "below" : ""}`}
+                        onMouseDown={(event) => event.stopPropagation()}
+                      >
+                        <button type="button" onClick={() => setDialog({ kind: "chart", chart })}>
+                          Bearbeiten
+                        </button>
+                        <button type="button" className="danger" onClick={() => deleteChart(chart.id)}>
+                          Löschen
+                        </button>
+                      </div>
+                      <span
+                        className="sheet-chart-resize"
+                        aria-hidden="true"
+                        onMouseDown={(event) => startChartDrag(event, chart, "resize")}
+                      />
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </div>
+          {!readOnly && (
+            <div className="sheet-more" style={{ width: totalWidth }}>
+              <button
+                type="button"
+                disabled={sheet.rowCount >= 10_000}
+                onClick={() =>
+                  commitSheet((current) => ({ ...current, rowCount: Math.min(10_000, current.rowCount + 100) }))
+                }
+              >
+                <Plus aria-hidden="true" /> 100 weitere Zeilen
+              </button>
+              <button
+                type="button"
+                disabled={sheet.colCount >= 200}
+                onClick={() =>
+                  commitSheet((current) => ({ ...current, colCount: Math.min(200, current.colCount + 10) }))
+                }
+              >
+                <Columns aria-hidden="true" /> 10 weitere Spalten
+              </button>
+            </div>
+          )}
+        </div>
+        {showComments && (
+          <CommentsPanel
+            threads={sheetComments
+              .map(([key, thread]) => ({ key, thread, at: parseCellKey(key) }))
+              .sort((a, b) => (a.at?.row ?? 0) - (b.at?.row ?? 0) || (a.at?.col ?? 0) - (b.at?.col ?? 0))
+              .map(({ key, thread }) => ({ thread, label: `Zelle ${key}` }))}
+            user={user}
+            readOnly={readOnly}
+            draft={commentDraft?.sheet === sheet.id ? `Zelle ${commentDraft.key}` : null}
+            active={focusComment?.id ?? null}
+            onCreate={(text) => {
+              const target = commentDraft;
+              if (!target) return;
+              commitSheet((current) => ({
+                ...current,
+                comments: { ...current.comments, [target.key]: newComment(user, text) },
+              }));
+              setCommentDraft(null);
+            }}
+            onCancelDraft={() => {
+              setCommentDraft(null);
+              focusGrid();
+            }}
+            onChange={(thread) => updateComment(thread.id, thread)}
+            onDelete={(id) => updateComment(id, null)}
+            onSelect={selectComment}
+            onClose={() => {
+              setShowComments(false);
+              setCommentDraft(null);
+            }}
+          />
         )}
       </div>
       <footer className="sheet-footer">
@@ -2665,6 +2788,11 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
               <span>Anzahl: {stats.filled}</span>
             </>
           )}
+          {openComments > 0 && (
+            <button type="button" className="office-status-link" onClick={() => setShowComments((value) => !value)}>
+              {openComments} {openComments === 1 ? "offener Kommentar" : "offene Kommentare"}
+            </button>
+          )}
         </span>
         <span className="office-zoom" role="group" aria-label="Zoom">
           {ZOOMS.map((value) => (
@@ -2684,7 +2812,13 @@ export default function SheetEditor({ model: initial, onChange, readOnly, title,
         createPortal(
           <div
             className="office-context"
-            style={{ top: Math.min(menu.y, window.innerHeight - 420), left: Math.min(menu.x, window.innerWidth - 260) }}
+            style={{
+              top: Math.max(8, Math.min(menu.y, window.innerHeight - 420)),
+              left: Math.min(menu.x, window.innerWidth - 260),
+              // Lange Menüs passen nicht immer ins Fenster: dann im Menü blättern.
+              maxHeight: window.innerHeight - Math.max(8, Math.min(menu.y, window.innerHeight - 420)) - 8,
+              overflowY: "auto",
+            }}
             onMouseLeave={() => setMenu(null)}
           >
             <MenuList

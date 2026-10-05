@@ -9,6 +9,7 @@ import {
   type DocumentModel,
   type PageSetup,
 } from "./model";
+import { initials, type CommentReply, type CommentThread } from "./comments";
 import {
   MODEL_PART,
   REL,
@@ -71,6 +72,10 @@ type Writer = {
   contentWidth: number;
   footnotes: string[];
   headings: { level: number; text: string }[];
+  // Kommentare: Nummer des Texts (in Lesereihenfolge), an dem ein Kommentarbereich beginnt bzw. endet.
+  textIndex: number;
+  commentStarts: Map<number, number[]>;
+  commentEnds: Map<number, number[]>;
 };
 
 function addRel(writer: Writer, type: string, target: string, external = false) {
@@ -130,12 +135,20 @@ function inline(nodes: DocNode[] | undefined, writer: Writer, extra = "") {
       continue;
     }
     if (node.type !== "text" || !node.text) continue;
+    const at = writer.textIndex++;
     const run = textRun(node.text, runProps(node.marks, extra));
     const link = node.marks?.find((mark) => mark.type === "link");
     const href = typeof link?.attrs?.href === "string" ? link.attrs.href : "";
+    out += (writer.commentStarts.get(at) ?? []).map((id) => `<w:commentRangeStart w:id="${id}"/>`).join("");
     out += href
       ? `<w:hyperlink r:id="${addRel(writer, REL.hyperlink, href, true)}" w:history="1">${run}</w:hyperlink>`
       : run;
+    out += (writer.commentEnds.get(at) ?? [])
+      .map(
+        (id) =>
+          `<w:commentRangeEnd w:id="${id}"/><w:r><w:rPr><w:rStyle w:val="Kommentarzeichen"/></w:rPr><w:commentReference w:id="${id}"/></w:r>`,
+      )
+      .join("");
   }
   return out;
 }
@@ -214,6 +227,79 @@ function footnotesXml(notes: string[]) {
         `<w:footnote w:id="${index + 1}"><w:p><w:pPr><w:pStyle w:val="Funotentext"/></w:pPr><w:r><w:rPr><w:rStyle w:val="Funotenzeichen"/></w:rPr><w:footnoteRef/></w:r><w:r><w:t xml:space="preserve"> ${esc(text)}</w:t></w:r></w:p></w:footnote>`,
     )
     .join("")}</w:footnotes>`;
+}
+
+// ---------- Kommentare ----------
+
+const W14 = 'xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"';
+const W15 = 'xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml"';
+const paraId = (index: number) => (index + 1).toString(16).toUpperCase().padStart(8, "0");
+const wordDate = (date: string) => (date ? `${date.slice(0, 19)}Z` : "");
+
+// Wo jeder Kommentar im Text liegt: erster und letzter Text mit seiner Markierung (in Lesereihenfolge).
+function commentPlaces(content: DocNode | undefined) {
+  const places = new Map<string, { first: number; last: number }>();
+  let index = 0;
+  const walk = (node: DocNode) => {
+    if (node.type === "text") {
+      if (!node.text) return;
+      const at = index++;
+      for (const mark of node.marks ?? [])
+        if (mark.type === "comment" && typeof mark.attrs?.id === "string") {
+          const place = places.get(mark.attrs.id);
+          if (place) place.last = at;
+          else places.set(mark.attrs.id, { first: at, last: at });
+        }
+      return;
+    }
+    for (const child of node.content ?? []) walk(child);
+  };
+  if (content) walk(content);
+  return places;
+}
+
+// Nummern der Word-Kommentare: jeder Kommentar und jede Antwort eine eigene (Antworten am selben Textbereich).
+function commentEntries(model: DocumentModel) {
+  const places = commentPlaces(model.content);
+  const entries: {
+    id: number;
+    parent: number | null;
+    thread: CommentThread;
+    entry: CommentReply;
+    resolved: boolean;
+  }[] = [];
+  for (const thread of model.comments ?? []) {
+    if (!places.has(thread.id)) continue;
+    const head = entries.length;
+    entries.push({ id: head, parent: null, thread, entry: thread, resolved: Boolean(thread.resolved) });
+    for (const reply of thread.replies)
+      entries.push({ id: entries.length, parent: head, thread, entry: reply, resolved: Boolean(thread.resolved) });
+  }
+  return { places, entries };
+}
+
+function commentsXml(entries: ReturnType<typeof commentEntries>["entries"]) {
+  return `${XML_HEAD}<w:comments ${W} ${W14}>${entries
+    .map(({ id, entry }) => {
+      const lines = entry.text.split("\n");
+      const paragraphs = lines
+        .map(
+          (line, index) =>
+            `<w:p${index === lines.length - 1 ? ` w14:paraId="${paraId(id)}" w14:textId="77777777"` : ""}><w:pPr><w:pStyle w:val="Kommentartext"/></w:pPr>${index === 0 ? '<w:r><w:rPr><w:rStyle w:val="Kommentarzeichen"/></w:rPr><w:annotationRef/></w:r>' : ""}<w:r><w:t xml:space="preserve">${esc(line)}</w:t></w:r></w:p>`,
+        )
+        .join("");
+      return `<w:comment w:id="${id}" w:author="${esc(entry.author)}"${entry.date ? ` w:date="${wordDate(entry.date)}"` : ""} w:initials="${esc(initials(entry.author))}">${paragraphs}</w:comment>`;
+    })
+    .join("")}</w:comments>`;
+}
+
+function commentsExtendedXml(entries: ReturnType<typeof commentEntries>["entries"]) {
+  return `${XML_HEAD}<w15:commentsEx ${W15}>${entries
+    .map(
+      ({ id, parent, resolved }) =>
+        `<w15:commentEx w15:paraId="${paraId(id)}"${parent === null ? "" : ` w15:paraIdParent="${paraId(parent)}"`} w15:done="${resolved ? 1 : 0}"/>`,
+    )
+    .join("")}</w15:commentsEx>`;
 }
 
 type ParagraphOptions = {
@@ -398,7 +484,7 @@ const STYLES = `${XML_HEAD}<w:styles ${W}><w:docDefaults><w:rPrDefault><w:rPr><w
   )
   .join(
     "",
-  )}<w:style w:type="paragraph" w:styleId="Funotentext"><w:name w:val="footnote text"/><w:basedOn w:val="Standard"/><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr></w:style><w:style w:type="character" w:styleId="Funotenzeichen"><w:name w:val="footnote reference"/><w:rPr><w:vertAlign w:val="superscript"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Kopfzeile"><w:name w:val="header"/><w:basedOn w:val="Standard"/><w:rPr><w:color w:val="5B6B6D"/><w:sz w:val="18"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Fusszeile"><w:name w:val="footer"/><w:basedOn w:val="Standard"/><w:rPr><w:color w:val="5B6B6D"/><w:sz w:val="18"/></w:rPr></w:style></w:styles>`;
+  )}<w:style w:type="paragraph" w:styleId="Kommentartext"><w:name w:val="annotation text"/><w:basedOn w:val="Standard"/><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style><w:style w:type="character" w:styleId="Kommentarzeichen"><w:name w:val="annotation reference"/><w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Funotentext"><w:name w:val="footnote text"/><w:basedOn w:val="Standard"/><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr></w:style><w:style w:type="character" w:styleId="Funotenzeichen"><w:name w:val="footnote reference"/><w:rPr><w:vertAlign w:val="superscript"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Kopfzeile"><w:name w:val="header"/><w:basedOn w:val="Standard"/><w:rPr><w:color w:val="5B6B6D"/><w:sz w:val="18"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Fusszeile"><w:name w:val="footer"/><w:basedOn w:val="Standard"/><w:rPr><w:color w:val="5B6B6D"/><w:sz w:val="18"/></w:rPr></w:style></w:styles>`;
 
 const BULLETS = ["•", "◦", "▪"];
 function numbering(nums: { id: number; start: number }[]) {
@@ -439,7 +525,16 @@ export function buildDocx(model: DocumentModel, meta: { title: string; author: s
     contentWidth: page.contentWidth,
     footnotes: [],
     headings: collectHeadings(model.content.content, []),
+    textIndex: 0,
+    commentStarts: new Map(),
+    commentEnds: new Map(),
   };
+  const comments = commentEntries(model);
+  for (const { id, thread } of comments.entries) {
+    const place = comments.places.get(thread.id)!;
+    writer.commentStarts.set(place.first, [...(writer.commentStarts.get(place.first) ?? []), id]);
+    writer.commentEnds.set(place.last, [...(writer.commentEnds.get(place.last) ?? []), id]);
+  }
   const body = blocks(model.content.content, writer) || "<w:p/>";
   const withHeader = Boolean(model.page.header);
   const withFooter = Boolean(model.page.footer) || model.page.pageNumbers;
@@ -452,6 +547,12 @@ export function buildDocx(model: DocumentModel, meta: { title: string; author: s
     ...(withHeader ? [{ id: "rId4", type: REL.header, target: "header1.xml" }] : []),
     ...(withFooter ? [{ id: "rId5", type: REL.footer, target: "footer1.xml" }] : []),
     ...(writer.footnotes.length ? [{ id: "rId6", type: REL.footnotes, target: "footnotes.xml" }] : []),
+    ...(comments.entries.length
+      ? [
+          { id: "rId7", type: REL.comments, target: "comments.xml" },
+          { id: "rId8", type: REL.commentsExtended, target: "commentsExtended.xml" },
+        ]
+      : []),
     ...writer.rels,
   ];
   const main = "application/vnd.openxmlformats-officedocument.wordprocessingml";
@@ -463,6 +564,12 @@ export function buildDocx(model: DocumentModel, meta: { title: string; author: s
     ...(withHeader ? ([["/word/header1.xml", `${main}.header+xml`]] as [string, string][]) : []),
     ...(withFooter ? ([["/word/footer1.xml", `${main}.footer+xml`]] as [string, string][]) : []),
     ...(writer.footnotes.length ? ([["/word/footnotes.xml", `${main}.footnotes+xml`]] as [string, string][]) : []),
+    ...(comments.entries.length
+      ? ([
+          ["/word/comments.xml", `${main}.comments+xml`],
+          ["/word/commentsExtended.xml", `${main}.commentsExtended+xml`],
+        ] as [string, string][])
+      : []),
   ];
   const entries: ZipEntry[] = [
     { path: "[Content_Types].xml", content: Buffer.from(contentTypes(overrides, writer.media.length > 0)) },
@@ -488,6 +595,12 @@ export function buildDocx(model: DocumentModel, meta: { title: string; author: s
     ...(writer.footnotes.length
       ? [{ path: "word/footnotes.xml", content: Buffer.from(footnotesXml(writer.footnotes)) }]
       : []),
+    ...(comments.entries.length
+      ? [
+          { path: "word/comments.xml", content: Buffer.from(commentsXml(comments.entries)) },
+          { path: "word/commentsExtended.xml", content: Buffer.from(commentsExtendedXml(comments.entries)) },
+        ]
+      : []),
     ...writer.media,
     { path: MODEL_PART, content: packModel(model, sha256(document), writer.mediaBySrc) },
   ];
@@ -502,6 +615,9 @@ type Reader = {
   styles: Map<string, string>;
   numFormats: Map<string, Map<number, string>>;
   footnotes: Map<string, string>;
+  // Kommentare: Word-Nummer → Kommentar im Modell, offene Bereiche beim Lesen.
+  commentMarks: Map<string, string>;
+  openComments: Set<string>;
 };
 
 function readRels(files: Map<string, Buffer>, part: string) {
@@ -563,8 +679,15 @@ function readRuns(node: XmlNode, reader: Reader, link?: string): DocNode[] {
       out.push(...readRuns(item, reader, link));
       continue;
     }
+    if (item.name === "commentRangeStart" || item.name === "commentRangeEnd") {
+      const thread = reader.commentMarks.get(item.attrs.id ?? "");
+      if (thread && item.name === "commentRangeStart") reader.openComments.add(thread);
+      else if (thread) reader.openComments.delete(thread);
+      continue;
+    }
     if (item.name !== "r") continue;
     const marks = readMarks(child(item, "rPr"));
+    for (const thread of reader.openComments) marks.push({ type: "comment", attrs: { id: thread } });
     if (link) marks.push({ type: "link", attrs: { href: link } });
     for (const part of item.children) {
       if (part.name === "t") {
@@ -764,6 +887,52 @@ function readBody(parent: XmlNode, reader: Reader): DocNode[] {
   return out;
 }
 
+// Kommentare aus comments.xml; Antworten und „erledigt“ aus commentsExtended.xml (neuere Word-Versionen).
+function readComments(files: Map<string, Buffer>, relsXml: Buffer | undefined) {
+  const marks = new Map<string, string>();
+  const relations = relsXml ? findAll(parseXml(relsXml.toString("utf8")), "Relationship") : [];
+  const part = (type: string) => {
+    const rel = relations.find((item) => item.attrs.Type === type);
+    return rel ? files.get(resolvePart("word/document.xml", rel.attrs.Target)) : undefined;
+  };
+  const xml = part(REL.comments);
+  if (!xml) return { marks, threads: [] as CommentThread[] };
+  const extended = new Map<string, { parent?: string; done: boolean }>();
+  const extendedXml = part(REL.commentsExtended);
+  if (extendedXml)
+    for (const entry of findAll(parseXml(extendedXml.toString("utf8")), "commentEx"))
+      extended.set(entry.attrs.paraId ?? "", { parent: entry.attrs.paraIdParent, done: entry.attrs.done === "1" });
+  const byPara = new Map<string, CommentThread>();
+  const threads: CommentThread[] = [];
+  for (const comment of findAll(parseXml(xml.toString("utf8")), "comment")) {
+    const paragraphs = childrenOf(comment, "p");
+    const text = paragraphs
+      .map((p) =>
+        findAll(p, "t")
+          .map((t) => textOf(t))
+          .join(""),
+      )
+      .join("\n")
+      .trim();
+    const id = `w${comment.attrs.id}`;
+    if (!text || !/^w\d{1,9}$/.test(id)) continue;
+    const date = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?/.exec(comment.attrs.date ?? "")?.[0];
+    const entry = { id, author: (comment.attrs.author ?? "").slice(0, 120), date: date ? `${date}Z` : "", text };
+    const para = paragraphs[paragraphs.length - 1]?.attrs.paraId ?? "";
+    const info = extended.get(para);
+    const parent = info?.parent ? byPara.get(info.parent) : undefined;
+    if (parent) {
+      parent.replies.push(entry);
+      continue;
+    }
+    const thread: CommentThread = { ...entry, ...(info?.done ? { resolved: true } : {}), replies: [] };
+    threads.push(thread);
+    if (para) byPara.set(para, thread);
+    marks.set(comment.attrs.id ?? "", id);
+  }
+  return { marks, threads };
+}
+
 export function readDocx(bytes: Buffer): { model: DocumentModel; imported: boolean } {
   const files = readZip(bytes);
   const documentXml = files.get("word/document.xml");
@@ -823,7 +992,16 @@ export function readDocx(bytes: Buffer): { model: DocumentModel; imported: boole
             .join(" ")
             .trim(),
         );
-  const reader: Reader = { files, rels, styles, numFormats, footnotes };
+  const comments = readComments(files, relsXml);
+  const reader: Reader = {
+    files,
+    rels,
+    styles,
+    numFormats,
+    footnotes,
+    commentMarks: comments.marks,
+    openComments: new Set(),
+  };
   const root = parseXml(documentXml.toString("utf8"));
   const body = find(root, "body");
   const content = body ? readBody(body, reader) : [];
@@ -842,6 +1020,7 @@ export function readDocx(bytes: Buffer): { model: DocumentModel; imported: boole
       kind: "document",
       page,
       content: { type: "doc", content: content.length ? content : emptyDoc().content },
+      comments: comments.threads,
     }) as DocumentModel,
     imported: true,
   };

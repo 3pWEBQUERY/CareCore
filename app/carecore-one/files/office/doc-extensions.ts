@@ -218,3 +218,53 @@ export function removeFootnote(editor: Editor, pos: number) {
   if (node?.type.name !== "footnote") return;
   editor.view.dispatch(editor.state.tr.delete(pos, pos + node.nodeSize));
 }
+
+// Kommentar an einer Textstelle (wie in Word): Markierung mit der Nummer des Kommentars; mehrere dürfen sich überlappen.
+export const CommentMark = Mark.create({
+  name: "comment",
+  excludes: "",
+  inclusive: false,
+  addAttributes() {
+    return {
+      id: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute("data-comment"),
+        renderHTML: (attributes: Record<string, unknown>) =>
+          typeof attributes.id === "string" ? { "data-comment": attributes.id } : {},
+      },
+    };
+  },
+  parseHTML: () => [{ tag: "span[data-comment]" }],
+  renderHTML: ({ HTMLAttributes }) => ["span", mergeAttributes(HTMLAttributes, { class: "office-comment-mark" }), 0],
+});
+
+// Alle Textstücke eines Kommentars (Position und Text) in Lesereihenfolge.
+export function commentRanges(editor: Editor, id: string) {
+  const ranges: { from: number; to: number; text: string }[] = [];
+  editor.state.doc.descendants((node, pos) => {
+    if (node.isText && node.marks.some((mark) => mark.type.name === "comment" && mark.attrs.id === id))
+      ranges.push({ from: pos, to: pos + node.nodeSize, text: node.text ?? "" });
+  });
+  return ranges;
+}
+
+export function addCommentMark(editor: Editor, id: string) {
+  const { from, to } = editor.state.selection;
+  if (from === to) return false;
+  editor.view.dispatch(editor.state.tr.addMark(from, to, editor.schema.marks.comment.create({ id })));
+  return true;
+}
+
+export function removeCommentMark(editor: Editor, id: string) {
+  const tr = editor.state.tr;
+  for (const range of commentRanges(editor, id))
+    tr.removeMark(range.from, range.to, editor.schema.marks.comment.create({ id }));
+  if (tr.docChanged) editor.view.dispatch(tr);
+}
+
+// Kommentare an der Cursorstelle (für die Hervorhebung in der Seitenleiste).
+export function commentsAt(editor: Editor) {
+  const { $from } = editor.state.selection;
+  const marks = [...(editor.state.storedMarks ?? []), ...$from.marks(), ...($from.nodeAfter?.marks ?? [])];
+  return [...new Set(marks.filter((mark) => mark.type.name === "comment").map((mark) => String(mark.attrs.id)))];
+}

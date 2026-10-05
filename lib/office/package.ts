@@ -39,6 +39,9 @@ export const REL = {
   tableStyles: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles",
   footnotes: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
   chart: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart",
+  comments: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+  commentsExtended: "http://schemas.microsoft.com/office/2011/relationships/commentsExtended",
+  commentAuthors: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/commentAuthors",
   package: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package",
 };
 

@@ -22,6 +22,7 @@ import {
   type SlideShape,
 } from "./model";
 import { chartSpaceXml, readChartSpace } from "./chart-xml";
+import { initials, type CommentReply, type CommentThread } from "./comments";
 import { buildXlsx } from "./xlsx";
 import {
   MODEL_PART,
@@ -312,13 +313,60 @@ const checkOf = (files: Map<string, Buffer> | ZipEntry[]) => {
           ([path]) =>
             path === "ppt/presentation.xml" ||
             /^ppt\/slides\/slide\d+\.xml$/.test(path) ||
-            /^ppt\/charts\/chart\d+\.xml$/.test(path),
+            /^ppt\/charts\/chart\d+\.xml$/.test(path) ||
+            /^ppt\/comments\/[^/]+\.xml$/.test(path),
         )
         .sort((a, b) => a[0].localeCompare(b[0]))
         .map(([, content]) => content),
     ),
   );
 };
+
+// ---------- Kommentare ----------
+
+type Authors = Map<string, { id: number; lastIdx: number }>;
+const P15 = 'xmlns:p15="http://schemas.microsoft.com/office/powerpoint/2012/main"';
+const THREADING = "{C676402C-5697-4E1C-873F-D02D1690AC5C}";
+
+// Personen mit Kommentaren (PowerPoint nummeriert die Kommentare je Person).
+function commentAuthors(model: DeckModel): Authors {
+  const authors: Authors = new Map();
+  for (const slide of model.slides)
+    for (const thread of slide.comments ?? [])
+      for (const entry of [thread, ...thread.replies]) {
+        const name = entry.author || "Kommentar";
+        if (!authors.has(name)) authors.set(name, { id: authors.size, lastIdx: 0 });
+      }
+  return authors;
+}
+
+function slideComments(slide: Slide, authors: Authors) {
+  const list: string[] = [];
+  (slide.comments ?? []).forEach((thread, position) => {
+    const cm = (entry: CommentReply, parent: { authorId: number; idx: number } | null) => {
+      const author = authors.get(entry.author || "Kommentar")!;
+      author.lastIdx += 1;
+      const threading = parent
+        ? `<p:extLst><p:ext uri="${THREADING}"><p15:threadingInfo ${P15} timeZoneBias="0"><p15:parentCm authorId="${parent.authorId}" idx="${parent.idx}"/></p15:threadingInfo></p:ext></p:extLst>`
+        : "";
+      list.push(
+        `<p:cm authorId="${author.id}" dt="${(entry.date || new Date().toISOString()).slice(0, 19)}.000" idx="${author.lastIdx}"><p:pos x="${10 + position * 40}" y="10"/><p:text>${esc(entry.text)}</p:text>${threading}</p:cm>`,
+      );
+      return { authorId: author.id, idx: author.lastIdx };
+    };
+    const head = cm(thread, null);
+    for (const reply of thread.replies) cm(reply, head);
+  });
+  return `${XML_HEAD}<p:cmLst ${NS}>${list.join("")}</p:cmLst>`;
+}
+
+const commentAuthorsXml = (authors: Authors) =>
+  `${XML_HEAD}<p:cmAuthorLst ${NS}>${[...authors]
+    .map(
+      ([name, author]) =>
+        `<p:cmAuthor id="${author.id}" name="${esc(name)}" initials="${esc(initials(name))}" lastIdx="${author.lastIdx}" clrIdx="${author.id % 8}"/>`,
+    )
+    .join("")}</p:cmAuthorLst>`;
 
 export function buildPptx(model: DeckModel, meta: { title: string; author: string }) {
   const theme = DECK_THEMES[model.theme];
@@ -327,11 +375,17 @@ export function buildPptx(model: DeckModel, meta: { title: string; author: strin
   const pml = "application/vnd.openxmlformats-officedocument.presentationml";
   let images = false;
   let charts = 0;
+  const authors = commentAuthors(model);
   const media = new Map<string, string>();
   model.slides.forEach((slide, index) => {
     const number = index + 1;
     const picture = SLIDE_BOXES[slide.layout].image ? dataImage(slide.image) : null;
     const rels = [{ id: "rId1", type: REL.slideLayout, target: "../slideLayouts/slideLayout1.xml" }];
+    if (slide.comments?.length) {
+      rels.push({ id: "rId4", type: REL.comments, target: `../comments/comment${number}.xml` });
+      entries.push({ path: `ppt/comments/comment${number}.xml`, content: Buffer.from(slideComments(slide, authors)) });
+      overrides.push([`/ppt/comments/comment${number}.xml`, `${pml}.comments+xml`]);
+    }
     if (picture) {
       images = true;
       entries.push({ path: `ppt/media/folie${number}.${picture.extension}`, content: picture.bytes });
@@ -406,6 +460,7 @@ export function buildPptx(model: DeckModel, meta: { title: string; author: strin
     { id: `rId${count + 4}`, type: REL.viewProps, target: "viewProps.xml" },
     { id: `rId${count + 5}`, type: REL.tableStyles, target: "tableStyles.xml" },
     { id: `rId${count + 6}`, type: REL.notesMaster, target: "notesMasters/notesMaster1.xml" },
+    ...(authors.size ? [{ id: `rId${count + 7}`, type: REL.commentAuthors, target: "commentAuthors.xml" }] : []),
   ]);
   const all: ZipEntry[] = [
     {
@@ -422,6 +477,7 @@ export function buildPptx(model: DeckModel, meta: { title: string; author: strin
             ["/ppt/presProps.xml", `${pml}.presProps+xml`],
             ["/ppt/viewProps.xml", `${pml}.viewProps+xml`],
             ["/ppt/tableStyles.xml", `${pml}.tableStyles+xml`],
+            ...(authors.size ? ([["/ppt/commentAuthors.xml", `${pml}.commentAuthors+xml`]] as [string, string][]) : []),
             ...overrides,
           ],
           images,
@@ -479,6 +535,7 @@ export function buildPptx(model: DeckModel, meta: { title: string; author: strin
         `${XML_HEAD}<a:tblStyleLst xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" def="{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"/>`,
       ),
     },
+    ...(authors.size ? [{ path: "ppt/commentAuthors.xml", content: Buffer.from(commentAuthorsXml(authors)) }] : []),
     ...entries,
   ];
   all.push({ path: MODEL_PART, content: packModel(model, checkOf(all), media) });
@@ -605,6 +662,101 @@ function readFrame(
   };
 }
 
+// ---------- Kommentare aus PowerPoint-Dateien ----------
+
+const MODERN_COMMENTS = "http://schemas.microsoft.com/office/2018/10/relationships/comments";
+const MODERN_AUTHORS = "http://schemas.microsoft.com/office/2018/10/relationships/authors";
+
+const pptDate = (value: string | undefined) => {
+  const match = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?/.exec(value ?? "");
+  return match ? `${match[0]}Z` : "";
+};
+const paragraphsText = (node: XmlNode | undefined) =>
+  childrenOf(node, "p")
+    .map((p) => textOf(p))
+    .join("\n")
+    .trim()
+    .slice(0, 2000);
+
+// Personen: klassisch (commentAuthors.xml) und neu (authors.xml, PowerPoint 365).
+function readAuthors(files: Map<string, Buffer>, presentationRels: Map<string, { target: string; type: string }>) {
+  const legacy = new Map<string, string>();
+  const modern = new Map<string, string>();
+  for (const rel of presentationRels.values()) {
+    const xml = files.get(rel.target);
+    if (!xml) continue;
+    if (rel.type === REL.commentAuthors)
+      for (const author of findAll(parseXml(xml.toString("utf8")), "cmAuthor"))
+        legacy.set(author.attrs.id ?? "", (author.attrs.name ?? "").slice(0, 120));
+    if (rel.type === MODERN_AUTHORS)
+      for (const author of findAll(parseXml(xml.toString("utf8")), "author"))
+        modern.set(author.attrs.id ?? "", (author.attrs.name ?? "").slice(0, 120));
+  }
+  return { legacy, modern };
+}
+
+function readSlideComments(
+  files: Map<string, Buffer>,
+  slideRels: Map<string, { target: string; type: string }>,
+  authors: ReturnType<typeof readAuthors>,
+  slideNumber: number,
+): CommentThread[] {
+  const threads: CommentThread[] = [];
+  for (const rel of slideRels.values()) {
+    const xml = files.get(rel.target);
+    if (!xml) continue;
+    if (rel.type === MODERN_COMMENTS) {
+      for (const [index, cm] of findAll(parseXml(xml.toString("utf8")), "cm").entries()) {
+        const text = paragraphsText(child(cm, "txBody"));
+        if (!text) continue;
+        const id = `m${slideNumber}x${index + 1}`;
+        threads.push({
+          id,
+          author: authors.modern.get(cm.attrs.authorId ?? "") ?? "",
+          date: pptDate(cm.attrs.created),
+          text,
+          ...(cm.attrs.status === "resolved" ? { resolved: true } : {}),
+          replies: findAll(child(cm, "replyLst"), "reply").flatMap((reply, position) => {
+            const body = paragraphsText(child(reply, "txBody"));
+            return body
+              ? [
+                  {
+                    id: `${id}r${position + 1}`,
+                    author: authors.modern.get(reply.attrs.authorId ?? "") ?? "",
+                    date: pptDate(reply.attrs.created),
+                    text: body,
+                  },
+                ]
+              : [];
+          }),
+        });
+      }
+    } else if (rel.type === REL.comments) {
+      const byKey = new Map<string, CommentThread>();
+      for (const cm of findAll(parseXml(xml.toString("utf8")), "cm")) {
+        const text = textOf(child(cm, "text")).trim().slice(0, 2000);
+        if (!text) continue;
+        const key = `${cm.attrs.authorId}-${cm.attrs.idx}`;
+        const entry = {
+          id: `c${slideNumber}x${key}`.replace(/[^A-Za-z0-9_-]/g, ""),
+          author: authors.legacy.get(cm.attrs.authorId ?? "") ?? "",
+          date: pptDate(cm.attrs.dt),
+          text,
+        };
+        const parentCm = find(cm, "parentCm");
+        const parent = parentCm ? byKey.get(`${parentCm.attrs.authorId}-${parentCm.attrs.idx}`) : undefined;
+        if (parent) parent.replies.push(entry);
+        else {
+          const thread: CommentThread = { ...entry, replies: [] };
+          byKey.set(key, thread);
+          threads.push(thread);
+        }
+      }
+    }
+  }
+  return threads;
+}
+
 export function readPptx(bytes: Buffer): { model: DeckModel; imported: boolean } {
   const files = readZip(bytes);
   const presentationXml = files.get("ppt/presentation.xml");
@@ -628,7 +780,8 @@ export function readPptx(bytes: Buffer): { model: DeckModel; imported: boolean }
     return map;
   };
   const presentationRels = rels("ppt/presentation.xml");
-  const slides = findAll(parseXml(presentationXml.toString("utf8")), "sldId").flatMap((entry): Slide[] => {
+  const authors = readAuthors(files, presentationRels);
+  const slides = findAll(parseXml(presentationXml.toString("utf8")), "sldId").flatMap((entry, position): Slide[] => {
     const path = presentationRels.get(entry.attrs.id ?? "")?.target;
     const xml = path ? files.get(path) : undefined;
     if (!path || !xml) return [];
@@ -714,6 +867,8 @@ export function readPptx(bytes: Buffer): { model: DeckModel; imported: boolean }
         const shape = findAll(notesRoot, "sp").find((item) => find(child(item, "nvSpPr"), "ph")?.attrs.type === "body");
         slide.notes = childrenOf(child(shape, "txBody"), "p").map(textOf).join("\n").trim();
       }
+    const comments = readSlideComments(files, slideRels, authors, position + 1);
+    if (comments.length) slide.comments = comments;
     return [slide];
   });
   return { model: cleanModel("deck", { kind: "deck", theme: "carecore", slides }) as DeckModel, imported: true };

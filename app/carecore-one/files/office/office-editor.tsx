@@ -46,6 +46,7 @@ type Loaded = {
   canEdit: boolean;
   imported: boolean;
   file: ExplorerFile;
+  user: string;
 };
 type Status = "saved" | "dirty" | "saving" | "error" | "conflict";
 
@@ -261,6 +262,7 @@ export default function OfficeEditor({
     flushRef,
     readOnly: !loaded?.canEdit || status === "conflict",
     title: name.replace(/\.[^.]+$/, ""),
+    user: loaded?.user ?? "",
   };
   const statusText =
     status === "saving"
@@ -391,9 +393,9 @@ export default function OfficeEditor({
       {loaded?.imported && loaded.canEdit && (
         <div className="office-banner info" role="note">
           <span>
-            Diese Datei stammt aus einem anderen Programm. Text, Tabellen und Bilder lassen sich hier bearbeiten;
-            besondere Elemente wie Diagramme, Textfelder oder Makros werden beim Speichern nicht übernommen. Das
-            Original bleibt als Version erhalten.
+            Diese Datei stammt aus einem anderen Programm. Text, Tabellen, Bilder, Diagramme, Formen und Kommentare
+            lassen sich hier bearbeiten; besondere Elemente wie Makros, SmartArt oder eingebettete Objekte werden beim
+            Speichern nicht übernommen. Das Original bleibt als Version erhalten.
           </span>
         </div>
       )}

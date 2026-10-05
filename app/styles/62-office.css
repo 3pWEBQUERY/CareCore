@@ -676,6 +676,260 @@ body.office-open {
 }
 
 /* ---------- Dokument ---------- */
+/* Arbeitsfläche mit Kommentar-Seitenleiste rechts */
+.office-main {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+}
+.office-main > :first-child {
+  min-width: 0;
+  flex: 1;
+}
+.office-comments {
+  width: 320px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+  font-family: Arial, Helvetica, sans-serif;
+}
+.office-comments header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.office-comments h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+}
+.office-comments h2 svg {
+  width: 18px;
+  height: 18px;
+  color: var(--brand);
+}
+.office-comments-count {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 12px;
+  text-align: center;
+}
+.office-comments-filter {
+  margin: 8px 12px 0;
+}
+.office-comments-list {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 10px 12px 16px;
+}
+.office-comments-empty {
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+.office-comment,
+.office-comment-draft {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+.office-comment-draft {
+  margin: 10px 12px 0;
+  border-color: var(--brand);
+}
+.office-comment.active {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
+}
+.office-comment.resolved {
+  opacity: 0.72;
+}
+.office-comment-anchor {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-style: italic;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+button.office-comment-anchor:hover {
+  color: var(--brand);
+}
+.office-comment-entry {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+.office-comment-avatar {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #ede9fe;
+  color: #5b21b6;
+  font-size: 11px;
+  font-weight: 700;
+}
+.office-comment-body p {
+  margin: 0;
+}
+.office-comment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  align-items: baseline;
+  font-size: 12px;
+}
+.office-comment-meta strong {
+  color: var(--ink);
+}
+.office-comment-meta time {
+  color: var(--muted);
+  font-size: 11px;
+}
+.office-comment-text {
+  margin-top: 2px !important;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.office-comment-status {
+  margin: 0;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 700;
+}
+.office-comment-icon {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.office-comment-icon:hover {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+.office-comment-icon.danger:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.office-comment-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.office-comment-draft textarea,
+.office-comment-reply textarea {
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  resize: vertical;
+}
+.office-comment-draft textarea:focus,
+.office-comment-reply textarea:focus {
+  border-color: var(--brand);
+  outline: 2px solid rgba(37, 99, 235, 0.18);
+}
+.office-comment-reply {
+  display: grid;
+  gap: 6px;
+}
+.office-comment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.office-comment-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.office-comment-actions button:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.office-comment-actions button.primary {
+  border-color: var(--brand);
+  color: white;
+  background: var(--brand);
+}
+.office-comment-actions button.primary:hover:not(:disabled) {
+  color: white;
+  filter: brightness(1.08);
+}
+.office-comment-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.office-comment-actions svg {
+  width: 14px;
+  height: 14px;
+}
+.office-status-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--brand);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.office-prose .office-comment-mark {
+  background: rgba(250, 204, 21, 0.32);
+  border-bottom: 2px solid rgba(217, 119, 6, 0.75);
+}
 .office-canvas {
   min-height: 0;
   flex: 1;
@@ -1425,6 +1679,20 @@ body.office-open {
   padding-right: 24px;
 }
 .sheet-filter-button,
+/* Kommentar an einer Zelle: Dreieck oben rechts wie in Excel */
+.sheet-comment-flag {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-top: 7px solid #d97706;
+  border-left: 7px solid transparent;
+  cursor: pointer;
+}
+.sheet-comment-flag.resolved {
+  border-top-color: #94a3b8;
+}
 .sheet-list-button {
   position: absolute;
   z-index: 4;
@@ -2064,6 +2332,9 @@ body.office-open {
   display: grid;
   grid-template-columns: 212px minmax(0, 1fr);
 }
+.deck-workspace.with-comments {
+  grid-template-columns: 212px minmax(0, 1fr) auto;
+}
 .deck-rail {
   min-height: 0;
   margin: 0;
@@ -2086,6 +2357,13 @@ body.office-open {
 }
 .deck-thumb.dragging {
   opacity: 0.45;
+}
+.deck-thumb-comments {
+  display: block;
+  margin-top: 4px;
+  color: #d97706;
+  font-size: 14px;
+  line-height: 1;
 }
 .deck-thumb-number {
   padding-top: 2px;
@@ -3006,9 +3284,23 @@ textarea.deck-shape-text {
   .office-canvas {
     padding: 12px 8px 32px;
   }
-  .deck-workspace {
+  .deck-workspace,
+  .deck-workspace.with-comments {
     grid-template-columns: 1fr;
     grid-template-rows: auto minmax(0, 1fr);
+  }
+  /* Kommentare unter der Arbeitsfläche statt daneben */
+  .office-main {
+    flex-direction: column;
+  }
+  .office-comments {
+    width: auto;
+    max-height: 45vh;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+  .deck-workspace.with-comments {
+    grid-template-rows: auto minmax(0, 1fr) auto;
   }
   .deck-rail {
     display: flex;
@@ -3063,6 +3355,7 @@ textarea.deck-shape-text {
   .office-toast,
   .office-popover,
   .office-context,
+  .office-comments,
   .sheet-formula-bar,
   .sheet-grid,
   .sheet-footer,
@@ -3104,6 +3397,10 @@ textarea.deck-shape-text {
   .office-prose table,
   .office-prose img {
     break-inside: avoid;
+  }
+  .office-prose .office-comment-mark {
+    background: none;
+    border: 0;
   }
   .office-toc {
     border: 0;

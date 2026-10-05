@@ -45,7 +45,9 @@ import {
   rootRels,
   sha256,
   unpackModel,
+  type Rel,
 } from "./package";
+import { type CommentThread } from "./comments";
 import { child, childrenOf, esc, find, findAll, parseXml, textOf, type XmlNode } from "./xml";
 import { DEFAULT_BORDER_COLOR, chartData, filteredRows, sidesOf } from "./sheet-features";
 import { CHART_KINDS, chartSpaceXml, chartTexts } from "./chart-xml";
@@ -323,6 +325,7 @@ function sheetXml(
   drawing: string | null,
   spills: Map<string, Spill>,
   defined: Set<string>,
+  legacy: string | null = null,
 ) {
   const display = (col: number, row: number) => {
     const key = cellKey(col, row);
@@ -417,7 +420,7 @@ function sheetXml(
   const print = sheet.print;
   const sheetPr = print.fit ? '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' : "";
   const pageSetup = `<pageSetup paperSize="9" orientation="${print.orientation}"${print.fit ? ' fitToWidth="1" fitToHeight="0"' : ""}/>${headerFooterXml(print)}`;
-  return `${XML_HEAD}<worksheet ${MAIN}>${sheetPr}<sheetViews><sheetView${sheet.showGrid ? "" : ' showGridLines="0"'} workbookViewId="0"${index === 0 ? ' tabSelected="1"' : ""}>${pane}</sheetView></sheetViews><sheetFormatPr defaultColWidth="${excelWidth(DEFAULT_COL_WIDTH)}" defaultRowHeight="${DEFAULT_ROW_HEIGHT * 0.75}"/>${cols ? `<cols>${cols}</cols>` : ""}<sheetData>${data}</sheetData>${autoFilter}${merges}${conditional}${validations}${print.gridlines ? '<printOptions gridLines="1"/>' : ""}<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>${pageSetup}${drawing ? `<drawing r:id="${drawing}"/>` : ""}</worksheet>`;
+  return `${XML_HEAD}<worksheet ${MAIN}>${sheetPr}<sheetViews><sheetView${sheet.showGrid ? "" : ' showGridLines="0"'} workbookViewId="0"${index === 0 ? ' tabSelected="1"' : ""}>${pane}</sheetView></sheetViews><sheetFormatPr defaultColWidth="${excelWidth(DEFAULT_COL_WIDTH)}" defaultRowHeight="${DEFAULT_ROW_HEIGHT * 0.75}"/>${cols ? `<cols>${cols}</cols>` : ""}<sheetData>${data}</sheetData>${autoFilter}${merges}${conditional}${validations}${print.gridlines ? '<printOptions gridLines="1"/>' : ""}<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>${pageSetup}${drawing ? `<drawing r:id="${drawing}"/>` : ""}${legacy ? `<legacyDrawing r:id="${legacy}"/>` : ""}</worksheet>`;
 }
 
 // ---------- Diagramme ----------
@@ -451,6 +454,41 @@ function chartXml(sheet: Sheet, chart: Sheet["charts"][number], values: Map<stri
       valRef: absolute(sheet.name, item.col, firstRow, item.col, area.r2),
     })),
   });
+}
+
+// ---------- Kommentare (Notizen) ----------
+
+// Text einer Notiz wie in Excel: „Name:“ fett, darunter der Text, Antworten mit Namen angehängt.
+function noteRuns(thread: CommentThread) {
+  const run = (text: string, bold = false) =>
+    `<r><rPr>${bold ? "<b/>" : ""}<sz val="9"/><color indexed="81"/><rFont val="Tahoma"/><family val="2"/></rPr><t xml:space="preserve">${esc(text)}</t></r>`;
+  return [
+    run(`${thread.author || "Kommentar"}:`, true),
+    run(`\n${thread.text}`),
+    ...thread.replies.flatMap((reply) => [run(`\n\n${reply.author || "Antwort"}:`, true), run(`\n${reply.text}`)]),
+    ...(thread.resolved ? [run("\n\n(erledigt)")] : []),
+  ].join("");
+}
+
+function notesXml(notes: [string, CommentThread][]) {
+  const authors = [...new Set(notes.map(([, thread]) => thread.author || "Kommentar"))];
+  return `${XML_HEAD}<comments ${MAIN}><authors>${authors.map((author) => `<author>${esc(author)}</author>`).join("")}</authors><commentList>${notes
+    .map(
+      ([key, thread]) =>
+        `<comment ref="${key}" authorId="${authors.indexOf(thread.author || "Kommentar")}"><text>${noteRuns(thread)}</text></comment>`,
+    )
+    .join("")}</commentList></comments>`;
+}
+
+// Notizfelder für Excel (VML): ausgeblendet, erscheinen beim Zeigen auf die Zelle.
+function notesVml(notes: [string, CommentThread][], number: number) {
+  const shapes = notes
+    .map(([key], index) => {
+      const at = parseCellKey(key)!;
+      return `<v:shape id="_x0000_s${number * 1024 + index + 1}" type="#_x0000_t202" style="position:absolute;margin-left:59.25pt;margin-top:1.5pt;width:144pt;height:72pt;z-index:${index + 1};visibility:hidden" fillcolor="#ffffe1" o:insetmode="auto"><v:fill color2="#ffffe1"/><v:shadow on="t" color="black" obscured="t"/><v:path o:connecttype="none"/><v:textbox style="mso-direction-alt:auto"><div style="text-align:left"></div></v:textbox><x:ClientData ObjectType="Note"><x:MoveWithCells/><x:SizeWithCells/><x:Anchor>${at.col + 1}, 15, ${Math.max(0, at.row - 1)}, 2, ${at.col + 3}, 15, ${at.row + 4}, 2</x:Anchor><x:AutoFill>False</x:AutoFill><x:Row>${at.row}</x:Row><x:Column>${at.col}</x:Column></x:ClientData></v:shape>`;
+    })
+    .join("");
+  return `<xml xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><o:shapelayout v:ext="edit"><o:idmap v:ext="edit" data="${number}"/></o:shapelayout><v:shapetype id="_x0000_t202" coordsize="21600,21600" o:spt="202" path="m,l,21600r21600,l21600,xe"><v:stroke joinstyle="miter"/><v:path gradientshapeok="t" o:connecttype="rect"/></v:shapetype>${shapes}</xml>`;
 }
 
 // Pixelposition im Blatt → Zelle und Versatz (für die Verankerung des Diagramms).
@@ -489,7 +527,12 @@ const checkOf = (files: Map<string, Buffer> | ZipEntry[]) => {
   return sha256(
     Buffer.concat(
       list
-        .filter(([path]) => path === "xl/workbook.xml" || path.startsWith("xl/worksheets/sheet"))
+        .filter(
+          ([path]) =>
+            path === "xl/workbook.xml" ||
+            path.startsWith("xl/worksheets/sheet") ||
+            /^xl\/(comments\d+|threadedComments\/[^/]+)\.xml$/.test(path),
+        )
         .sort((a, b) => a[0].localeCompare(b[0]))
         .map(([, content]) => content),
     ),
@@ -522,6 +565,7 @@ export function buildXlsx(model: SheetModel, meta: { title: string; author: stri
   const types: [string, string][] = [];
   let chartCount = 0;
   let drawingCount = 0;
+  let noteCount = 0;
   const sheets = model.sheets.map((sheet, index) => {
     const charts = sheet.charts.flatMap((chart) => {
       const xml = chartXml(sheet, chart, results[index]);
@@ -534,37 +578,60 @@ export function buildXlsx(model: SheetModel, meta: { title: string; author: stri
       ]);
       return [{ chart, file: `chart${chartCount}.xml` }];
     });
-    if (!charts.length) return sheetXml(sheet, index, styles, results[index], null, evaluator.spills(index), defined);
-    drawingCount += 1;
-    const drawing = `drawing${drawingCount}.xml`;
-    const linked = charts.map((item, position) => ({ rel: `rId${position + 1}`, chart: item.chart }));
-    extra.push({ path: `xl/drawings/${drawing}`, content: Buffer.from(drawingXml(sheet, linked)) });
-    extra.push({
-      path: `xl/drawings/_rels/${drawing}.rels`,
-      content: Buffer.from(
-        relationships(
-          charts.map((item, position) => ({
-            id: `rId${position + 1}`,
-            type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart",
-            target: `../charts/${item.file}`,
-          })),
+    const sheetRels: Rel[] = [];
+    let drawingRel: string | null = null;
+    if (charts.length) {
+      drawingCount += 1;
+      const drawing = `drawing${drawingCount}.xml`;
+      const linked = charts.map((item, position) => ({ rel: `rId${position + 1}`, chart: item.chart }));
+      extra.push({ path: `xl/drawings/${drawing}`, content: Buffer.from(drawingXml(sheet, linked)) });
+      extra.push({
+        path: `xl/drawings/_rels/${drawing}.rels`,
+        content: Buffer.from(
+          relationships(
+            charts.map((item, position) => ({
+              id: `rId${position + 1}`,
+              type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart",
+              target: `../charts/${item.file}`,
+            })),
+          ),
         ),
-      ),
-    });
-    extra.push({
-      path: `xl/worksheets/_rels/sheet${index + 1}.xml.rels`,
-      content: Buffer.from(
-        relationships([
-          {
-            id: "rId1",
-            type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing",
-            target: `../drawings/${drawing}`,
-          },
-        ]),
-      ),
-    });
-    types.push([`/xl/drawings/${drawing}`, "application/vnd.openxmlformats-officedocument.drawing+xml"]);
-    return sheetXml(sheet, index, styles, results[index], "rId1", evaluator.spills(index), defined);
+      });
+      types.push([`/xl/drawings/${drawing}`, "application/vnd.openxmlformats-officedocument.drawing+xml"]);
+      drawingRel = "rId1";
+      sheetRels.push({
+        id: drawingRel,
+        type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing",
+        target: `../drawings/${drawing}`,
+      });
+    }
+    // Kommentare als Notizen (comments + VML-Zeichnung, damit Excel das Notizfeld anzeigt).
+    let legacyRel: string | null = null;
+    const notes = Object.entries(sheet.comments ?? {});
+    if (notes.length) {
+      noteCount += 1;
+      extra.push({ path: `xl/comments${noteCount}.xml`, content: Buffer.from(notesXml(notes)) });
+      extra.push({ path: `xl/drawings/vmlDrawing${noteCount}.vml`, content: Buffer.from(notesVml(notes, noteCount)) });
+      types.push(
+        [`/xl/comments${noteCount}.xml`, "application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml"],
+        [`/xl/drawings/vmlDrawing${noteCount}.vml`, "application/vnd.openxmlformats-officedocument.vmlDrawing"],
+      );
+      legacyRel = "rId3";
+      sheetRels.push(
+        { id: "rId2", type: REL.comments, target: `../comments${noteCount}.xml` },
+        {
+          id: legacyRel,
+          type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing",
+          target: `../drawings/vmlDrawing${noteCount}.vml`,
+        },
+      );
+    }
+    if (sheetRels.length)
+      extra.push({
+        path: `xl/worksheets/_rels/sheet${index + 1}.xml.rels`,
+        content: Buffer.from(relationships(sheetRels)),
+      });
+    return sheetXml(sheet, index, styles, results[index], drawingRel, evaluator.spills(index), defined, legacyRel);
   });
   // Filterbereiche kennt Excel zusätzlich als versteckten Namen, den Druckbereich als „Print_Area“.
   const names = [
@@ -1112,6 +1179,110 @@ function readCharts(files: Map<string, Buffer>, sheetPath: string, sheet: Sheet)
   return charts;
 }
 
+// ---------- Kommentare aus Excel-Dateien ----------
+
+const THREADED = "http://schemas.microsoft.com/office/2017/10/relationships/threadedComment";
+const PERSON = "http://schemas.microsoft.com/office/2017/10/relationships/person";
+
+// Personen der Kommentar-Unterhaltungen (Excel 365) aus der Arbeitsmappe.
+function readPersons(files: Map<string, Buffer>) {
+  const persons = new Map<string, string>();
+  const relsXml = files.get("xl/_rels/workbook.xml.rels");
+  if (!relsXml) return persons;
+  const rel = findAll(parseXml(relsXml.toString("utf8")), "Relationship").find((item) => item.attrs.Type === PERSON);
+  const xml = rel ? files.get(resolvePart("xl/workbook.xml", rel.attrs.Target)) : undefined;
+  if (xml)
+    for (const person of findAll(parseXml(xml.toString("utf8")), "person"))
+      persons.set(person.attrs.id ?? "", (person.attrs.displayName ?? "").slice(0, 120));
+  return persons;
+}
+
+const excelDate = (value: string | undefined) => {
+  const match = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?/.exec(value ?? "");
+  return match ? `${match[0]}Z` : "";
+};
+
+function readNotes(files: Map<string, Buffer>, sheetPath: string, persons: Map<string, string>) {
+  const comments: Record<string, CommentThread> = {};
+  const rels = new Map<string, string>();
+  const relsXml = files.get(relsPathOf(sheetPath));
+  if (relsXml)
+    for (const rel of findAll(parseXml(relsXml.toString("utf8")), "Relationship"))
+      if (rel.attrs.TargetMode !== "External") rels.set(rel.attrs.Type, resolvePart(sheetPath, rel.attrs.Target));
+  // Neuere Unterhaltungen (mit Antworten) zuerst.
+  const threadedPath = rels.get(THREADED);
+  const threadedXml = threadedPath ? files.get(threadedPath) : undefined;
+  if (threadedXml) {
+    const byId = new Map<string, CommentThread>();
+    for (const entry of findAll(parseXml(threadedXml.toString("utf8")), "threadedComment")) {
+      const text = textOf(child(entry, "text")).trim().slice(0, 2000);
+      const ref = (entry.attrs.ref ?? "").toUpperCase();
+      if (!text || !parseCellKey(ref)) continue;
+      const id = `x${(entry.attrs.id ?? "").replace(/[^A-Za-z0-9]/g, "").slice(0, 36) || byId.size}`;
+      const item = {
+        id,
+        author: persons.get(entry.attrs.personId ?? "") ?? "",
+        date: excelDate(entry.attrs.dT),
+        text,
+      };
+      const parent = entry.attrs.parentId ? byId.get(entry.attrs.parentId) : undefined;
+      if (parent) parent.replies.push(item);
+      else {
+        const thread: CommentThread = { ...item, ...(entry.attrs.done === "1" ? { resolved: true } : {}), replies: [] };
+        byId.set(entry.attrs.id ?? id, thread);
+        comments[ref] = thread;
+      }
+    }
+  }
+  const notesPath = rels.get(REL.comments);
+  const notesXml = notesPath ? files.get(notesPath) : undefined;
+  if (!notesXml) return comments;
+  const root = parseXml(notesXml.toString("utf8"));
+  const authors = findAll(find(root, "authors"), "author").map((author) => textOf(author).slice(0, 120));
+  for (const [index, note] of findAll(root, "comment").entries()) {
+    const ref = (note.attrs.ref ?? "").toUpperCase();
+    if (!parseCellKey(ref) || comments[ref]) continue;
+    // Abschnitte: fett gedruckter „Name:“ beginnt einen Eintrag (so schreibt Excel den Namen in die Notiz).
+    const entries: { author: string; text: string }[] = [];
+    const text = child(note, "text");
+    const runs = text ? (findAll(text, "r").length ? findAll(text, "r") : [text]) : [];
+    for (const run of runs) {
+      const value = textOf(child(run, "t") ?? run);
+      const bold = Boolean(find(child(run, "rPr"), "b"));
+      if (bold && /:\s*$/.test(value)) entries.push({ author: value.trim().replace(/:$/, ""), text: "" });
+      else if (entries.length) entries[entries.length - 1].text += value;
+      else entries.push({ author: authors[Number(note.attrs.authorId)] ?? "", text: value });
+    }
+    let resolved = false;
+    const clean = entries
+      .map((entry) => {
+        let body = entry.text.trim();
+        if (/\(erledigt\)$/.test(body)) {
+          resolved = true;
+          body = body.replace(/\s*\(erledigt\)$/, "");
+        }
+        return { author: entry.author, text: body.slice(0, 2000) };
+      })
+      .filter((entry) => entry.text);
+    if (!clean.length) continue;
+    const [head, ...replies] = clean;
+    comments[ref] = {
+      id: `n${index + 1}`,
+      author: head.author,
+      date: "",
+      text: head.text,
+      ...(resolved ? { resolved: true } : {}),
+      replies: replies.map((reply, position) => ({
+        id: `n${index + 1}r${position + 1}`,
+        author: reply.author,
+        date: "",
+        text: reply.text,
+      })),
+    };
+  }
+  return comments;
+}
+
 export function readXlsx(bytes: Buffer): { model: SheetModel; imported: boolean } {
   const files = readZip(bytes);
   const workbookXml = files.get("xl/workbook.xml");
@@ -1144,12 +1315,15 @@ export function readXlsx(bytes: Buffer): { model: SheetModel; imported: boolean 
       );
   const styles = readStyles(files.get("xl/styles.xml"));
   const dxfs = readDxfs(files.get("xl/styles.xml"));
+  const persons = readPersons(files);
   const read = findAll(parseXml(workbookXml.toString("utf8")), "sheet").flatMap((entry) => {
     const path = rels.get(entry.attrs.id ?? "");
     const xml = path ? files.get(path) : undefined;
     if (!path || !xml) return [];
     const result = readSheet(xml, entry.attrs.name ?? "Tabelle", shared, styles, dxfs);
     result.sheet.charts = readCharts(files, path, result.sheet);
+    const notes = readNotes(files, path, persons);
+    if (Object.keys(notes).length) result.sheet.comments = notes;
     return [result];
   });
   // Benannte Bereiche und Druckbereiche (Namen mit Formeln oder mehreren Bereichen bleiben weg).

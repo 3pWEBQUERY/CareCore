@@ -10,6 +10,7 @@ import {
   type Area,
 } from "./formula";
 import { shiftArea, shiftRangeText } from "./sheet-features";
+import type { CommentThread } from "./comments";
 import { newId, type CellStyle, type Sheet, type SheetCell, type SheetModel } from "./model";
 
 export type Pos = { col: number; row: number };
@@ -93,8 +94,26 @@ export function clearArea(sheet: Sheet, area: Area, what: "content" | "formats" 
     else if (what === "formats") putCell(cells, key, { v: cells[key].v });
     else putCell(cells, key, { v: "", s: cells[key].s });
   }
-  return { ...sheet, cells };
+  if (what !== "all" || !sheet.comments) return { ...sheet, cells };
+  return { ...sheet, cells, comments: keepComments(sheet.comments, (col, row) => !inArea(area, col, row)) };
 }
+
+// Kommentare (je Zelle) verschieben oder entfernen: target liefert die neue Zelle oder null.
+function moveComments(
+  comments: Record<string, CommentThread> | undefined,
+  target: (col: number, row: number) => string | null,
+): Record<string, CommentThread> | undefined {
+  if (!comments) return comments;
+  const out: Record<string, CommentThread> = {};
+  for (const [key, thread] of Object.entries(comments)) {
+    const ref = parseCellKey(key);
+    const next = ref ? target(ref.col, ref.row) : null;
+    if (next) out[next] = thread;
+  }
+  return out;
+}
+const keepComments = (comments: Record<string, CommentThread>, keep: (col: number, row: number) => boolean) =>
+  moveComments(comments, (col, row) => (keep(col, row) ? cellKey(col, row) : null));
 
 export function styleArea(sheet: Sheet, area: Area, change: (style: CellStyle) => CellStyle): Sheet {
   const cells = { ...sheet.cells };
@@ -204,6 +223,15 @@ export function insertDelete(
       const range = shiftRange(chart.range);
       return range ? [{ ...chart, range }] : [];
     }),
+    ...(sheet.comments
+      ? {
+          comments: moveComments(sheet.comments, (col, row) => {
+            const moved = move(axis === "row" ? row : col);
+            if (moved === null) return null;
+            return axis === "row" ? cellKey(col, moved) : cellKey(moved, row);
+          }),
+        }
+      : {}),
     rowCount: axis === "row" ? Math.max(1, Math.min(10_000, sheet.rowCount + count)) : sheet.rowCount,
     colCount: axis === "col" ? Math.max(1, Math.min(200, sheet.colCount + count)) : sheet.colCount,
   };
@@ -231,6 +259,14 @@ export function renameSheet(model: SheetModel, sheetIndex: number, name: string)
 export function duplicateSheet(model: SheetModel, sheetIndex: number, name: string): SheetModel {
   const source = model.sheets[sheetIndex];
   const copy: Sheet = { ...structuredClone(source), id: newId(), name };
+  // Kopierte Kommentare sind eigene Kommentare (eigene Nummer), sonst wären sie zweimal dieselben.
+  if (copy.comments)
+    copy.comments = Object.fromEntries(
+      Object.entries(copy.comments).map(([key, thread]) => [
+        key,
+        { ...thread, id: newId(), replies: thread.replies.map((reply) => ({ ...reply, id: newId() })) },
+      ]),
+    );
   const sheets = [...model.sheets];
   sheets.splice(sheetIndex + 1, 0, copy);
   return { ...model, sheets };
@@ -278,7 +314,16 @@ export function sortArea(
       putCell(cells, cellKey(col, targetRow), moved);
     }
   });
-  return { ...sheet, cells };
+  if (!sheet.comments) return { ...sheet, cells };
+  // Kommentare wandern mit ihrer Zeile (wie in Excel).
+  const targetOf = new Map(order.map((sourceRow, offset) => [sourceRow, area.r1 + offset]));
+  return {
+    ...sheet,
+    cells,
+    comments: moveComments(sheet.comments, (col, row) =>
+      inArea(area, col, row) ? cellKey(col, targetOf.get(row) ?? row) : cellKey(col, row),
+    ),
+  };
 }
 
 // Text aus der Zwischenablage (Tabulator-getrennt, wie Excel kopiert) in Zeilen und Zellen zerlegen.

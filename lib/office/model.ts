@@ -1,6 +1,7 @@
 // Office-Dokumente der Ablage (Dokument, Tabelle, Präsentation): Inhalte, wie sie Editor und Server austauschen.
 // Gespeichert wird immer eine echte .docx/.xlsx/.pptx-Datei; dieses Modell steckt zusätzlich darin, damit beim
 // erneuten Öffnen nichts verloren geht.
+import { COMMENT_LIMITS, cleanThread, cleanThreads, type CommentThread } from "./comments";
 import {
   ERROR_LABELS,
   cellKey,
@@ -63,7 +64,8 @@ export type PageSetup = {
   footer: string;
   pageNumbers: boolean;
 };
-export type DocumentModel = { kind: "document"; page: PageSetup; content: DocNode };
+// Kommentare: im Dokument an Textstellen (Markierung „comment“), in der Tabelle je Zelle, in der Präsentation je Folie.
+export type DocumentModel = { kind: "document"; page: PageSetup; content: DocNode; comments?: CommentThread[] };
 
 export const DEFAULT_PAGE: PageSetup = {
   orientation: "portrait",
@@ -176,6 +178,7 @@ export type Sheet = {
   charts: SheetChart[];
   print: PrintSetup;
   showGrid: boolean;
+  comments?: Record<string, CommentThread>;
 };
 // Benannter Bereich der Arbeitsmappe („Plätze“ → Tabelle1!B2:B20), in Formeln wie ein Bezug nutzbar.
 export type SheetName = { name: string; sheet: string; range: string };
@@ -512,6 +515,7 @@ export type Slide = {
   image: string;
   notes: string;
   items: SlideItem[];
+  comments?: CommentThread[];
 };
 export type DeckTheme = "carecore" | "hell" | "dunkel" | "wald" | "sand";
 export type DeckModel = { kind: "deck"; theme: DeckTheme; slides: Slide[] };
@@ -983,6 +987,7 @@ const ALLOWED_MARKS = new Set([
   "link",
   "subscript",
   "superscript",
+  "comment",
 ]);
 
 function cleanAttrs(attrs: unknown): Record<string, unknown> | undefined {
@@ -1214,6 +1219,19 @@ function cleanSheet(input: unknown, index: number): Sheet | null {
     ...(print.pageNumbers === true ? { pageNumbers: true } : {}),
   };
   sheet.showGrid = raw.showGrid !== false;
+  // Kommentare je Zelle (nur gültige Zellen innerhalb des Blatts).
+  if (raw.comments && typeof raw.comments === "object") {
+    const comments: Record<string, CommentThread> = {};
+    for (const [key, value] of Object.entries(raw.comments as Record<string, unknown>).slice(
+      0,
+      COMMENT_LIMITS.threads,
+    )) {
+      const at = parseCellKey(key);
+      const thread = cleanThread(value);
+      if (at && at.col < 16_384 && at.row < 1_048_576 && thread) comments[cellKey(at.col, at.row)] = thread;
+    }
+    if (Object.keys(comments).length) sheet.comments = comments;
+  }
   return sheet;
 }
 
@@ -1319,6 +1337,7 @@ export function cleanModel(kind: OfficeKind, input: unknown): OfficeModel {
         pageNumbers: page.pageNumbers !== false,
       },
       content: asDoc(raw.content),
+      ...(cleanThreads(raw.comments).length ? { comments: cleanThreads(raw.comments) } : {}),
     };
   }
   if (kind === "sheet") {
@@ -1381,6 +1400,7 @@ export function cleanModel(kind: OfficeKind, input: unknown): OfficeModel {
           .slice(0, ITEM_LIMITS.items)
           .map(cleanSlideItem)
           .filter((entry): entry is SlideItem => entry !== null),
+        ...(cleanThreads(slide.comments).length ? { comments: cleanThreads(slide.comments) } : {}),
       },
     ];
   });
