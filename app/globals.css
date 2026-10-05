@@ -62,4 +62,10 @@
 @import "./styles/60-files.css";
 @import "./styles/61-chat.css";
 @import "./styles/62-office.css";
+@import "./styles/62-office-document.css";
+@import "./styles/62-office-sheet.css";
+@import "./styles/62-office-deck.css";
+@import "./styles/62-office-templates.css";
+@import "./styles/62-office-mobile.css";
+@import "./styles/62-office-print.css";
 @import "./styles/39-mobile-type.css";
