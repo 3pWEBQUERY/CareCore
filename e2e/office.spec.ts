@@ -80,6 +80,70 @@ test("Ablage: Dokument, Tabelle und Präsentation anlegen, bearbeiten und automa
   expect(errors).toEqual([]);
 });
 
+// Dokument: Inhaltsverzeichnis folgt den Überschriften, Zeilenabstand, hoch-/tiefgestellt und Fussnoten bleiben gespeichert.
+test("Dokument: Inhaltsverzeichnis, Zeilenabstand, hoch-/tiefgestellt und Fussnoten", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  const stamp = Date.now();
+  await page.goto("/c/carecore-one/ablage");
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Dokument/ }).click();
+  const gallery = page.getByRole("dialog", { name: "Neues Dokument (Word)" });
+  await gallery.getByLabel("Name").fill(`Bericht ${stamp}`);
+  await gallery.getByRole("button", { name: "Erstellen und öffnen" }).click();
+  const editor = page.locator(".office-prose");
+  await editor.click();
+
+  await page.getByRole("button", { name: "Inhaltsverzeichnis" }).click();
+  const toc = editor.locator(".office-toc");
+  await expect(toc).toContainText("Noch keine Überschriften");
+  await page.keyboard.press("ArrowDown");
+  await page.getByRole("button", { name: "Formatvorlage" }).click();
+  await page.getByRole("menuitemradio", { name: /Überschrift 1/ }).click();
+  await page.keyboard.type("Einleitung");
+  await expect(toc.getByRole("button", { name: "Einleitung" })).toBeVisible();
+  await page.keyboard.press("Enter");
+
+  // H₂O mit tiefgestellter 2, m² mit hochgestellter 2.
+  await page.keyboard.type("H");
+  await page.getByRole("button", { name: "Tiefgestellt" }).click();
+  await page.keyboard.type("2");
+  await page.getByRole("button", { name: "Tiefgestellt" }).click();
+  await page.keyboard.type("O auf 20 m");
+  await page.keyboard.press("Control+.");
+  await page.keyboard.type("2");
+  await expect(page.getByRole("button", { name: "Hochgestellt" })).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Control+.");
+  await expect(editor.locator("sub")).toHaveText("2");
+  await expect(editor.locator("sup")).toHaveText("2");
+
+  await page.getByRole("button", { name: "Zeilenabstand" }).click();
+  await page.getByRole("menuitemradio", { name: "1,5" }).click();
+  await expect(editor.locator("p[data-line-spacing='1.5']")).toHaveCount(1);
+
+  await page.getByRole("button", { name: "Fussnote" }).click();
+  await page.getByLabel("Text der Fussnote").fill("Gemäss Hygienerichtlinie");
+  await page.getByRole("button", { name: "Einfügen", exact: true }).click();
+  await expect(editor.locator(".office-footnote")).toHaveCount(1);
+  const note = page.getByLabel("Fussnote 1", { exact: true });
+  await expect(note).toHaveValue("Gemäss Hygienerichtlinie");
+  await note.fill("Gemäss Hygienerichtlinie 2026");
+
+  await expect(page.locator(".office-status")).toContainText("Gespeichert um");
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  await page.getByText(`Bericht ${stamp}.docx`, { exact: true }).dblclick();
+  const reopened = page.locator(".office-prose");
+  await expect(reopened.locator(".office-toc").getByRole("button", { name: "Einleitung" })).toBeVisible();
+  await expect(reopened.locator("sub")).toHaveText("2");
+  await expect(reopened.locator("sup")).toHaveText("2");
+  await expect(reopened.locator("p[data-line-spacing='1.5']")).toHaveCount(1);
+  await expect(page.getByLabel("Fussnote 1", { exact: true })).toHaveValue("Gemäss Hygienerichtlinie 2026");
+  await page.getByRole("button", { name: "Fussnote 1 löschen" }).click();
+  await expect(reopened.locator(".office-footnote")).toHaveCount(0);
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  expect(errors).toEqual([]);
+});
+
 // Tabelle: eingegebener Text bleibt stehen – auch beim Klick ausserhalb, auf „Fett“ oder beim Schliessen;
 // Knöpfe zeigen einen eigenen Tooltip; Umbenennen im Titel.
 test("Tabelle: Eingaben gehen nie verloren, Tooltips und Umbenennen", async ({ page }) => {

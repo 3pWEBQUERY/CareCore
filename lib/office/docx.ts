@@ -69,6 +69,8 @@ type Writer = {
   nums: { id: number; start: number }[];
   drawings: number;
   contentWidth: number;
+  footnotes: string[];
+  headings: { level: number; text: string }[];
 };
 
 function addRel(writer: Writer, type: string, target: string, external = false) {
@@ -122,6 +124,11 @@ function inline(nodes: DocNode[] | undefined, writer: Writer, extra = "") {
       out += image(node, writer);
       continue;
     }
+    if (node.type === "footnote") {
+      writer.footnotes.push(typeof node.attrs?.text === "string" ? node.attrs.text : "");
+      out += `<w:r><w:rPr><w:rStyle w:val="Funotenzeichen"/></w:rPr><w:footnoteReference w:id="${writer.footnotes.length}"/></w:r>`;
+      continue;
+    }
     if (node.type !== "text" || !node.text) continue;
     const run = textRun(node.text, runProps(node.marks, extra));
     const link = node.marks?.find((mark) => mark.type === "link");
@@ -161,6 +168,54 @@ function image(node: DocNode, writer: Writer) {
   return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${number}" name="Bild ${number}" descr="${alt}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${number}" name="${name}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rel}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
 }
 
+// Zeilenabstand als Vielfaches („1.5“); Word rechnet in 240stel einer Zeile.
+function lineSpacing(value: unknown) {
+  const factor = typeof value === "string" ? Number(value) : NaN;
+  return Number.isFinite(factor) && factor >= 0.5 && factor <= 5 ? factor : null;
+}
+
+// Reiner Text einer Überschrift fürs Inhaltsverzeichnis (ohne Fussnotenzahlen).
+const plainText = (node: DocNode): string =>
+  node.type === "text" ? (node.text ?? "") : (node.content ?? []).map(plainText).join("");
+
+function collectHeadings(nodes: DocNode[] | undefined, out: { level: number; text: string }[]) {
+  for (const node of nodes ?? []) {
+    if (node.type === "heading")
+      out.push({ level: Math.min(3, Math.max(1, Number(node.attrs?.level ?? 1))), text: plainText(node).trim() });
+    else collectHeadings(node.content, out);
+  }
+  return out;
+}
+
+// Inhaltsverzeichnis als Word-Feld: Word zeigt die Einträge sofort und aktualisiert sie mit F9 (dann mit Seitenzahlen).
+function tableOfContents(writer: Writer) {
+  const begin = `<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" \\h \\z \\u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>`;
+  const end = '<w:r><w:fldChar w:fldCharType="end"/></w:r>';
+  const title =
+    '<w:p><w:pPr><w:pStyle w:val="Inhaltsverzeichnisberschrift"/></w:pPr><w:r><w:t>Inhaltsverzeichnis</w:t></w:r></w:p>';
+  const entries = writer.headings.length ? writer.headings : [{ level: 1, text: "Keine Überschriften im Dokument." }];
+  return (
+    title +
+    entries
+      .map(
+        (entry, index) =>
+          `<w:p><w:pPr><w:pStyle w:val="Verzeichnis${entry.level}"/></w:pPr>${index === 0 ? begin : ""}<w:r><w:t xml:space="preserve">${esc(entry.text)}</w:t></w:r>${index === entries.length - 1 ? end : ""}</w:p>`,
+      )
+      .join("")
+  );
+}
+
+function footnotesXml(notes: string[]) {
+  const separator =
+    '<w:footnote w:type="separator" w:id="-1"><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="0"><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:continuationSeparator/></w:r></w:p></w:footnote>';
+  return `${XML_HEAD}<w:footnotes ${W}>${separator}${notes
+    .map(
+      (text, index) =>
+        `<w:footnote w:id="${index + 1}"><w:p><w:pPr><w:pStyle w:val="Funotentext"/></w:pPr><w:r><w:rPr><w:rStyle w:val="Funotenzeichen"/></w:rPr><w:footnoteRef/></w:r><w:r><w:t xml:space="preserve"> ${esc(text)}</w:t></w:r></w:p></w:footnote>`,
+    )
+    .join("")}</w:footnotes>`;
+}
+
 type ParagraphOptions = {
   style?: string;
   num?: { id: number; level: number };
@@ -176,6 +231,8 @@ function paragraph(node: DocNode, writer: Writer, options: ParagraphOptions = {}
   if (options.num)
     props.push(`<w:numPr><w:ilvl w:val="${options.num.level}"/><w:numId w:val="${options.num.id}"/></w:numPr>`);
   if (options.border) props.push('<w:pBdr><w:bottom w:val="single" w:sz="8" w:space="1" w:color="A0AEB0"/></w:pBdr>');
+  const spacing = lineSpacing(node.attrs?.lineHeight);
+  if (spacing) props.push(`<w:spacing w:line="${Math.round(spacing * 240)}" w:lineRule="auto"/>`);
   if (options.indent) props.push(`<w:ind w:left="${options.indent}"/>`);
   const align = ALIGN[String(node.attrs?.textAlign ?? "")];
   if (align && align !== "left") props.push(`<w:jc w:val="${align}"/>`);
@@ -304,6 +361,8 @@ function block(node: DocNode, writer: Writer, context: { quote?: boolean; depth?
       return paragraph({ type: "paragraph" }, writer, { border: true });
     case "pageBreak":
       return '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+    case "tableOfContents":
+      return tableOfContents(writer);
     case "image":
       return `<w:p>${image(node, writer)}</w:p>`;
     default:
@@ -330,7 +389,16 @@ const STYLES = `${XML_HEAD}<w:styles ${W}><w:docDefaults><w:rPrDefault><w:rPr><w
   )
   .join(
     "",
-  )}<w:style w:type="paragraph" w:styleId="Zitat"><w:name w:val="Quote"/><w:basedOn w:val="Standard"/><w:qFormat/><w:pPr><w:pBdr><w:left w:val="single" w:sz="18" w:space="8" w:color="2563EB"/></w:pBdr><w:ind w:left="360"/></w:pPr><w:rPr><w:i/><w:color w:val="5B6B6D"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="ListParagraph"><w:name w:val="List Paragraph"/><w:basedOn w:val="Standard"/><w:qFormat/><w:pPr><w:spacing w:after="60"/><w:contextualSpacing/></w:pPr></w:style><w:style w:type="character" w:styleId="Hyperlink"><w:name w:val="Hyperlink"/><w:rPr><w:color w:val="2563EB"/><w:u w:val="single"/></w:rPr></w:style><w:style w:type="table" w:styleId="Tabellenraster"><w:name w:val="Table Grid"/><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/><w:left w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/><w:right w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/></w:tblBorders><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="100" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style><w:style w:type="paragraph" w:styleId="Kopfzeile"><w:name w:val="header"/><w:basedOn w:val="Standard"/><w:rPr><w:color w:val="5B6B6D"/><w:sz w:val="18"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Fusszeile"><w:name w:val="footer"/><w:basedOn w:val="Standard"/><w:rPr><w:color w:val="5B6B6D"/><w:sz w:val="18"/></w:rPr></w:style></w:styles>`;
+  )}<w:style w:type="paragraph" w:styleId="Zitat"><w:name w:val="Quote"/><w:basedOn w:val="Standard"/><w:qFormat/><w:pPr><w:pBdr><w:left w:val="single" w:sz="18" w:space="8" w:color="2563EB"/></w:pBdr><w:ind w:left="360"/></w:pPr><w:rPr><w:i/><w:color w:val="5B6B6D"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="ListParagraph"><w:name w:val="List Paragraph"/><w:basedOn w:val="Standard"/><w:qFormat/><w:pPr><w:spacing w:after="60"/><w:contextualSpacing/></w:pPr></w:style><w:style w:type="character" w:styleId="Hyperlink"><w:name w:val="Hyperlink"/><w:rPr><w:color w:val="2563EB"/><w:u w:val="single"/></w:rPr></w:style><w:style w:type="table" w:styleId="Tabellenraster"><w:name w:val="Table Grid"/><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/><w:left w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/><w:right w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="BFC9CA"/></w:tblBorders><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="100" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style><w:style w:type="paragraph" w:styleId="Inhaltsverzeichnisberschrift"><w:name w:val="TOC Heading"/><w:basedOn w:val="berschrift1"/><w:next w:val="Standard"/><w:qFormat/><w:pPr><w:outlineLvl w:val="9"/></w:pPr></w:style>${[
+  1, 2, 3,
+]
+  .map(
+    (level) =>
+      `<w:style w:type="paragraph" w:styleId="Verzeichnis${level}"><w:name w:val="toc ${level}"/><w:basedOn w:val="Standard"/><w:next w:val="Standard"/><w:pPr><w:spacing w:after="60"/><w:ind w:left="${(level - 1) * 220}"/></w:pPr></w:style>`,
+  )
+  .join(
+    "",
+  )}<w:style w:type="paragraph" w:styleId="Funotentext"><w:name w:val="footnote text"/><w:basedOn w:val="Standard"/><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr></w:style><w:style w:type="character" w:styleId="Funotenzeichen"><w:name w:val="footnote reference"/><w:rPr><w:vertAlign w:val="superscript"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Kopfzeile"><w:name w:val="header"/><w:basedOn w:val="Standard"/><w:rPr><w:color w:val="5B6B6D"/><w:sz w:val="18"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Fusszeile"><w:name w:val="footer"/><w:basedOn w:val="Standard"/><w:rPr><w:color w:val="5B6B6D"/><w:sz w:val="18"/></w:rPr></w:style></w:styles>`;
 
 const BULLETS = ["•", "◦", "▪"];
 function numbering(nums: { id: number; start: number }[]) {
@@ -369,6 +437,8 @@ export function buildDocx(model: DocumentModel, meta: { title: string; author: s
     nums: [],
     drawings: 0,
     contentWidth: page.contentWidth,
+    footnotes: [],
+    headings: collectHeadings(model.content.content, []),
   };
   const body = blocks(model.content.content, writer) || "<w:p/>";
   const withHeader = Boolean(model.page.header);
@@ -381,6 +451,7 @@ export function buildDocx(model: DocumentModel, meta: { title: string; author: s
     { id: "rId3", type: REL.settings, target: "settings.xml" },
     ...(withHeader ? [{ id: "rId4", type: REL.header, target: "header1.xml" }] : []),
     ...(withFooter ? [{ id: "rId5", type: REL.footer, target: "footer1.xml" }] : []),
+    ...(writer.footnotes.length ? [{ id: "rId6", type: REL.footnotes, target: "footnotes.xml" }] : []),
     ...writer.rels,
   ];
   const main = "application/vnd.openxmlformats-officedocument.wordprocessingml";
@@ -391,6 +462,7 @@ export function buildDocx(model: DocumentModel, meta: { title: string; author: s
     ["/word/settings.xml", `${main}.settings+xml`],
     ...(withHeader ? ([["/word/header1.xml", `${main}.header+xml`]] as [string, string][]) : []),
     ...(withFooter ? ([["/word/footer1.xml", `${main}.footer+xml`]] as [string, string][]) : []),
+    ...(writer.footnotes.length ? ([["/word/footnotes.xml", `${main}.footnotes+xml`]] as [string, string][]) : []),
   ];
   const entries: ZipEntry[] = [
     { path: "[Content_Types].xml", content: Buffer.from(contentTypes(overrides, writer.media.length > 0)) },
@@ -413,6 +485,9 @@ export function buildDocx(model: DocumentModel, meta: { title: string; author: s
           },
         ]
       : []),
+    ...(writer.footnotes.length
+      ? [{ path: "word/footnotes.xml", content: Buffer.from(footnotesXml(writer.footnotes)) }]
+      : []),
     ...writer.media,
     { path: MODEL_PART, content: packModel(model, sha256(document), writer.mediaBySrc) },
   ];
@@ -426,6 +501,7 @@ type Reader = {
   rels: Map<string, string>;
   styles: Map<string, string>;
   numFormats: Map<string, Map<number, string>>;
+  footnotes: Map<string, string>;
 };
 
 function readRels(files: Map<string, Buffer>, part: string) {
@@ -496,6 +572,8 @@ function readRuns(node: XmlNode, reader: Reader, link?: string): DocNode[] {
         if (text) out.push({ type: "text", text, ...(marks.length ? { marks } : {}) });
       } else if (part.name === "tab") out.push({ type: "text", text: "\t", ...(marks.length ? { marks } : {}) });
       else if (part.name === "br" && part.attrs.type !== "page") out.push({ type: "hardBreak" });
+      else if (part.name === "footnoteReference")
+        out.push({ type: "footnote", attrs: { text: reader.footnotes.get(part.attrs.id) ?? "" } });
       else if (part.name === "drawing") {
         const blip = find(part, "blip");
         const target = blip?.attrs.embed ? reader.rels.get(blip.attrs.embed) : undefined;
@@ -534,6 +612,10 @@ function readParagraph(p: XmlNode, reader: Reader): ReadParagraph {
   const attrs: Record<string, unknown> = {};
   if (align === "center" || align === "right") attrs.textAlign = align;
   if (align === "both" || align === "distribute") attrs.textAlign = "justify";
+  const spacing = child(props, "spacing");
+  const rule = spacing?.attrs.lineRule ?? "auto";
+  const factor = Math.round((Number(spacing?.attrs.line) / 240) * 100) / 100;
+  if (rule === "auto" && factor >= 0.5 && factor <= 5 && factor !== 1.15) attrs.lineHeight = String(factor);
   const content = readRuns(p, reader);
   const pageBreak = findAll(p, "br").some((br) => br.attrs.type === "page");
   const heading = /^(heading|überschrift) (\d)$/.exec(styleName);
@@ -600,6 +682,19 @@ function readTable(tbl: XmlNode, reader: Reader): DocNode {
   return { type: "table", content: rows };
 }
 
+const paragraphStyle = (p: XmlNode, reader: Reader) =>
+  (reader.styles.get(child(child(p, "pPr"), "pStyle")?.attrs.val ?? "") ?? "").toLowerCase();
+
+// Felder öffnen (begin) und schliessen (end) sich auch über mehrere Absätze.
+const fieldBalance = (p: XmlNode) =>
+  findAll(p, "fldChar").reduce(
+    (sum, field) => sum + (field.attrs.fldCharType === "begin" ? 1 : field.attrs.fldCharType === "end" ? -1 : 0),
+    0,
+  );
+const isTocField = (p: XmlNode) =>
+  findAll(p, "instrText").some((instr) => /^\s*TOC\b/i.test(textOf(instr))) ||
+  findAll(p, "fldSimple").some((field) => /^\s*TOC\b/i.test(field.attrs.instr ?? ""));
+
 function readBody(parent: XmlNode, reader: Reader): DocNode[] {
   const out: DocNode[] = [];
   // Offene Listen je Ebene (verschachtelt wie im Dokument).
@@ -607,7 +702,21 @@ function readBody(parent: XmlNode, reader: Reader): DocNode[] {
   const closeLists = () => {
     stack = [];
   };
+  // Offenes Inhaltsverzeichnis-Feld: seine Einträge erzeugt der Editor selbst neu.
+  let tocDepth = 0;
   for (const item of parent.children) {
+    if (item.name === "p" && tocDepth > 0) {
+      tocDepth += fieldBalance(item);
+      continue;
+    }
+    if (item.name === "p" && isTocField(item)) {
+      closeLists();
+      out.push({ type: "tableOfContents" });
+      tocDepth = Math.max(0, fieldBalance(item));
+      continue;
+    }
+    if (item.name === "p" && /^(toc heading|inhaltsverzeichnisüberschrift)$/.test(paragraphStyle(item, reader)))
+      continue;
     if (item.name === "sdt") {
       out.push(...readBody(child(item, "sdtContent") ?? item, reader));
       continue;
@@ -691,7 +800,30 @@ export function readDocx(bytes: Buffer): { model: DocumentModel; imported: boole
       if (levels) numFormats.set(num.attrs.numId, levels);
     }
   }
-  const reader: Reader = { files, rels: readRels(files, "word/document.xml"), styles, numFormats };
+  const rels = readRels(files, "word/document.xml");
+  const footnotes = new Map<string, string>();
+  const relsXml = files.get("word/_rels/document.xml.rels");
+  const footnotesRel = relsXml
+    ? findAll(parseXml(relsXml.toString("utf8")), "Relationship").find((rel) => rel.attrs.Type === REL.footnotes)
+    : undefined;
+  const footnotesXml = footnotesRel
+    ? files.get(resolvePart("word/document.xml", footnotesRel.attrs.Target))
+    : undefined;
+  if (footnotesXml)
+    for (const note of findAll(parseXml(footnotesXml.toString("utf8")), "footnote"))
+      if (!note.attrs.type || note.attrs.type === "normal")
+        footnotes.set(
+          note.attrs.id,
+          findAll(note, "p")
+            .map((p) =>
+              findAll(p, "t")
+                .map((t) => textOf(t))
+                .join(""),
+            )
+            .join(" ")
+            .trim(),
+        );
+  const reader: Reader = { files, rels, styles, numFormats, footnotes };
   const root = parseXml(documentXml.toString("utf8"));
   const body = find(root, "body");
   const content = body ? readBody(body, reader) : [];

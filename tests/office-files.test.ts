@@ -175,6 +175,120 @@ test("Word: Datei aus einem anderen Programm wird gelesen (Überschriften, Liste
   assert.equal(plainText(model.content).includes("Flächen"), true);
 });
 
+const scholarlyDocument = (): DocumentModel => ({
+  kind: "document",
+  page: { orientation: "portrait", margins: "normal", header: "", footer: "", pageNumbers: false },
+  content: {
+    type: "doc",
+    content: [
+      { type: "tableOfContents" },
+      { type: "heading", attrs: { level: 1, textAlign: null }, content: [{ type: "text", text: "Einleitung" }] },
+      {
+        type: "paragraph",
+        attrs: { textAlign: null, lineHeight: "1.5" },
+        content: [
+          { type: "text", text: "H" },
+          { type: "text", text: "2", marks: [{ type: "subscript" }] },
+          { type: "text", text: "O und m" },
+          { type: "text", text: "2", marks: [{ type: "superscript" }] },
+          { type: "footnote", attrs: { text: "Quelle: Hygienerichtlinie 2026" } },
+          { type: "text", text: " Ende." },
+        ],
+      },
+      { type: "heading", attrs: { level: 2, textAlign: null }, content: [{ type: "text", text: "Ablauf" }] },
+      {
+        type: "paragraph",
+        attrs: { textAlign: null, lineHeight: "2" },
+        content: [
+          { type: "text", text: "Zweiter Hinweis" },
+          { type: "footnote", attrs: { text: "Siehe Anhang & Liste" } },
+        ],
+      },
+    ],
+  },
+});
+
+test("Word: Inhaltsverzeichnis, Zeilenabstand, hoch-/tiefgestellt und Fussnoten in der .docx-Datei", () => {
+  const model = scholarlyDocument();
+  const bytes = buildDocx(model, meta);
+  const files = readZip(bytes);
+  const document = xml(bytes, "word/document.xml");
+  // Inhaltsverzeichnis als Word-Feld mit den Überschriften als Einträgen.
+  assert.match(textOf(findAll(document, "instrText")[0]), /^ TOC \\o "1-3" \\h \\z \\u $/);
+  const styles = findAll(document, "pStyle").map((node) => node.attrs.val);
+  assert.deepEqual(styles.slice(0, 3), ["Inhaltsverzeichnisberschrift", "Verzeichnis1", "Verzeichnis2"]);
+  const fields = findAll(document, "fldChar").map((node) => node.attrs.fldCharType);
+  assert.deepEqual(fields, ["begin", "separate", "end"]);
+  // Zeilenabstand als Vielfaches von 240.
+  assert.deepEqual(
+    findAll(document, "spacing").map((node) => [node.attrs.line, node.attrs.lineRule]),
+    [
+      ["360", "auto"],
+      ["480", "auto"],
+    ],
+  );
+  const vert = findAll(document, "vertAlign").map((node) => node.attrs.val);
+  assert.deepEqual(vert, ["subscript", "superscript"]);
+  // Fussnoten in eigener Datei, im Text nur der Verweis.
+  assert.deepEqual(
+    findAll(document, "footnoteReference").map((node) => node.attrs.id),
+    ["1", "2"],
+  );
+  const notes = parseXml(files.get("word/footnotes.xml")!.toString());
+  const normal = findAll(notes, "footnote").filter((note) => !note.attrs.type);
+  assert.deepEqual(
+    normal.map((note) => findAll(note, "t").map(textOf).join("").trim()),
+    ["Quelle: Hygienerichtlinie 2026", "Siehe Anhang & Liste"],
+  );
+  assert.match(
+    files.get("word/_rels/document.xml.rels")!.toString(),
+    /relationships\/footnotes" Target="footnotes.xml"/,
+  );
+  assert.match(files.get("[Content_Types].xml")!.toString(), /footnotes\+xml/);
+  assert.match(files.get("word/styles.xml")!.toString(), /footnote reference/);
+  assert.deepEqual(readDocx(bytes).model, cleanModel("document", model));
+});
+
+test("Word: fremde Datei mit Inhaltsverzeichnis, Fussnoten und Zeilenabstand wird gelesen", () => {
+  const { model, imported } = readDocx(foreign(buildDocx(scholarlyDocument(), meta)));
+  assert.equal(imported, true);
+  const content = model.content.content ?? [];
+  assert.deepEqual(
+    content.map((node) => node.type),
+    ["tableOfContents", "heading", "paragraph", "heading", "paragraph"],
+  );
+  const first = content[2];
+  assert.equal(first.attrs?.lineHeight, "1.5");
+  assert.deepEqual(first.content?.[1].marks, [{ type: "subscript" }]);
+  assert.deepEqual(first.content?.[3].marks, [{ type: "superscript" }]);
+  assert.deepEqual(first.content?.[4], { type: "footnote", attrs: { text: "Quelle: Hygienerichtlinie 2026" } });
+  assert.equal(content[4].attrs?.lineHeight, "2");
+  assert.equal(content[4].content?.[1].attrs?.text, "Siehe Anhang & Liste");
+  // Standardabstand (1,15) bleibt ohne eigene Angabe.
+  assert.equal(content[1].attrs?.lineHeight, undefined);
+});
+
+test("Word: Inhaltsverzeichnis über mehrere Absätze mit Seitenzahl-Feldern wird ein Verzeichnis", () => {
+  const field = (type: string) => `<w:r><w:fldChar w:fldCharType="${type}"/></w:r>`;
+  const instr = (text: string) => `<w:r><w:instrText xml:space="preserve">${text}</w:instrText></w:r>`;
+  const entry = (text: string, first = false, last = false) =>
+    `<w:p><w:pPr><w:pStyle w:val="TOC1"/></w:pPr>${first ? field("begin") + instr(' TOC \\o "1-3" ') + field("separate") : ""}<w:r><w:t>${text}</w:t></w:r>${field("begin")}${instr(" PAGEREF _Toc1 \\h ")}${field("separate")}<w:r><w:t>2</w:t></w:r>${field("end")}${last ? field("end") : ""}</w:p>`;
+  const files = readZip(buildDocx(scholarlyDocument(), meta));
+  files.delete("carecore/model.json");
+  files.set(
+    "word/document.xml",
+    Buffer.from(
+      `<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:sdt><w:sdtContent><w:p><w:pPr><w:pStyle w:val="Inhaltsverzeichnisberschrift"/></w:pPr><w:r><w:t>Inhalt</w:t></w:r></w:p>${entry("Einleitung", true)}${entry("Ablauf", false, true)}</w:sdtContent></w:sdt><w:p><w:r><w:t>Nachher</w:t></w:r></w:p></w:body></w:document>`,
+    ),
+  );
+  const { model } = readDocx(createZip([...files].map(([path, content]) => ({ path, content }))));
+  assert.deepEqual(
+    (model.content.content ?? []).map((node) => node.type),
+    ["tableOfContents", "paragraph"],
+  );
+  assert.equal(plainText(model.content).trim(), "Nachher");
+});
+
 test("Excel: Werte, Formeln (englisch in der Datei), Formate, Blätter, Spaltenbreiten, verbundene Zellen", () => {
   const sheet = newSheet("Lager");
   sheet.cells.A1 = { v: "Artikel", s: { b: true, fill: "#eaf1ff", border: true } };

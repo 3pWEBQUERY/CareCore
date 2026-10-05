@@ -12,10 +12,12 @@ import { TaskItem, TaskList } from "@tiptap/extension-list";
 import { TableCell, TableHeader, TableKit } from "@tiptap/extension-table";
 import { CharacterCount, Placeholder } from "@tiptap/extensions";
 import {
+  ArrowsDownUp,
   ArrowUUpLeft,
   ArrowUUpRight,
   ArrowsMerge,
   ArrowsSplit,
+  Asterisk,
   ColumnsPlusLeft,
   ColumnsPlusRight,
   Eraser,
@@ -26,6 +28,7 @@ import {
   LinkSimple,
   ListBullets,
   ListChecks,
+  ListDashes,
   ListNumbers,
   MagnifyingGlass,
   Minus,
@@ -43,12 +46,28 @@ import {
   TextItalic,
   TextOutdent,
   TextStrikethrough,
+  TextSubscript,
+  TextSuperscript,
   TextUnderline,
   Trash,
 } from "@phosphor-icons/react";
 import { DEFAULT_PAGE, MARGINS_MM, type DocNode, type DocumentModel, type PageSetup } from "@/lib/office/model";
 import type { EditorProps } from "./editor-props";
 import { alignText, toggleList } from "./text-commands";
+import {
+  DEFAULT_LINE_SPACING,
+  Footnote,
+  LINE_SPACINGS,
+  LineSpacing,
+  Subscript,
+  Superscript,
+  TableOfContents,
+  footnotesOf,
+  insertTableOfContents,
+  removeFootnote,
+  setFootnoteText,
+  setLineSpacing,
+} from "./doc-extensions";
 import { ColorPicker, MenuList, ToolButton, ToolGroup, ToolPopover, ToolSeparator, imageToDataUrl } from "./office-ui";
 
 // Seitenumbruch wie in Word (Ctrl+Enter); erscheint im Editor als gestrichelte Linie.
@@ -300,6 +319,38 @@ function TablePicker({ onPick }: { onPick: (rows: number, cols: number) => void 
   );
 }
 
+function FootnotePanel({ onInsert }: { onInsert: (text: string) => void }) {
+  const [text, setText] = useState("");
+  return (
+    <div className="office-form">
+      <label>
+        <span>Text der Fussnote</span>
+        <textarea
+          autoFocus
+          rows={3}
+          value={text}
+          maxLength={2000}
+          placeholder="z. B. Quelle oder Erklärung"
+          onChange={(event) => setText(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey && text.trim()) {
+              event.preventDefault();
+              onInsert(text.replace(/\s+/g, " ").trim());
+            }
+          }}
+        />
+      </label>
+      <div className="office-form-actions">
+        <button type="button" disabled={!text.trim()} onClick={() => onInsert(text.replace(/\s+/g, " ").trim())}>
+          Einfügen
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const spacingLabel = (value: string) => (value.includes(".") ? value : `${value}.0`).replace(".", ",");
+
 function PagePanel({ page, onChange }: { page: PageSetup; onChange: (page: PageSetup) => void }) {
   return (
     <div className="office-form">
@@ -388,6 +439,9 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
       }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       TextStyleKit.configure({ lineHeight: false }),
+      LineSpacing,
+      Superscript,
+      Subscript,
       Highlight.configure({ multicolor: true }),
       TaskList,
       TaskItem.configure({ nested: true }),
@@ -396,6 +450,8 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
       ShadedHeader,
       Image.configure({ allowBase64: true, resize: { enabled: true, alwaysPreserveAspectRatio: true, minWidth: 40 } }),
       PageBreak,
+      TableOfContents,
+      Footnote,
       CharacterCount,
       Placeholder.configure({ placeholder: "Hier schreiben …" }),
     ],
@@ -446,6 +502,14 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
         italic: current.isActive("italic"),
         underline: current.isActive("underline"),
         strike: current.isActive("strike"),
+        superscript: current.isActive("superscript"),
+        subscript: current.isActive("subscript"),
+        lineSpacing: String(
+          current.getAttributes("paragraph").lineHeight ??
+            current.getAttributes("heading").lineHeight ??
+            DEFAULT_LINE_SPACING,
+        ),
+        footnotes: footnotesOf(current),
         bullet: current.isActive("bulletList"),
         ordered: current.isActive("orderedList"),
         task: current.isActive("taskList"),
@@ -611,6 +675,20 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
               active={state.strike}
               onClick={() => chain().toggleStrike().run()}
             />
+            <ToolButton
+              label="Hochgestellt"
+              shortcut="Ctrl+."
+              icon={<TextSuperscript />}
+              active={state.superscript}
+              onClick={() => chain().toggleMark("superscript").run()}
+            />
+            <ToolButton
+              label="Tiefgestellt"
+              shortcut="Ctrl+,"
+              icon={<TextSubscript />}
+              active={state.subscript}
+              onClick={() => chain().toggleMark("subscript").run()}
+            />
             <ColorPicker
               label="Schriftfarbe"
               icon={<TextAUnderline />}
@@ -653,6 +731,19 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
               active={state.align === "justify"}
               onClick={() => chain().setTextAlign("justify").run()}
             />
+            <ToolPopover label="Zeilenabstand" trigger={<ArrowsDownUp />}>
+              {(close) => (
+                <MenuList
+                  close={close}
+                  items={LINE_SPACINGS.map((value) => ({
+                    label: spacingLabel(value),
+                    hint: value === DEFAULT_LINE_SPACING ? "Standard" : undefined,
+                    active: state.lineSpacing === value,
+                    onSelect: () => setLineSpacing(editor, value === DEFAULT_LINE_SPACING ? null : value),
+                  }))}
+                />
+              )}
+            </ToolPopover>
             <ToolButton
               label="Aufzählung"
               icon={<ListBullets />}
@@ -709,6 +800,21 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
               {(close) => <LinkPanel editor={editor} close={close} />}
             </ToolPopover>
             <ToolButton label="Trennlinie" icon={<Minus />} onClick={() => chain().setHorizontalRule().run()} />
+            <ToolButton
+              label="Inhaltsverzeichnis"
+              icon={<ListDashes />}
+              onClick={() => insertTableOfContents(editor)}
+            />
+            <ToolPopover label="Fussnote" trigger={<Asterisk />}>
+              {(close) => (
+                <FootnotePanel
+                  onInsert={(text) => {
+                    close();
+                    chain().insertContent({ type: "footnote", attrs: { text } }).run();
+                  }}
+                />
+              )}
+            </ToolPopover>
             <ToolButton
               label="Seitenumbruch"
               shortcut="Ctrl+Enter"
@@ -823,6 +929,43 @@ export default function DocEditor({ model, onChange, readOnly, title }: EditorPr
             </div>
           )}
           <EditorContent editor={editor} />
+          {state.footnotes.length > 0 && (
+            <section className="office-footnotes" aria-label="Fussnoten">
+              <ol>
+                {state.footnotes.map((note, index) => (
+                  <li key={index}>
+                    {readOnly ? (
+                      <span>{note.text}</span>
+                    ) : (
+                      <>
+                        <input
+                          value={note.text}
+                          maxLength={2000}
+                          aria-label={`Fussnote ${index + 1}`}
+                          placeholder="Text der Fussnote"
+                          onFocus={() => {
+                            touched.current = true;
+                          }}
+                          onChange={(event) => setFootnoteText(editor, note.pos, event.target.value)}
+                        />
+                        <button
+                          type="button"
+                          aria-label={`Fussnote ${index + 1} löschen`}
+                          title="Fussnote löschen"
+                          onClick={() => {
+                            touched.current = true;
+                            removeFootnote(editor, note.pos);
+                          }}
+                        >
+                          <Trash />
+                        </button>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
           {(page.footer || page.pageNumbers) && (
             <div
               className="office-page-footer"
