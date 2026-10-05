@@ -68,8 +68,9 @@ import { CHART_LABELS } from "@/lib/office/sheet-features";
 import { CHART_ICONS, ChartDataDialog, ItemBar, ItemLayer, SHAPE_ICONS, StaticItems } from "./deck-items";
 import type { EditorProps } from "./editor-props";
 import { CommentsPanel, newComment } from "./office-comments";
-import type { CommentThread } from "@/lib/office/comments";
-import { alignText, toggleList } from "./text-commands";
+import { initials, type CommentThread } from "@/lib/office/comments";
+import { REMOTE_META, alignText, applyContent, toggleList } from "./text-commands";
+import { collaboratorColor } from "@/lib/office/presence";
 import {
   ColorPicker,
   MenuList,
@@ -221,6 +222,8 @@ function BodyEditor({
 }) {
   const emit = useRef(onChange);
   const focus = useRef(onFocus);
+  // Zuletzt selbst gemeldeter Inhalt: ein anderer Wert stammt von anderen Personen und wird übernommen.
+  const emitted = useRef<DocNode | null>(null);
   useEffect(() => {
     emit.current = onChange;
     focus.current = onFocus;
@@ -253,9 +256,18 @@ function BodyEditor({
     autofocus: autofocus ? "end" : false,
     immediatelyRender: false,
     editorProps,
-    onUpdate: ({ editor: current }) => emit.current(current.getJSON() as DocNode),
+    onUpdate: ({ editor: current, transaction }) => {
+      // Änderungen anderer (beim Zusammenführen übernommen) nicht als eigene melden.
+      if (transaction.getMeta(REMOTE_META)) return;
+      const json = current.getJSON() as DocNode;
+      emitted.current = json;
+      emit.current(json);
+    },
     onFocus: ({ editor: current }) => focus.current(current),
   });
+  useEffect(() => {
+    if (editor && value !== emitted.current) applyContent(editor, value);
+  }, [editor, value]);
   return <EditorContent editor={editor} />;
 }
 
@@ -361,7 +373,15 @@ function Presenter({
   );
 }
 
-export default function DeckEditor({ model: initial, onChange, readOnly, user }: EditorProps<DeckModel>) {
+export default function DeckEditor({
+  model: initial,
+  onChange,
+  readOnly,
+  user,
+  remoteRef,
+  people = [],
+  onPlace,
+}: EditorProps<DeckModel>) {
   const [model, setModel] = useState(initial);
   const modelRef = useRef(initial);
   const [current, setCurrent] = useState(0);
@@ -417,10 +437,28 @@ export default function DeckEditor({ model: initial, onChange, readOnly, user }:
     };
   }, []);
 
+  // Gleichzeitiges Bearbeiten: zusammengeführten Stand übernehmen (die aktuelle Folie bleibt gewählt).
+  useEffect(() => {
+    if (!remoteRef) return;
+    remoteRef.current = (next) => {
+      const shown = modelRef.current.slides[Math.min(current, modelRef.current.slides.length - 1)]?.id;
+      modelRef.current = next;
+      setModel(next);
+      const at = next.slides.findIndex((item) => item.id === shown);
+      if (at >= 0) setCurrent(at);
+    };
+    return () => {
+      remoteRef.current = null;
+    };
+  }, [remoteRef, current]);
+
   const index = Math.min(current, model.slides.length - 1);
   const slide = model.slides[index];
   const boxes = SLIDE_BOXES[slide.layout];
   const colors = slideColors(slide, model.theme);
+  useEffect(() => {
+    onPlace?.({ slide: slide.id });
+  }, [onPlace, slide.id]);
   const item = slide.items.find((entry) => entry.id === selectedItem) ?? null;
   const chartToEdit = slide.items.find((entry) => entry.id === dataDialog && entry.type === "chart");
 
@@ -996,6 +1034,20 @@ export default function DeckEditor({ model: initial, onChange, readOnly, user }:
               >
                 <span className="deck-thumb-number">
                   {position + 1}
+                  {people
+                    .filter((person) => person.place?.slide === item.id)
+                    .map((person) => (
+                      <span
+                        key={person.session}
+                        className="deck-thumb-person"
+                        style={{ background: collaboratorColor(person.session) }}
+                        role="img"
+                        aria-label={`${person.name} ist auf dieser Folie`}
+                        data-tip={`${person.name} ist auf dieser Folie`}
+                      >
+                        {initials(person.name)}
+                      </span>
+                    ))}
                   {item.comments?.some((thread) => !thread.resolved) && (
                     <span
                       className="deck-thumb-comments"

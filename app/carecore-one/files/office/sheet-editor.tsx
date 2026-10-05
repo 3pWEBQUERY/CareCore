@@ -62,6 +62,8 @@ import {
   type Value,
 } from "@/lib/office/formula";
 import type { CommentThread } from "@/lib/office/comments";
+import { mergeModels } from "@/lib/office/merge";
+import { collaboratorColor, type Collaborator } from "@/lib/office/presence";
 import {
   DEFAULT_COL_WIDTH,
   DEFAULT_ROW_HEIGHT,
@@ -228,6 +230,9 @@ export default function SheetEditor({
   title,
   flushRef,
   user,
+  remoteRef,
+  people = [],
+  onPlace,
 }: EditorProps<SheetModel>) {
   const [model, setModel] = useState(initial);
   const modelRef = useRef(initial);
@@ -319,6 +324,36 @@ export default function SheetEditor({
     },
     [active, commit],
   );
+  // Gleichzeitiges Bearbeiten: zusammengeführten Stand übernehmen. Die laufende Eingabe bleibt offen, und
+  // Rückgängig/Wiederholen betreffen weiterhin nur die eigenen Schritte (Verlauf auf den neuen Stand umgestellt).
+  useEffect(() => {
+    if (!remoteRef) return;
+    remoteRef.current = (next) => {
+      const before = modelRef.current;
+      if (next === before) return;
+      const rebase = (list: SheetModel[]) => list.map((entry) => mergeModels(before, entry, next) as SheetModel);
+      historyRef.current = { undo: rebase(historyRef.current.undo), redo: rebase(historyRef.current.redo) };
+      modelRef.current = next;
+      setModel(next);
+      setHistory({ undo: historyRef.current.undo, redo: historyRef.current.redo });
+      setActive((current) => Math.min(current, next.sheets.length - 1));
+    };
+    return () => {
+      remoteRef.current = null;
+    };
+  }, [remoteRef]);
+  // Eigene Stelle für die anderen (Blatt und aktive Zelle).
+  useEffect(() => {
+    onPlace?.({ sheet: sheet.id, cell: cellKey(range.focus.col, range.focus.row) });
+  }, [onPlace, sheet.id, range.focus.col, range.focus.row]);
+  // Andere Personen auf diesem Blatt, je Zelle.
+  const othersAt = useMemo(() => {
+    const map = new Map<string, Collaborator>();
+    for (const person of people)
+      if (person.place?.sheet === sheet.id && person.place.cell) map.set(person.place.cell, person);
+    return map;
+  }, [people, sheet.id]);
+
   function undo() {
     const previous = historyRef.current.undo[historyRef.current.undo.length - 1];
     if (!previous) return;
@@ -2597,6 +2632,28 @@ export default function SheetEditor({
                 }}
               />
             )}
+            {[...othersAt].map(([key, person]) => {
+              const at = parseCellKey(key);
+              if (!at || at.col >= sheet.colCount || at.row >= sheet.rowCount) return null;
+              const color = collaboratorColor(person.session);
+              return (
+                <div
+                  key={person.session}
+                  className={`sheet-remote ${at.row === 0 ? "first-row" : ""}`}
+                  style={{
+                    left: ROWHEAD_W + colLefts[at.col],
+                    top: HEADER_H + rowTops[at.row],
+                    width: colLefts[at.col + 1] - colLefts[at.col],
+                    height: rowTops[at.row + 1] - rowTops[at.row],
+                    borderColor: color,
+                  }}
+                  role="img"
+                  aria-label={`${person.name} ist in Zelle ${key}`}
+                >
+                  <span style={{ background: color }}>{person.name}</span>
+                </div>
+              );
+            })}
             {sheet.charts.map((chart) => {
               const box = chartDrag?.id === chart.id ? { ...chart, ...chartDrag } : chart;
               const chartArea = parseArea(chart.range);

@@ -57,7 +57,8 @@ import { DEFAULT_PAGE, MARGINS_MM, newId, type DocNode, type DocumentModel, type
 import type { CommentThread } from "@/lib/office/comments";
 import { CommentsPanel, newComment } from "./office-comments";
 import type { EditorProps } from "./editor-props";
-import { alignText, toggleList } from "./text-commands";
+import { REMOTE_META, alignText, applyContent, toggleList } from "./text-commands";
+import { collaboratorColor } from "@/lib/office/presence";
 import {
   CommentMark,
   DEFAULT_LINE_SPACING,
@@ -410,7 +411,16 @@ function PagePanel({ page, onChange }: { page: PageSetup; onChange: (page: PageS
   );
 }
 
-export default function DocEditor({ model, onChange, readOnly, title, user }: EditorProps<DocumentModel>) {
+export default function DocEditor({
+  model,
+  onChange,
+  readOnly,
+  title,
+  user,
+  remoteRef,
+  people = [],
+  onPlace,
+}: EditorProps<DocumentModel>) {
   const [page, setPage] = useState<PageSetup>({ ...DEFAULT_PAGE, ...model.page });
   const [zoom, setZoom] = useState(100);
   const pageRef = useRef(page);
@@ -481,12 +491,37 @@ export default function DocEditor({ model, onChange, readOnly, title, user }: Ed
     onFocus: () => {
       touched.current = true;
     },
-    onUpdate: ({ editor: current }) => {
-      if (!touched.current) return;
+    onUpdate: ({ editor: current, transaction }) => {
+      // Änderungen anderer (beim Zusammenführen übernommen) sind schon im Stand der Datei.
+      if (!touched.current || transaction.getMeta(REMOTE_META)) return;
       emit.current(withComments(current.getJSON() as DocNode, pageRef.current));
     },
-    onSelectionUpdate: ({ editor: current }) => setActiveComment(commentsAt(current)[0] ?? null),
+    onSelectionUpdate: ({ editor: current }) => {
+      setActiveComment(commentsAt(current)[0] ?? null);
+      // Eigene Stelle für die anderen: Absatz (oberste Ebene), in dem der Cursor steht.
+      place.current?.({ block: current.state.selection.$from.index(0) });
+    },
   });
+  const place = useRef(onPlace);
+  useEffect(() => {
+    place.current = onPlace;
+  }, [onPlace]);
+
+  // Gleichzeitiges Bearbeiten: zusammengeführten Stand übernehmen (Text, Seite, Kommentare).
+  useEffect(() => {
+    if (!remoteRef) return;
+    remoteRef.current = (next) => {
+      const nextPage = { ...DEFAULT_PAGE, ...next.page };
+      setPage(nextPage);
+      pageRef.current = nextPage;
+      commentsRef.current = next.comments ?? [];
+      setComments(next.comments ?? []);
+      if (editor) applyContent(editor, next.content);
+    };
+    return () => {
+      remoteRef.current = null;
+    };
+  }, [editor, remoteRef]);
 
   useEffect(() => {
     editor?.setEditable(!readOnly);
@@ -1105,6 +1140,19 @@ export default function DocEditor({ model, onChange, readOnly, title, user }: Ed
         </span>
       </footer>
       <style>{`@media print { @page { size: A4 ${page.orientation}; margin: ${margin}mm; } }`}</style>
+      {/* Andere Personen: farbiger Rand und Name am Absatz, in dem sie gerade schreiben. */}
+      {people.some((person) => person.place?.block !== undefined) && (
+        <style>
+          {people
+            .filter((person) => person.place?.block !== undefined)
+            .map((person) => {
+              const color = collaboratorColor(person.session);
+              const at = `.office-prose > :nth-child(${(person.place?.block ?? 0) + 1})`;
+              return `${at} { position: relative; box-shadow: -8px 0 0 -4px ${color}; } ${at}::after { content: ${JSON.stringify(person.name)}; position: absolute; top: -1.35em; right: 0; padding: 0 6px; border-radius: 6px; background: ${color}; color: white; font: 600 11px/1.6 Arial, sans-serif; pointer-events: none; }`;
+            })
+            .join("\n")}
+        </style>
+      )}
       {/* Aktiver Kommentar im Text kräftiger hervorgehoben. */}
       {activeComment && (
         <style>{`.office-prose [data-comment="${CSS.escape(activeComment)}"] { background: rgba(245, 158, 11, 0.42); }`}</style>

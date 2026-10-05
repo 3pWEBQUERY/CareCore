@@ -21,19 +21,26 @@ import {
   type OfficeModel,
   type SheetModel,
 } from "@/lib/office/model";
+import { mergeModels } from "@/lib/office/merge";
+import { collaboratorColor, type Collaborator, type OfficePlace } from "@/lib/office/presence";
+import { initials } from "@/lib/office/comments";
 import { RequestError, call, download, fileUrl } from "../explorer-api";
 import { FileIcon } from "../file-icon";
 import { TooltipLayer } from "./tooltip-layer";
 import type { EditorProps } from "./editor-props";
 
 // Vollbild-Editor für Dokument, Tabelle und Präsentation: lädt die Datei, speichert automatisch (ohne für jeden
-// Zwischenstand eine Version anzulegen), „Speichern“ legt eine Version an. Gleichzeitige Änderungen anderer werden
-// erkannt; dann lässt sich die eigene Fassung als Kopie sichern.
+// Zwischenstand eine Version anzulegen), „Speichern“ legt eine Version an. Arbeiten mehrere Personen gleichzeitig
+// in der Datei, werden ihre Änderungen laufend zusammengeführt; wer gerade wo ist, zeigen Kopfzeile und Editor.
 const DocEditor = dynamic(() => import("./doc-editor"), { ssr: false, loading: () => <EditorLoading /> });
 const SheetEditor = dynamic(() => import("./sheet-editor"), { ssr: false, loading: () => <EditorLoading /> });
 const DeckEditor = dynamic(() => import("./deck-editor"), { ssr: false, loading: () => <EditorLoading /> });
 
 const AUTOSAVE_MS = 1500;
+// Abstand der Lebenszeichen (neuer Stand anderer, wer ist wo); im Hintergrund seltener.
+const LIVE_MS = 2500;
+const LIVE_HIDDEN_MS = 15_000;
+type Live = { revision: number; people: Collaborator[]; model?: OfficeModel };
 
 function EditorLoading() {
   return <p className="office-loading">Editor wird geladen …</p>;
@@ -86,11 +93,19 @@ export default function OfficeEditor({
   const forceVersion = useRef(false);
   // Offene Eingabe im Editor (z. B. Zelle der Tabelle) vor jedem Speichern übernehmen.
   const flushRef = useRef<(() => boolean) | null>(null);
+  // Gleichzeitiges Bearbeiten: zuletzt gemeinsamer Stand (Grundlage für das Zusammenführen), Kennung dieses
+  // Fensters, eigene Stelle in der Datei und die anderen Personen.
+  const base = useRef<OfficeModel | null>(null);
+  const remoteRef = useRef<((model: OfficeModel) => void) | null>(null);
+  const [session] = useState(() => crypto.randomUUID().replace(/-/g, ""));
+  const place = useRef<OfficePlace | null>(null);
+  const [people, setPeople] = useState<Collaborator[]>([]);
 
   useEffect(() => {
     call<Loaded>(`/api/cloud/files/${file.id}?office=1`)
       .then((result) => {
         model.current = result.model;
+        base.current = result.model;
         revision.current = result.revision;
         // Aus Word, Excel oder PowerPoint: die erste Speicherung behält das Original als Version.
         forceVersion.current = result.imported;
@@ -106,6 +121,33 @@ export default function OfficeEditor({
     const id = window.setTimeout(() => setNotice(""), 3200);
     return () => window.clearTimeout(id);
   }, [notice]);
+
+  // Neuer Stand anderer: mit den eigenen, noch nicht gespeicherten Änderungen zusammenführen und im Editor zeigen.
+  const takeRemote = useCallback((live: Live) => {
+    if (!live.model || live.revision === revision.current || !base.current || !model.current) return false;
+    const merged = mergeModels(base.current, model.current, live.model);
+    base.current = live.model;
+    revision.current = live.revision;
+    model.current = merged;
+    remoteRef.current?.(merged);
+    return merged !== live.model;
+  }, []);
+
+  const live = useCallback(
+    async (leave = false) =>
+      call<Live>(`/api/cloud/files/${file.id}`, {
+        method: "POST",
+        json: {
+          action: "live",
+          session,
+          revision: revision.current,
+          place: place.current,
+          ...(leave ? { leave } : {}),
+        },
+        ...(leave ? { keepalive: true } : {}),
+      }),
+    [file.id, session],
+  );
 
   const save = useCallback(
     async (manual: boolean): Promise<void> => {
@@ -124,10 +166,24 @@ export default function OfficeEditor({
       setStatus("saving");
       const task = (async () => {
         try {
-          const result = await call<{ file: ExplorerFile; revision: number }>(`/api/cloud/files/${file.id}`, {
-            method: "PUT",
-            json: { model: snapshot, revision: revision.current, auto: !manual && !forceVersion.current },
-          });
+          let sent = snapshot;
+          let result: { file: ExplorerFile; revision: number } | null = null;
+          // Hat inzwischen jemand anderes gespeichert: dessen Stand holen, zusammenführen, erneut speichern.
+          for (let attempt = 0; !result; attempt += 1) {
+            try {
+              result = await call<{ file: ExplorerFile; revision: number }>(`/api/cloud/files/${file.id}`, {
+                method: "PUT",
+                json: { model: sent, revision: revision.current, auto: !manual && !forceVersion.current },
+              });
+            } catch (cause) {
+              if (!(cause instanceof RequestError && cause.status === 409) || attempt >= 3) throw cause;
+              const latest = await live();
+              setPeople(latest.people);
+              takeRemote(latest);
+              sent = model.current ?? sent;
+            }
+          }
+          base.current = sent;
           revision.current = result.revision;
           forceVersion.current = false;
           changed.current = true;
@@ -150,8 +206,41 @@ export default function OfficeEditor({
       await task;
       saving.current = null;
     },
-    [file.id, setStatus],
+    [file.id, live, setStatus, takeRemote],
   );
+
+  // Lebenszeichen: eigene Stelle melden, andere Personen und ihren neuesten Stand holen.
+  useEffect(() => {
+    if (!loaded) return;
+    let stopped = false;
+    let timer = 0;
+    const tick = async () => {
+      if (stopped) return;
+      // Während des Speicherns warten (der Stand ändert sich gerade); Fehler beim Lebenszeichen nicht melden.
+      if (!saving.current) {
+        try {
+          const result = await live();
+          if (stopped) return;
+          setPeople(result.people);
+          // Eigene, noch nicht gespeicherte Änderungen wurden mit dem neuen Stand zusammengeführt: gleich speichern.
+          if (takeRemote(result) && dirty.current && statusRef.current !== "conflict") void save(false);
+        } catch {
+          // Nächster Versuch beim nächsten Lebenszeichen.
+        }
+      }
+      if (!stopped) timer = window.setTimeout(tick, document.hidden ? LIVE_HIDDEN_MS : LIVE_MS);
+    };
+    timer = window.setTimeout(tick, 400);
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+      void live(true).catch(() => undefined);
+    };
+  }, [loaded, live, save, setStatus, takeRemote]);
+
+  const onPlace = useCallback((next: OfficePlace) => {
+    place.current = next;
+  }, []);
 
   const onChange = useCallback(
     (next: OfficeModel) => {
@@ -260,6 +349,9 @@ export default function OfficeEditor({
   const editorProps: Omit<EditorProps<OfficeModel>, "model"> = {
     onChange,
     flushRef,
+    remoteRef,
+    people,
+    onPlace,
     readOnly: !loaded?.canEdit || status === "conflict",
     title: name.replace(/\.[^.]+$/, ""),
     user: loaded?.user ?? "",
@@ -321,6 +413,21 @@ export default function OfficeEditor({
             {loaded && !loaded.canEdit ? "Nur lesen" : statusText}
           </span>
         </div>
+        {people.length > 0 && (
+          <ul className="office-people" aria-label="Ebenfalls in der Datei">
+            {people.slice(0, 5).map((person) => (
+              <li
+                key={person.session}
+                style={{ background: collaboratorColor(person.session) }}
+                data-tip={person.self ? `${person.name} (anderes Fenster)` : `${person.name} bearbeitet mit`}
+                aria-label={person.self ? `${person.name} (anderes Fenster)` : person.name}
+              >
+                {initials(person.name)}
+              </li>
+            ))}
+            {people.length > 5 && <li className="more">+{people.length - 5}</li>}
+          </ul>
+        )}
         <div className="office-actions">
           {loaded?.canEdit && (
             <button

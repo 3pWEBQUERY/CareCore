@@ -47,3 +47,33 @@ export function alignText(editor: Editor, align: "left" | "center" | "right" | "
   if (align === "left") editor.chain().focus().unsetTextAlign().run();
   else editor.chain().focus().setTextAlign(align).run();
 }
+
+// Gleichzeitiges Bearbeiten: neuen Inhalt übernehmen, indem nur der geänderte Abschnitt ersetzt wird. So bleiben
+// Cursor und Markierung an ihrer Stelle (sie wandern mit, wenn davor Text dazukommt), und Rückgängig betrifft
+// weiterhin nur die eigenen Änderungen.
+export const REMOTE_META = "carecoreRemote";
+
+export function applyContent(editor: Editor, json: unknown) {
+  if (editor.isDestroyed) return;
+  let next;
+  try {
+    next = editor.schema.nodeFromJSON(json);
+  } catch {
+    return;
+  }
+  const current = editor.state.doc;
+  const start = current.content.findDiffStart(next.content);
+  if (start === null) return;
+  const end = current.content.findDiffEnd(next.content);
+  let endA = end?.a ?? current.content.size;
+  let endB = end?.b ?? next.content.size;
+  const overlap = start - Math.min(endA, endB);
+  if (overlap > 0) {
+    endA += overlap;
+    endB += overlap;
+  }
+  const tr = editor.state.tr.replace(start, endA, next.slice(start, endB));
+  tr.setMeta("addToHistory", false);
+  tr.setMeta(REMOTE_META, true);
+  editor.view.dispatch(tr);
+}
