@@ -175,6 +175,14 @@ test("Tabelle: vertikale Ausrichtung, Funktionen, Rahmen, Filter und Auswahllist
   await page.keyboard.press("Enter");
   await expect(cell(14, 5)).toHaveText("60");
   await expect(cell(15, 5)).toHaveText("42");
+  // Formelhilfe: englischer Name findet NACHZEILE, mit Beispiel.
+  await cell(17, 5).click();
+  await page.keyboard.type("=BYR");
+  await expect(page.locator(".sheet-suggest")).toContainText("NACHZEILE");
+  await expect(page.locator(".sheet-suggest")).toContainText("auch BYROW");
+  await page.keyboard.press("Tab");
+  await expect(page.locator(".sheet-suggest-example")).toContainText("LAMBDA(zeile;SUMME(zeile))");
+  await page.keyboard.press("Escape");
 
   // Vertikal: oben, Mitte, unten.
   await cell(0, 0).click();

@@ -158,3 +158,17 @@ test("Funktionen: Excel-Namen beim Speichern und Öffnen", () => {
   assert.equal(formatWithCode(-5, '0;"minus "0'), "minus 5");
   assert.equal(formatWithCode("Anna", '0;0;0;"Name: "@'), "Name: Anna");
 });
+
+test("Formelhilfe: englische Namen finden die deutsche Hilfe, Beispiele für LAMBDA-Helfer", async () => {
+  const { functionHelp, suggestFunctions } = await import("@/lib/office/formula");
+  assert.equal(functionHelp("BYROW")?.name, "NACHZEILE");
+  assert.equal(functionHelp("nachzeile")?.name, "NACHZEILE");
+  assert.match(functionHelp("BYROW")?.example ?? "", /NACHZEILE\(B2:D10;LAMBDA\(zeile;SUMME\(zeile\)\)\)/);
+  assert.match(functionHelp("BYCOL")?.example ?? "", /NACHSPALTE/);
+  assert.ok(functionHelp("MAKEARRAY")?.example);
+  const typed = suggestFunctions("BYR");
+  assert.equal(typed[0].name, "NACHZEILE");
+  assert.equal(typed[0].english, "BYROW");
+  assert.equal(suggestFunctions("NACHZ")[0].name, "NACHZEILE");
+  assert.equal(suggestFunctions("NACHZ")[0].english, undefined);
+});
