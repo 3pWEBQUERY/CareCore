@@ -76,6 +76,8 @@ type Writer = {
   textIndex: number;
   commentStarts: Map<number, number[]>;
   commentEnds: Map<number, number[]>;
+  // Änderungen nachverfolgen: laufende Nummer für <w:ins>/<w:del>.
+  revisions: number;
 };
 
 function addRel(writer: Writer, type: string, target: string, external = false) {
@@ -109,14 +111,22 @@ function runProps(marks: DocMark[] | undefined, extra = "") {
   return parts.length ? `<w:rPr>${parts.join("")}</w:rPr>` : "";
 }
 
-const textRun = (text: string, props: string) =>
+const textRun = (text: string, props: string, tag = "w:t") =>
   text
     .split("\t")
     .map(
       (piece, index) =>
-        `${index ? `<w:r>${props}<w:tab/></w:r>` : ""}${piece ? `<w:r>${props}<w:t xml:space="preserve">${esc(piece)}</w:t></w:r>` : ""}`,
+        `${index ? `<w:r>${props}<w:tab/></w:r>` : ""}${piece ? `<w:r>${props}<${tag} xml:space="preserve">${esc(piece)}</${tag}></w:r>` : ""}`,
     )
     .join("");
+
+// Nachverfolgte Änderung um einen Lauf legen (<w:ins> eingefügt, <w:del> gelöscht – wie in Word).
+function revision(tag: "ins" | "del", mark: DocMark, content: string, writer: Writer) {
+  writer.revisions += 1;
+  const author = typeof mark.attrs?.author === "string" && mark.attrs.author ? mark.attrs.author : "CareCore";
+  const date = typeof mark.attrs?.date === "string" ? wordDate(mark.attrs.date) : "";
+  return `<w:${tag} w:id="${writer.revisions + 1000}" w:author="${esc(author)}"${date ? ` w:date="${date}"` : ""}>${content}</w:${tag}>`;
+}
 
 function inline(nodes: DocNode[] | undefined, writer: Writer, extra = "") {
   let out = "";
@@ -136,7 +146,11 @@ function inline(nodes: DocNode[] | undefined, writer: Writer, extra = "") {
     }
     if (node.type !== "text" || !node.text) continue;
     const at = writer.textIndex++;
-    const run = textRun(node.text, runProps(node.marks, extra));
+    const inserted = node.marks?.find((mark) => mark.type === "insertion");
+    const deleted = node.marks?.find((mark) => mark.type === "deletion");
+    let run = textRun(node.text, runProps(node.marks, extra), deleted ? "w:delText" : "w:t");
+    if (deleted) run = revision("del", deleted, run, writer);
+    if (inserted) run = revision("ins", inserted, run, writer);
     const link = node.marks?.find((mark) => mark.type === "link");
     const href = typeof link?.attrs?.href === "string" ? link.attrs.href : "";
     out += (writer.commentStarts.get(at) ?? []).map((id) => `<w:commentRangeStart w:id="${id}"/>`).join("");
@@ -502,7 +516,8 @@ function numbering(nums: { id: number; start: number }[]) {
     .join("")}</w:numbering>`;
 }
 
-const SETTINGS = `${XML_HEAD}<w:settings ${W}><w:defaultTabStop w:val="708"/><w:characterSpacingControl w:val="doNotCompress"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`;
+const settingsXml = (track: boolean) =>
+  `${XML_HEAD}<w:settings ${W}>${track ? "<w:trackRevisions/>" : ""}<w:defaultTabStop w:val="708"/><w:characterSpacingControl w:val="doNotCompress"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`;
 
 function headerFooter(tag: "hdr" | "ftr", text: string, pageNumbers: boolean) {
   const style = tag === "hdr" ? "Kopfzeile" : "Fusszeile";
@@ -528,6 +543,7 @@ export function buildDocx(model: DocumentModel, meta: { title: string; author: s
     textIndex: 0,
     commentStarts: new Map(),
     commentEnds: new Map(),
+    revisions: 0,
   };
   const comments = commentEntries(model);
   for (const { id, thread } of comments.entries) {
@@ -580,7 +596,7 @@ export function buildDocx(model: DocumentModel, meta: { title: string; author: s
     { path: "word/_rels/document.xml.rels", content: Buffer.from(relationships(rels)) },
     { path: "word/styles.xml", content: Buffer.from(STYLES) },
     { path: "word/numbering.xml", content: Buffer.from(numbering(writer.nums)) },
-    { path: "word/settings.xml", content: Buffer.from(SETTINGS) },
+    { path: "word/settings.xml", content: Buffer.from(settingsXml(Boolean(model.track))) },
     ...(withHeader
       ? [{ path: "word/header1.xml", content: Buffer.from(headerFooter("hdr", model.page.header, false)) }]
       : []),
@@ -667,16 +683,23 @@ function readMarks(props: XmlNode | undefined): DocMark[] {
   return marks;
 }
 
-function readRuns(node: XmlNode, reader: Reader, link?: string): DocNode[] {
+function readRuns(node: XmlNode, reader: Reader, link?: string, changes: DocMark[] = []): DocNode[] {
   const out: DocNode[] = [];
   for (const item of node.children) {
     if (item.name === "hyperlink") {
       const target = item.attrs.id ? reader.rels.get(item.attrs.id) : undefined;
-      out.push(...readRuns(item, reader, target && /^(https?:|mailto:)/.test(target) ? target : undefined));
+      out.push(...readRuns(item, reader, target && /^(https?:|mailto:)/.test(target) ? target : undefined, changes));
       continue;
     }
-    if (item.name === "ins" || item.name === "smartTag" || item.name === "sdt" || item.name === "sdtContent") {
-      out.push(...readRuns(item, reader, link));
+    // Nachverfolgte Änderungen aus Word bleiben Änderungen (verschobener Text: alte Stelle gelöscht, neue eingefügt).
+    if (item.name === "ins" || item.name === "del" || item.name === "moveTo" || item.name === "moveFrom") {
+      const type = item.name === "ins" || item.name === "moveTo" ? "insertion" : "deletion";
+      const mark: DocMark = { type, attrs: { author: item.attrs.author ?? "", date: item.attrs.date ?? "" } };
+      out.push(...readRuns(item, reader, link, [...changes.filter((entry) => entry.type !== type), mark]));
+      continue;
+    }
+    if (item.name === "smartTag" || item.name === "sdt" || item.name === "sdtContent") {
+      out.push(...readRuns(item, reader, link, changes));
       continue;
     }
     if (item.name === "commentRangeStart" || item.name === "commentRangeEnd") {
@@ -689,8 +712,9 @@ function readRuns(node: XmlNode, reader: Reader, link?: string): DocNode[] {
     const marks = readMarks(child(item, "rPr"));
     for (const thread of reader.openComments) marks.push({ type: "comment", attrs: { id: thread } });
     if (link) marks.push({ type: "link", attrs: { href: link } });
+    marks.push(...changes);
     for (const part of item.children) {
-      if (part.name === "t") {
+      if (part.name === "t" || part.name === "delText") {
         const text = textOf(part);
         if (text) out.push({ type: "text", text, ...(marks.length ? { marks } : {}) });
       } else if (part.name === "tab") out.push({ type: "text", text: "\t", ...(marks.length ? { marks } : {}) });
@@ -933,6 +957,12 @@ function readComments(files: Map<string, Buffer>, relsXml: Buffer | undefined) {
   return { marks, threads };
 }
 
+// In Word eingeschaltetes „Änderungen nachverfolgen“ bleibt eingeschaltet.
+function trackRevisions(xml: Buffer | undefined) {
+  const flag = xml ? find(parseXml(xml.toString("utf8")), "trackRevisions") : undefined;
+  return Boolean(flag) && !["false", "0", "off"].includes(flag?.attrs.val ?? "");
+}
+
 export function readDocx(bytes: Buffer): { model: DocumentModel; imported: boolean } {
   const files = readZip(bytes);
   const documentXml = files.get("word/document.xml");
@@ -1021,6 +1051,7 @@ export function readDocx(bytes: Buffer): { model: DocumentModel; imported: boole
       page,
       content: { type: "doc", content: content.length ? content : emptyDoc().content },
       comments: comments.threads,
+      track: trackRevisions(files.get("word/settings.xml")),
     }) as DocumentModel,
     imported: true,
   };
