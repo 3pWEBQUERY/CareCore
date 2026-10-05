@@ -158,8 +158,10 @@ test("Pflegeakte: Status, Pflegebereiche und Weg in die Pflegeplanung", async ({
   await dialog.getByRole("button", { name: "Abbrechen" }).click();
   await expect(dialog).toHaveCount(0);
   await page.getByRole("link", { name: "Pflegeplanung öffnen" }).click();
-  await expect(page).toHaveURL(/pflegeplanung\?resident=/);
+  // Die Pflegeplanung übernimmt die Person aus dem Link und räumt danach die Adresse auf.
+  await expect(page).toHaveURL(/\/pflegeplanung/);
   await expect(page.locator("h1").first()).toBeVisible();
+  await expect(page.getByText("Maria Keller").first()).toBeVisible();
   expect(errors).toEqual([]);
 });
 
