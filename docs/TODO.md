@@ -559,6 +559,54 @@ als Entwurf in `docs/ZWECKBESTIMMUNG.md`.
       Grenze (Wechselwirkungs-Hinweise, Einschätzungsinstrumente, Vitalwert-Grenzen und Trendhinweise, CareCore KI)
       durch eine Fachperson für Medizinprodukte-Regulierung prüfen lassen.
 
+## Abgleich mit careCoach (06.10.2026): noch zu erstellen
+
+Vergleich mit careCoach (topCare Management AG) nach den öffentlichen Angaben des Herstellers: Leistungskataloge
+BESA, RAI-NH, Plaisir und interRAI (LTCF, HC, CMH), Heim und Spitex, Einstufung, Abrechnung, Statistik,
+Schnittstellen (RAIsoft.net, BESA, Apotheken und Blister, Administrationssysteme, Rufsystem Ascom), Dokumentation nach
+Abweichungen, Diktat mit KI-Umformulierung, offline mobil. CareCore ist in Kommunikation, Office, Portalen, KI,
+Dienstplan, Sicherheit und Sprachen weiter; es fehlt vor allem, was die Finanzierung der Pflege betrifft. Es gilt
+weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen oder Fristen.
+
+### Hoch (ohne diese Punkte ersetzt CareCore careCoach im Heim nicht)
+
+- [ ] **Bedarfsabklärung mit anerkanntem Instrument:** Der RAI-Bereich ist heute eine vereinfachte Erfassung
+      (4 Bereiche, Stufe 0–4) ohne die Items von interRAI LTCF, ohne Abklärungshilfen (CAPs) und ohne Pflegestufe;
+      BESA fehlt. Die Inhalte sind lizenziert (interRAI; BESA bei ARTISET). Entscheid nötig: Lizenz und
+      Zertifizierung oder Schnittstelle zu RAIsoft.net bzw. BESA (Einstufung einlesen, Leistungen ausgeben).
+- [ ] **Bewohneradministration und Abrechnung:** Taxen (Pension, Betreuung, Pflege nach Stufe) mit Aufteilung nach
+      Kostenträger (Versicherer, Restfinanzierung, Anteil der Person), Abwesenheiten (Spital, Ferien) mit ihrer Wirkung
+      auf die Taxen, Monatsrechnung mit QR-Rechnung, elektronische Rechnung an Versicherer (Forum Datenaustausch) und
+      Export in die Finanzbuchhaltung. Tarife legt die Einrichtung bzw. der Kanton fest. Setzt die Pflegestufe voraus.
+- [ ] **Statistik der sozialmedizinischen Institutionen (SOMED, BFS):** jährliche Pflichtlieferung der Schweizer
+      Heime; Inhalt und Format an der Quelle prüfen, Export aus den vorhandenen Daten.
+- [ ] **Datenstandort Schweiz:** Heute Railway, Region Europa. Viele Heime und Kantone erwarten Hosting in der
+      Schweiz und Nachweise (z. B. ISO 27001, externer Sicherheitstest). Entscheid des Betreibers.
+
+### Mittel (damit CareCore klar besser ist)
+
+- [ ] **Dokumentation nach Abweichungen:** Sammelabschluss je Schicht und Person: „Alle geplanten Massnahmen wie
+      geplant durchgeführt“, nur Abweichungen einzeln mit Grund. Grundlage sind die laufenden Massnahmen der
+      Pflegeplanung mit Zeitpunkt; nichts wird ohne Bestätigung als erledigt vermerkt.
+- [ ] **Diktat mit KI umformulieren:** Rohtext aus der Erkennung auf dem Gerät wird pseudonymisiert zu einem
+      Pflegebericht-Entwurf umformuliert, den die Fachperson prüft. Braucht einen Entscheid (bisher: Spracheingabe
+      ohne Übermittlung).
+- [ ] **Vorlagen für die Pflegeplanung:** Standardpläne und Massnahmenkataloge der Einrichtung (keine Vorgaben von
+      CareCore), bei einer Person übernehmen und anpassen.
+- [ ] **Rufsystem anbinden:** Rufe (z. B. Ascom, Teletronic) in CareCore anzeigen und dokumentieren, Reaktionszeiten
+      für die Qualität. Braucht die Schnittstelle des Herstellers.
+- [ ] **Apotheke und Blister elektronisch:** Bestellungen an die Apotheke elektronisch, Rückmeldung von Verblisterung
+      und Änderungen; heute nur über das Apothekenportal.
+- [ ] **Lohn-Export der Zeiterfassung:** Stunden, Zuschläge und Abwesenheiten im Format der Lohnbuchhaltung (z. B.
+      Abacus, Sage); Lohnarten legt die Einrichtung fest.
+
+### Niedrig (weitere Märkte und Wechsel)
+
+- [ ] **Spitex und betreutes Wohnen:** Klientenverwaltung, ärztliche Verordnung bzw. Bedarfsmeldung, Einsatz- und
+      Tourenplanung, Leistungserfassung unterwegs mit Zeitstempel, Leistungsarten nach KLV, Abrechnung.
+- [ ] **Datenübernahme aus careCoach:** neben Bewohnern und Mitarbeitenden (CSV, vorhanden) auch der Verlauf der
+      Pflegedokumentation, Pflegeplanung und Medikation, sobald ein Exportformat vorliegt.
+
 ## Braucht eine Entscheidung oder externe Quelle
 
 - **Backups / Disaster Recovery:** Für diese Installation in Railway eingeschaltet; bei weiteren Installationen je
