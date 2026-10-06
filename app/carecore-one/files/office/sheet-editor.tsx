@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal, flushSync } from "react-dom";
-import { CaretDown, Columns, Funnel, Function as FunctionIcon, Plus } from "@phosphor-icons/react";
+import { CaretDown, Columns, Funnel, Function as FunctionIcon, Lock, Plus } from "@phosphor-icons/react";
 import {
   ERROR_HINTS,
   functionHelp,
@@ -19,6 +19,8 @@ import {
 } from "@/lib/office/formula";
 import type { CommentThread } from "@/lib/office/comments";
 import { mergeModels } from "@/lib/office/merge";
+import { pivotFields, refreshPivotSheet } from "@/lib/office/pivot";
+import { PIVOT_MESSAGE, PROTECTED_MESSAGE, cellLocked, protectionBlock } from "@/lib/office/sheet-protection";
 import { collaboratorColor, type Collaborator } from "@/lib/office/presence";
 import {
   DEFAULT_COL_WIDTH,
@@ -37,6 +39,7 @@ import {
   type SheetCell,
   type SheetChart,
   type SheetModel,
+  type SheetPivot,
 } from "@/lib/office/model";
 import {
   DEFAULT_BORDER_COLOR,
@@ -88,6 +91,7 @@ import {
   FindBar,
   NamesDialog,
   PageDialog,
+  PivotDialog,
   RulesDialog,
   ValidationDialog,
   type ChartValues,
@@ -213,7 +217,13 @@ export default function SheetEditor({
     emit.current(next);
   }, []);
   const commit = useCallback(
-    (next: SheetModel) => {
+    (next: SheetModel, force = false) => {
+      // Blattschutz und Pivot-Tabellen: verbotene Änderungen gar nicht erst übernehmen.
+      const block = force ? null : protectionBlock(modelRef.current, next);
+      if (block) {
+        setNotice(block);
+        return;
+      }
       historyRef.current = { undo: [...historyRef.current.undo.slice(-HISTORY + 1), modelRef.current], redo: [] };
       apply(next);
     },
@@ -415,6 +425,8 @@ export default function SheetEditor({
     const pos = range.focus;
     const origin = [...mergeAt.origin.values()].find((merge) => inArea(merge, pos.col, pos.row));
     const target = origin ? { col: origin.c1, row: origin.r1 } : pos;
+    if (cellLocked(sheet, cellKey(target.col, target.row)))
+      return setNotice(sheet.pivot ? PIVOT_MESSAGE : PROTECTED_MESSAGE);
     // Sofort zeichnen und das Eingabefeld fokussieren: so landen auch schnell getippte Zeichen in der Zelle.
     flushSync(() => {
       setEditing({ pos: target, value: value ?? rawAt(target), mode, source });
@@ -1398,6 +1410,82 @@ export default function SheetEditor({
   }
 
   // ---------- Blätter ----------
+  // ---------- Blattschutz ----------
+  function toggleProtection() {
+    if (readOnly || sheet.pivot) return;
+    const on = !sheet.protected;
+    commitSheet((current) => {
+      const next = { ...current };
+      if (on) next.protected = true;
+      else delete next.protected;
+      return next;
+    });
+    setNotice(on ? "Blatt geschützt – nur freigegebene Zellen bleiben bearbeitbar" : "Blattschutz aufgehoben");
+  }
+  function toggleUnlocked() {
+    const on = !activeStyle.unlocked;
+    applyStyle((style) => {
+      const next = { ...style };
+      if (on) next.unlocked = true;
+      else delete next.unlocked;
+      return next;
+    });
+  }
+
+  // ---------- Pivot-Tabelle ----------
+  function pivotStart(): SheetPivot {
+    if (sheet.pivot) return sheet.pivot;
+    const region =
+      area.r1 === area.r2 && area.c1 === area.c2 ? currentRegion(sheet, range.focus.col, range.focus.row) : area;
+    return {
+      source: sheet.id,
+      range: areaName(region),
+      rows: 0,
+      cols: null,
+      value: Math.min(1, region.c2 - region.c1),
+      fn: "sum",
+    };
+  }
+  function pivotFieldsFor(source: string, rangeText: string) {
+    const current = modelRef.current;
+    const index = current.sheets.findIndex((item) => item.id === source);
+    const region = parseArea(rangeText);
+    if (index < 0 || !region || region.r2 <= region.r1) return null;
+    const values = evaluateWorkbook(current);
+    return pivotFields(current.sheets[index], region, (col, row) => values.value(index, cellKey(col, row)));
+  }
+  function savePivot(pivot: SheetPivot, editing: boolean) {
+    const current = modelRef.current;
+    const values = evaluateWorkbook(current).value;
+    if (editing) {
+      const built = refreshPivotSheet(current, { ...current.sheets[active], pivot }, values);
+      if ("error" in built) return setNotice(built.error);
+      commit(replaceSheet(current, active, built), true);
+      return setNotice("Pivot-Tabelle geändert");
+    }
+    const names = new Set(current.sheets.map((item) => item.name.toLocaleLowerCase("de-CH")));
+    let number = 1;
+    while (names.has(`pivot-tabelle ${number}`)) number += 1;
+    const built = refreshPivotSheet(current, { ...newSheet(`Pivot-Tabelle ${number}`), pivot }, values);
+    if ("error" in built) return setNotice(built.error);
+    const at =
+      Math.max(
+        0,
+        current.sheets.findIndex((item) => item.id === pivot.source),
+      ) + 1;
+    commit({ ...current, sheets: [...current.sheets.slice(0, at), built, ...current.sheets.slice(at)] }, true);
+    setActive(at);
+    setRange({ anchor: { col: 0, row: 0 }, focus: { col: 0, row: 0 } });
+    setNotice("Pivot-Tabelle eingefügt");
+  }
+  function refreshPivot() {
+    const current = modelRef.current;
+    const built = refreshPivotSheet(current, current.sheets[active], evaluateWorkbook(current).value);
+    if ("error" in built) return setNotice(built.error);
+    commit(replaceSheet(current, active, built), true);
+    setNotice("Pivot-Tabelle aktualisiert");
+  }
+
   function addSheet() {
     if (readOnly) return;
     const names = new Set(model.sheets.map((item) => item.name.toLocaleLowerCase("de-CH")));
@@ -1882,6 +1970,13 @@ export default function SheetEditor({
           showComments={showComments}
           setShowComments={setShowComments}
           downloadCsv={downloadCsv}
+          protectedSheet={Boolean(sheet.protected)}
+          pivotSheet={Boolean(sheet.pivot)}
+          toggleProtection={toggleProtection}
+          toggleUnlocked={toggleUnlocked}
+          openPivot={() => setDialog({ kind: "pivot", editing: false })}
+          editPivot={() => setDialog({ kind: "pivot", editing: true })}
+          refreshPivot={refreshPivot}
         />
       )}
       <div className="sheet-formula-bar">
@@ -2249,6 +2344,7 @@ export default function SheetEditor({
                   setMenu({ x: event.clientX, y: event.clientY, kind: "tab", sheet: index });
                 }}
               >
+                {item.protected && <Lock className="sheet-tab-lock" aria-hidden="true" />}
                 {item.name}
               </button>
             ),
@@ -2456,6 +2552,16 @@ export default function SheetEditor({
               validations: current.validations.filter((item) => item.range !== rangeText),
             }))
           }
+        />
+      )}
+      {dialog?.kind === "pivot" && (
+        <PivotDialog
+          sheets={model.sheets.filter((item) => !item.pivot).map((item) => ({ id: item.id, name: item.name }))}
+          initial={pivotStart()}
+          editing={dialog.editing}
+          fieldsFor={pivotFieldsFor}
+          onClose={() => setDialog(null)}
+          onSave={(pivot) => savePivot(pivot, dialog.editing)}
         />
       )}
       {dialog?.kind === "names" && (

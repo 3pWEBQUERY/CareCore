@@ -773,3 +773,92 @@ test("Dokument: Änderungen nachverfolgen, annehmen und ablehnen", async ({ page
   await expect(page.locator(".office-status")).toContainText("Gespeichert um");
   expect(errors).toEqual([]);
 });
+
+// Tabelle: Pivot-Tabelle aus einem Bereich mit Überschriften (eigenes Blatt, nur über „Aktualisieren“ geändert) und
+// Blattschutz mit einer freigegebenen Zelle.
+test("Tabelle: Pivot-Tabelle einfügen und aktualisieren, Blattschutz mit freigegebener Zelle", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  const stamp = Date.now();
+  await page.goto("/c/carecore-one/ablage");
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Tabelle/ }).click();
+  const gallery = page.getByRole("dialog", { name: "Neue Tabelle (Excel)" });
+  await gallery.getByLabel("Name").fill(`Auswertung ${stamp}`);
+  await gallery.getByRole("button", { name: "Erstellen und öffnen" }).click();
+  const data = page.getByRole("grid", { name: "Blatt Tabelle1" });
+  await data.focus();
+  for (const row of [
+    ["Wohnbereich", "Monat", "Minuten"],
+    ["Ahorn", "Januar", "120"],
+    ["Birke", "Januar", "90"],
+    ["Ahorn", "Februar", "60"],
+  ]) {
+    for (const [index, value] of row.entries()) {
+      await page.keyboard.type(value);
+      await page.keyboard.press(index === row.length - 1 ? "Enter" : "Tab");
+    }
+    await page.keyboard.press("Home");
+  }
+  await data
+    .locator("td")
+    .filter({ hasText: /^Wohnbereich$/ })
+    .click();
+
+  // Pivot-Tabelle: Summe der Minuten je Wohnbereich.
+  await page.getByRole("button", { name: "Pivot-Tabelle einfügen" }).click();
+  const dialog = page.getByRole("dialog", { name: "Pivot-Tabelle einfügen" });
+  await expect(dialog.getByLabel("Bereich")).toHaveValue("A1:C4");
+  await dialog.getByRole("combobox", { name: "Werte" }).click();
+  await page.getByRole("option", { name: "Minuten" }).click();
+  await dialog.getByRole("button", { name: "Einfügen" }).click();
+  const pivot = page.getByRole("grid", { name: "Blatt Pivot-Tabelle 1" });
+  await expect(pivot).toBeVisible();
+  await expect(pivot.locator("td").filter({ hasText: /^Summe von Minuten$/ })).toHaveCount(1);
+  await expect(pivot.locator("td").filter({ hasText: /^Gesamtergebnis$/ })).toHaveCount(1);
+  await expect(pivot.locator("td").filter({ hasText: /^270$/ })).toHaveCount(1);
+  // Zellen der Pivot-Tabelle sind fest.
+  await pivot.locator("td").filter({ hasText: /^180$/ }).click();
+  await page.keyboard.type("5");
+  await expect(page.locator(".office-toast")).toContainText("Pivot-Tabelle ändert sich nur");
+  await expect(pivot.locator("td").filter({ hasText: /^180$/ })).toHaveCount(1);
+
+  // Daten ändern, dann aktualisieren.
+  await page.getByRole("tab", { name: "Tabelle1" }).click();
+  await data.locator("td").filter({ hasText: /^90$/ }).click();
+  await page.keyboard.type("100");
+  await page.keyboard.press("Enter");
+  await page.getByRole("tab", { name: "Pivot-Tabelle 1" }).click();
+  await expect(pivot.locator("td").filter({ hasText: /^270$/ })).toHaveCount(1);
+  await page.getByRole("button", { name: "Pivot-Tabelle aktualisieren" }).click();
+  await expect(pivot.locator("td").filter({ hasText: /^280$/ })).toHaveCount(1);
+
+  // Blattschutz: C2 bleibt bearbeitbar, A1 nicht.
+  await page.getByRole("tab", { name: "Tabelle1" }).click();
+  await data.locator("td").filter({ hasText: /^120$/ }).click();
+  await page.getByRole("button", { name: "Bearbeitbar trotz Blattschutz" }).click();
+  await page.getByRole("button", { name: "Blatt schützen" }).click();
+  await expect(page.getByRole("button", { name: "Blattschutz aufheben" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("tab", { name: "Tabelle1" }).locator(".sheet-tab-lock")).toBeVisible();
+  await data
+    .locator("td")
+    .filter({ hasText: /^Wohnbereich$/ })
+    .click();
+  await page.keyboard.type("X");
+  await expect(page.locator(".office-toast")).toContainText("Das Blatt ist geschützt.");
+  await expect(data.locator("td").filter({ hasText: /^Wohnbereich$/ })).toHaveCount(1);
+  await data.locator("td").filter({ hasText: /^120$/ }).click();
+  await page.keyboard.type("125");
+  await page.keyboard.press("Enter");
+  await expect(data.locator("td").filter({ hasText: /^125$/ })).toHaveCount(1);
+  await page.getByRole("button", { name: "Blattschutz aufheben" }).click();
+  await data
+    .locator("td")
+    .filter({ hasText: /^Wohnbereich$/ })
+    .click();
+  await page.keyboard.type("Bereich");
+  await page.keyboard.press("Enter");
+  await expect(data.locator("td").filter({ hasText: /^Bereich$/ })).toHaveCount(1);
+  await expect(page.locator(".office-status")).toContainText("Gespeichert um");
+  expect(errors).toEqual([]);
+});
