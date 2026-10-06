@@ -1,4 +1,5 @@
 import type { Editor } from "@tiptap/react";
+import { TextSelection } from "@tiptap/pm/state";
 
 // Liste ein- oder ausschalten wie in Word: Liegt jeder beschriebene Absatz der Markierung schon in dieser Liste,
 // wird sie aufgehoben (auch nach „Alles markieren“, das den leeren Schlussabsatz mit erfasst); sonst wird sie gesetzt.
@@ -76,4 +77,18 @@ export function applyContent(editor: Editor, json: unknown) {
   tr.setMeta("addToHistory", false);
   tr.setMeta(REMOTE_META, true);
   editor.view.dispatch(tr);
+}
+
+// Markierung bzw. Cursor aus dem Browser übernehmen: direkt nach Shift+Pfeil, Pos1 oder Ende kennt der Editor sie
+// noch nicht (der Browser meldet die neue Stelle erst etwas später).
+export function syncSelection(editor: Editor) {
+  const dom = window.getSelection();
+  const { view } = editor;
+  if (!dom?.anchorNode || !dom.focusNode || !view.dom.contains(dom.anchorNode) || !view.dom.contains(dom.focusNode))
+    return;
+  const anchor = view.posAtDOM(dom.anchorNode, dom.anchorOffset);
+  const head = view.posAtDOM(dom.focusNode, dom.focusOffset);
+  const { selection } = view.state;
+  if (anchor === selection.anchor && head === selection.head) return;
+  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, anchor, head)));
 }
