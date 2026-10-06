@@ -35,6 +35,10 @@
   font-size: 14px;
 }
 .proof-resident h2 a {
+  /* Tippfläche mindestens 24 px (WCAG 2.2, 2.5.8) ohne andere Optik. */
+  display: inline-block;
+  margin: -5px 0;
+  padding: 5px 0;
   color: var(--brand-dark);
 }
 .proof-resident h2 span,
