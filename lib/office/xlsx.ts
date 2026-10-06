@@ -140,7 +140,10 @@ class StyleTable {
       horizontal || style.valign || style.wrap || style.indent
         ? `<alignment${horizontal ? ` horizontal="${horizontal}"` : ""}${style.valign ? ` vertical="${style.valign === "middle" ? "center" : style.valign}"` : ""}${style.wrap ? ' wrapText="1"' : ""}${style.indent ? ` indent="${style.indent}"` : ""}/>`
         : "";
-    const xf = `<xf numFmtId="${numFmt}" fontId="${font}" fillId="${fill}" borderId="${border}" xfId="0"${numFmt ? ' applyNumberFormat="1"' : ""}${font ? ' applyFont="1"' : ""}${fill ? ' applyFill="1"' : ""}${border ? ' applyBorder="1"' : ""}${alignment ? ` applyAlignment="1">${alignment}</xf>` : "/>"}`;
+    // Blattschutz: Zelle nicht gesperrt (Excel: Format › Schutz › „Gesperrt“ aus).
+    const protection = style.unlocked ? '<protection locked="0"/>' : "";
+    const inner = alignment + protection;
+    const xf = `<xf numFmtId="${numFmt}" fontId="${font}" fillId="${fill}" borderId="${border}" xfId="0"${numFmt ? ' applyNumberFormat="1"' : ""}${font ? ' applyFont="1"' : ""}${fill ? ' applyFill="1"' : ""}${border ? ' applyBorder="1"' : ""}${alignment ? ' applyAlignment="1"' : ""}${protection ? ' applyProtection="1"' : ""}${inner ? `>${inner}</xf>` : "/>"}`;
     this.xfs.push(xf);
     this.index.set(key, this.xfs.length - 1);
     return this.xfs.length - 1;
@@ -420,7 +423,7 @@ function sheetXml(
   const print = sheet.print;
   const sheetPr = print.fit ? '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' : "";
   const pageSetup = `<pageSetup paperSize="9" orientation="${print.orientation}"${print.fit ? ' fitToWidth="1" fitToHeight="0"' : ""}/>${headerFooterXml(print)}`;
-  return `${XML_HEAD}<worksheet ${MAIN}>${sheetPr}<sheetViews><sheetView${sheet.showGrid ? "" : ' showGridLines="0"'} workbookViewId="0"${index === 0 ? ' tabSelected="1"' : ""}>${pane}</sheetView></sheetViews><sheetFormatPr defaultColWidth="${excelWidth(DEFAULT_COL_WIDTH)}" defaultRowHeight="${DEFAULT_ROW_HEIGHT * 0.75}"/>${cols ? `<cols>${cols}</cols>` : ""}<sheetData>${data}</sheetData>${autoFilter}${merges}${conditional}${validations}${print.gridlines ? '<printOptions gridLines="1"/>' : ""}<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>${pageSetup}${drawing ? `<drawing r:id="${drawing}"/>` : ""}${legacy ? `<legacyDrawing r:id="${legacy}"/>` : ""}</worksheet>`;
+  return `${XML_HEAD}<worksheet ${MAIN}>${sheetPr}<sheetViews><sheetView${sheet.showGrid ? "" : ' showGridLines="0"'} workbookViewId="0"${index === 0 ? ' tabSelected="1"' : ""}>${pane}</sheetView></sheetViews><sheetFormatPr defaultColWidth="${excelWidth(DEFAULT_COL_WIDTH)}" defaultRowHeight="${DEFAULT_ROW_HEIGHT * 0.75}"/>${cols ? `<cols>${cols}</cols>` : ""}<sheetData>${data}</sheetData>${sheet.protected ? '<sheetProtection sheet="1" objects="1" scenarios="1"/>' : ""}${autoFilter}${merges}${conditional}${validations}${print.gridlines ? '<printOptions gridLines="1"/>' : ""}<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>${pageSetup}${drawing ? `<drawing r:id="${drawing}"/>` : ""}${legacy ? `<legacyDrawing r:id="${legacy}"/>` : ""}</worksheet>`;
 }
 
 // ---------- Diagramme ----------
@@ -856,6 +859,7 @@ function readStyles(xml: Buffer | undefined): CellStyle[] {
     if (vertical === "top" || vertical === "bottom") style.valign = vertical;
     if (vertical === "center") style.valign = "middle";
     if (alignment?.attrs.wrapText === "1") style.wrap = true;
+    if (child(xf, "protection")?.attrs.locked === "0") style.unlocked = true;
     const indent = Number(alignment?.attrs.indent ?? 0);
     if (indent >= 1) style.indent = Math.min(10, Math.trunc(indent));
     return style;
@@ -972,6 +976,8 @@ function readSheet(
   sheet.colCount = Math.min(200, Math.max(26, maxCol + 2));
   const view = find(find(root, "sheetViews"), "sheetView");
   if (view?.attrs.showGridLines === "0") sheet.showGrid = false;
+  const protection = find(root, "sheetProtection");
+  if (protection && (protection.attrs.sheet === "1" || protection.attrs.sheet === "true")) sheet.protected = true;
   // Zeilen, die ein Filter ausblendet, ergeben sich wieder aus dem Filter.
   let filterVisible: FilterVisible | null = null;
   const autoFilter = find(root, "autoFilter");

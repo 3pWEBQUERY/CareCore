@@ -337,6 +337,13 @@
   color: var(--ink);
   background: var(--brand-soft);
 }
+/* Geschütztes Blatt: Schloss vor dem Namen */
+.sheet-tab-lock {
+  width: 13px;
+  height: 13px;
+  margin-right: 5px;
+  vertical-align: -2px;
+}
 .sheet-tab-rename {
   width: 140px;
   border: 1px solid var(--brand);

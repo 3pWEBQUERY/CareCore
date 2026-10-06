@@ -10,6 +10,7 @@ export type Dialog =
   | { kind: "chart"; chart: SheetChart | null }
   | { kind: "names" }
   | { kind: "page" }
+  | { kind: "pivot"; editing: boolean }
   | null;
 
 // Rahmenlinien als innere Schatten (sie verschieben das Raster nicht).

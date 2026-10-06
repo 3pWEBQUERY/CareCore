@@ -279,6 +279,18 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       (Schweiz) bzw. EUR (Deutschland, Österreich). Gesetzliche Höchstbeträge oder Abrechnungsfristen gibt CareCore
       nicht vor.
 
+## Erledigt (06.10.2026): Tabelle
+
+- [x] **Pivot-Tabelle:** Daten › „Pivot-Tabelle einfügen“ fasst einen Bereich mit Überschriften nach einem Zeilenfeld
+      und optional einem Spaltenfeld zusammen (Summe, Anzahl, Mittelwert, Minimum, Maximum, mit Gesamtergebnissen) und
+      legt sie auf ein eigenes Blatt. Die Zellen der Pivot-Tabelle sind fest; „Pivot-Tabelle aktualisieren“ übernimmt
+      geänderte Daten, „bearbeiten“ ändert die Felder. In der Excel-Datei steht die Pivot-Tabelle als Werte (ohne
+      Excel-eigene Pivot-Definition); in CareCore bleibt sie aktualisierbar.
+- [x] **Blattschutz:** Überprüfen › „Blatt schützen“ sperrt Zellen, Formate und den Aufbau des Blatts; mit
+      „Bearbeitbar trotz Blattschutz“ freigegebene Zellen bleiben ausfüllbar (z. B. Vorlagen). Schutz vor versehentlichen
+      Änderungen ohne Kennwort: wer die Datei bearbeiten darf, kann den Schutz aufheben. In der Excel-Datei als
+      `sheetProtection` und „Gesperrt“ je Zelle (wird auch aus Excel gelesen).
+
 ## Analyse vom 03.10.2026: noch zu erstellen
 
 Rundgang über alle 89 Seiten (Desktop und Handy, als Administration): keine Skriptfehler, keine fehlgeschlagenen

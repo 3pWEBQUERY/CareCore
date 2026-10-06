@@ -7,6 +7,7 @@ import {
   AlignTop,
   ArrowUUpLeft,
   ArrowUUpRight,
+  ArrowsClockwise,
   ArrowsMerge,
   ChartBar,
   ChatCircleText,
@@ -17,9 +18,12 @@ import {
   GridFour,
   Highlighter,
   ListChecks,
+  Lock,
+  LockOpen,
   MagnifyingGlass,
   PaintBrush,
   PaintBucket,
+  PencilSimple,
   Printer,
   Rows,
   Sigma,
@@ -28,6 +32,7 @@ import {
   SortDescending,
   SquareHalf,
   Swatches,
+  Table,
   Tag,
   TextAUnderline,
   TextAlignCenter,
@@ -108,6 +113,13 @@ export function SheetRibbon({
   showComments,
   setShowComments,
   downloadCsv,
+  protectedSheet,
+  pivotSheet,
+  toggleProtection,
+  toggleUnlocked,
+  openPivot,
+  editPivot,
+  refreshPivot,
 }: {
   canUndo: boolean;
   canRedo: boolean;
@@ -152,6 +164,13 @@ export function SheetRibbon({
   showComments: boolean;
   setShowComments: Dispatch<SetStateAction<boolean>>;
   downloadCsv: () => void;
+  protectedSheet: boolean;
+  pivotSheet: boolean;
+  toggleProtection: () => void;
+  toggleUnlocked: () => void;
+  openPivot: () => void;
+  editPivot: () => void;
+  refreshPivot: () => void;
 }) {
   return (
     <div className="office-ribbon" role="toolbar" aria-label="Tabelle bearbeiten">
@@ -450,6 +469,14 @@ export function SheetRibbon({
         <ToolButton label="Bedingte Formatierung" icon={<Highlighter />} onClick={() => setDialog({ kind: "rules" })} />
         <ToolButton label="Diagramm einfügen" icon={<ChartBar />} onClick={addChart} />
         <ToolButton label="Namen verwalten" icon={<Tag />} onClick={() => setDialog({ kind: "names" })} />
+        {pivotSheet ? (
+          <>
+            <ToolButton label="Pivot-Tabelle aktualisieren" icon={<ArrowsClockwise />} onClick={refreshPivot} />
+            <ToolButton label="Pivot-Tabelle bearbeiten" icon={<PencilSimple />} onClick={editPivot} />
+          </>
+        ) : (
+          <ToolButton label="Pivot-Tabelle einfügen" icon={<Table />} onClick={openPivot} />
+        )}
       </ToolGroup>
       <ToolSeparator />
       <ToolGroup label="Bearbeiten">
@@ -622,6 +649,20 @@ export function SheetRibbon({
           icon={<ChatsCircle />}
           active={showComments}
           onClick={() => setShowComments((value) => !value)}
+        />
+        <ToolButton
+          label={protectedSheet ? "Blattschutz aufheben" : "Blatt schützen"}
+          icon={protectedSheet ? <Lock /> : <LockOpen />}
+          active={protectedSheet}
+          disabled={pivotSheet}
+          onClick={toggleProtection}
+        />
+        <ToolButton
+          label="Bearbeitbar trotz Blattschutz"
+          icon={<LockOpen />}
+          active={Boolean(activeStyle.unlocked)}
+          disabled={protectedSheet || pivotSheet}
+          onClick={toggleUnlocked}
         />
       </ToolGroup>
       <ToolSeparator />

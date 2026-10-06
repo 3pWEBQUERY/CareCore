@@ -6,13 +6,16 @@ import { Check, X } from "@phosphor-icons/react";
 import { CareOptionSelect } from "@/app/components/care-form-controls";
 import { areaName, parseArea, type Area } from "@/lib/office/formula";
 import {
+  PIVOT_FUNCTIONS,
   nameProblem,
   type ChartType,
+  type PivotFunction,
   type PrintSetup,
   type RuleOp,
   type RuleStyle,
   type SheetChart,
   type SheetName,
+  type SheetPivot,
   type SheetRule,
 } from "@/lib/office/model";
 import {
@@ -1279,5 +1282,121 @@ export function FilterMenu({
       </div>
     </div>,
     document.body,
+  );
+}
+
+// ---------- Pivot-Tabelle ----------
+
+export type PivotValues = SheetPivot;
+
+export function PivotDialog({
+  sheets,
+  initial,
+  editing,
+  fieldsFor,
+  onSave,
+  onClose,
+}: {
+  sheets: { id: string; name: string }[];
+  initial: PivotValues;
+  editing: boolean;
+  // Überschriften des Bereichs (null: Bereich ungültig).
+  fieldsFor: (source: string, range: string) => string[] | null;
+  onSave: (pivot: PivotValues) => void;
+  onClose: () => void;
+}) {
+  const [source, setSource] = useState(initial.source);
+  const [range, setRange] = useState(initial.range);
+  const [rows, setRows] = useState(String(initial.rows));
+  const [cols, setCols] = useState(initial.cols === null ? "" : String(initial.cols));
+  const [value, setValue] = useState(String(initial.value));
+  const [fn, setFn] = useState<PivotFunction>(initial.fn);
+  const [problem, setProblem] = useState("");
+  const normalized = normalizeRange(range);
+  const fields = normalized ? fieldsFor(source, normalized) : null;
+  const options = (fields ?? []).map((name, index) => ({ value: String(index), label: name }));
+  const save = () => {
+    if (!normalized || !fields)
+      return setProblem("Bitte einen gültigen Bereich mit Überschriften angeben, z. B. A1:D50.");
+    const at = (text: string) => (text !== "" && Number(text) < fields.length ? Number(text) : null);
+    const rowField = at(rows);
+    const valueField = at(value);
+    if (rowField === null || valueField === null) return setProblem("Bitte das Zeilenfeld und das Wertfeld wählen.");
+    const colField = at(cols);
+    if (colField !== null && colField === rowField)
+      return setProblem("Zeilen und Spalten brauchen zwei verschiedene Felder.");
+    onSave({ source, range: normalized, rows: rowField, cols: colField, value: valueField, fn });
+    onClose();
+  };
+  return (
+    <SheetDialog
+      title={editing ? "Pivot-Tabelle bearbeiten" : "Pivot-Tabelle einfügen"}
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" onClick={onClose}>
+            Abbrechen
+          </button>
+          <button type="button" className="primary" onClick={save}>
+            {editing ? "Übernehmen" : "Einfügen"}
+          </button>
+        </>
+      }
+    >
+      <p className="sheet-dialog-text">
+        Fasst einen Bereich mit Überschriften in der ersten Zeile zusammen. Die Pivot-Tabelle steht auf einem eigenen
+        Blatt und wird über „Pivot-Tabelle aktualisieren“ auf den neuen Stand gebracht.
+      </p>
+      <div className="sheet-dialog-grid">
+        <Field label="Blatt mit den Daten">
+          <CareOptionSelect
+            label="Blatt mit den Daten"
+            value={source}
+            menuZIndex={MENU_Z}
+            options={sheets.map((item) => ({ value: item.id, label: item.name }))}
+            onChange={setSource}
+          />
+        </Field>
+        <Field label="Bereich">
+          <input value={range} onChange={(event) => setRange(event.target.value)} spellCheck={false} />
+        </Field>
+      </div>
+      <div className="sheet-dialog-grid">
+        <Field label="Zeilen">
+          <CareOptionSelect label="Zeilen" value={rows} menuZIndex={MENU_Z} options={options} onChange={setRows} />
+        </Field>
+        <Field label="Spalten (optional)">
+          <CareOptionSelect
+            label="Spalten (optional)"
+            value={cols}
+            menuZIndex={MENU_Z}
+            options={[{ value: "", label: "Keine" }, ...options]}
+            onChange={setCols}
+          />
+        </Field>
+      </div>
+      <div className="sheet-dialog-grid">
+        <Field label="Werte">
+          <CareOptionSelect label="Werte" value={value} menuZIndex={MENU_Z} options={options} onChange={setValue} />
+        </Field>
+        <Field label="Berechnung">
+          <CareOptionSelect
+            label="Berechnung"
+            value={fn}
+            menuZIndex={MENU_Z}
+            options={(Object.keys(PIVOT_FUNCTIONS) as PivotFunction[]).map((key) => ({
+              value: key,
+              label: PIVOT_FUNCTIONS[key],
+            }))}
+            onChange={(next) => setFn(next as PivotFunction)}
+          />
+        </Field>
+      </div>
+      {problem && (
+        <p className="office-inline-error" role="alert">
+          {problem}
+        </p>
+      )}
+    </SheetDialog>
   );
 }

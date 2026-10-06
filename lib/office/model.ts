@@ -111,6 +111,8 @@ export type CellStyle = {
   bc?: string;
   font?: string;
   indent?: number;
+  // Blattschutz: Zelle bleibt bearbeitbar, wenn das Blatt geschützt ist (wie „Gesperrt“ ausschalten in Excel).
+  unlocked?: boolean;
 };
 export type BorderWeight = "thin" | "medium" | "thick";
 export type SheetCell = { v: string; s?: CellStyle };
@@ -186,6 +188,28 @@ export type Sheet = {
   print: PrintSetup;
   showGrid: boolean;
   comments?: Record<string, CommentThread>;
+  // Blattschutz: gesperrte Zellen, Formate und der Aufbau des Blatts lassen sich nicht ändern.
+  protected?: boolean;
+  // Pivot-Tabelle: das Blatt zeigt die Auswertung eines Bereichs (nur über „Aktualisieren“ geändert).
+  pivot?: SheetPivot;
+};
+export const PIVOT_FUNCTIONS = {
+  sum: "Summe",
+  count: "Anzahl",
+  average: "Mittelwert",
+  min: "Minimum",
+  max: "Maximum",
+} as const;
+export type PivotFunction = keyof typeof PIVOT_FUNCTIONS;
+// Quelle: Blatt (Kennung, übersteht Umbenennen) und Bereich mit Überschriften in der ersten Zeile; Felder als
+// Spalte innerhalb des Bereichs (0 = erste Spalte).
+export type SheetPivot = {
+  source: string;
+  range: string;
+  rows: number;
+  cols: number | null;
+  value: number;
+  fn: PivotFunction;
 };
 // Benannter Bereich der Arbeitsmappe („Plätze“ → Tabelle1!B2:B20), in Formeln wie ein Bezug nutzbar.
 export type SheetName = { name: string; sheet: string; range: string };
@@ -1062,6 +1086,7 @@ function cleanStyle(input: unknown): CellStyle | undefined {
   const style: CellStyle = {};
   for (const flag of ["b", "i", "u", "s", "wrap", "border", "bt", "bb", "bl", "br"] as const)
     if (raw[flag] === true) style[flag] = true;
+  if (raw.unlocked === true) style.unlocked = true;
   if (raw.bw === "thin" || raw.bw === "medium" || raw.bw === "thick") style.bw = raw.bw;
   if (typeof raw.bc === "string" && COLOR.test(raw.bc)) style.bc = raw.bc;
   if (typeof raw.font === "string" && FONT_NAMES.includes(raw.font)) style.font = raw.font;
@@ -1228,6 +1253,29 @@ function cleanSheet(input: unknown, index: number): Sheet | null {
     ...(print.pageNumbers === true ? { pageNumbers: true } : {}),
   };
   sheet.showGrid = raw.showGrid !== false;
+  if (raw.protected === true) sheet.protected = true;
+  const pivot = raw.pivot && typeof raw.pivot === "object" ? (raw.pivot as Record<string, unknown>) : null;
+  const field = (value: unknown) =>
+    Number.isInteger(value) && Number(value) >= 0 && Number(value) < 200 ? Number(value) : null;
+  if (
+    pivot &&
+    typeof pivot.source === "string" &&
+    pivot.source.length <= 40 &&
+    typeof pivot.range === "string" &&
+    RANGE.test(pivot.range) &&
+    field(pivot.rows) !== null &&
+    field(pivot.value) !== null &&
+    typeof pivot.fn === "string" &&
+    pivot.fn in PIVOT_FUNCTIONS
+  )
+    sheet.pivot = {
+      source: pivot.source,
+      range: pivot.range,
+      rows: field(pivot.rows)!,
+      cols: field(pivot.cols),
+      value: field(pivot.value)!,
+      fn: pivot.fn as PivotFunction,
+    };
   // Kommentare je Zelle (nur gültige Zellen innerhalb des Blatts).
   if (raw.comments && typeof raw.comments === "object") {
     const comments: Record<string, CommentThread> = {};
