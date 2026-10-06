@@ -360,6 +360,21 @@ test("Tabelle: Eingaben gehen nie verloren, Tooltips und Umbenennen", async ({ p
   await name.fill(`Eingaben neu ${stamp}`);
   await name.press("Enter");
   await expect(name).toHaveValue(`Eingaben neu ${stamp}.xlsx`);
+  // Tab, Tab, Enter wie in Excel: zurück in die Spalte, in der die Eingabe begann, eine Zeile tiefer.
+  await cell(5, 1).click();
+  for (const key of ["Menge", "Tab", "Preis", "Tab", "Total", "Enter", "Zweite", "Tab", "Zeile", "Enter", "Dritte"])
+    await (key === "Tab" || key === "Enter" ? page.keyboard.press(key) : page.keyboard.type(key));
+  await page.keyboard.press("Enter");
+  await expect(cell(6, 1)).toHaveText("Zweite");
+  await expect(cell(6, 2)).toHaveText("Zeile");
+  await expect(cell(7, 1)).toHaveText("Dritte");
+  // Mit einer Pfeiltaste dazwischen gilt die Tab-Folge nicht mehr: Enter geht gerade nach unten.
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("Rechts");
+  await page.keyboard.press("Enter");
+  await expect(cell(9, 3)).toHaveText("Rechts");
   await cell(4, 0).click();
   // Pause länger als das automatische Speichern (1,5 s nach der Formatierung): die Eingabe bleibt offen.
   await page.keyboard.type("Beim");
@@ -798,7 +813,6 @@ test("Tabelle: Pivot-Tabelle einfügen und aktualisieren, Blattschutz mit freige
       await page.keyboard.type(value);
       await page.keyboard.press(index === row.length - 1 ? "Enter" : "Tab");
     }
-    await page.keyboard.press("Home");
   }
   await data
     .locator("td")

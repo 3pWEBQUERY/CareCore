@@ -441,7 +441,16 @@ export default function SheetEditor({
     }
   }
 
-  function commitEdit(move?: { dc: number; dr: number }, options: { keepFocus?: boolean } = {}) {
+  // Tab, Tab, …, Enter wie in Excel: Enter führt in die Spalte zurück, in der die Folge mit Tab begann, eine Zeile
+  // tiefer. Gilt nur, solange die Zelle aktiv ist, auf die der letzte Tab geführt hat.
+  const tabChain = useRef<{ start: number; at: string } | null>(null);
+  function keyStep(from: { col: number; row: number }, dc: number, dr: number) {
+    const chain = tabChain.current?.at === cellKey(from.col, from.row) ? tabChain.current : null;
+    if (dr === 0) return { dc, start: chain ? chain.start : from.col };
+    return { dc: chain ? chain.start - from.col : dc, start: null };
+  }
+
+  function commitEdit(move?: { dc: number; dr: number; key?: boolean }, options: { keepFocus?: boolean } = {}) {
     const editing = editingRef.current;
     if (!editing) return true;
     let raw = editing.value;
@@ -479,8 +488,10 @@ export default function SheetEditor({
     setFormulaError("");
     setPoint(null);
     if (move) {
-      const next = { col: editing.pos.col + move.dc, row: editing.pos.row + move.dr };
+      const step = move.key ? keyStep(editing.pos, move.dc, move.dr) : { dc: move.dc, start: null };
+      const next = { col: editing.pos.col + step.dc, row: editing.pos.row + move.dr };
       select(next);
+      tabChain.current = step.start === null ? null : { start: step.start, at: cellKey(next.col, next.row) };
     } else select(editing.pos);
     if (!options.keepFocus) focusGrid();
     return true;
@@ -1161,7 +1172,7 @@ export default function SheetEditor({
   }
 
   // ---------- Tastatur ----------
-  function move(dc: number, dr: number, extend: boolean, jump: boolean) {
+  function move(dc: number, dr: number, extend: boolean, jump: boolean, tabStart: number | null = null) {
     const from = range.focus;
     let col = from.col + dc;
     let row = from.row + dr;
@@ -1192,6 +1203,7 @@ export default function SheetEditor({
     }
     if (extend) select(range.anchor, { col, row });
     else select({ col, row });
+    tabChain.current = tabStart === null ? null : { start: tabStart, at: cellKey(col, row) };
   }
 
   function onGridKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
@@ -1208,10 +1220,10 @@ export default function SheetEditor({
       const mod = event.metaKey || event.ctrlKey;
       if (event.key === "Enter") {
         event.preventDefault();
-        commitEdit({ dc: 0, dr: event.shiftKey ? -1 : 1 });
+        commitEdit({ dc: 0, dr: event.shiftKey ? -1 : 1, key: true });
       } else if (event.key === "Tab") {
         event.preventDefault();
-        commitEdit({ dc: event.shiftKey ? -1 : 1, dr: 0 });
+        commitEdit({ dc: event.shiftKey ? -1 : 1, dr: 0, key: true });
       } else if (event.key === "Escape") {
         event.preventDefault();
         cancelEdit();
@@ -1297,11 +1309,13 @@ export default function SheetEditor({
     }
     if (key === "Enter") {
       event.preventDefault();
-      return move(0, event.shiftKey ? -1 : 1, false, false);
+      const dr = event.shiftKey ? -1 : 1;
+      return move(keyStep(range.focus, 0, dr).dc, dr, false, false);
     }
     if (key === "Tab") {
       event.preventDefault();
-      return move(event.shiftKey ? -1 : 1, 0, false, false);
+      const dc = event.shiftKey ? -1 : 1;
+      return move(dc, 0, false, false, keyStep(range.focus, dc, 0).start);
     }
     if (key === "Home") {
       event.preventDefault();
@@ -1369,10 +1383,10 @@ export default function SheetEditor({
     }
     if (event.key === "Enter") {
       event.preventDefault();
-      commitEdit({ dc: 0, dr: event.shiftKey ? -1 : 1 });
+      commitEdit({ dc: 0, dr: event.shiftKey ? -1 : 1, key: true });
     } else if (event.key === "Tab") {
       event.preventDefault();
-      commitEdit({ dc: event.shiftKey ? -1 : 1, dr: 0 });
+      commitEdit({ dc: event.shiftKey ? -1 : 1, dr: 0, key: true });
     } else if (event.key === "Escape") {
       event.preventDefault();
       cancelEdit();
