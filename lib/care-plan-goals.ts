@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ApiError, assertUuid, text, type ApiContext, type Row } from "@/lib/api-context";
 import { residentAudit } from "@/lib/resident-audit";
+import { DAY_PART_KEYS } from "@/lib/intervention-proofs-shared";
 import { GOAL_CATEGORIES, type GoalStatus, type InterventionStatus, type Outcome } from "@/lib/care-planning-shared";
 import { date, OPEN, loadPlan, assertOpen, today } from "./care-planning";
 
@@ -153,6 +154,8 @@ export function parseIntervention(body: Record<string, unknown>) {
     instructions: text(body.instructions, 4000) || null,
     frequency: text(body.frequency, 100) || null,
     responsibleRole: text(body.responsibleRole, 100) || null,
+    // Tageszeiten für den Durchführungsnachweis (leer: ohne Nachweis je Tageszeit).
+    dayParts: DAY_PART_KEYS.filter((part) => Array.isArray(body.dayParts) && body.dayParts.includes(part)),
   };
   if (!intervention.title) throw new ApiError("Bitte die Massnahme benennen.");
   if (!intervention.frequency) throw new ApiError("Bitte die Häufigkeit angeben, z. B. „2× täglich“.");
@@ -166,8 +169,10 @@ export async function addIntervention(ctx: ApiContext, goalId: unknown, body: Re
   const id = randomUUID();
   await ctx.sql.transaction([
     ctx.sql`
-      INSERT INTO carecore_interventions (id, care_goal_id, title, instructions, frequency, responsible_role, status, created_by)
-      VALUES (${id}, ${goal.id}, ${intervention.title}, ${intervention.instructions}, ${intervention.frequency}, ${intervention.responsibleRole}, 'active', ${ctx.actor.id})`,
+      INSERT INTO carecore_interventions (id, care_goal_id, title, instructions, frequency, responsible_role, day_parts, status,
+        created_by)
+      VALUES (${id}, ${goal.id}, ${intervention.title}, ${intervention.instructions}, ${intervention.frequency},
+        ${intervention.responsibleRole}, ${intervention.dayParts}::text[], 'active', ${ctx.actor.id})`,
     log(ctx, goal.resident_id, "intervention", id, "created", null, { goalId: goal.id, ...intervention }),
   ]);
   return id;
@@ -198,7 +203,8 @@ export async function updateIntervention(ctx: ApiContext, interventionIdInput: u
   await ctx.sql.transaction([
     ctx.sql`
       UPDATE carecore_interventions SET title = ${intervention.title}, instructions = ${intervention.instructions},
-        frequency = ${intervention.frequency}, responsible_role = ${intervention.responsibleRole}, updated_at = NOW()
+        frequency = ${intervention.frequency}, responsible_role = ${intervention.responsibleRole},
+        day_parts = ${intervention.dayParts}::text[], updated_at = NOW()
       WHERE id = ${id}`,
     log(
       ctx,
@@ -211,6 +217,7 @@ export async function updateIntervention(ctx: ApiContext, interventionIdInput: u
         instructions: before.instructions,
         frequency: before.frequency,
         responsibleRole: before.responsible_role,
+        dayParts: before.day_parts,
       },
       intervention,
     ),

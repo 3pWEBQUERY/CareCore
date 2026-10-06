@@ -1,4 +1,5 @@
 // Care planning definitions shared by the API and the client workspace.
+import type { DayPart } from "@/lib/intervention-proofs-shared";
 
 export const GOAL_CATEGORIES = [
   "Mobilität",
@@ -59,6 +60,8 @@ export type Intervention = {
   instructions: string | null;
   frequency: string | null;
   responsibleRole: string | null;
+  // Tageszeiten für den Durchführungsnachweis.
+  dayParts: DayPart[];
   status: InterventionStatus;
 };
 
