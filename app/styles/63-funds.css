@@ -1,0 +1,96 @@
+/* Bewohnergelder: Konto der Person, Kasse und Kontoauszug */
+.fund-layout {
+  margin-top: 18px;
+}
+.fund-amount[data-direction="in"] {
+  color: var(--success);
+}
+.fund-amount[data-direction="out"] {
+  color: var(--ink);
+}
+.fund-entries li time {
+  flex: none;
+  width: 78px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.fund-cash-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.fund-account-link {
+  padding: 0;
+  border: 0;
+  color: var(--brand);
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.fund-account-link:hover,
+.fund-account-link:focus-visible {
+  text-decoration: underline;
+}
+.fund-counts {
+  margin-top: 16px;
+}
+.fund-counts h3 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+.fund-counts li.fund-count-differs {
+  border-color: var(--critical);
+}
+.fund-preview {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.fund-preview[data-state="negative"] {
+  border-color: var(--critical);
+  color: var(--critical);
+}
+.fund-preview[data-state="balanced"] {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.funds-sheet table {
+  margin-top: 12px;
+}
+.funds-sheet .funds-sheet-amount {
+  text-align: right;
+  white-space: nowrap;
+}
+.funds-sheet .funds-sheet-total td {
+  font-weight: 800;
+  background: #f8fafc;
+}
+.transfer-sheet dl.funds-sheet-sums {
+  grid-template-columns: minmax(0, 1fr) auto;
+  width: 320px;
+  margin: 12px 0 0 auto;
+}
+.funds-sheet-sums dd {
+  text-align: right;
+}
+.funds-sheet-signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 36px;
+  margin-top: 48px;
+}
+.funds-sheet-signatures span {
+  padding-top: 6px;
+  border-top: 1px solid #0f172a;
+  color: #475569;
+}

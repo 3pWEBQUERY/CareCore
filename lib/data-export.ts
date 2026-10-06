@@ -56,6 +56,13 @@ export const EXPORT_SECTIONS: Array<{ key: string; title: string; tables: string
     query: (sql, id) => sql`SELECT * FROM carecore_resident_belongings WHERE resident_id = ${id} ORDER BY created_at`,
   },
   {
+    key: "funds",
+    title: "Bewohnergelder (Buchungen, Beträge in Rappen bzw. Cent)",
+    tables: ["carecore_fund_entries"],
+    query: (sql, id) =>
+      sql`SELECT * FROM carecore_fund_entries WHERE resident_id = ${id} ORDER BY booked_on, created_at`,
+  },
+  {
     key: "consents",
     title: "Einwilligungen und Freigaben",
     tables: ["carecore_resident_consents"],

@@ -12,4 +12,5 @@ export const PERMISSION_LABELS: Record<string, string> = {
   "administration.manage": "Administration",
   "rai.manage": "RAI / interRAI",
   "ai.use": "CareCore KI",
+  "funds.manage": "Bewohnergelder verwalten",
 };

@@ -61,6 +61,7 @@ const roleKeys = [
   "administration.manage",
   "rai.manage",
   "ai.use",
+  "funds.manage",
 ];
 
 // Leer bleibt leer (null); sonst eine einfache Formprüfung, gespeichert in Kleinbuchstaben.
