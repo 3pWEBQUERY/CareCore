@@ -51,6 +51,14 @@
   font-size: 14px;
   line-height: 1;
 }
+/* Folie mit Übergang (wie das Sternchen in der Folienübersicht von PowerPoint) */
+.deck-thumb-transition {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+}
 .deck-thumb-number {
   padding-top: 2px;
   color: var(--muted);
@@ -684,7 +692,14 @@ textarea.deck-shape-text {
   cursor: pointer;
 }
 .deck-presenter-stage {
+  display: grid;
   width: min(100vw, calc(100vh * 16 / 9));
+  overflow: hidden;
+}
+/* Bisherige und neue Folie liegen während des Übergangs übereinander. */
+.deck-presenter-layer {
+  grid-area: 1 / 1;
+  min-width: 0;
 }
 .deck-presenter-stage .deck-slide {
   box-shadow: none;

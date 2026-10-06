@@ -1,7 +1,17 @@
 "use client";
 
 import NextImage from "next/image";
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { createPortal, flushSync } from "react-dom";
 import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -18,6 +28,7 @@ import {
   ChatCircleText,
   ChatsCircle,
   CopySimple,
+  FilmStrip,
   HighlighterCircle,
   Image as ImageIcon,
   Layout,
@@ -50,6 +61,8 @@ import {
   SLIDE_LAYOUTS,
   SLIDE_SHAPES,
   SLIDE_SIZE,
+  SLIDE_TRANSITIONS,
+  TRANSITION_SPEEDS,
   emptyDoc,
   newId,
   newSlide,
@@ -63,7 +76,10 @@ import {
   type SlideItem,
   type SlideLayout,
   type SlideShape,
+  type SlideTransitionType,
+  type TransitionSpeed,
 } from "@/lib/office/model";
+import { playTransition, reducedMotion } from "./deck-transitions";
 import { CHART_LABELS } from "@/lib/office/sheet-features";
 import { CHART_ICONS, ChartDataDialog, ItemBar, ItemLayer, SHAPE_ICONS, StaticItems } from "./deck-items";
 import type { EditorProps } from "./editor-props";
@@ -323,7 +339,11 @@ function Presenter({
   onExit: () => void;
 }) {
   const [index, setIndex] = useState(start);
+  // Bisherige Folie, solange der Übergang zur neuen läuft.
+  const [leaving, setLeaving] = useState<number | null>(null);
   const root = useRef<HTMLDivElement>(null);
+  const enterRef = useRef<HTMLDivElement>(null);
+  const leaveRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const element = root.current;
     element?.focus();
@@ -337,7 +357,27 @@ function Presenter({
       if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
     };
   }, [onExit]);
-  const go = (delta: number) => setIndex((current) => Math.max(0, Math.min(slides.length - 1, current + delta)));
+  // Übergang der Folie, die eingeblendet wird (wie in PowerPoint nur vorwärts).
+  useLayoutEffect(() => {
+    const transition = slides[index]?.transition;
+    if (leaving === null || !transition) return;
+    const animations = playTransition(transition, enterRef.current, leaveRef.current);
+    if (!animations.length) {
+      setLeaving(null);
+      return;
+    }
+    void Promise.all(animations.map((animation) => animation.finished))
+      .then(() => setLeaving(null))
+      .catch(() => undefined);
+    return () => animations.forEach((animation) => animation.cancel());
+  }, [index, leaving, slides]);
+  const show = (target: number) => {
+    const next = Math.max(0, Math.min(slides.length - 1, target));
+    if (next === index) return;
+    setLeaving(next > index && slides[next].transition && !reducedMotion() ? index : null);
+    setIndex(next);
+  };
+  const go = (delta: number) => show(index + delta);
   return createPortal(
     <div
       ref={root}
@@ -353,13 +393,20 @@ function Presenter({
         } else if (["ArrowLeft", "ArrowUp", "PageUp", "Backspace"].includes(event.key)) {
           event.preventDefault();
           go(-1);
-        } else if (event.key === "Home") setIndex(0);
-        else if (event.key === "End") setIndex(slides.length - 1);
+        } else if (event.key === "Home") show(0);
+        else if (event.key === "End") show(slides.length - 1);
         else if (event.key === "Escape") onExit();
       }}
     >
       <div className="deck-presenter-stage">
-        <SlideView slide={slides[index]} theme={theme} />
+        {leaving !== null && (
+          <div ref={leaveRef} className="deck-presenter-layer" aria-hidden="true">
+            <SlideView slide={slides[leaving]} theme={theme} />
+          </div>
+        )}
+        <div ref={enterRef} key={index} className="deck-presenter-layer">
+          <SlideView slide={slides[index]} theme={theme} />
+        </div>
       </div>
       <div className="deck-presenter-bar" onClick={(event) => event.stopPropagation()}>
         <button type="button" onClick={() => go(-1)} disabled={index === 0} aria-label="Vorherige Folie">
@@ -448,6 +495,30 @@ export default function DeckEditor({
     },
     [update],
   );
+
+  // ---------- Übergänge ----------
+  const stageRef = useRef<HTMLDivElement>(null);
+  function setTransition(type: SlideTransitionType | null) {
+    const slideId = modelRef.current.slides[index]?.id;
+    if (!slideId) return;
+    updateSlide(slideId, (item) => {
+      const next = { ...item };
+      if (type) next.transition = { type, speed: item.transition?.speed ?? "med" };
+      else delete next.transition;
+      return next;
+    });
+  }
+  function setTransitionSpeed(speed: TransitionSpeed) {
+    const slideId = modelRef.current.slides[index]?.id;
+    if (!slideId) return;
+    updateSlide(slideId, (item) => (item.transition ? { ...item, transition: { ...item.transition, speed } } : item));
+  }
+  function applyTransitionToAll() {
+    const now = modelRef.current;
+    const transition = now.slides[index]?.transition;
+    if (!transition) return;
+    update({ ...now, slides: now.slides.map((item) => ({ ...item, transition })) });
+  }
 
   useEffect(() => {
     if (!undo) return;
@@ -950,6 +1021,67 @@ export default function DeckEditor({
             )}
           </ToolGroup>
           <ToolSeparator />
+          <ToolGroup label="Übergänge">
+            <ToolPopover
+              label="Übergang"
+              className="office-format-picker"
+              trigger={
+                <span className="office-select-text">
+                  {slide.transition ? SLIDE_TRANSITIONS[slide.transition.type] : "Kein Übergang"}
+                </span>
+              }
+            >
+              {(close) => (
+                <MenuList
+                  close={close}
+                  items={[
+                    {
+                      label: "Kein Übergang",
+                      active: !slide.transition,
+                      onSelect: () => setTransition(null),
+                    },
+                    ...(Object.keys(SLIDE_TRANSITIONS) as SlideTransitionType[]).map((type) => ({
+                      label: SLIDE_TRANSITIONS[type],
+                      active: slide.transition?.type === type,
+                      onSelect: () => setTransition(type),
+                    })),
+                  ]}
+                />
+              )}
+            </ToolPopover>
+            <ToolPopover
+              label="Tempo des Übergangs"
+              disabled={!slide.transition}
+              trigger={
+                <span className="office-select-text">{TRANSITION_SPEEDS[slide.transition?.speed ?? "med"].label}</span>
+              }
+            >
+              {(close) => (
+                <MenuList
+                  close={close}
+                  items={(Object.keys(TRANSITION_SPEEDS) as TransitionSpeed[]).map((speed) => ({
+                    label: TRANSITION_SPEEDS[speed].label,
+                    hint: `${TRANSITION_SPEEDS[speed].ms / 1000} s`.replace(".", ","),
+                    active: slide.transition?.speed === speed,
+                    onSelect: () => setTransitionSpeed(speed),
+                  }))}
+                />
+              )}
+            </ToolPopover>
+            <ToolButton
+              label="Vorschau des Übergangs"
+              icon={<Play />}
+              disabled={!slide.transition}
+              onClick={() => slide.transition && playTransition(slide.transition, stageRef.current)}
+            />
+            <ToolButton
+              label="Übergang für alle Folien übernehmen"
+              icon={<CopySimple />}
+              disabled={!slide.transition}
+              onClick={applyTransitionToAll}
+            />
+          </ToolGroup>
+          <ToolSeparator />
           <ToolGroup label="Überprüfen">
             <ToolButton
               label="Neuer Kommentar"
@@ -1088,6 +1220,16 @@ export default function DeckEditor({
                       <ChatCircleText weight="fill" aria-hidden="true" />
                     </span>
                   )}
+                  {item.transition && (
+                    <span
+                      className="deck-thumb-transition"
+                      role="img"
+                      aria-label={`Übergang: ${SLIDE_TRANSITIONS[item.transition.type]}`}
+                      data-tip={`Übergang: ${SLIDE_TRANSITIONS[item.transition.type]}`}
+                    >
+                      <FilmStrip aria-hidden="true" />
+                    </span>
+                  )}
                 </span>
                 <button
                   type="button"
@@ -1139,6 +1281,7 @@ export default function DeckEditor({
         </ol>
         <div className="deck-stage-wrap">
           <div
+            ref={stageRef}
             className="deck-stage"
             onPointerDown={(event) => {
               if (!(event.target as HTMLElement).closest(".deck-item")) setSelectedItem(null);

@@ -6,6 +6,8 @@ import {
   SLIDE_BODY_SIZE,
   SLIDE_BOXES,
   SLIDE_SIZE,
+  SLIDE_TRANSITIONS,
+  TRANSITION_SPEEDS,
   cellKey,
   cleanModel,
   contrastText,
@@ -20,6 +22,9 @@ import {
   type SlideBox,
   type SlideItem,
   type SlideShape,
+  type SlideTransition,
+  type SlideTransitionType,
+  type TransitionSpeed,
 } from "./model";
 import { chartSpaceXml, readChartSpace } from "./chart-xml";
 import { initials, type CommentReply, type CommentThread } from "./comments";
@@ -227,6 +232,25 @@ function chartPart(item: Extract<SlideItem, { type: "chart" }>, workbookRel: str
   });
 }
 
+// Übergang der Folie; Richtung „von rechts“ (dir="l") wie die Vorgabe in PowerPoint.
+function transitionXml(slide: Slide) {
+  const transition = slide.transition;
+  if (!transition) return "";
+  const effect = transition.type === "fade" ? "<p:fade/>" : `<p:${transition.type} dir="l"/>`;
+  return `<p:transition spd="${transition.speed}">${effect}</p:transition>`;
+}
+
+// Übergang aus PowerPoint lesen; bei neueren Effekten (mc:AlternateContent) gilt der Ersatz für ältere Versionen.
+function readTransition(root: XmlNode): SlideTransition | undefined {
+  for (const node of findAll(root, "transition")) {
+    const effect = node.children.find((item) => item.name in SLIDE_TRANSITIONS);
+    if (!effect) continue;
+    const speed = node.attrs.spd in TRANSITION_SPEEDS ? (node.attrs.spd as TransitionSpeed) : "med";
+    return { type: effect.name as SlideTransitionType, speed };
+  }
+  return undefined;
+}
+
 function slideXml(
   slide: Slide,
   model: DeckModel,
@@ -290,7 +314,7 @@ function slideXml(
     );
   }
   for (const item of slide.items) shapes.push(itemXml(item, id++, { ...colors, background }, chartRel));
-  return `${XML_HEAD}<p:sld ${NS}><p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val="${rgb(background)}"/></a:solidFill><a:effectLst/></p:bgPr></p:bg><p:spTree>${GROUP}${shapes.join("")}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`;
+  return `${XML_HEAD}<p:sld ${NS}><p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val="${rgb(background)}"/></a:solidFill><a:effectLst/></p:bgPr></p:bg><p:spTree>${GROUP}${shapes.join("")}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>${transitionXml(slide)}</p:sld>`;
 }
 
 function notesXml(text: string) {
@@ -869,6 +893,8 @@ export function readPptx(bytes: Buffer): { model: DeckModel; imported: boolean }
       }
     const comments = readSlideComments(files, slideRels, authors, position + 1);
     if (comments.length) slide.comments = comments;
+    const transition = readTransition(root);
+    if (transition) slide.transition = transition;
     return [slide];
   });
   return { model: cleanModel("deck", { kind: "deck", theme: "carecore", slides }) as DeckModel, imported: true };
