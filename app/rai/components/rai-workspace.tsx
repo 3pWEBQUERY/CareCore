@@ -9,7 +9,7 @@ import { useApiData } from "@/app/components/workspace-ui";
 import type { RaiWorkplace } from "@/lib/rai-shared";
 import { RaiView, meta } from "./rai-data";
 import { OverviewView } from "./rai-overview-view";
-import { AssessmentView, requestRaiSave } from "./rai-assessment-view";
+import { AssessmentView } from "./rai-assessment-view";
 import { DueView, ReportsView, downloadRaiReport } from "./rai-due-reports-views";
 import { RaiRefreshPopover } from "./rai-refresh-popover";
 
@@ -31,26 +31,26 @@ export default function RaiWorkspace({ view }: { view: RaiView }) {
           <main className="workspace module-workspace rai-workspace">
             <section className="page-heading care-page-heading" aria-labelledby="rai-title">
               <div className="heading-copy">
-                <p className="eyebrow">CareCore RAI</p>
+                <p className="eyebrow">CareCore Kompass</p>
                 <h1 id="rai-title">{current.title}</h1>
                 <p>{current.description.replace("Bewohner", t.prefix)}</p>
               </div>
-              <button
-                className="primary-button"
-                type="button"
-                onClick={() =>
-                  view === "overview"
-                    ? router.push("/c/rai/erfassung")
-                    : view === "due"
-                      ? setRefreshOpen(true)
-                      : view === "assessment"
-                        ? requestRaiSave()
+              {view !== "assessment" && (
+                <button
+                  className="primary-button"
+                  type="button"
+                  onClick={() =>
+                    view === "overview"
+                      ? router.push("/c/rai/erfassung")
+                      : view === "due"
+                        ? setRefreshOpen(true)
                         : downloadRaiReport()
-                }
-              >
-                <ModuleIcon name={view === "overview" ? "plus" : "check"} className="button-icon" />
-                {current.action}
-              </button>
+                  }
+                >
+                  <ModuleIcon name={view === "overview" ? "plus" : "check"} className="button-icon" />
+                  {current.action}
+                </button>
+              )}
             </section>
             {view === "overview" && <OverviewView rai={rai} />}
             {view === "assessment" && <AssessmentView showToast={showToast} />}

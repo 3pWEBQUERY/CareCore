@@ -2,7 +2,6 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { resolveSettings } from "../lib/settings-shared.ts";
 import { notifyCategory, resolvePreferences, START_PAGES } from "../lib/user-settings-shared.ts";
-import { raiProgress, scoreFromLabel, RAI_SCORES } from "../lib/rai-shared.ts";
 
 test("organisation settings fall back to safe defaults", () => {
   const settings = resolveSettings({ documentationReminder: { enabled: false, value: 999 }, keyboardShortcuts: "x" });
@@ -36,14 +35,6 @@ test("notification types map to their category", () => {
   assert.equal(notifyCategory("supply_low"), "supply");
   assert.equal(notifyCategory("btm_count_due"), "btm");
   assert.equal(notifyCategory("support_request"), null);
-});
-
-test("RAI progress counts the four domains and the note", () => {
-  assert.equal(raiProgress({}, ""), 0);
-  assert.equal(raiProgress({ Alltag: 2, Kognition: 1 }, ""), 40);
-  assert.equal(raiProgress({ Alltag: 0, Kognition: 1, Stimmung: 2, Gesundheit: 4 }, "Notiz"), 100);
-  assert.equal(scoreFromLabel(RAI_SCORES[3]), 3);
-  assert.equal(scoreFromLabel("unbekannt"), undefined);
 });
 
 test("new personal preferences: defaults, invalid values and quiet hours across midnight", async () => {

@@ -51,11 +51,11 @@ export function DueView({ rai }: { rai: RaiData }) {
       <div className="rai-card-header">
         <div>
           <p className="eyebrow">Arbeitskorb</p>
-          <h2 className="card-title">RAI-Fälligkeiten</h2>
+          <h2 className="card-title">Fälligkeiten</h2>
           <p className="card-subtitle">
             {rai.loading && !rai.data
               ? "Wird geladen …"
-              : `${visible.length} von ${items.length} Erfassungen benötigen Aufmerksamkeit`}
+              : `${visible.length} von ${items.length} Abklärungen brauchen Aufmerksamkeit`}
           </p>
         </div>
         <div className="rai-filter-row">
@@ -110,7 +110,7 @@ export function DueView({ rai }: { rai: RaiData }) {
           <div className="resident-empty">
             <ModuleIcon name="calendar" />
             <strong>Keine Fälligkeiten</strong>
-            <p>{items.length ? "Der Filter zeigt aktuell keine Einträge." : "Alle Erfassungen sind aktuell."}</p>
+            <p>{items.length ? "Der Filter zeigt aktuell keine Einträge." : "Alle Abklärungen sind aktuell."}</p>
           </div>
         )}
       </div>
@@ -125,8 +125,8 @@ export function ReportsView({ rai }: { rai: RaiData }) {
   if (rai.error && !rai.data) return <LoadError message={rai.error} onRetry={rai.reload} />;
   const residents = rai.data?.residents ?? [];
   const summary = rai.data?.summary;
-  const scored = residents.filter((row) => row.averageScore !== null);
-  const average = scored.length ? scored.reduce((sum, row) => sum + (row.averageScore ?? 0), 0) / scored.length : null;
+  const assessed = residents.filter((row) => row.needs !== null);
+  const withNeeds = assessed.filter((row) => (row.needs ?? 0) > 0);
   const monthEnd = (() => {
     const date = new Date(`${todayInZurich().slice(0, 7)}-01T12:00:00Z`);
     date.setUTCMonth(date.getUTCMonth() + 1);
@@ -138,24 +138,24 @@ export function ReportsView({ rai }: { rai: RaiData }) {
   const reports = [
     {
       id: "complete",
-      title: "RAI-Vollständigkeit Haus",
-      detail: `${residents.filter((row) => row.state === "current" || row.state === "due").length} von ${residents.length} ${t.manyDative} mit aktueller Erfassung`,
+      title: "Vollständigkeit im Haus",
+      detail: `${residents.filter((row) => row.state === "current" || row.state === "due").length} von ${residents.length} ${t.manyDative} mit aktueller Abklärung`,
       value: summary ? `${summary.currentShare}%` : "–",
       tone: "stable",
       rows: residents.filter((row) => row.state !== "current" && row.state !== "due"),
     },
     {
       id: "need",
-      title: "Unterstützungsbedarf",
-      detail: `Ø Einschätzung über alle Bereiche (0–4) bei ${scored.length} abgeschlossenen Erfassungen`,
-      value: average === null ? "–" : average.toFixed(1).replace(".", ","),
+      title: "Handlungsbedarf festgehalten",
+      detail: `${withNeeds.length} von ${assessed.length} abgeschlossenen Abklärungen mit Handlungsbedarf in mindestens einem Bereich (Entscheid der Fachperson)`,
+      value: String(withNeeds.length),
       tone: "info",
-      rows: [...scored].sort((a, b) => (b.averageScore ?? 0) - (a.averageScore ?? 0)),
+      rows: [...withNeeds].sort((a, b) => (b.needs ?? 0) - (a.needs ?? 0)),
     },
     {
       id: "month",
       title: `Fälligkeiten ${monthName}`,
-      detail: "Erfassungen bis Monatsende mit verantwortlicher Person",
+      detail: "Abklärungen bis Monatsende mit verantwortlicher Person",
       value: String(dueThisMonth.length),
       tone: dueThisMonth.length ? "attention" : "stable",
       rows: dueThisMonth,
@@ -169,7 +169,7 @@ export function ReportsView({ rai }: { rai: RaiData }) {
         <div className="rai-card-header">
           <div>
             <p className="eyebrow">Auswertung</p>
-            <h2 className="card-title">{active ? active.title : "RAI-Berichte"}</h2>
+            <h2 className="card-title">{active ? active.title : "Berichte"}</h2>
             <p className="card-subtitle">
               {active ? countOf(active.rows.length, t) : "Transparente Kennzahlen für Pflege und Leitung."}
             </p>
@@ -199,7 +199,11 @@ export function ReportsView({ rai }: { rai: RaiData }) {
                     </small>
                   </span>
                 </span>
-                <span>{active.id === "need" ? `Ø ${row.averageScore?.toFixed(1).replace(".", ",")}` : row.reason}</span>
+                <span>
+                  {active.id === "need"
+                    ? `${row.needs} Bereich${row.needs === 1 ? "" : "e"} mit Handlungsbedarf`
+                    : row.reason}
+                </span>
                 <span className={`status-badge ${RAI_STATE[row.state].tone}`}>{RAI_STATE[row.state].label}</span>
                 <span>{row.assessor ?? "–"}</span>
                 <button className="quiet-button" type="button" onClick={() => openAssessment(row.id)}>
@@ -241,7 +245,7 @@ export function ReportsView({ rai }: { rai: RaiData }) {
         <strong>{summary ? `${summary.currentShare}% aktuell abgeschlossen` : "Wird geladen …"}</strong>
         <p>
           {drafts.length
-            ? `${drafts.length} Entw${drafts.length === 1 ? "urf wartet" : "ürfe warten"} auf den Abschluss durch eine RAI Verantwortliche.`
+            ? `${drafts.length} Entw${drafts.length === 1 ? "urf wartet" : "ürfe warten"} auf den Abschluss durch die verantwortliche Person.`
             : "Keine offenen Entwürfe."}
         </p>
         <button

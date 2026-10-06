@@ -10,6 +10,6 @@ export async function GET() {
     if (ctx instanceof NextResponse) return ctx;
     return NextResponse.json(await raiWorkplace(ctx));
   } catch (error) {
-    return apiErrorResponse(error, "RAI-Arbeitsplatz konnte nicht geladen werden.");
+    return apiErrorResponse(error, "Der Kompass konnte nicht geladen werden.");
   }
 }

@@ -570,10 +570,18 @@ weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen ode
 
 ### Hoch (ohne diese Punkte ersetzt CareCore careCoach im Heim nicht)
 
-- [ ] **Bedarfsabklärung mit anerkanntem Instrument:** Der RAI-Bereich ist heute eine vereinfachte Erfassung
-      (4 Bereiche, Stufe 0–4) ohne die Items von interRAI LTCF, ohne Abklärungshilfen (CAPs) und ohne Pflegestufe;
-      BESA fehlt. Die Inhalte sind lizenziert (interRAI; BESA bei ARTISET). Entscheid nötig: Lizenz und
-      Zertifizierung oder Schnittstelle zu RAIsoft.net bzw. BESA (Einstufung einlesen, Leistungen ausgeben).
+- [ ] **Bedarfsabklärung – eigenes Instrument „CareCore Kompass“** (Entscheid vom 06.10.2026: eigenes Instrument mit
+      eigenem Namen statt Lizenz von interRAI oder BESA; kein Medizinprodukt, Zweck siehe `docs/ZWECKBESTIMMUNG.md`).
+      Hinweis: Für die Einstufung zur Finanzierung (KVG) bleibt ein vom Kanton anerkanntes Instrument massgebend; der
+      Kompass ersetzt es nicht.
+  - [x] Schritt A: Instrument mit 13 Bereichen und beschreibenden Antwortstufen (ohne Punkte), Abklärung Schritt für
+        Schritt mit Hinweisen aus der Akte, automatisches Speichern, Übernahme früherer Antworten nur auf Knopfdruck,
+        Handlungsbedarf je Bereich als Entscheid der Fachperson, Abschluss erst vollständig, Verwerfen mit Grund.
+        Fristen (erste Abklärung nach Eintritt, Folgeabklärung) legt die Einrichtung in der Konfiguration fest.
+        Ersetzt den bisherigen vereinfachten RAI-Arbeitsplatz; frühere Erfassungen bleiben im Verlauf.
+  - [ ] Schritt B: Ergebnis mit Vergleich zur letzten Abklärung, Bericht zum Drucken, Übernahme des Handlungsbedarfs
+        in die Pflegeplanung, Anzeige in Akte und Tagesliste.
+  - [ ] Schritt C: Auswertungen je Wohnbereich, KI-Zusammenfassung als Entwurf, eigene Adresse `/kompass`.
 - [ ] **Bewohneradministration und Abrechnung:** Taxen (Pension, Betreuung, Pflege nach Stufe) mit Aufteilung nach
       Kostenträger (Versicherer, Restfinanzierung, Anteil der Person), Abwesenheiten (Spital, Ferien) mit ihrer Wirkung
       auf die Taxen, Monatsrechnung mit QR-Rechnung, elektronische Rechnung an Versicherer (Forum Datenaustausch) und
@@ -581,7 +589,8 @@ weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen ode
 - [ ] **Statistik der sozialmedizinischen Institutionen (SOMED, BFS):** jährliche Pflichtlieferung der Schweizer
       Heime; Inhalt und Format an der Quelle prüfen, Export aus den vorhandenen Daten.
 - [ ] **Datenstandort Schweiz:** Heute Railway, Region Europa. Viele Heime und Kantone erwarten Hosting in der
-      Schweiz und Nachweise (z. B. ISO 27001, externer Sicherheitstest). Entscheid des Betreibers.
+      Schweiz und Nachweise (z. B. ISO 27001, externer Sicherheitstest). Entschieden am 06.10.2026: ja, nach
+      Abschluss der übrigen Punkte.
 
 ### Mittel (damit CareCore klar besser ist)
 
@@ -593,8 +602,8 @@ weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen ode
       als Nachtrag; nichts wird ohne Bestätigung als durchgeführt vermerkt. Stornieren mit Grund statt Löschen; alles im
       Protokoll der Akte und in der Auskunft.
 - [ ] **Diktat mit KI umformulieren:** Rohtext aus der Erkennung auf dem Gerät wird pseudonymisiert zu einem
-      Pflegebericht-Entwurf umformuliert, den die Fachperson prüft. Braucht einen Entscheid (bisher: Spracheingabe
-      ohne Übermittlung).
+      Pflegebericht-Entwurf umformuliert, den die Fachperson prüft. Entschieden am 06.10.2026: ja (nur der Text,
+      keine Tonaufnahme).
 - [ ] **Vorlagen für die Pflegeplanung:** Standardpläne und Massnahmenkataloge der Einrichtung (keine Vorgaben von
       CareCore), bei einer Person übernehmen und anpassen.
 - [ ] **Rufsystem anbinden:** Rufe (z. B. Ascom, Teletronic) in CareCore anzeigen und dokumentieren, Reaktionszeiten

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { ADMIN, field, login, watchErrors } from "./support";
 
-// Wunden, Pflegeplanung und RAI auf den Demodaten, der Reihe nach.
+// Wunden, Pflegeplanung und Kompass auf den Demodaten, der Reihe nach.
 test.describe.configure({ mode: "serial" });
 
 test("Wunde anlegen mit Erstbeurteilung und Verlauf dokumentieren", async ({ page }) => {
@@ -181,34 +181,77 @@ test("Pflegeplan anlegen, Ziel formulieren und evaluieren", async ({ page }) => 
   expect(errors).toEqual([]);
 });
 
-test("RAI-Erfassung: alle Bereiche einschätzen (auch per Tastatur) und abschliessen", async ({ page }) => {
+test("Kompass: Abklärung beginnen, alle Bereiche beantworten, automatisch speichern und abschliessen", async ({
+  page,
+}) => {
   await login(page, ADMIN);
   const errors = watchErrors(page);
   await page.goto("/c/rai");
   await page.getByRole("button", { name: /Peter Aebischer/ }).click();
-  await expect(page.getByRole("heading", { name: "interRAI · Peter Aebischer" })).toBeVisible();
-  const domains = page.getByRole("combobox", { name: /Einschätzung$/ });
-  await expect(domains).toHaveCount(4);
-
-  // Erster Bereich nur mit der Tastatur: öffnen, zwei Optionen weiter, Enter wählt.
-  await domains.nth(0).focus();
+  await expect(page.getByRole("heading", { name: "Neue Abklärung · Peter Aebischer" })).toBeVisible();
+  // Anlass nur mit der Tastatur: öffnen, eine Option weiter, Enter wählt.
+  const occasion = page.getByRole("combobox", { name: "Anlass" });
+  await occasion.focus();
   await page.keyboard.press("ArrowDown");
-  await expect(domains.nth(0)).toHaveAttribute("aria-expanded", "true");
-  await page.keyboard.press("ArrowDown");
+  await expect(occasion).toHaveAttribute("aria-expanded", "true");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
-  await expect(domains.nth(0)).toHaveText("1 – Beobachten");
-  await expect(domains.nth(0)).toBeFocused();
-  for (const index of [1, 2, 3]) {
-    await domains.nth(index).click();
-    await page.getByRole("option", { name: "2 – Geringe Unterstützung" }).click();
-  }
-  await page.getByLabel("Fachliche Notiz").fill("Selbständig mit Rollator, braucht Hilfe beim Duschen.");
-  await expect(page.getByText("Entwurf · 100%")).toBeVisible();
-  await page.getByRole("button", { name: /Erfassung abschliessen/ }).click();
+  await expect(occasion).toHaveText("Regelmässige Abklärung");
+  await expect(occasion).toBeFocused();
+  await page.getByRole("button", { name: "Abklärung beginnen" }).click();
+  await expect(page.getByText("Abklärung für Peter Aebischer begonnen")).toBeVisible();
+  const steps = page.getByRole("navigation", { name: "Bereiche der Abklärung" });
+  await expect(steps.getByRole("button")).toHaveCount(15);
 
-  // Erst nach der Bestätigung weiter – sonst bricht der Seitenwechsel das Speichern ab.
-  await expect(page.getByText("interRAI-Erfassung für Peter Aebischer abgeschlossen")).toBeVisible();
+  // Grunddaten: Beteiligte wählen.
+  await page.getByRole("group", { name: "Beteiligt" }).getByRole("button", { name: "Person selbst" }).click();
+  await page.getByRole("button", { name: /^Weiter: Kommunikation & Sinne/ }).click();
+
+  // Jeden Bereich beantworten: erste Stufe, bei Bewegung „Teilweise Hilfe“ und Handlungsbedarf mit Beschreibung.
+  for (let step = 0; step < 13; step += 1) {
+    const panel = page.locator(".kompass-panel");
+    const title = (await panel.getByRole("heading", { level: 2 }).textContent()) ?? "";
+    const items = panel.locator(".kompass-item");
+    const count = await items.count();
+    for (let index = 0; index < count; index += 1) {
+      const choices = items.nth(index).getByRole("radio");
+      await (
+        title === "Bewegung & Mobilität" && index === 1
+          ? items.nth(index).getByRole("radio", { name: "Teilweise Hilfe" })
+          : choices.first()
+      ).click();
+    }
+    if (title === "Bewegung & Mobilität") {
+      await panel.getByRole("radio", { name: "Handlungsbedarf", exact: true }).click();
+      await panel.getByLabel("Was soll die Pflegeplanung aufgreifen? (Pflicht)").fill("Begleitung beim Aufstehen");
+      await panel.getByLabel("Ressourcen – was die Person selbst kann und gerne tut").fill("Geht gerne in den Garten");
+    } else await panel.getByRole("radio", { name: "Kein Handlungsbedarf" }).click();
+    await expect(steps.locator("li[data-complete=true]")).toHaveCount(step + 1);
+    if (step === 2) {
+      // Nach einem Neuladen ist alles gespeichert.
+      await expect(page.locator(".kompass-bar-state small")).toContainText("gespeichert um");
+      await page.reload();
+      await expect(steps.locator("li[data-complete=true]")).toHaveCount(3);
+      await steps
+        .getByRole("button", { name: /Sicherheit im Alltag|Körperpflege & Kleiden/ })
+        .first()
+        .click();
+      await steps.getByRole("button", { name: /Körperpflege & Kleiden/ }).click();
+      continue;
+    }
+    await page.getByRole("button", { name: /^Weiter: / }).click();
+  }
+
+  await expect(page.getByRole("heading", { name: "Abschluss", level: 2 })).toBeVisible();
+  const table = page.locator(".kompass-table");
+  await expect(table.getByRole("row", { name: /Bewegung & Mobilität/ })).toContainText("Ja");
+  await page
+    .getByLabel("Gesamtbild aus Sicht der Fachperson")
+    .fill("Selbständig mit Rollator, braucht Hilfe beim Aufstehen.");
+  await page.getByRole("button", { name: "Abklärung abschliessen" }).click();
+  await expect(page.getByText("Abklärung für Peter Aebischer abgeschlossen")).toBeVisible();
+  const history = page.getByRole("region", { name: "Abgeschlossene Abklärungen" });
+  await expect(history).toContainText("Handlungsbedarf: Bewegung & Mobilität");
   await page.goto("/c/rai");
   await expect(page.getByRole("button", { name: /Peter Aebischer.*Zimmer 101/ })).toContainText("Aktuell");
   expect(errors).toEqual([]);

@@ -6,7 +6,7 @@ export const NOTIFY_CATEGORIES = {
   schedule: { label: "Dienstplan", detail: "Erinnerungen an deine Dienste", prefix: "shift_" },
   learning: { label: "Schulungen", detail: "Zuweisungen und ablaufende Nachweise", prefix: "learning" },
   team: { label: "Team-Neuigkeiten", detail: "Wichtige Beiträge im Team", prefix: "team_" },
-  rai: { label: "RAI-Fälligkeiten", detail: "Fällige interRAI-Erfassungen", prefix: "rai_" },
+  rai: { label: "Kompass-Fälligkeiten", detail: "Fällige Abklärungen mit dem Kompass", prefix: "rai_" },
   supply: { label: "Pflegebedarf", detail: "Produkte am Mindestbestand", prefix: "supply_" },
   btm: { label: "BtM-Kontrolle", detail: "Fällige Bestandskontrollen von Betäubungsmitteln", prefix: "btm_" },
   wounds: { label: "Wundversorgung", detail: "Überfällige Verbandwechsel deiner Wunden", prefix: "wound_" },

@@ -35,7 +35,15 @@ export type ModuleIconName =
   | "filter"
   | "logout"
   | "close"
-  | "activity";
+  | "activity"
+  | "compass"
+  | "eye"
+  | "walk"
+  | "moon"
+  | "drop"
+  | "shower"
+  | "toilet"
+  | "care";
 
 export type NavModule = {
   id: string;
@@ -140,10 +148,10 @@ export const navigation: NavGroup[] = [
       },
       {
         id: "rai",
-        label: "RAI / interRAI",
-        icon: "assess",
+        label: "Kompass",
+        icon: "compass",
         permission: "rai.manage",
-        children: ["Übersicht", "Erfassung", "Fälligkeiten", "Berichte"],
+        children: ["Übersicht", "Abklärung", "Fälligkeiten", "Berichte"],
       },
     ],
   },
@@ -324,7 +332,7 @@ const routes: Record<string, Record<string, string>> = {
   activities: { Angebote: "/alltag", "Teilnahme je Person": "/alltag/teilnahme" },
   rai: {
     Übersicht: "/rai",
-    Erfassung: "/rai/erfassung",
+    Abklärung: "/rai/erfassung",
     Fälligkeiten: "/rai/faelligkeiten",
     Berichte: "/rai/berichte",
   },

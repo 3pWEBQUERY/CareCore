@@ -7,11 +7,11 @@ import { useWorkContext, useTerms } from "@/app/components/care-context";
 import { requestJson, todayInZurich } from "@/app/components/workspace-ui";
 import type { RaiWorkplace } from "@/lib/rai-shared";
 
-const SCOPES = { all: "Alle offenen Erfassungen", overdue: "Nur überfällige Erfassungen", new: "Nur neue Bewohner" };
+const SCOPES = { all: "Alle offenen Abklärungen", overdue: "Nur überfällige Abklärungen", new: "Nur neue Bewohner" };
 const PERIODS = { 30: "Nächste 30 Tage", 7: "Nächste 7 Tage", 90: "Nächste 90 Tage" };
 type Scope = keyof typeof SCOPES;
 
-// Plans the due interRAI assessments of the chosen care units (see refreshRaiDue).
+// Plant die fälligen Abklärungen der gewählten Wohnbereiche (siehe refreshRaiDue).
 export function RaiRefreshPopover({
   workplace,
   onClose,
@@ -95,12 +95,9 @@ export function RaiRefreshPopover({
       >
         <header className="area-editor-header">
           <div>
-            <p className="eyebrow">CareCore RAI · Arbeitskorb</p>
+            <p className="eyebrow">CareCore Kompass · Arbeitskorb</p>
             <h2 id="rai-refresh-title">Fälligkeiten aktualisieren</h2>
-            <p>
-              Synchronisiere die RAI-Fälligkeiten mit dem aktuellen {t.prefix}bestand und informiere die zuständigen RAI
-              Verantwortlichen.
-            </p>
+            <p>Gleiche die Fälligkeiten mit dem aktuellen {t.prefix}bestand und informiere die Verantwortlichen.</p>
           </div>
           <button className="area-editor-close" type="button" onClick={onClose} aria-label="Aktualisierung schliessen">
             ×

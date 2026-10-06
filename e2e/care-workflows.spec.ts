@@ -165,22 +165,22 @@ test("Pflegeakte: Status, Pflegebereiche und Weg in die Pflegeplanung", async ({
   expect(errors).toEqual([]);
 });
 
-test("RAI-Fälligkeiten: Filter nach Zeitraum und Grund, Öffnen der Erfassung", async ({ page }) => {
+test("Kompass-Fälligkeiten: Filter nach Zeitraum und Grund, Öffnen der Abklärung", async ({ page }) => {
   await login(page, ADMIN);
   const errors = watchErrors(page);
   await page.goto("/c/rai/faelligkeiten");
-  await expect(page.getByRole("heading", { name: "RAI-Fälligkeiten", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Fälligkeiten", level: 1 })).toBeVisible();
   const rows = page.locator("article");
   await expect(rows.first()).toBeVisible();
   const total = await rows.count();
-  await expect(page.getByText(new RegExp(`${total} von ${total} Erfassungen`))).toBeVisible();
-  // „Nach Eintritt“: Personen ohne abgeschlossene Erfassung (neu eingetreten oder Ersterfassung noch offen).
+  await expect(page.getByText(new RegExp(`${total} von ${total} Abklärungen`))).toBeVisible();
+  // „Nach Eintritt“: Personen ohne abgeschlossene Abklärung (neu eingetreten oder erste Abklärung noch offen).
   await page.getByRole("button", { name: "Nach Eintritt" }).click();
   await expect(page.getByRole("button", { name: "Nach Eintritt" })).toHaveAttribute("aria-pressed", "true");
-  await expect(rows.filter({ hasText: "Ersterfassung nach Eintritt" }).first()).toBeVisible();
+  await expect(rows.filter({ hasText: "Erste Abklärung nach Eintritt" }).first()).toBeVisible();
   const afterEntry = await rows.count();
   expect(afterEntry).toBeLessThanOrEqual(total);
-  await expect(page.getByText(new RegExp(`${afterEntry} von ${total} Erfassungen`))).toBeVisible();
+  await expect(page.getByText(new RegExp(`${afterEntry} von ${total} Abklärungen`))).toBeVisible();
   await page.getByRole("button", { name: "Alle", exact: true }).click();
   await expect(rows).toHaveCount(total);
   await rows.first().getByRole("button", { name: "Öffnen" }).click();

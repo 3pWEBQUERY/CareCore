@@ -43,7 +43,31 @@ mit der Zweckbestimmung zusammen fachlich geprüft werden.
 | Hinweise zu Wechselwirkungen    | Nur Hinweise, die die Einrichtung selbst mit Quelle erfasst; keine Wirkstoffdatenbank.                                                                                                                  |
 | Einschätzungsinstrumente        | Erfassung nach veröffentlichter Methode bzw. Vorgabe der Einrichtung; CareCore zählt Punkte und zeigt die von der Quelle bzw. Einrichtung festgelegten Bereiche; die Beurteilung trifft die Fachperson. |
 | Vitalwerte, Gewicht, Trinkmenge | Grenzen und Zeiträume legt die Einrichtung bzw. die Ärztin oder der Arzt fest; ohne Vorgabe kein Hinweis.                                                                                               |
+| CareCore Kompass                | Eigenes Instrument zur Bedarfsabklärung: beschreibende Antworten, keine Punktzahl, keine Pflegestufe, kein Risiko; Handlungsbedarf entscheidet die Fachperson je Bereich (siehe unten).                 |
 | CareCore KI                     | Erstellt nur Entwürfe (z. B. für die Pflegeplanung), die eine Fachperson prüft und übernimmt; keine Diagnosen, keine Medikation.                                                                        |
+
+## CareCore Kompass (Bedarfsabklärung)
+
+Zweck, wörtlich: „CareCore ermöglicht Pflegefachpersonen, das Assessment mit dem CareCore Kompass digital
+durchzuführen, Ergebnisse zu dokumentieren und die daraus resultierende Pflegeplanung zu verwalten.“
+
+Nicht Zweck: „CareCore analysiert die Gesundheitsdaten automatisch und bestimmt den medizinischen Pflegebedarf bzw.
+diagnostiziert Risiken.“
+
+Umsetzung:
+
+- Die Fragen und Antwortstufen sind eigenständig für CareCore verfasst und beschreiben Beobachtungen und
+  Unterstützung im Alltag (z. B. „Teilweise Hilfe“, „Häufig beobachtet“). Es gibt keine Punkte, Summen, Stufen oder
+  Ampeln, die aus den Antworten errechnet werden.
+- Ob in einem Bereich Handlungsbedarf besteht, entscheidet die Fachperson und beschreibt ihn selbst; ohne diesen
+  Entscheid lässt sich die Abklärung nicht abschliessen.
+- „Aus der Akte“ zeigt nur Fakten aus anderen Bereichen (z. B. dokumentierte Stürze, laufende Wunden, Hilfsmittel),
+  ohne sie zu bewerten.
+- Der Vergleich mit der letzten Abklärung zählt nur, bei wie vielen Fragen mehr oder weniger Unterstützung bzw.
+  Beobachtung angegeben wurde.
+- Fristen für Abklärungen legt die Einrichtung fest; ohne Einstellung wird nichts automatisch fällig.
+- Der Kompass ersetzt kein vom Kanton bzw. Land anerkanntes Instrument für die Einstufung zur Finanzierung
+  (z. B. nach KVG in der Schweiz).
 
 ## Offen
 

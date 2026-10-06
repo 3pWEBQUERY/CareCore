@@ -130,7 +130,7 @@ export const EXPORT_SECTIONS: Array<{ key: string; title: string; tables: string
   },
   {
     key: "rai",
-    title: "RAI / interRAI",
+    title: "Bedarfsabklärung (Kompass)",
     tables: ["carecore_rai_assessments"],
     query: (sql, id) => sql`SELECT * FROM carecore_rai_assessments WHERE resident_id = ${id} ORDER BY created_at`,
   },
