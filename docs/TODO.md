@@ -269,6 +269,16 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - **Sicherheit:** Zwei-Faktor-Pflicht für Leitung und Administration (einschaltbar unter Konfiguration ›
   Sicherheit), Passwort-Richtlinie ab 10 Zeichen, Administration kann alle Sitzungen einer Person beenden.
 
+## Entschieden (06.10.2026)
+
+- [x] **Bewohnergelder (Barbetrag, Taschengeld):** CareCore deckt sie ab. Bewohner › Bewohnergelder: Konto je Person
+      in der Kasse der Einrichtung mit Einzahlung, Auszahlung und Ausgabe (Zweck, von bzw. an, Beleg-Nr.), Guthaben
+      nie unter null, Storno mit Grund statt Ändern oder Löschen, Kontoauszug je Monat (A4, mit laufendem Saldo und
+      Unterschriftsfeldern) und Kassenkontrolle (gezählter Bestand gegen die Summe aller Guthaben, Differenz nur mit
+      Erklärung). Eigenes Recht „Bewohnergelder verwalten“, zu Beginn nur für die Administration. Beträge in CHF
+      (Schweiz) bzw. EUR (Deutschland, Österreich). Gesetzliche Höchstbeträge oder Abrechnungsfristen gibt CareCore
+      nicht vor.
+
 ## Analyse vom 03.10.2026: noch zu erstellen
 
 Rundgang über alle 89 Seiten (Desktop und Handy, als Administration): keine Skriptfehler, keine fehlgeschlagenen
@@ -530,9 +540,6 @@ als Entwurf in `docs/ZWECKBESTIMMUNG.md`.
       durch eine Fachperson für Medizinprodukte-Regulierung prüfen lassen.
 
 ## Braucht eine Entscheidung oder externe Quelle
-
-- **Verwaltung von Bewohnergeldern (Barbetrag, Taschengeld):** In vielen Heimen üblich (Kasse je Person mit Belegen).
-  Gehört eher zur Heimverwaltung als zur Pflege; vor dem Bau entscheiden, ob CareCore das abdecken soll.
 
 - **Backups / Disaster Recovery:** Für diese Installation in Railway eingeschaltet; bei weiteren Installationen je
   Installation einschalten (`docs/BETRIEB.md`). Ziele für RPO und RTO legt der Betreiber mit der Einrichtung fest.

@@ -28,6 +28,7 @@ import {
 } from "@/lib/feedback-shared";
 import { CONSENT_DECISIONS, type ConsentDecision } from "@/lib/consents-shared";
 import { BELONGING_KINDS, type BelongingKind } from "@/lib/belongings-shared";
+import { FUND_KINDS, type FundKind } from "@/lib/funds-shared";
 import { VACCINATION_PLACES, type VaccinationPlace } from "@/lib/vaccinations-shared";
 import { DIAGNOSIS_KINDS, DIAGNOSIS_STATUSES, type DiagnosisKind, type DiagnosisStatus } from "@/lib/diagnoses-shared";
 import { PARTICIPATION_STATUS } from "@/lib/activities-shared";
@@ -125,6 +126,8 @@ export const AUDIT_AREAS: Record<string, { area: string; href: string | null }> 
   resident_diagnosis: { area: "Diagnose", href: "/bewohner" },
   vaccination: { area: "Impfung", href: "/bewohner" },
   resident_belonging: { area: "Hilfsmittel und Gegenstände", href: "/bewohner" },
+  fund_entry: { area: "Bewohnergelder", href: "/bewohner/gelder" },
+  fund_count: { area: "Kassenkontrolle", href: "/bewohner/gelder" },
   resident_consent: { area: "Einwilligung", href: "/bewohner/einwilligungen" },
   resident_appointment: { area: "Fahrdienst", href: "/carecore-one/kalender/fahrdienst" },
   device: { area: "Gerät", href: "/leitung/qualitaet/geraete" },
@@ -328,6 +331,9 @@ const TITLES: Record<string, string> = {
   "resident_appointment:return_undone": "Vermerk der Rückkehr zurückgenommen",
   "resident_consent:revoked": "Einwilligung widerrufen",
   "resident_belonging:created": "Hilfsmittel bzw. Gegenstand erfasst",
+  "fund_entry:created": "Buchung der Bewohnergelder erfasst",
+  "fund_entry:cancelled": "Buchung der Bewohnergelder storniert",
+  "fund_count:created": "Kassenkontrolle erfasst",
   "resident_belonging:updated": "Hilfsmittel bzw. Gegenstand geändert",
   "resident_belonging:removed": "Hilfsmittel bzw. Gegenstand nicht mehr vorhanden",
   "vaccination:created": "Impfung erfasst",
@@ -625,6 +631,12 @@ const FIELDS: Record<string, string> = {
   leader: "Leitung des Angebots",
   repeatWeeks: "Wöchentlich (Anzahl)",
   witness: "Zeuge",
+  amountCents: "Betrag",
+  countedCents: "Gezählter Betrag",
+  bookedOn: "Gebucht am",
+  purpose: "Zweck",
+  party: "Von bzw. an",
+  receipt: "Beleg-Nr.",
   expected: "Soll",
   counted: "Gezählt",
   difference: "Differenz",
@@ -820,6 +832,9 @@ function show(field: string, value: unknown, context: { entityType: string; acti
   if (field === "enabled" && typeof value === "boolean") return value ? "eingeschaltet" : "ausgeschaltet";
   if (typeof value === "boolean") return value ? "ja" : "nein";
   if ((field === "bytes" || field === "sizeBytes") && typeof value === "number") return size(value);
+  // Beträge der Bewohnergelder in Rappen bzw. Cent gespeichert.
+  if (field.endsWith("Cents") && typeof value === "number")
+    return (value / 100).toLocaleString("de-CH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   if (typeof value === "number") return value.toLocaleString("de-CH");
   if (Array.isArray(value)) {
     if (value.some((item) => item !== null && typeof item === "object")) return null;
@@ -835,6 +850,7 @@ function show(field: string, value: unknown, context: { entityType: string; acti
   if (context.entityType === "feedback" && field === "channel")
     return FEEDBACK_CHANNELS[text as FeedbackChannel] ?? text;
   if (context.entityType === "feedback" && field === "status") return FEEDBACK_STATUSES[text as FeedbackStatus] ?? text;
+  if (context.entityType === "fund_entry" && field === "kind") return FUND_KINDS[text as FundKind] ?? text;
   if (context.entityType === "device" && field === "result")
     return DEVICE_CHECK_RESULTS[text as DeviceCheckResult] ?? text;
   if (context.entityType === "resident_consent" && field === "decision")

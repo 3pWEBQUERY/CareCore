@@ -72,6 +72,8 @@ export function navigationLabel(label: string, terms: Terms) {
       return `Kennzahlen ${terms.many}`;
     case "Bewohnerakte":
       return `${terms.prefix}akte`;
+    case "Bewohnergelder":
+      return `${terms.prefix}gelder`;
     default:
       return label;
   }

@@ -248,7 +248,21 @@ export function commentRanges(editor: Editor, id: string) {
   return ranges;
 }
 
+// Markierung aus dem Browser übernehmen: direkt nach Shift+Pfeil bzw. Shift+Pos1 kennt der Editor sie noch nicht.
+function syncSelection(editor: Editor) {
+  const dom = window.getSelection();
+  const { view } = editor;
+  if (!dom?.anchorNode || !dom.focusNode || !view.dom.contains(dom.anchorNode) || !view.dom.contains(dom.focusNode))
+    return;
+  const anchor = view.posAtDOM(dom.anchorNode, dom.anchorOffset);
+  const head = view.posAtDOM(dom.focusNode, dom.focusOffset);
+  const { selection } = view.state;
+  if (anchor === selection.anchor && head === selection.head) return;
+  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, anchor, head)));
+}
+
 export function addCommentMark(editor: Editor, id: string) {
+  syncSelection(editor);
   const { from, to } = editor.state.selection;
   if (from === to) return false;
   editor.view.dispatch(editor.state.tr.addMark(from, to, editor.schema.marks.comment.create({ id })));
