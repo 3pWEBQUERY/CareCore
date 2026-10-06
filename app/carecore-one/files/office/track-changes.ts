@@ -4,7 +4,7 @@ import type { Mark as PmMark, Node as PmNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from "@tiptap/pm/state";
 import { ReplaceStep } from "@tiptap/pm/transform";
 import { collaboratorColor } from "@/lib/office/presence";
-import { REMOTE_META } from "./text-commands";
+import { REMOTE_META, syncSelection } from "./text-commands";
 
 // Änderungen nachverfolgen wie in Word: Eingefügtes wird unterstrichen, Gelöschtes bleibt durchgestrichen stehen,
 // bis jemand die Änderung annimmt oder ablehnt. Jede Änderung trägt Name und Zeitpunkt.
@@ -163,6 +163,8 @@ export const TrackChanges = Extension.create<Record<string, never>, TrackState>(
   addKeyboardShortcuts() {
     const removeChar = (direction: -1 | 1) => {
       if (!this.storage.on) return false;
+      // Direkt nach Ende oder Pfeiltaste steht der Cursor im Editor sonst noch an der alten Stelle.
+      if (this.editor.state.selection instanceof TextSelection) syncSelection(this.editor);
       const { state, view } = this.editor;
       const { selection } = state;
       if (!selection.empty) return false;

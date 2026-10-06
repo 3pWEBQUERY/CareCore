@@ -279,6 +279,14 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       (Schweiz) bzw. EUR (Deutschland, Österreich). Gesetzliche Höchstbeträge oder Abrechnungsfristen gibt CareCore
       nicht vor.
 
+## Erledigt (06.10.2026): Präsentation
+
+- [x] **Folienübergänge:** Gruppe „Übergänge“: Verblassen, Schieben, Wischen oder Überdecken je Folie mit Tempo
+      (schnell 0,5 s, mittel 0,75 s, langsam 1 s), Vorschau auf der Folie, „Für alle Folien übernehmen“, Zeichen in
+      der Folienübersicht. Die Vorführung spielt den Übergang beim Weiterschalten (wie in PowerPoint nur vorwärts);
+      bei „weniger Bewegung“ im System ohne Animation. In PowerPoint-Dateien als `p:transition` gelesen und
+      geschrieben; neuere Effekte werden über den Ersatz für ältere Versionen gelesen, unbekannte entfallen.
+
 ## Erledigt (06.10.2026): Tabelle
 
 - [x] **Pivot-Tabelle:** Daten › „Pivot-Tabelle einfügen“ fasst einen Bereich mit Überschriften nach einem Zeilenfeld

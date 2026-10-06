@@ -862,3 +862,58 @@ test("Tabelle: Pivot-Tabelle einfügen und aktualisieren, Blattschutz mit freige
   await expect(page.locator(".office-status")).toContainText("Gespeichert um");
   expect(errors).toEqual([]);
 });
+
+// Präsentation: Übergang je Folie mit Tempo, für alle Folien übernehmen, gespeichert und in der Vorführung abgespielt.
+test("Präsentation: Folienübergänge festlegen und in der Vorführung abspielen", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  const stamp = Date.now();
+  await page.goto("/c/carecore-one/ablage");
+  await page.getByRole("button", { name: "Neu", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Präsentation/ }).click();
+  const gallery = page.getByRole("dialog", { name: "Neue Präsentation (PowerPoint)" });
+  await gallery.getByRole("radio", { name: /Teamsitzung/ }).click();
+  await gallery.getByLabel("Name").fill(`Übergänge ${stamp}`);
+  await gallery.getByRole("button", { name: "Erstellen und öffnen" }).click();
+  const thumbs = page.locator(".deck-thumb");
+  await expect(thumbs).toHaveCount(5);
+
+  // Zweite Folie: Schieben, langsam.
+  await thumbs.nth(1).locator(".deck-thumb-button").click();
+  await expect(page.getByRole("button", { name: "Vorschau des Übergangs" })).toBeDisabled();
+  await page.getByRole("button", { name: "Übergang", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "Schieben" }).click();
+  await expect(thumbs.nth(1).getByRole("img", { name: "Übergang: Schieben" })).toBeVisible();
+  await expect(thumbs.nth(0).locator(".deck-thumb-transition")).toHaveCount(0);
+  await page.getByRole("button", { name: "Tempo des Übergangs" }).click();
+  await page.getByRole("menuitemradio", { name: /Langsam/ }).click();
+  await expect(page.getByRole("button", { name: "Tempo des Übergangs" })).toContainText("Langsam");
+  await page.getByRole("button", { name: "Vorschau des Übergangs" }).click();
+
+  // Für alle Folien übernehmen, dann die erste Folie ohne Übergang.
+  await page.getByRole("button", { name: "Übergang für alle Folien übernehmen" }).click();
+  await expect(page.locator(".deck-thumb-transition")).toHaveCount(5);
+  await thumbs.nth(0).locator(".deck-thumb-button").click();
+  await page.getByRole("button", { name: "Übergang", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "Kein Übergang" }).click();
+  await expect(page.locator(".deck-thumb-transition")).toHaveCount(4);
+  await expect(page.locator(".office-status")).toContainText("Gespeichert um");
+
+  // Nach dem erneuten Öffnen noch da.
+  await page.getByRole("button", { name: "Zurück zur Ablage" }).click();
+  await page.getByText(`Übergänge ${stamp}.pptx`, { exact: true }).dblclick();
+  await expect(page.locator(".deck-thumb-transition")).toHaveCount(4);
+  await expect(thumbs.nth(2).getByRole("img", { name: "Übergang: Schieben" })).toBeVisible();
+
+  // Vorführung: beim Weiterschalten liegen kurz beide Folien übereinander, danach nur noch die neue.
+  await page.getByRole("button", { name: "Ab aktueller Folie vorführen" }).click();
+  const presenter = page.getByRole("dialog", { name: "Vorführen" });
+  await expect(presenter.locator(".deck-presenter-layer")).toHaveCount(1);
+  await page.keyboard.press("ArrowRight");
+  await expect(presenter.locator(".deck-presenter-layer")).toHaveCount(2);
+  await expect(presenter.locator(".deck-presenter-layer")).toHaveCount(1);
+  await expect(presenter).toContainText("2 / 5");
+  await page.keyboard.press("Escape");
+  await expect(presenter).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

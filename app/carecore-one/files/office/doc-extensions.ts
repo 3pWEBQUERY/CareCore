@@ -1,5 +1,6 @@
 import { Extension, Mark, Node, mergeAttributes, type Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
+import { syncSelection } from "./text-commands";
 
 // Hoch- und tiefgestellt (H₂O, m²) – schliessen sich gegenseitig aus wie in Word.
 export const Superscript = Mark.create({
@@ -246,19 +247,6 @@ export function commentRanges(editor: Editor, id: string) {
       ranges.push({ from: pos, to: pos + node.nodeSize, text: node.text ?? "" });
   });
   return ranges;
-}
-
-// Markierung aus dem Browser übernehmen: direkt nach Shift+Pfeil bzw. Shift+Pos1 kennt der Editor sie noch nicht.
-function syncSelection(editor: Editor) {
-  const dom = window.getSelection();
-  const { view } = editor;
-  if (!dom?.anchorNode || !dom.focusNode || !view.dom.contains(dom.anchorNode) || !view.dom.contains(dom.focusNode))
-    return;
-  const anchor = view.posAtDOM(dom.anchorNode, dom.anchorOffset);
-  const head = view.posAtDOM(dom.focusNode, dom.focusOffset);
-  const { selection } = view.state;
-  if (anchor === selection.anchor && head === selection.head) return;
-  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, anchor, head)));
 }
 
 export function addCommentMark(editor: Editor, id: string) {

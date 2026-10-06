@@ -547,7 +547,24 @@ export type Slide = {
   notes: string;
   items: SlideItem[];
   comments?: CommentThread[];
+  // Übergang beim Einblenden dieser Folie in der Vorführung (wie in PowerPoint).
+  transition?: SlideTransition;
 };
+export const SLIDE_TRANSITIONS = {
+  fade: "Verblassen",
+  push: "Schieben",
+  wipe: "Wischen",
+  cover: "Überdecken",
+} as const;
+export type SlideTransitionType = keyof typeof SLIDE_TRANSITIONS;
+// Dauer wie die Stufen in PowerPoint (schnell 0,5 s, mittel 0,75 s, langsam 1 s).
+export const TRANSITION_SPEEDS = {
+  fast: { label: "Schnell", ms: 500 },
+  med: { label: "Mittel", ms: 750 },
+  slow: { label: "Langsam", ms: 1000 },
+} as const;
+export type TransitionSpeed = keyof typeof TRANSITION_SPEEDS;
+export type SlideTransition = { type: SlideTransitionType; speed: TransitionSpeed };
 export type DeckTheme = "carecore" | "hell" | "dunkel" | "wald" | "sand";
 export type DeckModel = { kind: "deck"; theme: DeckTheme; slides: Slide[] };
 
@@ -1292,6 +1309,15 @@ function cleanSheet(input: unknown, index: number): Sheet | null {
   return sheet;
 }
 
+function cleanTransition(input: unknown): SlideTransition | undefined {
+  if (!input || typeof input !== "object") return undefined;
+  const raw = input as Record<string, unknown>;
+  if (typeof raw.type !== "string" || !(raw.type in SLIDE_TRANSITIONS)) return undefined;
+  const speed =
+    typeof raw.speed === "string" && raw.speed in TRANSITION_SPEEDS ? (raw.speed as TransitionSpeed) : "med";
+  return { type: raw.type as SlideTransitionType, speed };
+}
+
 const LAYOUTS = new Set(SLIDE_LAYOUTS.map((item) => item.value));
 const SHAPES = new Set(SLIDE_SHAPES.map((item) => item.value));
 function cleanSlideItem(input: unknown): SlideItem | null {
@@ -1459,6 +1485,7 @@ export function cleanModel(kind: OfficeKind, input: unknown): OfficeModel {
           .map(cleanSlideItem)
           .filter((entry): entry is SlideItem => entry !== null),
         ...(cleanThreads(slide.comments).length ? { comments: cleanThreads(slide.comments) } : {}),
+        ...(cleanTransition(slide.transition) ? { transition: cleanTransition(slide.transition) } : {}),
       },
     ];
   });
