@@ -2,6 +2,7 @@
 
 import { ModuleIcon } from "@/app/components/module-icon";
 import { formatDate, formatDateTime } from "@/app/components/workspace-ui";
+import { DAY_PARTS } from "@/lib/intervention-proofs-shared";
 import {
   GOAL_STATUS_LABELS,
   INTERVENTION_STATUS_LABELS,
@@ -65,7 +66,15 @@ export default function GoalCard({
             <span>
               <strong>{intervention.title}</strong>
               <small>
-                {[intervention.frequency, intervention.responsibleRole].filter(Boolean).join(" · ")}
+                {[
+                  intervention.frequency,
+                  intervention.responsibleRole,
+                  intervention.dayParts.length
+                    ? `Nachweis: ${intervention.dayParts.map((part) => DAY_PARTS[part].label).join(", ")}`
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
                 {intervention.status !== "active" ? ` · ${INTERVENTION_STATUS_LABELS[intervention.status]}` : ""}
               </small>
               {intervention.instructions && <em>{intervention.instructions}</em>}

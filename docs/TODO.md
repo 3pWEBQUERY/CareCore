@@ -585,9 +585,13 @@ weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen ode
 
 ### Mittel (damit CareCore klar besser ist)
 
-- [ ] **Dokumentation nach Abweichungen:** Sammelabschluss je Schicht und Person: „Alle geplanten Massnahmen wie
-      geplant durchgeführt“, nur Abweichungen einzeln mit Grund. Grundlage sind die laufenden Massnahmen der
-      Pflegeplanung mit Zeitpunkt; nichts wird ohne Bestätigung als erledigt vermerkt.
+- [x] **Dokumentation nach Abweichungen:** Je Massnahme der Pflegeplanung lassen sich Tageszeiten für den Nachweis
+      wählen (Morgen, Mittag, Abend, Nacht wie die Medikamentenrunden; ohne Wahl kein Nachweis je Tageszeit).
+      Dokumentation › Nachweis zeigt je Wohnbereich, Tag und Tageszeit die geplanten Massnahmen je Person: „Alle wie
+      geplant“ bestätigt mit einem Klick, „Abweichung erfassen“ hält „teilweise“ oder „nicht durchgeführt“ mit Pflichtgrund
+      fest und legt dazu einen wichtigen Eintrag in der Pflegedokumentation an. Erst ab Beginn der Tageszeit, frühere Tage
+      als Nachtrag; nichts wird ohne Bestätigung als durchgeführt vermerkt. Stornieren mit Grund statt Löschen; alles im
+      Protokoll der Akte und in der Auskunft.
 - [ ] **Diktat mit KI umformulieren:** Rohtext aus der Erkennung auf dem Gerät wird pseudonymisiert zu einem
       Pflegebericht-Entwurf umformuliert, den die Fachperson prüft. Braucht einen Entscheid (bisher: Spracheingabe
       ohne Übermittlung).

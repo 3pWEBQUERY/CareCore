@@ -4,7 +4,10 @@ import { VACCINATION_PLACES } from "@/lib/vaccinations-shared";
 import { BELONGING_KINDS } from "@/lib/belongings-shared";
 import { CONSENT_DECISIONS } from "@/lib/consents-shared";
 import { TRANSPORT_LABELS } from "@/lib/resident-appointments";
+import { DAY_PARTS, PROOF_OUTCOMES } from "@/lib/intervention-proofs-shared";
 import { FEEDBACK_CHANNELS, FEEDBACK_KINDS, FEEDBACK_SOURCES, FEEDBACK_STATUSES } from "@/lib/feedback-shared";
+
+const DAY_PART_LABELS = Object.fromEntries(Object.entries(DAY_PARTS).map(([key, part]) => [key, part.label]));
 
 export type ExportSection = { key: string; title: string; rows: Array<Record<string, unknown>> };
 
@@ -44,6 +47,7 @@ export const EXPORT_HIDDEN_COLUMNS = new Set([
   "catalog_id",
   "desired_care_unit_id",
   "entry_id",
+  "documentation_entry_id",
   "file_id",
   "follow_up_task_id",
   "intervention_id",
@@ -321,6 +325,9 @@ export const EXPORT_COLUMN_LABELS: Record<string, string> = {
   returned_by: "Rückkehr vermerkt von",
   answered_by: "Beantwortet von",
   closed_by: "Abgeschlossen von",
+  day_parts: "Nachweis je Tageszeit",
+  proof_date: "Nachgewiesen für den Tag",
+  day_part: "Tageszeit",
 };
 
 // Häufige technische Werte in lesbarer Form.
@@ -331,6 +338,7 @@ export const EXPORT_SECTION_VALUE_LABELS: Record<string, Record<string, Record<s
   belongings: { kind: BELONGING_KINDS },
   consents: { decision: CONSENT_DECISIONS },
   appointments: { transport: TRANSPORT_LABELS },
+  intervention_proofs: { outcome: PROOF_OUTCOMES, day_part: DAY_PART_LABELS },
   feedback: { kind: FEEDBACK_KINDS, source: FEEDBACK_SOURCES, channel: FEEDBACK_CHANNELS, status: FEEDBACK_STATUSES },
 };
 

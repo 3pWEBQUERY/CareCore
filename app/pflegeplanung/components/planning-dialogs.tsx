@@ -5,6 +5,7 @@ import { CareDatePicker, CareMultiSelect, CareSelect } from "@/app/components/ca
 import { EditorDialog, requestJson, todayInZurich } from "@/app/components/workspace-ui";
 import { useCountry } from "@/app/components/care-context";
 import { NOT_ASSESSED, careLevelOptions } from "@/lib/country";
+import { DAY_PARTS, DAY_PART_KEYS } from "@/lib/intervention-proofs-shared";
 import {
   CARE_RESOURCES,
   GOAL_CATEGORIES,
@@ -232,9 +233,10 @@ export function InterventionDialog({
     instructions: intervention?.instructions ?? "",
     frequency: intervention?.frequency ?? "",
     responsibleRole: intervention?.responsibleRole ?? RESPONSIBLE_ROLES[0],
+    dayParts: intervention?.dayParts ?? [],
   });
   const { saving, error, save } = useSave(onSaved);
-  const set = <K extends keyof typeof form>(key: K, value: string) =>
+  const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
   return (
     <EditorDialog
@@ -285,6 +287,35 @@ export function InterventionDialog({
           onChange={(v) => set("responsibleRole", v)}
         />
       </label>
+      <div className="area-editor-wide form-field">
+        <span>Nachweis je Tageszeit</span>
+        <div className="chip-row" role="group" aria-label="Nachweis je Tageszeit">
+          {DAY_PART_KEYS.map((part) => {
+            const active = form.dayParts.includes(part);
+            return (
+              <button
+                type="button"
+                key={part}
+                className={`day-toggle ${active ? "active" : ""}`}
+                aria-pressed={active}
+                onClick={() =>
+                  set(
+                    "dayParts",
+                    DAY_PART_KEYS.filter((key) => (key === part ? !active : form.dayParts.includes(key))),
+                  )
+                }
+              >
+                {DAY_PARTS[part].label}
+              </button>
+            );
+          })}
+          <small>
+            {form.dayParts.length
+              ? "erscheint zu diesen Tageszeiten im Durchführungsnachweis"
+              : "ohne Nachweis je Tageszeit"}
+          </small>
+        </div>
+      </div>
       <label className="area-editor-wide">
         <span>Durchführung</span>
         <textarea

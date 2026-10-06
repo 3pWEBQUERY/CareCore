@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { DAY_PART_KEYS } from "@/lib/intervention-proofs-shared";
 import { readTerms } from "@/lib/settings";
 import { ApiError, assertResident, assertUuid, iso, text, type ApiContext, type Row } from "@/lib/api-context";
 import { residentAudit } from "@/lib/resident-audit";
@@ -111,6 +112,7 @@ function mapIntervention(row: Row): Intervention {
     instructions: (row.instructions as string | null) ?? null,
     frequency: (row.frequency as string | null) ?? null,
     responsibleRole: (row.responsible_role as string | null) ?? null,
+    dayParts: DAY_PART_KEYS.filter((part) => Array.isArray(row.day_parts) && row.day_parts.includes(part)),
     status: row.status as InterventionStatus,
   };
 }

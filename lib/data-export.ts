@@ -254,6 +254,13 @@ export const EXPORT_SECTIONS: Array<{ key: string; title: string; tables: string
     },
   },
   {
+    key: "intervention_proofs",
+    title: "Durchführungsnachweis",
+    tables: ["carecore_intervention_proofs"],
+    query: (sql, id) =>
+      sql`SELECT * FROM carecore_intervention_proofs WHERE resident_id = ${id} ORDER BY proof_date, recorded_at`,
+  },
+  {
     key: "elimination",
     title: "Ausscheidung und Kontinenz",
     tables: ["carecore_elimination_entries"],
