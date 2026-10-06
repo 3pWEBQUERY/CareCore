@@ -14,6 +14,8 @@ export type SettingKey =
   | "weightLossDays"
   | "fluidBehindDays"
   | "stoolReminderDays"
+  | "kompassAdmissionDays"
+  | "kompassIntervalMonths"
   | "navigationBadges"
   | "keyboardShortcuts"
   | "residentRetentionYears"
@@ -139,6 +141,32 @@ export const SETTING_DEFINITIONS: Record<SettingKey, Definition> = {
     unit: "Tage",
     min: 1,
     max: 14,
+    defaults: { enabled: false, value: null },
+  },
+  kompassAdmissionDays: {
+    title: "Kompass: erste Abklärung nach Eintritt",
+    icon: "compass",
+    area: "Kompass",
+    describe: (value) =>
+      value
+        ? `Die erste Abklärung mit dem Kompass ist ${value} ${value === 1 ? "Tag" : "Tage"} nach dem Eintritt fällig`
+        : "Frist ist noch nicht festgelegt – es wird keine erste Abklärung fällig",
+    unit: "Tage",
+    min: 1,
+    max: 90,
+    defaults: { enabled: false, value: null },
+  },
+  kompassIntervalMonths: {
+    title: "Kompass: Folgeabklärung",
+    icon: "compass",
+    area: "Kompass",
+    describe: (value) =>
+      value
+        ? `Nach jeder abgeschlossenen Abklärung ist die nächste in ${value} ${value === 1 ? "Monat" : "Monaten"} fällig`
+        : "Abstand ist noch nicht festgelegt – Folgeabklärungen werden nicht automatisch fällig",
+    unit: "Monate",
+    min: 1,
+    max: 24,
     defaults: { enabled: false, value: null },
   },
   navigationBadges: {

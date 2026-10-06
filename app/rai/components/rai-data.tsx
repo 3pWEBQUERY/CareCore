@@ -14,25 +14,26 @@ export type RaiData = {
 export const meta: Record<RaiView, { child: string; title: string; description: string; action: string }> = {
   overview: {
     child: "Übersicht",
-    title: "RAI Arbeitsplatz",
-    description: "interRAI-Erfassungen, Verantwortlichkeiten und Fälligkeiten zentral steuern.",
-    action: "Neue interRAI-Erfassung",
+    title: "Kompass",
+    description:
+      "Bedarfsabklärungen mit dem CareCore Kompass: wer dran ist, was fällig ist und wer verantwortlich ist.",
+    action: "Neue Abklärung",
   },
   assessment: {
-    child: "interRAI-Erfassung",
-    title: "interRAI-Erfassung",
-    description: "Bewohnerbezogene Einschätzungen strukturiert und nachvollziehbar dokumentieren.",
-    action: "Erfassung speichern",
+    child: "Abklärung",
+    title: "Abklärung",
+    description: "Schritt für Schritt durch alle Bereiche – mit Hinweisen aus der Akte und automatischem Speichern.",
+    action: "",
   },
   due: {
     child: "Fälligkeiten",
-    title: "RAI-Fälligkeiten",
-    description: "Anstehende Erfassungen und offene Bereiche zuverlässig im Blick behalten.",
+    title: "Fälligkeiten",
+    description: "Anstehende Abklärungen und offene Entwürfe im Blick behalten.",
     action: "Fälligkeiten aktualisieren",
   },
   reports: {
     child: "Berichte",
-    title: "RAI-Berichte",
+    title: "Berichte",
     description: "Auswertungen zur Datenqualität und zum Unterstützungsbedarf im Haus.",
     action: "Bericht exportieren",
   },

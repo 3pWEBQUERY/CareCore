@@ -16,7 +16,7 @@ export function nextLabel(row: RaiResidentRow) {
   return formatDate(row.dueOn);
 }
 
-// Opens the interRAI assessment of a resident; the header resident follows.
+// Öffnet die Abklärung einer Person; die Person in der Kopfzeile folgt.
 export function useOpenAssessment() {
   const router = useRouter();
   return (residentId: string) => {
@@ -53,14 +53,14 @@ export function OverviewView({ rai }: { rai: RaiData }) {
     null;
   return (
     <>
-      <section className="rai-summary" aria-label="RAI Übersicht">
+      <section className="rai-summary" aria-label="Kompass Übersicht">
         <div>
           <span className="rai-summary-icon">
             <ModuleIcon name="assess" />
           </span>
           <span>
             <strong>{summary?.records ?? "–"}</strong>
-            <small>aktive RAI-Akten</small>
+            <small>Personen mit Abklärung</small>
           </span>
         </div>
         <div>
@@ -69,7 +69,7 @@ export function OverviewView({ rai }: { rai: RaiData }) {
           </span>
           <span>
             <strong>{summary?.due ?? "–"}</strong>
-            <small>Erfassungen fällig</small>
+            <small>Abklärungen fällig</small>
           </span>
         </div>
         <div>
@@ -87,7 +87,7 @@ export function OverviewView({ rai }: { rai: RaiData }) {
           </span>
           <span>
             <strong>{summary?.responsible ?? "–"}</strong>
-            <small>RAI Verantwortliche</small>
+            <small>Verantwortliche</small>
           </span>
         </div>
       </section>
@@ -96,7 +96,7 @@ export function OverviewView({ rai }: { rai: RaiData }) {
           <div className="rai-card-header">
             <div>
               <p className="eyebrow">Arbeitskorb</p>
-              <h2 className="card-title">{t.many} und Erfassungen</h2>
+              <h2 className="card-title">{t.many} und Abklärungen</h2>
               <p className="card-subtitle">
                 {rai.loading && !rai.data
                   ? "Wird geladen …"
@@ -109,7 +109,7 @@ export function OverviewView({ rai }: { rai: RaiData }) {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={`${t.many} suchen`}
-                aria-label={`RAI ${t.many} suchen`}
+                aria-label={`${t.many} im Kompass suchen`}
               />
             </label>
           </div>
@@ -161,7 +161,7 @@ export function OverviewView({ rai }: { rai: RaiData }) {
             {rai.data && filtered.length === 0 && (
               <div className="resident-empty">
                 <ModuleIcon name="search" />
-                <strong>Keine RAI-Akten gefunden</strong>
+                <strong>Keine Personen gefunden</strong>
                 <p>Suchbegriff oder Filter anpassen.</p>
               </div>
             )}
@@ -172,7 +172,7 @@ export function OverviewView({ rai }: { rai: RaiData }) {
             <div className="card-header">
               <div>
                 <p className="eyebrow">Rollen und Rechte</p>
-                <h2 className="card-title">RAI Verantwortliche</h2>
+                <h2 className="card-title">Verantwortliche</h2>
               </div>
               <span className="status-badge stable">{people.length} aktiv</span>
             </div>
@@ -184,14 +184,16 @@ export function OverviewView({ rai }: { rai: RaiData }) {
                     <strong>{person.name}</strong>
                     <small>
                       {person.openAssessments
-                        ? `${person.openAssessments} offene Erfassung${person.openAssessments === 1 ? "" : "en"}`
-                        : "keine offenen Erfassungen"}
+                        ? `${person.openAssessments} offene Abklärung${person.openAssessments === 1 ? "" : "en"}`
+                        : "keine offenen Abklärungen"}
                     </small>
                   </span>
                   {person.online && <span className="rai-online-dot" title="Gerade aktiv" />}
                 </div>
               ))}
-              {rai.data && !people.length && <p className="card-subtitle">Noch niemand mit RAI-Berechtigung.</p>}
+              {rai.data && !people.length && (
+                <p className="card-subtitle">Noch niemand mit Berechtigung für den Kompass.</p>
+              )}
             </div>
             <button
               className="secondary-button"
@@ -206,7 +208,7 @@ export function OverviewView({ rai }: { rai: RaiData }) {
               <div>
                 <p className="eyebrow">Nächster Schritt</p>
                 <h2 className="card-title">
-                  {next?.state === "in_progress" ? "Erfassung fortsetzen" : "Nächste Erfassung"}
+                  {next?.state === "in_progress" ? "Abklärung fortsetzen" : "Nächste Abklärung"}
                 </h2>
               </div>
             </div>
@@ -216,21 +218,21 @@ export function OverviewView({ rai }: { rai: RaiData }) {
             {next ? (
               <>
                 <strong>
-                  {next.name} · {next.instrument ?? "interRAI LTCF"}
+                  {next.name} · {next.reason}
                 </strong>
                 <p>
                   {next.state === "in_progress"
-                    ? `Die Erfassung ist zu ${next.progress}% abgeschlossen. Die offenen Bereiche warten auf deine fachliche Einschätzung.`
+                    ? `Die Abklärung ist zu ${next.progress}% erledigt. Die offenen Bereiche warten auf deine fachliche Einschätzung.`
                     : `${next.reason} · fällig ${nextLabel(next)}.`}
                 </p>
                 <button className="primary-button" type="button" onClick={() => openAssessment(next.id)}>
-                  {next.state === "in_progress" ? "Weiterarbeiten" : "Erfassung starten"} <ModuleIcon name="chevron" />
+                  {next.state === "in_progress" ? "Weiterarbeiten" : "Abklärung beginnen"} <ModuleIcon name="chevron" />
                 </button>
               </>
             ) : (
               <>
                 <strong>Alles aktuell</strong>
-                <p>{rai.data ? "Keine Erfassung ist offen oder fällig." : "Wird geladen …"}</p>
+                <p>{rai.data ? "Keine Abklärung ist offen oder fällig." : "Wird geladen …"}</p>
               </>
             )}
           </section>

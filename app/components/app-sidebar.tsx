@@ -35,6 +35,14 @@ import {
   UsersThree,
   Warning,
   X,
+  Compass,
+  Drop,
+  Eye,
+  Footprints,
+  HandHeart,
+  Moon,
+  Shower,
+  Toilet,
 } from "@phosphor-icons/react";
 import { useNavigationBadges, useWorkContext, type NavigationBadges } from "./care-context";
 import { BrandIcon } from "./brand-icon";
@@ -87,6 +95,14 @@ const icons = {
   logout: SignOut,
   close: X,
   activity: PuzzlePiece,
+  compass: Compass,
+  eye: Eye,
+  walk: Footprints,
+  moon: Moon,
+  drop: Drop,
+  shower: Shower,
+  toilet: Toilet,
+  care: HandHeart,
 } satisfies Record<Exclude<ModuleIconName, "caretDown" | "sidebar">, typeof House>;
 
 function RailIcon({ name }: { name: ModuleIconName | "carecoreOne" }) {

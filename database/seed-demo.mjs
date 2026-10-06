@@ -678,27 +678,35 @@ await seed("carecore_quality_actions", [
   },
 ]);
 await seed("carecore_rai_assessments", [
+  // Begonnene Abklärung mit dem CareCore Kompass (Mobilität teilweise beantwortet) und eine geplante.
   {
     id: id("rai-hans"),
     resident_id: resident[0],
     responsible_user_id: actor,
-    assessment_type: "interRAI LTCF",
+    assessment_type: "CareCore Kompass 1",
     status: "in_progress",
     due_on: day(2),
     started_at: date(-3),
-    progress: 68,
-    data: json({ alltag: 2, stimmung: 0 }),
+    progress: 3,
+    data: json({
+      kompass: 1,
+      occasion: "routine",
+      assessedOn: day(-3),
+      participants: ["Person selbst", "Pflegeteam"],
+      answers: { "mobility.bed": "0", "mobility.transfer": "2", "mobility.walk_in": "1" },
+      domains: {},
+      summary: "",
+    }),
   },
   {
     id: id("rai-maria"),
     resident_id: resident[1],
     responsible_user_id: actor,
-    assessment_type: "interRAI LTCF",
-    status: "current",
+    assessment_type: "CareCore Kompass 1",
+    status: "new",
     due_on: day(28),
-    completed_at: date(-1),
-    progress: 100,
-    data: json({ alltag: 1, stimmung: 0 }),
+    progress: 0,
+    data: json({}),
   },
 ]);
 await seed("carecore_ai_drafts", [

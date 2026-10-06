@@ -10,7 +10,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   "quality.manage": "Qualitätsmanagement",
   "insights.read": "Kennzahlen",
   "administration.manage": "Administration",
-  "rai.manage": "RAI / interRAI",
+  "rai.manage": "Kompass (Bedarfsabklärung)",
   "ai.use": "CareCore KI",
   "funds.manage": "Bewohnergelder verwalten",
 };

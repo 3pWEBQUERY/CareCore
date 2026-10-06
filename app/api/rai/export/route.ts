@@ -7,7 +7,7 @@ import { RAI_STATE } from "@/lib/rai-shared";
 
 export const runtime = "nodejs";
 
-// RAI report as CSV (semicolon separated, opens directly in Excel).
+// Bericht des Kompass als CSV (Semikolon getrennt, öffnet direkt in Excel).
 export async function GET() {
   try {
     const ctx = await apiContext("rai.manage");
@@ -25,7 +25,7 @@ export async function GET() {
         "Instrument",
         "Verantwortlich",
         "Letzter Abschluss",
-        "Ø Einschätzung",
+        "Bereiche mit Handlungsbedarf",
       ],
       ...residents.map((row) => [
         row.name,
@@ -38,17 +38,17 @@ export async function GET() {
         row.instrument,
         row.assessor,
         row.lastCompletedOn,
-        row.averageScore === null ? null : Math.round(row.averageScore * 10) / 10,
+        row.needs,
       ]),
     ];
     const csv = toCsv(lines);
     return new NextResponse(csv, {
       headers: {
         "content-type": "text/csv; charset=utf-8",
-        "content-disposition": `attachment; filename="rai-bericht-${new Date().toISOString().slice(0, 10)}.csv"`,
+        "content-disposition": `attachment; filename="kompass-bericht-${new Date().toISOString().slice(0, 10)}.csv"`,
       },
     });
   } catch (error) {
-    return apiErrorResponse(error, "RAI-Bericht konnte nicht erstellt werden.");
+    return apiErrorResponse(error, "Der Bericht konnte nicht erstellt werden.");
   }
 }

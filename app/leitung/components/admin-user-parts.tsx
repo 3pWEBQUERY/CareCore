@@ -49,7 +49,7 @@ export const labels: Record<string, string> = {
   "quality.manage": "Qualität",
   "insights.read": "Kennzahlen",
   "administration.manage": "Administration",
-  "rai.manage": "RAI",
+  "rai.manage": "Kompass",
   "ai.use": "KI-Assistenz",
 };
 
@@ -65,7 +65,7 @@ export const permissionHints: Record<string, string> = {
   "quality.manage": "Qualität, Ereignisse und Rückmeldungen bearbeiten",
   "insights.read": "Kennzahlen und Auswertungen ansehen",
   "administration.manage": "Einstellungen, Rollen und Zugänge verwalten",
-  "rai.manage": "RAI-Erfassungen durchführen und abschliessen",
+  "rai.manage": "Abklärungen mit dem Kompass durchführen und abschliessen",
   "ai.use": "Vorschläge der KI-Assistenz nutzen",
 };
 
