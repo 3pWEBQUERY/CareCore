@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "./app-navigation";
 import { setCareResident, useCareResident, useCareUnit, useWorkContext } from "./care-context";
 import { requestJson } from "./workspace-ui";
 import type { AiSearchResult } from "@/lib/ai-search";
@@ -32,7 +32,7 @@ const MAX_RESULTS = 12;
 // Global quick search over the residents and every function the person may use.
 // Choosing a resident opens the resident record and makes it the working context.
 export function GlobalSearchDialog({ onClose }: { onClose: () => void }) {
-  const router = useRouter();
+  const router = useAppRouter();
   const context = useWorkContext();
   const [query, setQuery] = useState("");
   const [contextResidentId] = useCareResident();

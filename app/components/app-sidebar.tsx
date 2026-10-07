@@ -1,8 +1,8 @@
 "use client";
 
+import { useAppRouter } from "./app-navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   ArrowsLeftRight,
@@ -200,7 +200,7 @@ export function SidebarTooltip({
 }
 
 export default function AppSidebar({ activeModule, activeChild, onToast }: AppSidebarProps) {
-  const router = useRouter();
+  const router = useAppRouter();
   const [flyoutGroup, setFlyoutGroup] = useState<string | null>(null);
   const context = useWorkContext();
   const terms = termsFor(context?.terminology);
@@ -238,6 +238,12 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
     .filter((page) => page.moduleId !== activeModule || page.child !== activeChild)
     .slice(0, 4);
 
+  // Seite schon beim Darüberfahren laden, damit der Wechsel sofort erscheint.
+  function prefetchChild(moduleId: string, child: string) {
+    const href = routeFor(moduleId, child);
+    if (href) router.prefetch(href);
+  }
+
   function selectChild(moduleId: string, child: string) {
     const href = routeFor(moduleId, child);
     if (href) {
@@ -270,6 +276,7 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
             className={`sidebar-rail-button ${activeModule === "home" ? "active" : ""}`}
             type="button"
             aria-label="Startseite"
+            onPointerEnter={() => router.prefetch("/c")}
             onClick={() => {
               setFlyoutGroup(null);
               router.push("/c");
@@ -287,6 +294,8 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
                 key={`${link.moduleId}:${link.child}`}
                 aria-label={count ? `${link.label} (${count})` : link.label}
                 onClick={() => selectChild(link.moduleId, link.child)}
+                onPointerEnter={() => prefetchChild(link.moduleId, link.child)}
+                onFocus={() => prefetchChild(link.moduleId, link.child)}
               >
                 <RailIcon name={link.icon} />
                 {count > 0 && <span className="sidebar-rail-badge">{count > 99 ? "99+" : count}</span>}
@@ -318,6 +327,7 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
             className={`sidebar-rail-button ${activeModule === "settings" ? "active" : ""}`}
             type="button"
             aria-label="Einstellungen"
+            onPointerEnter={() => router.prefetch("/c/einstellungen")}
             onClick={() => {
               setFlyoutGroup(null);
               router.push("/c/einstellungen");
@@ -361,6 +371,8 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
                     type="button"
                     key={`${page.moduleId}:${page.child}`}
                     onClick={() => selectChild(page.moduleId, page.child)}
+                    onPointerEnter={() => prefetchChild(page.moduleId, page.child)}
+                    onFocus={() => prefetchChild(page.moduleId, page.child)}
                   >
                     <span>{moduleLabel(page.moduleId, page.child, terms)}</span>
                     <RailIcon name="chevron" />
@@ -378,6 +390,8 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
                     type="button"
                     key={module.id}
                     onClick={() => selectChild(module.id, module.children[0])}
+                    onPointerEnter={() => prefetchChild(module.id, module.children[0])}
+                    onFocus={() => prefetchChild(module.id, module.children[0])}
                   >
                     <span>{L(module.label)}</span>
                     {count > 0 && <em className="sidebar-flyout-badge">{count}</em>}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "./app-navigation";
 import { ModuleIcon } from "./module-icon";
 import { openHelp } from "./help-panel";
 import {
@@ -26,7 +26,7 @@ const BAR: BarItem[] = [
 
 // Mobile bottom bar and main menu; shows only the areas the signed-in person may use.
 export function MobileNavigation({ activeModule }: { activeModule?: string }) {
-  const router = useRouter();
+  const router = useAppRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const context = useWorkContext();

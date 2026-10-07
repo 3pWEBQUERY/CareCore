@@ -2,10 +2,7 @@
 
 import { useTerms } from "@/app/components/care-context";
 import { useState } from "react";
-import { MobileNavigation } from "@/app/components/mobile-navigation";
-import AppHeader from "../components/app-header";
-import AppSidebar from "../components/app-sidebar";
-import { PageTabs } from "../components/page-tabs";
+import ModulePageShell from "../components/module-page-shell";
 import { ResidentRecord } from "./components/resident-record";
 import type { RecordView } from "./components/resident-record-data";
 import { Icon } from "./components/residents-utils";
@@ -52,87 +49,82 @@ export default function ResidentsPage() {
     );
   };
   return (
-    <div className="app-shell residents-page">
-      <AppSidebar activeModule="residents" activeChild="Übersicht" onToast={setToast} />
+    <ModulePageShell activeModule="residents" activeChild="Übersicht" pageClass="residents-page" onSearch={openSearch}>
+      {() => (
+        <>
+          <main className="workspace residents-workspace">
+            <section className="page-heading residents-heading" aria-labelledby="residents-page-title">
+              <div className="heading-copy">
+                <p className="eyebrow">CareCore {t.many}</p>
+                <h1 id="residents-page-title">{t.many}</h1>
+                <p>Zentrale {t.prefix}akte für den gesamten Wohnbereich.</p>
+              </div>
+              <button className="primary-button" type="button" onClick={() => setIntakeEditorOpen(true)}>
+                <Icon name="plus" className="button-icon" />
+                {t.oneOblique} aufnehmen
+              </button>
+            </section>
 
-      <div className="main-column">
-        <AppHeader searchOpen={searchOpen} onSearch={openSearch} onToast={setToast} />
-        <PageTabs moduleId="residents" child="Übersicht" />
+            <ResidentSummary r={r} />
 
-        <main className="workspace residents-workspace">
-          <section className="page-heading residents-heading" aria-labelledby="residents-page-title">
-            <div className="heading-copy">
-              <p className="eyebrow">CareCore {t.many}</p>
-              <h1 id="residents-page-title">{t.many}</h1>
-              <p>Zentrale {t.prefix}akte für den gesamten Wohnbereich.</p>
+            <ResidentDirectory r={r} />
+          </main>
+
+          {searchOpen && (
+            <div
+              className="overlay"
+              role="presentation"
+              onClick={(event) => event.currentTarget === event.target && setSearchOpen(false)}
+            >
+              <ResidentSearchDialog r={r} />
             </div>
-            <button className="primary-button" type="button" onClick={() => setIntakeEditorOpen(true)}>
-              <Icon name="plus" className="button-icon" />
-              {t.oneOblique} aufnehmen
-            </button>
-          </section>
+          )}
 
-          <ResidentSummary r={r} />
+          {selectedResident && (
+            <ResidentRecord
+              key={selectedResident.id}
+              resident={selectedResident}
+              initialView={recordView}
+              onViewChange={setRecordView}
+              navigation={
+                navigationList.length > 1
+                  ? {
+                      position: recordIndex + 1,
+                      total: navigationList.length,
+                      onPrevious: () => stepRecord(-1),
+                      onNext: () => stepRecord(1),
+                    }
+                  : undefined
+              }
+              onClose={() => setSelectedResident(null)}
+              onAction={setToast}
+              onPhotoChanged={() => {
+                void loadResidents();
+              }}
+              onGenderChanged={(residentId, gender) => {
+                setResidents((current) => current.map((item) => (item.id === residentId ? { ...item, gender } : item)));
+                setSelectedResident((current) => (current?.id === residentId ? { ...current, gender } : current));
+              }}
+            />
+          )}
 
-          <ResidentDirectory r={r} />
-        </main>
-      </div>
+          <ResidentIntakeEditor
+            open={intakeEditorOpen}
+            onClose={() => setIntakeEditorOpen(false)}
+            onSuccess={(message) => {
+              setToast(message);
+              void loadResidents();
+            }}
+          />
 
-      <MobileNavigation activeModule="residents" />
-
-      {searchOpen && (
-        <div
-          className="overlay"
-          role="presentation"
-          onClick={(event) => event.currentTarget === event.target && setSearchOpen(false)}
-        >
-          <ResidentSearchDialog r={r} />
-        </div>
+          {toast && (
+            <div className="toast" role="status">
+              <Icon name="check" />
+              {toast}
+            </div>
+          )}
+        </>
       )}
-
-      {selectedResident && (
-        <ResidentRecord
-          key={selectedResident.id}
-          resident={selectedResident}
-          initialView={recordView}
-          onViewChange={setRecordView}
-          navigation={
-            navigationList.length > 1
-              ? {
-                  position: recordIndex + 1,
-                  total: navigationList.length,
-                  onPrevious: () => stepRecord(-1),
-                  onNext: () => stepRecord(1),
-                }
-              : undefined
-          }
-          onClose={() => setSelectedResident(null)}
-          onAction={setToast}
-          onPhotoChanged={() => {
-            void loadResidents();
-          }}
-          onGenderChanged={(residentId, gender) => {
-            setResidents((current) => current.map((item) => (item.id === residentId ? { ...item, gender } : item)));
-            setSelectedResident((current) => (current?.id === residentId ? { ...current, gender } : current));
-          }}
-        />
-      )}
-
-      <ResidentIntakeEditor
-        open={intakeEditorOpen}
-        onClose={() => setIntakeEditorOpen(false)}
-        onSuccess={(message) => {
-          setToast(message);
-          void loadResidents();
-        }}
-      />
-
-      {toast && (
-        <div className="toast" role="status">
-          <Icon name="check" />
-          {toast}
-        </div>
-      )}
-    </div>
+    </ModulePageShell>
   );
 }

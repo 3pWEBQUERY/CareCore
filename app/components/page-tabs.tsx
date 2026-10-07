@@ -39,6 +39,7 @@ export function PageTabs({ moduleId, child }: { moduleId: string; child: string 
             href={href}
             className={tab === child ? "active" : ""}
             aria-current={tab === child ? "page" : undefined}
+            transitionTypes={["nav-tab"]}
           >
             {L(tab)}
             {count > 0 && <em>{count > 99 ? "99+" : count}</em>}

@@ -1,8 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  ViewTransition,
+  type ReactNode,
+} from "react";
 import { usePathname } from "next/navigation";
 import AppHeader from "./app-header";
+import { FrameContext, type FrameApi } from "./app-frame";
 import AppSidebar from "./app-sidebar";
 import { GlobalSearchDialog } from "./global-search-dialog";
 import { MobileNavigation } from "./mobile-navigation";
@@ -10,22 +20,70 @@ import { ModuleIcon } from "./module-icon";
 import { activePage } from "./navigation";
 import { PageTabs } from "./page-tabs";
 
-// Page frame of all module pages: sidebar, header, mobile navigation, global search and toast.
-export default function ModulePageShell({
-  activeModule,
-  activeChild,
-  pageClass,
-  locationPrimary,
-  locationSecondary,
-  children,
-}: {
+type ShellProps = {
   activeModule?: string;
   activeChild?: string;
   pageClass: string;
   locationPrimary?: string;
   locationSecondary?: string;
+  // Eigene Suche der Seite (Kopfzeile und ⌘K) statt der globalen Suche.
+  onSearch?: () => void;
   children: (showToast: (message: string) => void) => ReactNode;
-}) {
+};
+
+// Seite im Arbeitsplatz. Im festen Rahmen (app-frame) liefert sie nur ihren Inhalt mit Übergang; ausserhalb davon
+// baut sie den Rahmen wie bisher selbst auf.
+export default function ModulePageShell(props: ShellProps) {
+  const frame = useContext(FrameContext);
+  return frame ? <FramedPage frame={frame} {...props} /> : <StandaloneShell {...props} />;
+}
+
+// Übergänge: anderer Bereich – der Inhalt steigt leicht auf; anderer Reiter im Bereich – leises Überblenden.
+const ENTER = { "nav-tab": "page-tab-in", default: "page-in" };
+const EXIT = { "nav-tab": "page-tab-out", default: "page-out" };
+
+function FramedPage({
+  frame,
+  activeModule,
+  activeChild,
+  pageClass,
+  locationPrimary,
+  locationSecondary,
+  onSearch,
+  children,
+}: ShellProps & { frame: FrameApi }) {
+  const searchRef = useRef(onSearch);
+  useEffect(() => {
+    searchRef.current = onSearch;
+  }, [onSearch]);
+  const hasSearch = Boolean(onSearch);
+  useLayoutEffect(() => {
+    frame.setPage({
+      activeModule,
+      activeChild,
+      locationPrimary,
+      locationSecondary,
+      onSearch: hasSearch ? () => searchRef.current?.() : undefined,
+    });
+    return () => frame.setPage(null);
+  }, [frame, activeModule, activeChild, locationPrimary, locationSecondary, hasSearch]);
+  return (
+    <ViewTransition enter={ENTER} exit={EXIT} default="none">
+      <div className={`page-view ${pageClass}`}>{children(frame.showToast)}</div>
+    </ViewTransition>
+  );
+}
+
+// Page frame for pages outside the fixed frame: sidebar, header, mobile navigation, global search and toast.
+function StandaloneShell({
+  activeModule,
+  activeChild,
+  pageClass,
+  locationPrimary,
+  locationSecondary,
+  onSearch,
+  children,
+}: ShellProps) {
   // The address decides module and tab; the props remain for pages outside the navigation.
   const pathname = usePathname();
   const page = activePage(pathname);
@@ -33,7 +91,7 @@ export default function ModulePageShell({
   const child = page?.child ?? activeChild;
   const [searchOpen, setSearchOpen] = useState(false);
   const [toast, setToast] = useState("");
-  const openSearch = useCallback(() => setSearchOpen(true), []);
+  const openSearch = useCallback(() => (onSearch ? onSearch() : setSearchOpen(true)), [onSearch]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
