@@ -404,7 +404,7 @@ export default function RosterPlanner() {
                     title={
                       data.aiAvailable
                         ? "Vorschlag der KI – jede Zuweisung wird geprüft"
-                        : "KI ist nicht eingerichtet (GEMINI_API_KEY fehlt)"
+                        : "KI ist nicht eingerichtet (MISTRAL_API_KEY fehlt)"
                     }
                   >
                     <Sparkle className="button-icon" /> Mit KI planen

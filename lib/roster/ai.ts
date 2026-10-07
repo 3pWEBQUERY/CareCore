@@ -21,7 +21,7 @@ import {
   type PlanningRange,
   type SuggestedAction,
 } from "./ai-core";
-import { GeminiError, geminiConfigured, geminiJson, geminiModel } from "@/lib/gemini";
+import { MistralError, mistralConfigured, mistralJson, mistralModel } from "@/lib/mistral";
 import { auditQuery } from "./audit";
 import type { RosterContext } from "./context";
 import { requirePermission } from "./context";
@@ -33,7 +33,7 @@ import { commitChanges } from "./shift-service";
 import { addDays, weekStart } from "./time";
 import type { ScheduleSnapshot, ShiftChange, Violation } from "./types";
 
-// KI-Planung und -Analyse mit Google Gemini (Spec 9). Der Key bleibt serverseitig; ohne Key ist die
+// KI-Planung und -Analyse mit Mistral (Spec 9). Der Key bleibt serverseitig; ohne Key ist die
 // Funktion mit klarer Meldung deaktiviert. Prompt-Inhalte werden nicht geloggt.
 
 export type ModelCall = (request: {
@@ -43,15 +43,15 @@ export type ModelCall = (request: {
   schema: object;
 }) => Promise<string>;
 
-const MODEL = geminiModel;
-export const aiConfigured = geminiConfigured;
+const MODEL = mistralModel;
+export const aiConfigured = mistralConfigured;
 
-// Standard: offizielles Gemini-SDK mit JSON-Schema-Ausgabe. Tests setzen ein Test-Double.
+// Standard: offizielles Mistral-SDK mit JSON-Schema-Ausgabe. Tests setzen ein Test-Double.
 let modelCall: ModelCall = async ({ system, user, schema }) => {
   try {
-    return await geminiJson({ system, user, schema });
+    return await mistralJson({ system, user, schema });
   } catch (error) {
-    if (error instanceof GeminiError) throw new AiOutputError(error.message);
+    if (error instanceof MistralError) throw new AiOutputError(error.message);
     throw error;
   }
 };
@@ -134,7 +134,7 @@ export async function startRun(ctx: RosterContext, body: Body) {
   if (!aiConfigured())
     throw new RosterError(
       "AI_UNAVAILABLE",
-      "Die KI-Planung ist nicht eingerichtet (GEMINI_API_KEY fehlt). Alle anderen Funktionen stehen zur Verfügung.",
+      "Die KI-Planung ist nicht eingerichtet (MISTRAL_API_KEY fehlt). Alle anderen Funktionen stehen zur Verfügung.",
       503,
     );
   const unitId = uuid(body.unitId, "Wohnbereich");

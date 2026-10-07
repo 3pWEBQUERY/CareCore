@@ -1,6 +1,6 @@
 import { readTerms } from "@/lib/settings";
 import { ApiError, auditStatement, iso, text, type ApiContext, type Row } from "@/lib/api-context";
-import { GeminiError, geminiConfigured, geminiJson } from "@/lib/gemini";
+import { MistralError, mistralConfigured, mistralJson } from "@/lib/mistral";
 
 // Such-Assistenz von CareCore KI: eine Frage in Alltagssprache („Wer ist diese Woche gestürzt?“) über die
 // Bewohnenden eines Wohnbereichs oder der ganzen Einrichtung. Die KI bekommt die Daten pseudonymisiert (Kennung R1,
@@ -12,8 +12,8 @@ export type AiSearchResult = {
   residents: Array<{ id: string; name: string; room: string }>;
 };
 
-type JsonCall = typeof geminiJson;
-let searchCall: JsonCall = geminiJson;
+type JsonCall = typeof mistralJson;
+let searchCall: JsonCall = mistralJson;
 // Tests setzen ein Test-Double.
 export const setSearchCall = (call: JsonCall) => {
   searchCall = call;
@@ -47,8 +47,8 @@ const when = (value: unknown) =>
 const initials = (row: Row) => `${String(row.first_name)[0] ?? ""}${String(row.last_name)[0] ?? ""}`.toUpperCase();
 
 export async function aiSearch(ctx: ApiContext, body: Record<string, unknown>): Promise<AiSearchResult> {
-  if (!geminiConfigured())
-    throw new ApiError("CareCore KI ist noch nicht eingerichtet: GEMINI_API_KEY fehlt in der Umgebung.", 503);
+  if (!mistralConfigured())
+    throw new ApiError("CareCore KI ist noch nicht eingerichtet: MISTRAL_API_KEY fehlt in der Umgebung.", 503);
   const question = text(body.question, 400);
   if (question.length < 5) throw new ApiError("Bitte eine Frage eingeben.");
   const careUnitId =
@@ -144,7 +144,7 @@ export async function aiSearch(ctx: ApiContext, body: Record<string, unknown>): 
       }),
     ) as { answer?: unknown; residents?: unknown };
   } catch (error) {
-    if (error instanceof GeminiError)
+    if (error instanceof MistralError)
       throw new ApiError(error.status === 503 ? `CareCore KI: ${error.message}` : error.message, error.status);
     if (error instanceof SyntaxError) throw new ApiError("Die KI hat keine verwertbare Antwort geliefert.", 502);
     throw error;

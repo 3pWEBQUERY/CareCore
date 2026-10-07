@@ -32,5 +32,5 @@ test("Such-Assistenz: Frage in der Suche an CareCore KI stellen", async ({ page 
   const ask = dialog.getByRole("button", { name: /CareCore KI fragen/ });
   await expect(ask).toBeVisible();
   await ask.click();
-  await expect(dialog.locator(".search-ai-answer")).toContainText(/GEMINI_API_KEY|Antwort|gestürzt/);
+  await expect(dialog.locator(".search-ai-answer")).toContainText(/MISTRAL_API_KEY|Antwort|gestürzt/);
 });

@@ -7,7 +7,7 @@ import { addDays, localDate, shiftMonth } from "@/lib/roster/time";
 import type { RuleCode } from "@/lib/roster/types";
 import { fixture, q } from "../support/db";
 
-// Test-Double statt Gemini: antwortet deterministisch und hält die gesendeten Prompts fest.
+// Test-Double statt Mistral: antwortet deterministisch und hält die gesendeten Prompts fest.
 type Input = { zeitraum: { from: string; to: string }; personen: Array<{ ref: string }>; abgelehnt?: unknown };
 const today = localDate(new Date(), "Europe/Zurich");
 const next = shiftMonth(Number(today.slice(0, 4)), Number(today.slice(5, 7)), 1);
@@ -15,10 +15,10 @@ const monthKey = `${next.year}-${String(next.month).padStart(2, "0")}`;
 const from = `${monthKey}-08`;
 const to = `${monthKey}-10`;
 
-test("ohne GEMINI_API_KEY ist die KI sauber deaktiviert", async () => {
+test("ohne MISTRAL_API_KEY ist die KI sauber deaktiviert", async () => {
   const f = await fixture();
-  const previous = process.env.GEMINI_API_KEY;
-  delete process.env.GEMINI_API_KEY;
+  const previous = process.env.MISTRAL_API_KEY;
+  delete process.env.MISTRAL_API_KEY;
   try {
     const error = await startRun(await f.ctx("leadA"), { unitId: f.units.a, month: monthKey }).catch((e) => e);
     assert.ok(error instanceof RosterError);
@@ -30,7 +30,7 @@ test("ohne GEMINI_API_KEY ist die KI sauber deaktiviert", async () => {
     );
     assert.equal(runs.n, 0);
   } finally {
-    if (previous !== undefined) process.env.GEMINI_API_KEY = previous;
+    if (previous !== undefined) process.env.MISTRAL_API_KEY = previous;
   }
 });
 
@@ -62,7 +62,7 @@ test("KI-Planung: pseudonymisierte Eingabe, Regelprüfung jeder Zuweisung, Über
       notes: [{ date: day, text: `${first} übernimmt den Frühdienst.` }],
     });
   });
-  process.env.GEMINI_API_KEY = "test-double";
+  process.env.MISTRAL_API_KEY = "test-double";
   try {
     const { id } = await startRun(lead, { unitId: f.units.a, month: monthKey, from, to });
     await executeRun(lead, id);
@@ -112,7 +112,7 @@ test("KI-Planung: pseudonymisierte Eingabe, Regelprüfung jeder Zuweisung, Über
     const again = await applyRun(lead, id, {}).catch((e) => e);
     assert.ok(again instanceof RosterError);
   } finally {
-    delete process.env.GEMINI_API_KEY;
+    delete process.env.MISTRAL_API_KEY;
   }
 });
 
@@ -120,7 +120,7 @@ test("KI-Antwort mit ungültigem JSON: Lauf schlägt mit klarer Meldung fehl", a
   const f = await fixture();
   const lead = await f.ctx("leadA");
   setModelCall(async () => "Hier ist Ihr Plan: …");
-  process.env.GEMINI_API_KEY = "test-double";
+  process.env.MISTRAL_API_KEY = "test-double";
   try {
     const { id } = await startRun(lead, { unitId: f.units.a, month: monthKey, from, to });
     await executeRun(lead, id);
@@ -133,18 +133,18 @@ test("KI-Antwort mit ungültigem JSON: Lauf schlägt mit klarer Meldung fehl", a
     );
     assert.equal(shifts.n, 0);
   } finally {
-    delete process.env.GEMINI_API_KEY;
+    delete process.env.MISTRAL_API_KEY;
   }
 });
 
 test("Mitarbeitende dürfen die KI nicht verwenden", async () => {
   const f = await fixture();
-  process.env.GEMINI_API_KEY = "test-double";
+  process.env.MISTRAL_API_KEY = "test-double";
   try {
     const error = await startRun(await f.ctx("anna"), { unitId: f.units.a, month: monthKey }).catch((e) => e);
     assert.ok(error instanceof RosterError);
     assert.equal(error.code, "FORBIDDEN");
   } finally {
-    delete process.env.GEMINI_API_KEY;
+    delete process.env.MISTRAL_API_KEY;
   }
 });

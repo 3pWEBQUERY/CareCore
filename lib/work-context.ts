@@ -4,7 +4,7 @@ import { resolveSettings, type AppSettings } from "@/lib/settings-shared";
 import { resolveTerminology, termsFor, type TerminologyKey } from "@/lib/terminology";
 import { resolvePreferences, type UserPreferences } from "@/lib/user-settings-shared";
 import { countryCode, type CountryCode } from "@/lib/country";
-import { geminiConfigured } from "@/lib/gemini";
+import { mistralConfigured } from "@/lib/mistral";
 
 export type CareUnit = { id: string; name: string; detail: string; residentCount: number; primary: boolean };
 export type ContextResident = {
@@ -112,7 +112,7 @@ export async function getWorkContext(userId: string): Promise<WorkContext> {
       organizationName: profile.organization_name,
       strongLoginMissing: Boolean(profile.strong_login_missing),
       aiReady:
-        geminiConfigured() &&
+        mistralConfigured() &&
         Array.isArray(profile.permissions) &&
         (profile.permissions as string[]).includes("ai.use"),
       logoUpdatedAt: profile.logo_updated_at

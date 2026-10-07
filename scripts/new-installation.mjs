@@ -48,5 +48,5 @@ const lines = [
 console.log(lines.join("\n"));
 console.error(
   "\nNur in Railway einfügen, nicht speichern oder per E-Mail versenden." +
-    "\nDatenbank, Bucket und Gemini/SMTP-Variablen siehe docs/INSTALLATION.md.",
+    "\nDatenbank, Bucket und Mistral/SMTP-Variablen siehe docs/INSTALLATION.md.",
 );

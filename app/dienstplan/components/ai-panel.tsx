@@ -173,7 +173,7 @@ export function AiPlanningPanel({
     >
       {!data.aiAvailable && (
         <p className="roster-alert">
-          Die KI-Planung ist nicht eingerichtet: In Railway fehlt <code>GEMINI_API_KEY</code>. Alle anderen Funktionen
+          Die KI-Planung ist nicht eingerichtet: In Railway fehlt <code>MISTRAL_API_KEY</code>. Alle anderen Funktionen
           des Dienstplans stehen zur Verfügung.
         </p>
       )}

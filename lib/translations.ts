@@ -1,6 +1,6 @@
 import catalog from "@/locales/catalog.json" with { type: "json" };
 import { ApiError, auditStatement, iso, type ApiContext, type Row, type Sql } from "@/lib/api-context";
-import { GeminiError, geminiConfigured, geminiJson, geminiModel } from "@/lib/gemini";
+import { MistralError, mistralConfigured, mistralJson, mistralModel } from "@/lib/mistral";
 import { hasPermission } from "@/lib/server-data";
 import { releasedLanguages } from "@/lib/languages";
 import {
@@ -154,8 +154,8 @@ Antworte nur mit einem JSON-Objekt: Schlüssel ist die Nummer des Textes, Wert d
 
 export type TranslationCall = (request: { system: string; user: string; schema: object }) => Promise<string>;
 
-// Standard: Google Gemini mit JSON-Schema-Ausgabe. Tests setzen ein Test-Double.
-let translationCall: TranslationCall = geminiJson;
+// Standard: Mistral mit JSON-Schema-Ausgabe. Tests setzen ein Test-Double.
+let translationCall: TranslationCall = mistralJson;
 export const setTranslationCall = (call: TranslationCall) => {
   translationCall = call;
 };
@@ -164,8 +164,8 @@ export const setTranslationCall = (call: TranslationCall) => {
 export async function draftTranslations(ctx: ApiContext, localeInput: unknown, limit = 120) {
   requireAdmin(ctx);
   const locale = targetLanguage(localeInput);
-  if (!geminiConfigured())
-    throw new ApiError("Die KI für Übersetzungen ist nicht eingerichtet (GEMINI_API_KEY fehlt).", 503);
+  if (!mistralConfigured())
+    throw new ApiError("Die KI für Übersetzungen ist nicht eingerichtet (MISTRAL_API_KEY fehlt).", 503);
   const rows = (await ctx.sql`SELECT source FROM carecore_translations WHERE locale = ${locale}`) as Row[];
   const done = new Set(rows.map((row) => String(row.source)));
   const batch = SOURCES.filter((source) => !done.has(source)).slice(0, Math.min(Math.max(limit, 1), 200));
@@ -185,7 +185,7 @@ export async function draftTranslations(ctx: ApiContext, localeInput: unknown, l
       },
     });
   } catch (error) {
-    if (error instanceof GeminiError) throw new ApiError(error.message, error.status);
+    if (error instanceof MistralError) throw new ApiError(error.message, error.status);
     throw error;
   }
   const json = /\{[\s\S]*\}/.exec(content)?.[0];
@@ -209,7 +209,7 @@ export async function draftTranslations(ctx: ApiContext, localeInput: unknown, l
       auditStatement(ctx, "language", ctx.actor.organizationId, "ai_drafted", null, {
         locale,
         count: accepted.length,
-        model: geminiModel(),
+        model: mistralModel(),
       }),
     ]);
   return { drafted: accepted.length, remaining: SOURCES.length - done.size - accepted.length };

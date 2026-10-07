@@ -5,7 +5,7 @@ import { readSettings } from "@/lib/settings";
 import { restraintLabel, type RestraintKind } from "@/lib/restraints-shared";
 import { addMonths, day, orgToday, raiPeople, raiWorkplace } from "@/lib/rai";
 import { hasPermission } from "@/lib/server-data";
-import { geminiConfigured } from "@/lib/gemini";
+import { mistralConfigured } from "@/lib/mistral";
 import { addGoal, parseGoal } from "@/lib/care-plan-goals";
 import { OPEN as OPEN_PLANS, createPlan, today as planToday } from "@/lib/care-planning";
 import {
@@ -329,7 +329,7 @@ export async function kompassDetail(ctx: ApiContext, residentInput: unknown): Pr
     context: await kompassContext(ctx, residentId, previous?.completedAt ?? null),
     settings,
     today,
-    aiDraft: geminiConfigured() && hasPermission(ctx.actor, "ai.use"),
+    aiDraft: mistralConfigured() && hasPermission(ctx.actor, "ai.use"),
   };
 }
 

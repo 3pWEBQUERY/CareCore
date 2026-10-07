@@ -1,7 +1,7 @@
 import "server-only";
 import type { Row } from "@/lib/api-context";
 import { iso } from "@/lib/api-context";
-import { geminiConfigured } from "@/lib/gemini";
+import { mistralConfigured } from "@/lib/mistral";
 import type { RosterContext } from "./context";
 import { unitsFor } from "./context";
 import { ensurePeriod, findPeriod, loadSnapshot, monthRange, unitMemberIds } from "./data";
@@ -328,7 +328,7 @@ export async function getSchedule(
       allowShiftTakeover: snapshot.ruleSet.allowShiftTakeover,
       deviationThresholdMinutes: snapshot.ruleSet.deviationThresholdMinutes,
     },
-    aiAvailable: lead && geminiConfigured(),
+    aiAvailable: lead && mistralConfigured(),
     candidates: lead && !period?.lockedAt ? await planningCandidates(ctx, unitId, rowIds) : [],
     changeToken: token,
   };
