@@ -168,7 +168,7 @@ test("Pflegeakte: Status, Pflegebereiche und Weg in die Pflegeplanung", async ({
 test("Kompass-Fälligkeiten: Filter nach Zeitraum und Grund, Öffnen der Abklärung", async ({ page }) => {
   await login(page, ADMIN);
   const errors = watchErrors(page);
-  await page.goto("/c/rai/faelligkeiten");
+  await page.goto("/c/kompass/faelligkeiten");
   await expect(page.getByRole("heading", { name: "Fälligkeiten", level: 1 })).toBeVisible();
   const rows = page.locator("article");
   await expect(rows.first()).toBeVisible();
@@ -184,7 +184,7 @@ test("Kompass-Fälligkeiten: Filter nach Zeitraum und Grund, Öffnen der Abklär
   await page.getByRole("button", { name: "Alle", exact: true }).click();
   await expect(rows).toHaveCount(total);
   await rows.first().getByRole("button", { name: "Öffnen" }).click();
-  await expect(page).toHaveURL(/\/rai\/erfassung/);
+  await expect(page).toHaveURL(/\/kompass\/abklaerung/);
   await expect(page.locator("h1").first()).toBeVisible();
   expect(errors).toEqual([]);
 });

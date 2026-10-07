@@ -200,7 +200,7 @@ export async function refreshRaiDue(ctx: ApiContext, body: Record<string, unknow
       statements.push(ctx.sql`
         INSERT INTO carecore_notifications (id, user_id, title, body, type, priority, link_url)
         VALUES (${randomUUID()}, ${person.id}, ${`${candidates.length} Abklärung${candidates.length === 1 ? "" : "en"} mit dem Kompass fällig`},
-          ${`${ctx.actor.display_name} hat die Fälligkeiten des Kompass aktualisiert.`}, 'rai_due', 'normal', '/c/rai/faelligkeiten')`);
+          ${`${ctx.actor.display_name} hat die Fälligkeiten des Kompass aktualisiert.`}, 'rai_due', 'normal', '/c/kompass/faelligkeiten')`);
       notified += 1;
     }
   statements.push(

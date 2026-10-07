@@ -21,7 +21,7 @@ export function useOpenAssessment() {
   const router = useRouter();
   return (residentId: string) => {
     setCareResident(residentId);
-    router.push(`/c/rai/erfassung?resident=${residentId}`);
+    router.push(`/c/kompass/abklaerung?resident=${residentId}`);
   };
 }
 

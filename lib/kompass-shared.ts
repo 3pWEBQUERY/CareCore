@@ -36,6 +36,8 @@ export type KompassDetail = {
   context: KompassContext;
   settings: { admissionDays: number | null; intervalMonths: number | null };
   today: string;
+  // Ob die Fachperson einen Entwurf für das Gesamtbild mit CareCore KI anfordern kann.
+  aiDraft: boolean;
 };
 
 export type KompassReport = {
@@ -55,4 +57,28 @@ export type KompassStatusSummary = {
   // Fortschritt in Prozent, wenn eine Abklärung begonnen ist.
   inProgress: number | null;
   canOpen: boolean;
+};
+
+// Auswertung je Wohnbereich: nur gezählt, ohne Wertung. Grundlage ist die letzte abgeschlossene Abklärung mit dem
+// Kompass jeder Person, die derzeit im Haus bzw. im Wohnbereich wohnt.
+export type KompassStatistics = {
+  careUnit: { id: string; name: string } | null;
+  people: number;
+  assessed: number;
+  domains: Array<{
+    id: string;
+    title: string;
+    // Personen mit mindestens einer Antwort über der ersten Stufe der Skala in diesem Bereich.
+    withSupport: number;
+    // Personen, bei denen die Fachperson Handlungsbedarf festgehalten hat.
+    withNeed: number;
+    items: Array<{
+      key: string;
+      label: string;
+      // Anzahl Personen je Antwort in der Reihenfolge der Skala; „Trifft nicht zu“ separat.
+      counts: Array<{ value: string; label: string; count: number }>;
+      notApplicable: number;
+      answered: number;
+    }>;
+  }>;
 };

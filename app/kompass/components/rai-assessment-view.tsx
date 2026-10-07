@@ -33,6 +33,7 @@ import {
   type KompassItem,
   type Occasion,
 } from "@/lib/kompass-instrument";
+import type { AiDraft } from "@/lib/ai-shared";
 import type { KompassAssessment, KompassDetail, KompassReport } from "@/lib/kompass-shared";
 
 const NOBODY = "";
@@ -208,7 +209,7 @@ function NeedsCard({
           <p className="eyebrow">Letzte Abklärung{kompass ? ` · ${formatDate(kompass.assessedOn)}` : ""}</p>
           <h2 className="card-title">Handlungsbedarf</h2>
         </div>
-        <a className="secondary-button" href={`/c/rai/bericht?id=${assessmentId}`} target="_blank" rel="noreferrer">
+        <a className="secondary-button" href={`/c/kompass/bericht?id=${assessmentId}`} target="_blank" rel="noreferrer">
           <ModuleIcon name="docs" className="button-icon" /> Bericht
         </a>
       </div>
@@ -370,7 +371,7 @@ function HistoryCard({ history }: { history: KompassAssessment[] }) {
                     .join(" · ")}
                 </small>
                 {item.kompass && (
-                  <a href={`/c/rai/bericht?id=${item.id}`} target="_blank" rel="noreferrer">
+                  <a href={`/c/kompass/bericht?id=${item.id}`} target="_blank" rel="noreferrer">
                     Bericht öffnen
                   </a>
                 )}
@@ -644,6 +645,17 @@ function KompassForm({
             data={data}
             previous={previous?.kompass ?? null}
             onSummary={(summary) => change({ summary }, (current) => ({ ...current, summary }))}
+            requestDraft={
+              detail.aiDraft
+                ? async () => {
+                    await flush();
+                    const result = await requestJson<{ draft: AiDraft }>(`/api/rai/residents/${resident.id}/summary`, {
+                      method: "POST",
+                    });
+                    return result.draft;
+                  }
+                : null
+            }
             go={go}
             completing={completing}
             onComplete={() => void complete()}
@@ -974,6 +986,7 @@ function FinishStep({
   data,
   previous,
   onSummary,
+  requestDraft,
   go,
   completing,
   onComplete,
@@ -982,6 +995,7 @@ function FinishStep({
   data: KompassData;
   previous: KompassData | null;
   onSummary: (summary: string) => void;
+  requestDraft: (() => Promise<AiDraft>) | null;
   go: (step: string) => void;
   completing: boolean;
   onComplete: () => void;
@@ -999,6 +1013,33 @@ function FinishStep({
     [data, previous],
   );
   const open = rows.filter((row) => !row.progress.complete);
+  const [suggestion, setSuggestion] = useState<AiDraft | null>(null);
+  const [drafting, setDrafting] = useState(false);
+  const [aiError, setAiError] = useState("");
+  async function createDraft() {
+    if (!requestDraft) return;
+    setDrafting(true);
+    setAiError("");
+    try {
+      setSuggestion(await requestDraft());
+    } catch (cause) {
+      setAiError(cause instanceof Error ? cause.message : "Der Entwurf konnte nicht erstellt werden.");
+    } finally {
+      setDrafting(false);
+    }
+  }
+  // Übernehmen ersetzt ein leeres Gesamtbild und ergänzt ein vorhandenes; der Entwurf wird als geprüft vermerkt.
+  async function review(action: "accept" | "discard") {
+    if (!suggestion) return;
+    const content = suggestion.content;
+    setSuggestion(null);
+    if (action === "accept") onSummary(data.summary.trim() ? `${data.summary.trim()}\n\n${content}` : content);
+    try {
+      await requestJson(`/api/ai/drafts/${suggestion.id}`, { method: "PATCH", body: { action } });
+    } catch {
+      // Der Vermerk am Entwurf ist zweitrangig; das Gesamtbild ist bereits übernommen bzw. verworfen.
+    }
+  }
   return (
     <section className="card kompass-panel" aria-labelledby="kompass-finish">
       <header className="kompass-panel-head">
@@ -1056,16 +1097,49 @@ function FinishStep({
           </tbody>
         </table>
       </div>
-      <label className="kompass-summary">
-        <span>Gesamtbild aus Sicht der Fachperson</span>
+      <div className="kompass-summary">
+        <span className="kompass-summary-label">
+          <label htmlFor="kompass-summary-text">Gesamtbild aus Sicht der Fachperson</label>
+          {requestDraft && (
+            <button className="quiet-button" type="button" disabled={drafting} onClick={() => void createDraft()}>
+              <ModuleIcon name="ai" /> {drafting ? "Entwurf wird geschrieben …" : "Entwurf mit CareCore KI"}
+            </button>
+          )}
+        </span>
         <textarea
+          id="kompass-summary-text"
           rows={4}
           maxLength={8000}
           value={data.summary}
           onChange={(event) => onSummary(event.target.value)}
           placeholder="Was prägt den Alltag der Person zurzeit? Was ist ihr wichtig? Was hat sich verändert?"
         />
-      </label>
+      </div>
+      {aiError && (
+        <p className="kompass-missing" role="alert">
+          {aiError}
+        </p>
+      )}
+      {suggestion && (
+        <div className="kompass-ai-draft" role="region" aria-label="Entwurf der CareCore KI">
+          <p className="kompass-ai-draft-head">
+            <ModuleIcon name="ai" /> Entwurf der CareCore KI – bitte prüfen und anpassen
+          </p>
+          <p className="kompass-ai-draft-text">{suggestion.content}</p>
+          <p className="kompass-ai-draft-note">
+            Der Entwurf stützt sich nur auf Ihre Antworten und Notizen und wurde ohne Namen erstellt. Er wird erst
+            übernommen, wenn Sie es bestätigen.
+          </p>
+          <div className="kompass-ai-draft-actions">
+            <button className="secondary-button" type="button" onClick={() => void review("discard")}>
+              Verwerfen
+            </button>
+            <button className="primary-button" type="button" onClick={() => void review("accept")}>
+              Ins Gesamtbild übernehmen
+            </button>
+          </div>
+        </div>
+      )}
       {open.length > 0 && (
         <p className="kompass-missing" role="status">
           Noch offen: {open.map((row) => row.domain.title).join(", ")}.

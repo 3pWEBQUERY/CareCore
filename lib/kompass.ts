@@ -5,6 +5,7 @@ import { readSettings } from "@/lib/settings";
 import { restraintLabel, type RestraintKind } from "@/lib/restraints-shared";
 import { addMonths, day, orgToday, raiPeople, raiWorkplace } from "@/lib/rai";
 import { hasPermission } from "@/lib/server-data";
+import { geminiConfigured } from "@/lib/gemini";
 import { addGoal, parseGoal } from "@/lib/care-plan-goals";
 import { OPEN as OPEN_PLANS, createPlan, today as planToday } from "@/lib/care-planning";
 import {
@@ -12,15 +13,20 @@ import {
   KOMPASS_DOMAINS,
   KOMPASS_INSTRUMENT,
   KOMPASS_NAME,
+  NOT_APPLICABLE,
   OCCASIONS,
   PARTICIPANTS,
+  SCALES,
+  answerRank,
   domainProgress,
+  optionLabel,
   emptyKompass,
   kompassProgress,
   validAnswer,
   type ContextKey,
   type DomainNotes,
   type KompassData,
+  type KompassItem,
   type Occasion,
 } from "@/lib/kompass-instrument";
 import type {
@@ -29,6 +35,7 @@ import type {
   KompassDetail,
   KompassFact,
   KompassReport,
+  KompassStatistics,
   KompassStatus,
   KompassStatusSummary,
 } from "@/lib/kompass-shared";
@@ -322,6 +329,7 @@ export async function kompassDetail(ctx: ApiContext, residentInput: unknown): Pr
     context: await kompassContext(ctx, residentId, previous?.completedAt ?? null),
     settings,
     today,
+    aiDraft: geminiConfigured() && hasPermission(ctx.actor, "ai.use"),
   };
 }
 
@@ -659,5 +667,109 @@ export async function kompassStatus(ctx: ApiContext, residentId: string): Promis
     dueOn: day(open?.due_on) ?? day(current?.due_on),
     inProgress: open?.status === "in_progress" ? Number(open.progress ?? 0) : null,
     canOpen: hasPermission(ctx.actor, "rai.manage"),
+  };
+}
+
+// ---------------------------------------------------------------- Grundlage für den KI-Entwurf
+
+// Laufende Abklärung einer Person als Text für den Entwurf des Gesamtbilds: Antworten, Notizen und Entscheide der
+// Fachperson, dazu Veränderungen gegenüber der letzten abgeschlossenen Abklärung. Ohne Namen.
+export async function kompassDraftText(ctx: ApiContext, residentId: string) {
+  const rows = (await ctx.sql`
+    SELECT id, status, data, completed_at FROM carecore_rai_assessments
+    WHERE resident_id = ${residentId} AND assessment_type = ${KOMPASS_INSTRUMENT}
+      AND (status = 'in_progress' OR (status IN ('current', 'archived') AND completed_at IS NOT NULL))
+    ORDER BY (status = 'in_progress') DESC, completed_at DESC NULLS LAST LIMIT 2`) as Row[];
+  const draft = rows[0]?.status === "in_progress" ? rows[0] : null;
+  const data = draft ? readKompass(draft.data) : null;
+  if (!draft || !data) throw new ApiError("Für diese Person ist keine Abklärung in Bearbeitung.", 404);
+  const before = rows[1] ? readKompass(rows[1].data) : null;
+  const lines = [
+    `Anlass: ${OCCASIONS[data.occasion]}`,
+    data.assessedOn ? `Abklärung vom ${formatDay(data.assessedOn)}` : "",
+    data.participants.length ? `Beteiligt: ${data.participants.join(", ")}` : "",
+    before ? `Letzte abgeschlossene Abklärung: ${formatDay(before.assessedOn)}` : "Erste Abklärung mit dem Kompass",
+  ];
+  for (const domain of KOMPASS_DOMAINS) {
+    const notes = data.domains[domain.id] ?? {};
+    lines.push("", `Bereich ${domain.title}:`);
+    for (const item of domain.items) {
+      const key = `${domain.id}.${item.id}`;
+      const answer = optionLabel(item, data.answers[key]);
+      const earlier = before ? optionLabel(item, before.answers[key]) : null;
+      lines.push(
+        `- ${item.label}: ${answer ?? "nicht beantwortet"}${earlier && answer && earlier !== answer ? ` (zuvor: ${earlier})` : ""}`,
+      );
+    }
+    if (notes.resources) lines.push(`Ressourcen: ${notes.resources}`);
+    if (notes.wishes) lines.push(`Wünsche und Gewohnheiten: ${notes.wishes}`);
+    if (notes.need !== undefined)
+      lines.push(
+        `Handlungsbedarf (Entscheid der Fachperson): ${notes.need ? `Ja${notes.needText ? ` – ${notes.needText}` : ""}` : "Nein"}`,
+      );
+    if (notes.notes) lines.push(`Notizen: ${notes.notes}`);
+  }
+  return { assessmentId: String(draft.id), text: lines.filter((line, index) => line || index > 3).join("\n") };
+}
+
+// ---------------------------------------------------------------- Auswertung je Wohnbereich
+
+// Unterstützung oder Beobachtung: jede Antwort über der ersten Stufe der Skala; bei Massnahmen erst „Mit
+// Unterstützung“ und „Durch die Pflege“ (macht die Person es selbst, braucht sie dabei keine Hilfe).
+const noted = (item: KompassItem, value: string | undefined) =>
+  (answerRank(item, value) ?? -1) >= (item.scale === "care" ? 2 : 1);
+
+// Zählt die Antworten der letzten abgeschlossenen Abklärung je Person (optional nur ein Wohnbereich). CareCore
+// zählt nur; es gibt keine Punktzahl und keine Einstufung.
+export async function kompassStatistics(ctx: ApiContext, careUnitInput: unknown): Promise<KompassStatistics> {
+  let careUnit: KompassStatistics["careUnit"] = null;
+  if (careUnitInput) {
+    const id = assertUuid(careUnitInput, "Wohnbereich");
+    const units = (await ctx.sql`
+      SELECT cu.id, cu.name FROM carecore_care_units cu JOIN carecore_sites si ON si.id = cu.site_id
+      WHERE cu.id = ${id} AND si.organization_id = ${ctx.actor.organizationId}`) as Row[];
+    if (!units[0]) throw new ApiError("Wohnbereich nicht gefunden.", 404);
+    careUnit = { id, name: String(units[0].name) };
+  }
+  const careUnitId = careUnit?.id ?? null;
+  const rows = (await ctx.sql`
+    SELECT r.id, done.data
+    FROM carecore_residents r
+    LEFT JOIN LATERAL (SELECT care_unit_id FROM carecore_resident_stays WHERE resident_id = r.id AND ended_at IS NULL
+      ORDER BY started_at DESC LIMIT 1) stay ON TRUE
+    LEFT JOIN LATERAL (SELECT data FROM carecore_rai_assessments WHERE resident_id = r.id AND status = 'current'
+      AND assessment_type = ${KOMPASS_INSTRUMENT} ORDER BY completed_at DESC NULLS LAST LIMIT 1) done ON TRUE
+    WHERE r.organization_id = ${ctx.actor.organizationId} AND r.status = 'active'
+      AND (${careUnitId}::uuid IS NULL OR stay.care_unit_id = ${careUnitId}::uuid)`) as Row[];
+  const assessments = rows.map((row) => readKompass(row.data)).filter((data): data is KompassData => data !== null);
+  return {
+    careUnit,
+    people: rows.length,
+    assessed: assessments.length,
+    domains: KOMPASS_DOMAINS.map((domain) => {
+      const keyOf = (itemId: string) => `${domain.id}.${itemId}`;
+      return {
+        id: domain.id,
+        title: domain.title,
+        withSupport: assessments.filter((data) =>
+          domain.items.some((item) => noted(item, data.answers[keyOf(item.id)])),
+        ).length,
+        withNeed: assessments.filter((data) => data.domains[domain.id]?.need === true).length,
+        items: domain.items.map((item) => {
+          const values = assessments.map((data) => data.answers[keyOf(item.id)]).filter((value) => value !== undefined);
+          return {
+            key: keyOf(item.id),
+            label: item.label,
+            counts: SCALES[item.scale].options.map((option) => ({
+              value: option.value,
+              label: option.label,
+              count: values.filter((value) => value === option.value).length,
+            })),
+            notApplicable: values.filter((value) => value === NOT_APPLICABLE).length,
+            answered: values.length,
+          };
+        }),
+      };
+    }),
   };
 }

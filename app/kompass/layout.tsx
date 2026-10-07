@@ -5,6 +5,6 @@ export const metadata: Metadata = {
   description: "Bedarfsabklärung mit dem CareCore Kompass: Abklärungen, Verantwortlichkeiten und Auswertungen.",
 };
 
-export default function RaiLayout({ children }: LayoutProps<"/rai">) {
+export default function RaiLayout({ children }: LayoutProps<"/kompass">) {
   return children;
 }

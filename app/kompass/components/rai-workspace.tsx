@@ -11,6 +11,7 @@ import { RaiView, meta } from "./rai-data";
 import { OverviewView } from "./rai-overview-view";
 import { AssessmentView } from "./rai-assessment-view";
 import { DueView, ReportsView, downloadRaiReport } from "./rai-due-reports-views";
+import { KompassStatisticsView } from "./kompass-statistics";
 import { RaiRefreshPopover } from "./rai-refresh-popover";
 
 export default function RaiWorkspace({ view }: { view: RaiView }) {
@@ -41,7 +42,7 @@ export default function RaiWorkspace({ view }: { view: RaiView }) {
                   type="button"
                   onClick={() =>
                     view === "overview"
-                      ? router.push("/c/rai/erfassung")
+                      ? router.push("/c/kompass/abklaerung")
                       : view === "due"
                         ? setRefreshOpen(true)
                         : downloadRaiReport()
@@ -55,7 +56,12 @@ export default function RaiWorkspace({ view }: { view: RaiView }) {
             {view === "overview" && <OverviewView rai={rai} />}
             {view === "assessment" && <AssessmentView showToast={showToast} />}
             {view === "due" && <DueView rai={rai} />}
-            {view === "reports" && <ReportsView rai={rai} />}
+            {view === "reports" && (
+              <>
+                <ReportsView rai={rai} />
+                <KompassStatisticsView rai={rai} />
+              </>
+            )}
           </main>
           {refreshOpen && rai.data && (
             <RaiRefreshPopover

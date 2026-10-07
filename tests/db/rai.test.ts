@@ -9,6 +9,7 @@ import {
   dueKompass,
   kompassDetail,
   kompassReport,
+  kompassStatistics,
   kompassStatus,
   saveKompassDraft,
   startKompass,
@@ -17,6 +18,8 @@ import { recordSummary } from "@/lib/resident-record";
 import { dailyWorklist } from "@/lib/worklist";
 import { KOMPASS_DOMAINS, KOMPASS_INSTRUMENT, NOT_APPLICABLE, SCALES } from "@/lib/kompass-instrument";
 import { raiWorkplace } from "@/lib/rai";
+import { draftKompassSummary, reviewDraft, setDraftCall } from "@/lib/ai";
+import { geminiText } from "@/lib/gemini";
 import { apiContextFor, createResident, fixture, q } from "../support/db";
 
 const failure = async (promise: Promise<unknown>) =>
@@ -245,7 +248,7 @@ test("Kompass: Bericht mit Vergleich, Handlungsbedarf als Ziel übernehmen, Akte
       .find((row) => row.id === residentId)
       ?.items.filter((item) => item.label.startsWith("Kompass"))
       .map((item) => [item.label, item.detail, item.href]),
-    [["Kompass fortsetzen", "Abklärung zu 0% erledigt", `/c/rai/erfassung?resident=${residentId}`]],
+    [["Kompass fortsetzen", "Abklärung zu 0% erledigt", `/c/kompass/abklaerung?resident=${residentId}`]],
   );
   assert.deepEqual(await dueKompass(reader), [], "ohne Berechtigung für den Kompass kein Eintrag");
   await saveKompassDraft(ctx, residentId, { id: second.id, patch: fullPatch(2) });
@@ -327,4 +330,90 @@ test("Kompass: Bericht mit Vergleich, Handlungsbedarf als Ziel übernehmen, Akte
     log.map((row) => row.action),
     ["started", "completed", "need_adopted"],
   );
+});
+
+test("Kompass: Auswertung je Wohnbereich (nur gezählt) und KI-Entwurf für das Gesamtbild", async () => {
+  const f = await fixture();
+  const reader = await apiContextFor(f, "anna");
+  const ctx = {
+    ...reader,
+    actor: { ...reader.actor, permissions: [...reader.actor.permissions, "rai.manage", "ai.use"] },
+  } as ApiContext;
+  const first = await createResident(f, "Erna Muster");
+  const second = await createResident(f, "Hans Beispiel");
+  await createResident(f, "Olga Ohne");
+  for (const [residentId, level] of [
+    [first, 1],
+    [second, 2],
+  ] as const) {
+    const started = await startKompass(ctx, residentId, { occasion: "admission", assessedOn: zurichDay(0) });
+    await saveKompassDraft(ctx, residentId, { id: started.id, patch: fullPatch(level) });
+    await completeKompass(ctx, residentId, { id: started.id });
+  }
+
+  // Ganzes Haus: drei Personen, zwei mit abgeschlossener Abklärung; Mobilität bei beiden mit Handlungsbedarf.
+  const house = await kompassStatistics(ctx, null);
+  assert.equal(house.careUnit, null);
+  assert.equal(house.people, 3);
+  assert.equal(house.assessed, 2);
+  const mobility = house.domains.find((domain) => domain.id === "mobility");
+  assert.equal(mobility?.withNeed, 2);
+  assert.equal(mobility?.withSupport, 2, "Antworten über der ersten Stufe der Skala");
+  const transfer = mobility?.items.find((item) => item.key === "mobility.transfer");
+  assert.deepEqual(
+    transfer?.counts.map((count) => count.count),
+    [0, 1, 1, 0, 0],
+  );
+  assert.equal(transfer?.answered, 2);
+  assert.equal(house.domains.find((domain) => domain.id === "communication")?.withNeed, 0);
+  // Massnahmen: „Macht es selbst“ zählt nicht als Unterstützung, „Mit Unterstützung“ schon.
+  assert.equal(house.domains.find((domain) => domain.id === "treatment")?.withSupport, 1);
+
+  // Wohnbereich: der andere Wohnbereich ist leer, fremde Wohnbereiche werden abgewiesen.
+  const unitA = await kompassStatistics(ctx, f.units.a);
+  assert.equal(unitA.careUnit?.name, "Wohngruppe A");
+  assert.equal(unitA.assessed, 2);
+  const unitB = await kompassStatistics(ctx, f.units.b);
+  assert.equal(unitB.people, 0);
+  assert.equal(unitB.assessed, 0);
+  assert.equal((await failure(kompassStatistics(ctx, randomUUID()))).status, 404);
+  assert.equal((await failure(kompassStatistics(ctx, "x"))).status, 400);
+
+  // KI-Entwurf: nur mit laufender Abklärung, ohne Namen, Entscheide der Fachperson im Auftrag; die Abklärung selbst
+  // bleibt unverändert.
+  const previousKey = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = "test-double";
+  try {
+    const sent: string[] = [];
+    setDraftCall(async ({ user }) => {
+      sent.push(user);
+      return { text: "Frau EM lebt sich gut ein.", truncated: false };
+    });
+    assert.equal((await failure(draftKompassSummary(ctx, first))).status, 404);
+    const draft = await startKompass(ctx, first, { occasion: "change", assessedOn: zurichDay(0) });
+    await saveKompassDraft(ctx, first, { id: draft.id, patch: fullPatch(2) });
+    const result = await draftKompassSummary(ctx, first);
+    assert.equal(result.task, "kompassSummary");
+    assert.equal(result.content, "Frau EM lebt sich gut ein.");
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].includes("Erna") || sent[0].includes("Muster"), false, "keine Namen an die KI");
+    assert.match(sent[0], /EM \(/);
+    assert.match(sent[0], /Handlungsbedarf \(Entscheid der Fachperson\): Ja – Begleitung beim Aufstehen am Morgen/);
+    assert.match(sent[0], /Sehen: Deutlich eingeschränkt \(zuvor: Leicht eingeschränkt\)/);
+    assert.match(sent[0], /bewerte den Bedarf nicht selbst/);
+    const detail = await kompassDetail(ctx, first);
+    assert.equal(detail.draft?.kompass?.summary, "", "das Gesamtbild übernimmt erst die Fachperson");
+    assert.equal(detail.aiDraft, true);
+    assert.equal((await kompassDetail(reader, first)).aiDraft, false, "ohne Berechtigung für die KI kein Entwurf");
+    assert.equal((await reviewDraft(ctx, result.id, { action: "discard" })).status, "discarded");
+    const [audit] = await q<{ after_data: { task: string; assessmentId: string } }>(
+      `SELECT after_data FROM carecore_audit_log WHERE entity_type = 'ai_draft' AND entity_id = $1 AND action = 'created'`,
+      [result.id],
+    );
+    assert.deepEqual([audit.after_data.task, audit.after_data.assessmentId], ["kompassSummary", draft.id]);
+  } finally {
+    setDraftCall(geminiText);
+    if (previousKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = previousKey;
+  }
 });
