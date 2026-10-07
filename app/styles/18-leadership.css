@@ -229,12 +229,12 @@
   display: block;
 }
 .leadership-priority-list strong {
-  font-size: 10px;
+  font-size: 12px;
 }
 .leadership-priority-list small {
   margin-top: 4px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
 }
 .leadership-register {
   grid-column: 1;
@@ -269,12 +269,12 @@
   display: block;
 }
 .leadership-register-list strong {
-  font-size: 10px;
+  font-size: 12px;
 }
 .leadership-register-list small {
   margin-top: 4px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
   line-height: 1.35;
 }
 .leadership-decision {
@@ -288,7 +288,7 @@
 .leadership-decision-body > p {
   margin: 0 0 2px;
   color: #4f6478;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.5;
 }
 .leadership-decision-body > div {
@@ -300,10 +300,11 @@
 }
 .leadership-decision-body span {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
 }
 .leadership-decision-body strong {
-  font-size: 10px;
+  font-size: 12px;
+  text-align: right;
 }
 .leadership-decision-actions {
   display: flex;
@@ -312,9 +313,9 @@
 }
 .leadership-decision-actions button {
   flex: 1;
-  min-height: 36px;
+  min-height: 40px;
   padding-inline: 8px;
-  font-size: 9px;
+  font-size: 13px;
 }
 .leadership-page .legacy-leadership-board {
   display: grid;

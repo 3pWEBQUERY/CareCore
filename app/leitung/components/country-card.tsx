@@ -41,7 +41,7 @@ export function CountryCard({
       .finally(() => setSaving(false));
   };
   return (
-    <section className="card admin-terminology-card admin-country-card" aria-labelledby="admin-country-title">
+    <section className="card admin-terminology-card admin-country-card" id="land" aria-labelledby="admin-country-title">
       <div className="card-header">
         <div>
           <p className="eyebrow">Land</p>

@@ -726,26 +726,11 @@
   .leadership-chart-legend {
     font-size: 11.5px;
   }
-  .leadership-priority-list strong {
-    font-size: 12px;
-  }
   .leadership-priority-list small {
-    font-size: 11px;
-  }
-  .leadership-register-list strong {
     font-size: 12px;
   }
   .leadership-register-list small {
-    font-size: 11px;
-  }
-  .leadership-decision-body span {
-    font-size: 11.5px;
-  }
-  .leadership-decision-body strong {
     font-size: 12px;
-  }
-  .leadership-decision-actions button {
-    font-size: 11.5px;
   }
   .admin-setting-list small {
     font-size: 12px;
