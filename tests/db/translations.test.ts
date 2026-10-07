@@ -84,17 +84,17 @@ test("Übersetzungen: nur Katalogtexte, Platzhalter bleiben, Entwürfe nur zum P
   );
 });
 
-test("KI-Entwürfe mit Gemini: nur als Entwurf, Platzhalter geprüft, ohne Schlüssel deaktiviert", async () => {
+test("KI-Entwürfe mit Mistral: nur als Entwurf, Platzhalter geprüft, ohne Schlüssel deaktiviert", async () => {
   const ctx = await admin();
   await q(`DELETE FROM carecore_translations WHERE locale = 'sq'`);
-  const previous = process.env.GEMINI_API_KEY;
-  const previousModel = process.env.GEMINI_MODEL;
-  delete process.env.GEMINI_MODEL;
+  const previous = process.env.MISTRAL_API_KEY;
+  const previousModel = process.env.MISTRAL_MODEL;
+  delete process.env.MISTRAL_MODEL;
   try {
-    delete process.env.GEMINI_API_KEY;
-    assert.match(await rejected(draftTranslations(ctx, "sq", 5)), /GEMINI_API_KEY fehlt/);
+    delete process.env.MISTRAL_API_KEY;
+    assert.match(await rejected(draftTranslations(ctx, "sq", 5)), /MISTRAL_API_KEY fehlt/);
 
-    process.env.GEMINI_API_KEY = "test-double";
+    process.env.MISTRAL_API_KEY = "test-double";
     const requests: Array<{ user: string; schema: { required?: string[] } }> = [];
     setTranslationCall(async (request) => {
       requests.push(request as (typeof requests)[number]);
@@ -127,14 +127,14 @@ test("KI-Entwürfe mit Gemini: nur als Entwurf, Platzhalter geprüft, ohne Schl�
       `SELECT after_data FROM carecore_audit_log WHERE entity_type = 'language' AND action = 'ai_drafted'
        ORDER BY created_at DESC LIMIT 1`,
     );
-    assert.deepEqual([audit.after_data.model, audit.after_data.count], ["gemini-3.5-flash-lite", expected]);
+    assert.deepEqual([audit.after_data.model, audit.after_data.count], ["mistral-small-latest", expected]);
 
     setTranslationCall(async () => "{ kaputt }");
     assert.match(await rejected(draftTranslations(ctx, "sq", 3)), /keine lesbare Antwort/);
   } finally {
-    if (previous === undefined) delete process.env.GEMINI_API_KEY;
-    else process.env.GEMINI_API_KEY = previous;
-    if (previousModel !== undefined) process.env.GEMINI_MODEL = previousModel;
+    if (previous === undefined) delete process.env.MISTRAL_API_KEY;
+    else process.env.MISTRAL_API_KEY = previous;
+    if (previousModel !== undefined) process.env.MISTRAL_MODEL = previousModel;
     await q(`DELETE FROM carecore_translations WHERE locale = 'sq'`);
   }
 });

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ApiError } from "@/lib/api-context";
 import { generateDraft, rephraseText, reviewDraft, setDraftCall } from "@/lib/ai";
-import { geminiText } from "@/lib/gemini";
+import { mistralText } from "@/lib/mistral";
 import { apiContextFor, createResident, fixture, q } from "../support/db";
 
 const failure = (promise: Promise<unknown>) =>
@@ -16,14 +16,14 @@ test("Diktat mit KI umformulieren: pseudonymisiert, nur Vorschlag, Platzhalter z
   const f = await fixture();
   const ctx = await apiContextFor(f, "anna");
   const resident = await createResident(f, "Erna Muster");
-  const previous = process.env.GEMINI_API_KEY;
+  const previous = process.env.MISTRAL_API_KEY;
   try {
-    delete process.env.GEMINI_API_KEY;
+    delete process.env.MISTRAL_API_KEY;
     const missing = await failure(rephraseText(ctx, { text: "frau muster hat gut gegessen" }));
     assert.ok(missing instanceof ApiError);
     assert.equal(missing.status, 503);
 
-    process.env.GEMINI_API_KEY = "test-double";
+    process.env.MISTRAL_API_KEY = "test-double";
     const sent: string[] = [];
     setDraftCall(async ({ user }) => {
       sent.push(user);
@@ -62,8 +62,8 @@ test("Diktat mit KI umformulieren: pseudonymisiert, nur Vorschlag, Platzhalter z
     const general = await generateDraft(ctx, { task: "rephrase", prompt: "Wie geht es?", residentId: resident });
     assert.equal(general.task, "question");
   } finally {
-    setDraftCall(geminiText);
-    if (previous === undefined) delete process.env.GEMINI_API_KEY;
-    else process.env.GEMINI_API_KEY = previous;
+    setDraftCall(mistralText);
+    if (previous === undefined) delete process.env.MISTRAL_API_KEY;
+    else process.env.MISTRAL_API_KEY = previous;
   }
 });

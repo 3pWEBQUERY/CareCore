@@ -20,8 +20,8 @@ test("Such-Assistenz: Daten pseudonymisiert an die KI, Kennungen zurück auf die
     const token = /\[(R\d+)\] EM/.exec(request.user)?.[1];
     return JSON.stringify({ answer: `[${token}] ist gestern gestürzt.`, residents: [token, "R99"] });
   });
-  const previous = process.env.GEMINI_API_KEY;
-  process.env.GEMINI_API_KEY = "test-ohne-aufruf";
+  const previous = process.env.MISTRAL_API_KEY;
+  process.env.MISTRAL_API_KEY = "test-ohne-aufruf";
   try {
     const result = await aiSearch(ctx, { question: "Wer ist diese Woche gestürzt?", careUnitId: f.units.a });
     // Namen gehen nicht an die KI, nur Kennung und Kürzel.
@@ -43,7 +43,7 @@ test("Such-Assistenz: Daten pseudonymisiert an die KI, Kennungen zurück auf die
     );
     assert.equal(audit.after_data.questionLength, "Wer ist diese Woche gestürzt?".length);
   } finally {
-    if (previous === undefined) delete process.env.GEMINI_API_KEY;
-    else process.env.GEMINI_API_KEY = previous;
+    if (previous === undefined) delete process.env.MISTRAL_API_KEY;
+    else process.env.MISTRAL_API_KEY = previous;
   }
 });

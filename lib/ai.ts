@@ -15,19 +15,19 @@ import { AI_TASKS, type AiDraft, type AiOverview, type AiTask } from "@/lib/ai-s
 import { createEntry } from "@/lib/documentation";
 import { createNote } from "@/lib/handover";
 import { auditOrigin } from "@/lib/audit-origin";
-import { GeminiError, geminiConfigured, geminiModel, geminiText } from "@/lib/gemini";
+import { MistralError, mistralConfigured, mistralModel, mistralText } from "@/lib/mistral";
 import { kompassDraftText } from "@/lib/kompass";
 import { pseudonymize } from "@/lib/pseudonymize";
 
-// CareCore KI: drafts from Google Gemini based on the care data of one resident or one care
+// CareCore KI: drafts from Mistral based on the care data of one resident or one care
 // unit. Drafts are never saved to the record automatically; staff review, edit and
 // accept or discard them. Residents are sent pseudonymised (initials, age, room).
 
-export const aiConfigured = geminiConfigured;
+export const aiConfigured = mistralConfigured;
 
-// Standard: Google Gemini. Tests setzen ein Test-Double.
-type DraftCall = typeof geminiText;
-let draftCall: DraftCall = geminiText;
+// Standard: Mistral. Tests setzen ein Test-Double.
+type DraftCall = typeof mistralText;
+let draftCall: DraftCall = mistralText;
 export const setDraftCall = (call: DraftCall) => {
   draftCall = call;
 };
@@ -282,7 +282,7 @@ async function requestText(user: string, maxOutputTokens: number) {
     content = response.text;
     if (content && response.truncated) content += "\n\n[Antwort gekürzt]";
   } catch (error) {
-    if (error instanceof GeminiError)
+    if (error instanceof MistralError)
       throw new ApiError(error.status === 503 ? `CareCore KI: ${error.message}` : error.message, error.status);
     throw error;
   }
@@ -292,7 +292,7 @@ async function requestText(user: string, maxOutputTokens: number) {
 
 export async function generateDraft(ctx: ApiContext, body: Record<string, unknown>): Promise<AiDraft> {
   if (!aiConfigured())
-    throw new ApiError("CareCore KI ist noch nicht eingerichtet: GEMINI_API_KEY fehlt in der Umgebung.", 503);
+    throw new ApiError("CareCore KI ist noch nicht eingerichtet: MISTRAL_API_KEY fehlt in der Umgebung.", 503);
   const task = (
     typeof body.task === "string" && body.task in AI_TASKS && !["kompassSummary", "rephrase"].includes(body.task)
       ? body.task
@@ -326,7 +326,7 @@ export async function generateDraft(ctx: ApiContext, body: Record<string, unknow
     ctx.sql`
     INSERT INTO carecore_ai_drafts (id, organization_id, resident_id, care_unit_id, requested_by, type, prompt, content, model)
     VALUES (${id}, ${ctx.actor.organizationId}, ${residentId}, ${careUnitId}, ${ctx.actor.id}, ${task}, ${prompt || null},
-      ${content}, ${geminiModel()})`,
+      ${content}, ${mistralModel()})`,
     auditStatement(ctx, "ai_draft", id, "created", null, { task, residentId, careUnitId }),
   ]);
   return mapDraft(await draftById(ctx, id));
@@ -386,7 +386,7 @@ export async function reviewDraft(ctx: ApiContext, idInput: string, body: Record
 // Entwurf wird nicht gespeichert, bis die Fachperson ihn ins Gesamtbild übernimmt und die Abklärung selbst abschliesst.
 export async function draftKompassSummary(ctx: ApiContext, residentInput: unknown): Promise<AiDraft> {
   if (!aiConfigured())
-    throw new ApiError("CareCore KI ist noch nicht eingerichtet: GEMINI_API_KEY fehlt in der Umgebung.", 503);
+    throw new ApiError("CareCore KI ist noch nicht eingerichtet: MISTRAL_API_KEY fehlt in der Umgebung.", 503);
   const residentId = await assertResident(ctx, residentInput);
   const [{ assessmentId, text: data }, rows] = await Promise.all([
     kompassDraftText(ctx, residentId),
@@ -409,7 +409,7 @@ export async function draftKompassSummary(ctx: ApiContext, residentInput: unknow
     ctx.sql`
     INSERT INTO carecore_ai_drafts (id, organization_id, resident_id, requested_by, type, prompt, content, model)
     VALUES (${id}, ${ctx.actor.organizationId}, ${residentId}, ${ctx.actor.id}, 'kompassSummary', NULL, ${content},
-      ${geminiModel()})`,
+      ${mistralModel()})`,
     auditStatement(ctx, "ai_draft", id, "created", null, { task: "kompassSummary", residentId, assessmentId }),
   ]);
   return mapDraft(await draftById(ctx, id));
@@ -418,7 +418,7 @@ export async function draftKompassSummary(ctx: ApiContext, residentInput: unknow
 // Diktierten oder getippten Rohtext als Pflegebericht umformulieren (nur Entwurf; die Fachperson übernimmt ihn).
 export async function rephraseText(ctx: ApiContext, body: Record<string, unknown>): Promise<AiDraft> {
   if (!aiConfigured())
-    throw new ApiError("CareCore KI ist noch nicht eingerichtet: GEMINI_API_KEY fehlt in der Umgebung.", 503);
+    throw new ApiError("CareCore KI ist noch nicht eingerichtet: MISTRAL_API_KEY fehlt in der Umgebung.", 503);
   const raw = text(body.text, 4000);
   if (raw.length < 10) throw new ApiError("Bitte zuerst etwas diktieren oder schreiben.");
   const residentId = body.residentId ? await assertResident(ctx, body.residentId) : null;
@@ -444,7 +444,7 @@ export async function rephraseText(ctx: ApiContext, body: Record<string, unknown
     ctx.sql`
     INSERT INTO carecore_ai_drafts (id, organization_id, resident_id, requested_by, type, prompt, content, model)
     VALUES (${id}, ${ctx.actor.organizationId}, ${residentId}, ${ctx.actor.id}, 'rephrase', ${raw}, ${content},
-      ${geminiModel()})`,
+      ${mistralModel()})`,
     auditStatement(ctx, "ai_draft", id, "created", null, { task: "rephrase", residentId, names: pseudonym.count }),
   ]);
   return mapDraft(await draftById(ctx, id));

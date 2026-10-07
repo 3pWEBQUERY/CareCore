@@ -174,8 +174,9 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 - [x] **Einrichtbare Übersichtsseiten:** Startseite (alle Bausteine, Kopf- und Hauptbereich, Breite) und die
       Kennzahlen-Seiten (Pflege, Bewohner, Leitung, Personal, Meine Kennzahlen: verschieben, Breite, stapeln,
       ausblenden) je Person; Arbeitsseiten bleiben bewusst einheitlich (Entscheidung vom 01.10.2026).
-- [x] **Google Gemini** (`gemini-3.5-flash-lite`, Entscheidung vom 30.09.2026) für CareCore KI, KI-Dienstplanung
-      und Übersetzungsentwürfe, Schlüssel `GEMINI_API_KEY`; Mistral und Anthropic entfernt.
+- [x] **Mistral** (`mistral-small-latest`, offizielles SDK `@mistralai/mistralai`, Entscheidung vom 07.10.2026) für
+      CareCore KI, KI-Dienstplanung, KI-Suche, Diktat und Übersetzungsentwürfe, Schlüssel `MISTRAL_API_KEY`, Modell
+      wählbar über `MISTRAL_MODEL`; Google Gemini entfernt (vorher seit 30.09.2026).
 - [x] **Portale (Phase 6).**
   - [x] Portal für Angehörige und Ärztinnen/Ärzte (Entscheidung vom 30.09.2026): eigene Zugänge mit Einmal-Passwort,
         Freigaben individuell je Person oder Wohnbereich, einzeln gewählte Bereiche (Notfalldaten, Medikation,

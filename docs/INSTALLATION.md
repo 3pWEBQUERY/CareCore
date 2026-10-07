@@ -40,7 +40,7 @@ Unter **Variables** › **Raw Editor** einfügen:
 - `DATABASE_URL=${{Postgres.DATABASE_URL}}`,
 - die Bucket-Variablen über **Add Reference** (`S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`,
   `S3_SECRET_ACCESS_KEY`) und `S3_FORCE_PATH_STYLE=false`,
-- optional `GEMINI_API_KEY` und `GEMINI_MODEL` für CareCore KI,
+- optional `MISTRAL_API_KEY` und `MISTRAL_MODEL` für CareCore KI,
 - optional die E-Mail-Variablen (`docs/EMAIL.md`).
 
 ## 4. Einstellungen des Dienstes

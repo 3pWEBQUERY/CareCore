@@ -19,7 +19,7 @@ import { dailyWorklist } from "@/lib/worklist";
 import { KOMPASS_DOMAINS, KOMPASS_INSTRUMENT, NOT_APPLICABLE, SCALES } from "@/lib/kompass-instrument";
 import { raiWorkplace } from "@/lib/rai";
 import { draftKompassSummary, reviewDraft, setDraftCall } from "@/lib/ai";
-import { geminiText } from "@/lib/gemini";
+import { mistralText } from "@/lib/mistral";
 import { apiContextFor, createResident, fixture, q } from "../support/db";
 
 const failure = async (promise: Promise<unknown>) =>
@@ -381,8 +381,8 @@ test("Kompass: Auswertung je Wohnbereich (nur gezählt) und KI-Entwurf für das 
 
   // KI-Entwurf: nur mit laufender Abklärung, ohne Namen, Entscheide der Fachperson im Auftrag; die Abklärung selbst
   // bleibt unverändert.
-  const previousKey = process.env.GEMINI_API_KEY;
-  process.env.GEMINI_API_KEY = "test-double";
+  const previousKey = process.env.MISTRAL_API_KEY;
+  process.env.MISTRAL_API_KEY = "test-double";
   try {
     const sent: string[] = [];
     setDraftCall(async ({ user }) => {
@@ -412,8 +412,8 @@ test("Kompass: Auswertung je Wohnbereich (nur gezählt) und KI-Entwurf für das 
     );
     assert.deepEqual([audit.after_data.task, audit.after_data.assessmentId], ["kompassSummary", draft.id]);
   } finally {
-    setDraftCall(geminiText);
-    if (previousKey === undefined) delete process.env.GEMINI_API_KEY;
-    else process.env.GEMINI_API_KEY = previousKey;
+    setDraftCall(mistralText);
+    if (previousKey === undefined) delete process.env.MISTRAL_API_KEY;
+    else process.env.MISTRAL_API_KEY = previousKey;
   }
 });

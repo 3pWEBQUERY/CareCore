@@ -200,10 +200,10 @@ Jede Änderung läuft serverseitig durch die Regel-Engine (`lib/roster/rules.ts`
 
 **Umgebungsvariablen**
 
-| Variable         | Pflicht | Zweck                                                                                                                                |
-| ---------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `GEMINI_API_KEY` | nein    | Google Gemini für CareCore KI, KI-Dienstplanung und Übersetzungsentwürfe. Ohne Schlüssel sind diese deaktiviert, alles andere läuft. |
-| `GEMINI_MODEL`   | nein    | Modell, Standard `gemini-3.5-flash-lite`.                                                                                            |
+| Variable          | Pflicht | Zweck                                                                                                                          |
+| ----------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `MISTRAL_API_KEY` | nein    | Mistral für CareCore KI, KI-Dienstplanung und Übersetzungsentwürfe. Ohne Schlüssel sind diese deaktiviert, alles andere läuft. |
+| `MISTRAL_MODEL`   | nein    | Modell, Standard `mistral-small-latest`.                                                                                       |
 
 An die KI gehen nur pseudonymisierte Daten (E1, E2, …, Diensttyp-Codes, Zahlen) – keine Namen, Abwesenheitsgründe oder Freitexte. Jede vorgeschlagene Zuweisung wird von der Regel-Engine geprüft; übernommen wird nur in Entwürfe.
 
@@ -222,7 +222,7 @@ Demo-Logins nach dem Seed: `demo.leitung.linde`, `demo.leitung.ahorn`, `demo.lei
 - Aktualisierung per Polling (alle 25 s, pausiert im Hintergrund), kein Push in Echtzeit.
 - Arbeitsrechtliche Werte sind Beispielwerte und ersetzen keine rechtliche Prüfung (GAV, Betriebsreglement).
 - Der Saldo im laufenden Monat vergleicht das Ist mit dem Soll bis heute; Überträge aus Vormonaten werden nicht geführt.
-- Die KI-Planung wurde mit einem Test-Double geprüft; mit einem echten Gemini-Schlüssel ist sie lokal zu verifizieren.
+- Die KI-Planung wurde mit einem Test-Double geprüft; mit einem echten Mistral-Schlüssel ist sie lokal zu verifizieren.
 
 ## Getting Started
 
