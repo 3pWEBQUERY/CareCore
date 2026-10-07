@@ -51,6 +51,7 @@ const ENTITIES: Record<string, string> = {
   holiday: "Feiertag",
   employee_profile: "Personal",
   qualification: "Qualifikation",
+  wage_type: "Lohnart",
   time_off: "Wunschfrei",
   preference: "Dienstwunsch",
   swap: "Tausch",

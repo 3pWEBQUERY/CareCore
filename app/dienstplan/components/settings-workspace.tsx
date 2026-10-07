@@ -10,8 +10,9 @@ import { StaffingTab } from "./settings-staffing";
 import { RulesTab } from "./settings-rules";
 import { HolidaysTab } from "./settings-holidays";
 import { PeopleTab } from "./settings-people";
+import { WageTypesTab } from "./settings-wage-types";
 
-const TABS = ["Diensttypen", "Mindestbesetzung", "Regelwerk", "Feiertage", "Personal"] as const;
+const TABS = ["Diensttypen", "Mindestbesetzung", "Regelwerk", "Feiertage", "Personal", "Lohnarten"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function SettingsWorkspace() {
@@ -36,7 +37,10 @@ export default function SettingsWorkspace() {
             <div className="heading-copy">
               <p className="eyebrow">Leitung · Dienstplan</p>
               <h1>Einstellungen</h1>
-              <p>Diensttypen, Mindestbesetzung, Regelwerk, Feiertage und Personal. Jede Änderung wird protokolliert.</p>
+              <p>
+                Diensttypen, Mindestbesetzung, Regelwerk, Feiertage, Personal und Lohnarten. Jede Änderung wird
+                protokolliert.
+              </p>
             </div>
           </header>
           <section className="roster-toolbar">
@@ -88,6 +92,7 @@ export default function SettingsWorkspace() {
           )}
           {data && tab === "Feiertage" && <HolidaysTab data={data} reload={reload} showToast={showToast} />}
           {data && tab === "Personal" && <PeopleTab data={data} reload={reload} showToast={showToast} />}
+          {data && tab === "Lohnarten" && <WageTypesTab data={data} reload={reload} showToast={showToast} />}
         </main>
       )}
     </ModulePageShell>

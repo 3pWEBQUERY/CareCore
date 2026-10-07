@@ -31,6 +31,7 @@ import { publicHolidays } from "@/lib/holidays";
 import type { CountryCode } from "@/lib/country";
 import { organizationLocation } from "@/lib/organization-country";
 import type { RuleSet, ShiftTypeInfo } from "./types";
+import { WAGE_SOURCES, type WageSource, type WageType } from "./payroll-shared";
 
 // Einstellungen des Dienstplans (Spec 8.2): Diensttypen, Mindestbesetzung, Regelwerk, Feiertage,
 // Personal. Organisationsweites pflegt die Administration, Wohnbereichsbezogenes die Leitung.
@@ -57,9 +58,13 @@ export type SettingsPayload = {
   region: string | null;
   holidays: Array<{ id: string; date: string; name: string }>;
   qualifications: Array<{ id: string; code: string; name: string; grantsMedication: boolean }>;
+  // Lohnarten für den Lohn-Export (organisationsweit).
+  wageTypes: WageType[];
   employees: Array<{
     id: string;
     name: string;
+    // Personalnummer der Lohnbuchhaltung.
+    employeeNumber: string;
     pensumPercent: number;
     weeklyTargetMinutesOverride: number | null;
     employmentStart: string | null;
@@ -78,34 +83,39 @@ export async function getSettings(ctx: RosterContext, requestedUnit: string | nu
   const unitId = requestedUnit ?? managed[0] ?? null;
   if (unitId) requirePermission(ctx, "diensttypen:manage", unitId);
   const org = ctx.actor.organizationId;
-  const [units, ruleSet, override, types, used, staffingRows, holidayRows, qualificationRows] = await Promise.all([
-    unitOptions(ctx),
-    loadRuleSet(ctx, unitId),
-    unitId
-      ? (ctx.sql`SELECT 1 FROM carecore_rule_sets WHERE care_unit_id = ${unitId}` as Promise<Row[]>)
-      : Promise.resolve([] as Row[]),
-    loadShiftTypes(ctx),
-    ctx.sql`SELECT DISTINCT shift_type_id FROM carecore_roster_shifts WHERE organization_id = ${org}` as Promise<Row[]>,
-    unitId
-      ? (ctx.sql`SELECT id, shift_type_id, weekday, to_char(date, 'YYYY-MM-DD') AS date, min_count, max_count, min_qualified, qualification_id
+  const [units, ruleSet, override, types, used, staffingRows, holidayRows, qualificationRows, wageRows] =
+    await Promise.all([
+      unitOptions(ctx),
+      loadRuleSet(ctx, unitId),
+      unitId
+        ? (ctx.sql`SELECT 1 FROM carecore_rule_sets WHERE care_unit_id = ${unitId}` as Promise<Row[]>)
+        : Promise.resolve([] as Row[]),
+      loadShiftTypes(ctx),
+      ctx.sql`SELECT DISTINCT shift_type_id FROM carecore_roster_shifts WHERE organization_id = ${org}` as Promise<
+        Row[]
+      >,
+      unitId
+        ? (ctx.sql`SELECT id, shift_type_id, weekday, to_char(date, 'YYYY-MM-DD') AS date, min_count, max_count, min_qualified, qualification_id
           FROM carecore_staffing_requirements WHERE care_unit_id = ${unitId} ORDER BY date NULLS FIRST, weekday` as Promise<
-          Row[]
-        >)
-      : Promise.resolve([] as Row[]),
-    ctx.sql`SELECT id, to_char(date, 'YYYY-MM-DD') AS date, name FROM carecore_public_holidays
+            Row[]
+          >)
+        : Promise.resolve([] as Row[]),
+      ctx.sql`SELECT id, to_char(date, 'YYYY-MM-DD') AS date, name FROM carecore_public_holidays
       WHERE organization_id = ${org} AND date >= date_trunc('year', NOW()) - INTERVAL '1 year' ORDER BY date` as Promise<
-      Row[]
-    >,
-    ctx.sql`SELECT id, code, name, grants_medication FROM carecore_qualifications WHERE organization_id = ${org} ORDER BY code` as Promise<
-      Row[]
-    >,
-  ]);
+        Row[]
+      >,
+      ctx.sql`SELECT id, code, name, grants_medication FROM carecore_qualifications WHERE organization_id = ${org} ORDER BY code` as Promise<
+        Row[]
+      >,
+      loadWageTypes(ctx),
+    ]);
   const usedIds = new Set(used.map((row) => String(row.shift_type_id)));
   const memberIds = unitId ? await unitMemberIds(ctx, unitId) : [];
   const leadRows = memberIds.length
     ? ((await ctx.sql`SELECT user_id, care_unit_id FROM carecore_unit_memberships WHERE is_lead AND user_id = ANY(${memberIds}::uuid[])`) as Row[])
     : [];
   const employees = await loadEmployees(ctx, memberIds);
+  const numbers = await employeeNumbers(ctx, memberIds);
   const { country, region } = await organizationLocation(ctx);
   return {
     unitId,
@@ -135,11 +145,13 @@ export async function getSettings(ctx: RosterContext, requestedUnit: string | nu
       name: String(row.name),
       grantsMedication: Boolean(row.grants_medication),
     })),
+    wageTypes: wageRows,
     employees: Object.values(employees)
       .sort((a, b) => a.name.localeCompare(b.name, "de-CH"))
       .map((employee) => ({
         id: employee.id,
         name: employee.name,
+        employeeNumber: numbers.get(employee.id) ?? "",
         pensumPercent: employee.pensumPercent,
         weeklyTargetMinutesOverride: employee.weeklyTargetMinutesOverride,
         employmentStart: employee.employmentStart,
@@ -477,6 +489,8 @@ export async function saveEmployeeProfile(ctx: RosterContext, userIdInput: strin
       ? before.excludedCategories
       : stringList(body.excludedCategories, EXCLUSIONS, "Ausschluss");
   const active = body.active === undefined ? before.active : bool(body.active);
+  const employeeNumber =
+    body.employeeNumber === undefined ? undefined : (text(body.employeeNumber, "Personalnummer", 80, false) ?? "");
   const qualifications = Array.isArray(body.qualifications)
     ? body.qualifications.map((item) => {
         const value = item as Record<string, unknown>;
@@ -496,6 +510,9 @@ export async function saveEmployeeProfile(ctx: RosterContext, userIdInput: strin
         employment_end = EXCLUDED.employment_end, active = EXCLUDED.active, excluded_categories = EXCLUDED.excluded_categories,
         updated_at = NOW()`,
   ];
+  if (employeeNumber !== undefined)
+    statements.push(ctx.sql`UPDATE carecore_user_profiles SET employee_number = ${employeeNumber || null}, updated_at = NOW()
+      WHERE user_id = ${userId} AND organization_id = ${ctx.actor.organizationId}`);
   for (const id of managed) {
     const plannable = unitIds.includes(id);
     const lead = leadUnitIds ? leadUnitIds.includes(id) : null;
@@ -527,6 +544,7 @@ export async function saveEmployeeProfile(ctx: RosterContext, userIdInput: strin
       unitIds,
       leadUnitIds,
       qualifications,
+      ...(employeeNumber === undefined ? {} : { employeeNumber }),
     }),
   );
   await ctx.sql.transaction(statements);
@@ -557,5 +575,48 @@ export async function saveQualification(ctx: RosterContext, body: Body) {
     before ? { grantsMedication: Boolean(before.grants_medication) } : null,
     { code, name, grantsMedication },
   );
+  return { id: String(rows[0].id) };
+}
+
+// --- Lohnarten (Lohn-Export) ---------------------------------------------------------------------
+
+export async function loadWageTypes(ctx: RosterContext): Promise<WageType[]> {
+  const rows = (await ctx.sql`SELECT id, code, name, source FROM carecore_payroll_wage_types
+    WHERE organization_id = ${ctx.actor.organizationId} ORDER BY code`) as Row[];
+  return rows.map((row) => ({
+    id: String(row.id),
+    code: String(row.code),
+    name: String(row.name),
+    source: String(row.source) as WageSource,
+  }));
+}
+
+// Personalnummern der Lohnbuchhaltung je Person.
+export async function employeeNumbers(ctx: RosterContext, ids: string[]) {
+  if (!ids.length) return new Map<string, string>();
+  const rows = (await ctx.sql`SELECT user_id, employee_number FROM carecore_user_profiles
+    WHERE user_id = ANY(${ids}::uuid[]) AND organization_id = ${ctx.actor.organizationId}`) as Row[];
+  return new Map(rows.map((row) => [String(row.user_id), row.employee_number ? String(row.employee_number) : ""]));
+}
+
+export async function saveWageType(ctx: RosterContext, body: Body) {
+  if (!managedUnitIds(ctx.access).length) throw forbidden("Lohnarten pflegt die Leitung.");
+  const code = text(body.code, "Nummer", 20, true)!;
+  const name = text(body.name, "Bezeichnung", 120, true)!;
+  const source = oneOf(body.source, WAGE_SOURCES, "Wert");
+  const rows = (await ctx.sql`INSERT INTO carecore_payroll_wage_types (organization_id, code, name, source)
+    VALUES (${ctx.actor.organizationId}, ${code}, ${name}, ${source}) RETURNING id`) as Row[];
+  const id = String(rows[0].id);
+  await audit(ctx, "created", "wage_type", id, null, null, { code, name, source });
+  return { id };
+}
+
+export async function deleteWageType(ctx: RosterContext, id: string) {
+  if (!managedUnitIds(ctx.access).length) throw forbidden("Lohnarten pflegt die Leitung.");
+  const rows = (await ctx.sql`
+    DELETE FROM carecore_payroll_wage_types WHERE id = ${uuid(id, "Lohnart")} AND organization_id = ${ctx.actor.organizationId}
+    RETURNING id, code, name, source`) as Row[];
+  if (!rows[0]) throw notFound("Lohnart");
+  await audit(ctx, "deleted", "wage_type", String(rows[0].id), null, rows[0], null);
   return { id: String(rows[0].id) };
 }
