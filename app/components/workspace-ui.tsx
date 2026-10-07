@@ -158,12 +158,14 @@ export function PageHeading({
 export function SummaryTiles({
   label,
   tiles,
+  className,
 }: {
   label: string;
   tiles: Array<{ icon: ModuleIconName; value: ReactNode; caption: string; tone?: "attention" | "info" | "critical" }>;
+  className?: string;
 }) {
   return (
-    <section className="wound-summary" aria-label={label}>
+    <section className={className ? `wound-summary ${className}` : "wound-summary"} aria-label={label}>
       {tiles.map((tile) => (
         <div key={tile.caption}>
           <span className={`summary-icon ${tile.tone ?? ""}`}>
