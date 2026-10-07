@@ -14,6 +14,50 @@
   color: var(--muted);
   font-size: 12px;
 }
+/* Handy: Buchung als kleine Karte – oben Datum und Betrag, darunter Art, Zweck und Angaben über die ganze Breite,
+   unten „Stornieren“. */
+@media (max-width: 760px) {
+  .fund-entries li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "date amount"
+      "text text"
+      "action action";
+    align-items: center;
+    gap: 6px 12px;
+    padding: 12px 14px;
+  }
+  .fund-entries li time {
+    grid-area: date;
+    width: auto;
+    font-size: 13px;
+    font-weight: 650;
+  }
+  .fund-entries li > div {
+    grid-area: text;
+    gap: 3px;
+  }
+  .fund-entries li strong {
+    font-size: 15px;
+    line-height: 1.35;
+  }
+  .fund-entries li small {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .fund-entries li .fund-amount {
+    grid-area: amount;
+    justify-self: end;
+    font-size: 16px;
+  }
+  .fund-entries li > button {
+    grid-area: action;
+    justify-self: stretch;
+    min-height: 40px;
+    margin-top: 4px;
+  }
+}
 .fund-cash-head {
   display: flex;
   align-items: flex-start;
