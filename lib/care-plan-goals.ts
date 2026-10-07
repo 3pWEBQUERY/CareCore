@@ -62,13 +62,38 @@ export async function addGoal(ctx: ApiContext, planId: unknown, body: Record<str
   const goal = parseGoal(body);
   if (goal.targetDate && goal.targetDate < (await today(ctx)))
     throw new ApiError("Das Überprüfungsdatum liegt in der Vergangenheit.");
+  // Aus einer Vorlage: Herkunft festhalten und die gewählten Massnahmen gleich mit anlegen.
+  let templateId: string | null = null;
+  if (body.templateId) {
+    templateId = assertUuid(body.templateId, "Vorlage");
+    const [template] = (await ctx.sql`
+      SELECT id FROM carecore_care_goal_templates WHERE id = ${templateId}
+        AND organization_id = ${ctx.actor.organizationId}`) as Row[];
+    if (!template) throw new ApiError("Vorlage nicht gefunden.", 404);
+  }
+  const interventions = (Array.isArray(body.interventions) ? body.interventions : [])
+    .slice(0, 30)
+    .map((item) => parseIntervention((item && typeof item === "object" ? item : {}) as Record<string, unknown>));
   const id = randomUUID();
   await ctx.sql.transaction([
     ctx.sql`
-      INSERT INTO carecore_care_goals (id, care_plan_id, category, problem, resources, statement, target_date, status, created_by)
-      VALUES (${id}, ${plan.id}, ${goal.category}, ${goal.problem}, ${goal.resources}, ${goal.statement}, ${goal.targetDate}, 'active', ${ctx.actor.id})`,
+      INSERT INTO carecore_care_goals (id, care_plan_id, category, problem, resources, statement, target_date, status,
+        template_id, created_by)
+      VALUES (${id}, ${plan.id}, ${goal.category}, ${goal.problem}, ${goal.resources}, ${goal.statement}, ${goal.targetDate},
+        'active', ${templateId}, ${ctx.actor.id})`,
     ctx.sql`UPDATE carecore_care_plans SET updated_at = NOW() WHERE id = ${plan.id}`,
-    log(ctx, plan.resident_id, "care_goal", id, "created", null, { planId: plan.id, ...goal }),
+    log(ctx, plan.resident_id, "care_goal", id, "created", null, { planId: plan.id, ...goal, templateId }),
+    ...interventions.flatMap((intervention) => {
+      const interventionId = randomUUID();
+      return [
+        ctx.sql`
+          INSERT INTO carecore_interventions (id, care_goal_id, title, instructions, frequency, responsible_role, day_parts,
+            status, created_by)
+          VALUES (${interventionId}, ${id}, ${intervention.title}, ${intervention.instructions}, ${intervention.frequency},
+            ${intervention.responsibleRole}, ${intervention.dayParts}::text[], 'active', ${ctx.actor.id})`,
+        log(ctx, plan.resident_id, "intervention", interventionId, "created", null, { goalId: id, ...intervention }),
+      ];
+    }),
   ]);
   return id;
 }

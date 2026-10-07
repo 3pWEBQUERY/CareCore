@@ -635,8 +635,13 @@ weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen ode
       umformulieren“ (nur mit Berechtigung für die KI und eingerichteter KI). Namen aller Bewohnenden und Mitarbeitenden
       der Einrichtung gehen nur als Platzhalter ([Person 1] …) an die KI und werden im Vorschlag wieder eingesetzt;
       der Vorschlag ersetzt den Text erst mit „Text übernehmen“, gespeichert wird wie bisher mit dem Formular.
-- [ ] **Vorlagen für die Pflegeplanung:** Standardpläne und Massnahmenkataloge der Einrichtung (keine Vorgaben von
-      CareCore), bei einer Person übernehmen und anpassen.
+- [x] **Vorlagen für die Pflegeplanung:** Standardpläne und Massnahmenkataloge der Einrichtung (keine Vorgaben von
+      CareCore), bei einer Person übernehmen und anpassen. Unter Pflegeplanung → Vorlagen (Recht Qualität verwalten)
+      legt die Einrichtung Standardpläne (Pflegebereich, Problem, Ressourcen, Ziel, Überprüfung nach Tagen, Massnahmen)
+      und einen Massnahmenkatalog an; nicht mehr gebrauchte Vorlagen werden nicht mehr angeboten, bleiben aber
+      nachvollziehbar. Beim neuen Ziel füllt „Vorlage“ die Felder vor, die Massnahmen sind einzeln abwählbar und alles
+      bleibt vor dem Speichern änderbar; bei einer neuen Massnahme hilft „Aus dem Katalog“. Ziel und Massnahmen werden
+      gemeinsam gespeichert und protokolliert.
 - [ ] **Rufsystem anbinden:** Rufe (z. B. Ascom, Teletronic) in CareCore anzeigen und dokumentieren, Reaktionszeiten
       für die Qualität. Braucht die Schnittstelle des Herstellers.
 - [ ] **Apotheke und Blister elektronisch:** Bestellungen an die Apotheke elektronisch, Rückmeldung von Verblisterung

@@ -40,6 +40,7 @@ export const EXPORT_HIDDEN_COLUMNS = new Set([
   "resident_id",
   "rate_id",
   "invoice_id",
+  "template_id",
   "account_id",
   "activity_id",
   "administration_id",

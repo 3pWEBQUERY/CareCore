@@ -350,3 +350,74 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Vorlagen der Einrichtung */
+.care-templates-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+.care-template-interventions {
+  display: grid;
+  gap: 12px;
+}
+.care-template-interventions > strong {
+  font-size: 13px;
+}
+.care-template-intervention {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.care-template-intervention legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.care-template-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.care-template-add .area-custom-select {
+  min-width: 260px;
+}
+.care-template-pick {
+  display: grid;
+  gap: 6px;
+}
+.care-template-pick label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 400;
+}
+.care-template-pick small {
+  color: var(--muted);
+}
+@media (max-width: 1100px) {
+  .care-templates-layout {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 760px) {
+  .care-template-intervention {
+    grid-template-columns: 1fr;
+  }
+}
+.planning-templates .service-records li .quiet-button,
+.care-template-intervention legend .quiet-button {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 13px;
+}

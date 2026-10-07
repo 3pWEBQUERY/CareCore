@@ -139,7 +139,8 @@ export const navigation: NavGroup[] = [
         id: "plan",
         label: "Planung & Einschätzungen",
         icon: "plan",
-        children: ["Pflegeplanung", "Ziele & Massnahmen", "Auswertung", "Einschätzungen", "Fälligkeiten"],
+        children: ["Pflegeplanung", "Ziele & Massnahmen", "Auswertung", "Vorlagen", "Einschätzungen", "Fälligkeiten"],
+        childPermissions: { Vorlagen: "quality.manage" },
       },
       {
         id: "activities",
@@ -328,6 +329,7 @@ const routes: Record<string, Record<string, string>> = {
     Pflegeplanung: "/pflegeplanung",
     "Ziele & Massnahmen": "/pflegeplanung/ziele-massnahmen",
     Auswertung: "/pflegeplanung/auswertung",
+    Vorlagen: "/pflegeplanung/vorlagen",
     Einschätzungen: "/einschaetzungen",
     Fälligkeiten: "/einschaetzungen/faelligkeiten",
   },

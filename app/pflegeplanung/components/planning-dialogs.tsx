@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { CareDatePicker, CareMultiSelect, CareSelect } from "@/app/components/care-form-controls";
-import { EditorDialog, requestJson, todayInZurich } from "@/app/components/workspace-ui";
+import { CareDatePicker, CareMultiSelect, CareOptionSelect, CareSelect } from "@/app/components/care-form-controls";
+import { EditorDialog, requestJson, todayInZurich, useApiData } from "@/app/components/workspace-ui";
 import { useCountry } from "@/app/components/care-context";
 import { NOT_ASSESSED, careLevelOptions } from "@/lib/country";
 import { DAY_PARTS, DAY_PART_KEYS } from "@/lib/intervention-proofs-shared";
@@ -14,6 +14,8 @@ import {
   splitResources,
   type CareGoal,
   type CarePlan,
+  type CareTemplates,
+  type TemplateIntervention,
   type Intervention,
   type Outcome,
 } from "@/lib/care-planning-shared";
@@ -151,6 +153,25 @@ export function GoalDialog({
   const { saving, error, save } = useSave(onSaved);
   const set = <K extends keyof typeof form>(key: K, value: string) =>
     setForm((current) => ({ ...current, [key]: value }));
+  // Vorlagen der Einrichtung (nur beim neuen Ziel): Inhalte werden übernommen und können angepasst werden.
+  const templates = useApiData<CareTemplates>(goal ? null : "/api/care-planning/templates").data;
+  const [templateId, setTemplateId] = useState("");
+  const [picked, setPicked] = useState<TemplateIntervention[]>([]);
+  const template = templates?.goals.find((entry) => entry.id === templateId) ?? null;
+  const applyTemplate = (id: string) => {
+    const chosen = templates?.goals.find((entry) => entry.id === id);
+    if (!chosen) return;
+    setTemplateId(id);
+    setForm((current) => ({
+      ...current,
+      category: (GOAL_CATEGORIES as readonly string[]).includes(chosen.category) ? chosen.category : current.category,
+      problem: chosen.problem,
+      resources: chosen.resources,
+      statement: chosen.statement,
+      targetDate: chosen.reviewDays ? plusDays(chosen.reviewDays) : current.targetDate,
+    }));
+    setPicked(chosen.interventions);
+  };
   return (
     <EditorDialog
       id="care-goal"
@@ -163,14 +184,33 @@ export function GoalDialog({
           () =>
             goal
               ? requestJson(`/api/care-planning/goals/${goal.id}`, { method: "PATCH", body: form })
-              : requestJson(`/api/care-planning/plans/${planId}/goals`, { method: "POST", body: form }),
-          goal ? "Pflegeziel aktualisiert" : "Pflegeziel hinzugefügt",
+              : requestJson(`/api/care-planning/plans/${planId}/goals`, {
+                  method: "POST",
+                  body: template ? { ...form, templateId: template.id, interventions: picked } : form,
+                }),
+          goal
+            ? "Pflegeziel aktualisiert"
+            : picked.length && template
+              ? `Pflegeziel mit ${picked.length} ${picked.length === 1 ? "Massnahme" : "Massnahmen"} hinzugefügt`
+              : "Pflegeziel hinzugefügt",
         )
       }
       saving={saving}
       error={error}
       submitLabel={goal ? "Änderungen speichern" : "Ziel hinzufügen"}
     >
+      {!goal && templates && templates.goals.length > 0 && (
+        <label className="area-editor-wide">
+          <span>Vorlage (optional)</span>
+          <CareOptionSelect
+            label="Vorlage"
+            value={templateId}
+            placeholder="Ohne Vorlage"
+            options={templates.goals.map((entry) => ({ value: entry.id, label: `${entry.category} · ${entry.title}` }))}
+            onChange={applyTemplate}
+          />
+        </label>
+      )}
       <label>
         <span>Pflegebereich</span>
         <CareSelect
@@ -217,6 +257,32 @@ export function GoalDialog({
           placeholder="z. B. Herr Müller geht mit Rollator und Begleitung 20 m im Korridor ohne Sturz."
         />
       </label>
+      {template && template.interventions.length > 0 && (
+        <div className="area-editor-wide form-field care-template-pick">
+          <span>Massnahmen aus der Vorlage</span>
+          <div className="chip-row" role="group" aria-label="Massnahmen aus der Vorlage">
+            {template.interventions.map((item, index) => {
+              const active = picked.includes(item);
+              return (
+                <button
+                  type="button"
+                  key={`${item.title}:${index}`}
+                  className={`day-toggle ${active ? "active" : ""}`}
+                  aria-pressed={active}
+                  onClick={() =>
+                    setPicked(
+                      template.interventions.filter((entry) => (entry === item ? !active : picked.includes(entry))),
+                    )
+                  }
+                >
+                  {item.title} · {item.frequency}
+                </button>
+              );
+            })}
+          </div>
+          <small>Gewählte Massnahmen werden mit dem Ziel angelegt und lassen sich danach einzeln anpassen.</small>
+        </div>
+      )}
     </EditorDialog>
   );
 }
@@ -238,6 +304,13 @@ export function InterventionDialog({
   const { saving, error, save } = useSave(onSaved);
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
+  // Massnahmenkatalog der Einrichtung (nur bei neuen Massnahmen), passende Pflegebereiche zuerst.
+  const catalog =
+    useApiData<CareTemplates>(intervention ? null : "/api/care-planning/templates").data?.interventions ?? [];
+  const sorted = [...catalog].sort(
+    (a, b) =>
+      Number(b.category === goal.category) - Number(a.category === goal.category) || a.title.localeCompare(b.title),
+  );
   return (
     <EditorDialog
       id="care-intervention"
@@ -258,6 +331,30 @@ export function InterventionDialog({
       error={error}
       submitLabel={intervention ? "Änderungen speichern" : "Massnahme speichern"}
     >
+      {!intervention && sorted.length > 0 && (
+        <label className="area-editor-wide">
+          <span>Aus dem Katalog (optional)</span>
+          <CareOptionSelect
+            label="Aus dem Katalog"
+            value=""
+            placeholder="Massnahme aus dem Katalog übernehmen"
+            options={sorted.map((entry) => ({ value: entry.id, label: `${entry.category} · ${entry.title}` }))}
+            onChange={(id) => {
+              const entry = sorted.find((item) => item.id === id);
+              if (entry)
+                setForm({
+                  title: entry.title,
+                  instructions: entry.instructions,
+                  frequency: entry.frequency,
+                  responsibleRole: (RESPONSIBLE_ROLES as readonly string[]).includes(entry.responsibleRole)
+                    ? entry.responsibleRole
+                    : RESPONSIBLE_ROLES[0],
+                  dayParts: entry.dayParts,
+                });
+            }}
+          />
+        </label>
+      )}
       <label className="area-editor-wide">
         <span>Massnahme</span>
         <input

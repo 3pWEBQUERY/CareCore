@@ -180,3 +180,31 @@ export const splitResources = (text: string | null | undefined) =>
     .split(/\s*[,;\n]\s*/)
     .map((item) => item.trim())
     .filter(Boolean);
+
+// Vorlagen der Einrichtung (Standardpläne und Massnahmenkatalog).
+export type TemplateIntervention = {
+  title: string;
+  instructions: string;
+  frequency: string;
+  responsibleRole: string;
+  dayParts: DayPart[];
+};
+
+export type GoalTemplate = {
+  id: string;
+  category: string;
+  title: string;
+  problem: string;
+  resources: string;
+  statement: string;
+  reviewDays: number | null;
+  interventions: TemplateIntervention[];
+};
+
+export type InterventionTemplate = TemplateIntervention & { id: string; category: string };
+
+export type CareTemplates = {
+  goals: GoalTemplate[];
+  interventions: InterventionTemplate[];
+  canManage: boolean;
+};
