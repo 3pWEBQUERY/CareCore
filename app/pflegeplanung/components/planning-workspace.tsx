@@ -5,12 +5,14 @@ import ModulePageShell from "@/app/components/module-page-shell";
 import EvaluationView from "./evaluation-view";
 import GoalsView from "./goals-view";
 import PlanView from "./plan-view";
+import TemplatesView from "./templates-view";
 
-export type PlanningView = "overview" | "goals" | "evaluation";
+export type PlanningView = "overview" | "goals" | "evaluation" | "templates";
 const navigationLabel: Record<PlanningView, string> = {
   overview: "Pflegeplanung",
   goals: "Ziele & Massnahmen",
   evaluation: "Auswertung",
+  templates: "Vorlagen",
 };
 
 export default function PlanningWorkspace({ view }: { view: PlanningView }) {
@@ -31,6 +33,7 @@ export default function PlanningWorkspace({ view }: { view: PlanningView }) {
           )}
           {view === "goals" && <GoalsView showToast={showToast} />}
           {view === "evaluation" && <EvaluationView />}
+          {view === "templates" && <TemplatesView showToast={showToast} />}
         </main>
       )}
     </ModulePageShell>
