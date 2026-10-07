@@ -8,6 +8,7 @@ import { DOC_CATEGORIES, IMPORTANCE, TEMPLATES, type DocEntry, type Importance }
 import { useCareResident, useTerms } from "@/app/components/care-context";
 import { sendOrQueue } from "@/app/components/offline-queue";
 import { DictationButton, appendDictation } from "@/app/components/dictation-button";
+import { AiRephrase } from "@/app/components/ai-rephrase";
 
 export type ResidentOption = { id: string; name: string; room: string };
 
@@ -144,6 +145,7 @@ export function EntryFields({
         />
       </label>
       <DictationButton onText={(text) => set("body", appendDictation(draft.body, text))} />
+      <AiRephrase text={draft.body} residentId={draft.residentId || null} onAccept={(text) => set("body", text)} />
     </>
   );
 }

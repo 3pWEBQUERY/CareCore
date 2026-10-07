@@ -17,6 +17,7 @@ import { createNote } from "@/lib/handover";
 import { auditOrigin } from "@/lib/audit-origin";
 import { GeminiError, geminiConfigured, geminiModel, geminiText } from "@/lib/gemini";
 import { kompassDraftText } from "@/lib/kompass";
+import { pseudonymize } from "@/lib/pseudonymize";
 
 // CareCore KI: drafts from Google Gemini based on the care data of one resident or one care
 // unit. Drafts are never saved to the record automatically; staff review, edit and
@@ -48,6 +49,8 @@ const INSTRUCTIONS: Record<AiTask, string> = {
   carePlan:
     "Schlage Ergänzungen für die Pflegeplanung dieser einen Bewohner:in vor. Gliedere nach Pflegeproblemen; nenne je Problem die Ressourcen, ein überprüfbares Ziel und konkrete Massnahmen (mit Häufigkeit, wo die Daten sie nahelegen) sowie die Datengrundlage (z. B. Einschätzung, Bericht, Vitalwert). Bestehende Ziele und Massnahmen nicht erneut vorschlagen; weise stattdessen auf solche hin, die nach den Daten überprüft werden sollten. Keine Grenzwerte, Fristen oder Skalenwerte erfinden, die nicht in den Daten stehen. Keine Diagnosen, keine Medikation; wo ärztliche Abklärung angezeigt ist, empfiehl sie.",
   question: "Beantworte die Frage der Pflegefachperson auf Basis der Daten.",
+  rephrase:
+    "Formuliere den diktierten Rohtext der Pflegefachperson als sachlichen Eintrag für den Pflegebericht um: vollständige Sätze, Fachsprache der Pflege, dritte Person, Präsens oder Perfekt, ohne Wertungen. Korrigiere offensichtliche Fehler der Spracherkennung, Grammatik und Zeichensetzung. Übernimm alle Fakten, Zeiten, Mengen und Beobachtungen vollständig und unverändert; füge nichts hinzu und lass nichts weg. Platzhalter in eckigen Klammern wie [Person 1] übernimmst du genau so. Nur der Berichtstext, ohne Einleitung.",
   kompassSummary:
     "Formuliere einen Entwurf für das Gesamtbild einer Bedarfsabklärung mit dem CareCore Kompass, aus Sicht der Pflegefachperson. Fliesstext mit 4 bis 8 Sätzen, beschreibend und wertschätzend: was den Alltag der Person zurzeit prägt, was ihr wichtig ist (aus Ressourcen, Wünschen und Gewohnheiten), was sich seit der letzten Abklärung verändert hat und in welchen Bereichen die Fachperson Handlungsbedarf festgehalten hat. Übernimm die Entscheide der Fachperson unverändert; bewerte den Bedarf nicht selbst, nenne keine Risiken, Punktzahlen, Stufen oder Diagnosen und füge nichts hinzu, was nicht in den Daten steht.",
 };
@@ -291,7 +294,9 @@ export async function generateDraft(ctx: ApiContext, body: Record<string, unknow
   if (!aiConfigured())
     throw new ApiError("CareCore KI ist noch nicht eingerichtet: GEMINI_API_KEY fehlt in der Umgebung.", 503);
   const task = (
-    typeof body.task === "string" && body.task in AI_TASKS && body.task !== "kompassSummary" ? body.task : "question"
+    typeof body.task === "string" && body.task in AI_TASKS && !["kompassSummary", "rephrase"].includes(body.task)
+      ? body.task
+      : "question"
   ) as AiTask;
   const prompt = text(body.prompt, 2000);
   if (task === "question" && prompt.length < 3) throw new ApiError("Bitte eine Frage oder einen Auftrag eingeben.");
@@ -406,6 +411,41 @@ export async function draftKompassSummary(ctx: ApiContext, residentInput: unknow
     VALUES (${id}, ${ctx.actor.organizationId}, ${residentId}, ${ctx.actor.id}, 'kompassSummary', NULL, ${content},
       ${geminiModel()})`,
     auditStatement(ctx, "ai_draft", id, "created", null, { task: "kompassSummary", residentId, assessmentId }),
+  ]);
+  return mapDraft(await draftById(ctx, id));
+}
+
+// Diktierten oder getippten Rohtext als Pflegebericht umformulieren (nur Entwurf; die Fachperson übernimmt ihn).
+export async function rephraseText(ctx: ApiContext, body: Record<string, unknown>): Promise<AiDraft> {
+  if (!aiConfigured())
+    throw new ApiError("CareCore KI ist noch nicht eingerichtet: GEMINI_API_KEY fehlt in der Umgebung.", 503);
+  const raw = text(body.text, 4000);
+  if (raw.length < 10) throw new ApiError("Bitte zuerst etwas diktieren oder schreiben.");
+  const residentId = body.residentId ? await assertResident(ctx, body.residentId) : null;
+  const people = (await ctx.sql`
+    SELECT first_name, last_name FROM carecore_residents WHERE organization_id = ${ctx.actor.organizationId}
+    UNION ALL
+    SELECT split_part(u.display_name, ' ', 1), NULLIF(substr(u.display_name, length(split_part(u.display_name, ' ', 1)) + 2), '')
+    FROM carecore_users u JOIN carecore_user_profiles p ON p.user_id = u.id
+    WHERE p.organization_id = ${ctx.actor.organizationId}`) as Row[];
+  const names = people.flatMap((row) => {
+    const first = String(row.first_name ?? "");
+    const last = String(row.last_name ?? "");
+    return [`${first} ${last}`, `${last} ${first}`, first, last];
+  });
+  const pseudonym = pseudonymize(raw, names);
+  const answer = await requestText(
+    [`Auftrag: ${INSTRUCTIONS.rephrase}`, "Rohtext:", pseudonym.text].join("\n\n"),
+    4000,
+  );
+  const content = pseudonym.restore(answer);
+  const id = randomUUID();
+  await ctx.sql.transaction([
+    ctx.sql`
+    INSERT INTO carecore_ai_drafts (id, organization_id, resident_id, requested_by, type, prompt, content, model)
+    VALUES (${id}, ${ctx.actor.organizationId}, ${residentId}, ${ctx.actor.id}, 'rephrase', ${raw}, ${content},
+      ${geminiModel()})`,
+    auditStatement(ctx, "ai_draft", id, "created", null, { task: "rephrase", residentId, names: pseudonym.count }),
   ]);
   return mapDraft(await draftById(ctx, id));
 }

@@ -610,9 +610,12 @@ weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen ode
       fest und legt dazu einen wichtigen Eintrag in der Pflegedokumentation an. Erst ab Beginn der Tageszeit, frühere Tage
       als Nachtrag; nichts wird ohne Bestätigung als durchgeführt vermerkt. Stornieren mit Grund statt Löschen; alles im
       Protokoll der Akte und in der Auskunft.
-- [ ] **Diktat mit KI umformulieren:** Rohtext aus der Erkennung auf dem Gerät wird pseudonymisiert zu einem
+- [x] **Diktat mit KI umformulieren:** Rohtext aus der Erkennung auf dem Gerät wird pseudonymisiert zu einem
       Pflegebericht-Entwurf umformuliert, den die Fachperson prüft. Entschieden am 06.10.2026: ja (nur der Text,
-      keine Tonaufnahme).
+      keine Tonaufnahme). Umgesetzt in der Schnelldokumentation und im Dialog „Eintrag“: „Mit CareCore KI
+      umformulieren“ (nur mit Berechtigung für die KI und eingerichteter KI). Namen aller Bewohnenden und Mitarbeitenden
+      der Einrichtung gehen nur als Platzhalter ([Person 1] …) an die KI und werden im Vorschlag wieder eingesetzt;
+      der Vorschlag ersetzt den Text erst mit „Text übernehmen“, gespeichert wird wie bisher mit dem Formular.
 - [ ] **Vorlagen für die Pflegeplanung:** Standardpläne und Massnahmenkataloge der Einrichtung (keine Vorgaben von
       CareCore), bei einer Person übernehmen und anpassen.
 - [ ] **Rufsystem anbinden:** Rufe (z. B. Ascom, Teletronic) in CareCore anzeigen und dokumentieren, Reaktionszeiten
