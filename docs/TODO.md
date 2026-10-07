@@ -646,8 +646,15 @@ weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen ode
       für die Qualität. Braucht die Schnittstelle des Herstellers.
 - [ ] **Apotheke und Blister elektronisch:** Bestellungen an die Apotheke elektronisch, Rückmeldung von Verblisterung
       und Änderungen; heute nur über das Apothekenportal.
-- [ ] **Lohn-Export der Zeiterfassung:** Stunden, Zuschläge und Abwesenheiten im Format der Lohnbuchhaltung (z. B.
-      Abacus, Sage); Lohnarten legt die Einrichtung fest.
+- [x] **Lohn-Export der Zeiterfassung:** Stunden, Zuschläge und Abwesenheiten im Format der Lohnbuchhaltung (z. B.
+      Abacus, Sage); Lohnarten legt die Einrichtung fest. Unter Dienstplan › Einstellungen › Lohnarten legt die Leitung
+      ihre Lohnarten an (Nummer und Bezeichnung aus der Lohnbuchhaltung, dazu der Wert der Monatsauswertung: Ist-,
+      Soll-, Saldo-, Nacht-, Wochenend-, Feiertagsstunden oder Abwesenheitstage je Art); die Personalnummer steht im
+      Personalprofil. „CSV Lohn“ in der Arbeitszeit liefert je Person und Lohnart eine Zeile (Periode, Personalnummer,
+      Person, Lohnart, Bezeichnung, Menge, Einheit), nur Personen mit diesem Stammwohnbereich (keine doppelte
+      Abrechnung). Ansätze und Zuschläge in Franken rechnet die Lohnbuchhaltung.
+  - [ ] Importformate einzelner Lohnprogramme (z. B. Abacus, Sage) nach deren Schnittstellenbeschreibung, sobald ein
+        Kunde sie vorgibt.
 
 ### Niedrig (weitere Märkte und Wechsel)
 

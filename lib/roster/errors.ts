@@ -39,6 +39,7 @@ const UNIQUE_MESSAGES: Record<string, string> = {
   carecore_staffing_date_idx: "Für dieses Datum und diesen Diensttyp gibt es bereits eine Vorgabe.",
   carecore_public_holidays_organization_id_date_key: "Für dieses Datum ist bereits ein Feiertag eingetragen.",
   carecore_qualifications_organization_id_code_key: "Dieses Qualifikationskürzel ist bereits vergeben.",
+  carecore_payroll_wage_types_code_key: "Diese Lohnart-Nummer ist bereits vergeben.",
   carecore_schedule_periods_care_unit_id_year_month_key: "Diesen Monat gibt es bereits.",
 };
 

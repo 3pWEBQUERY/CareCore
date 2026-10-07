@@ -168,6 +168,7 @@ function PersonEditor({
   onSaved: () => void;
 }) {
   const [form, setForm] = useState({
+    employeeNumber: person.employeeNumber,
     pensumPercent: person.pensumPercent,
     employmentStart: person.employmentStart ?? "",
     employmentEnd: person.employmentEnd ?? "",
@@ -215,6 +216,14 @@ function PersonEditor({
           max={100}
           value={form.pensumPercent}
           onChange={(e) => setForm({ ...form, pensumPercent: Number(e.target.value) })}
+        />
+      </label>
+      <label>
+        <span>Personalnummer (Lohn)</span>
+        <input
+          maxLength={80}
+          value={form.employeeNumber}
+          onChange={(e) => setForm({ ...form, employeeNumber: e.target.value })}
         />
       </label>
       <label className="roster-checkbox">

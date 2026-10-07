@@ -1,11 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { RosterError } from "@/lib/roster/errors";
+import { RosterError, toRosterError } from "@/lib/roster/errors";
 import { timesheetCsv } from "@/lib/roster/export-service";
 import { getMySchedule } from "@/lib/roster/my-schedule";
 import { periodAction } from "@/lib/roster/period-service";
 import { getSchedule } from "@/lib/roster/schedule";
 import { createShift } from "@/lib/roster/shift-service";
+import { deleteWageType, getSettings, saveEmployeeProfile, saveWageType } from "@/lib/roster/settings-service";
 import { localDate } from "@/lib/roster/time";
 import {
   checkMissingClockOuts,
@@ -241,4 +242,65 @@ test("Arbeitszeit-Export: Summen und Einträge als CSV, nur für die Leitung", a
   assert.match(entryLines[1], /Anna Müller;Frühdienst;/);
   // Mitarbeitende erhalten keinen Export des Wohnbereichs.
   await expectCode(timesheetCsv(anna, new URLSearchParams({ monat: month, einheit: f.units.a })), "FORBIDDEN");
+});
+
+test("Lohn-Export: Lohnarten der Einrichtung, Personalnummer, nur Personen mit diesem Stammwohnbereich", async () => {
+  const f = await fixture();
+  const shiftId = await runningShift(f, "anna");
+  const anna = await f.ctx("anna");
+  const { id } = await clockIn(anna, { shiftId });
+  await q(`UPDATE carecore_time_entries SET clock_in = $2 WHERE id = $1`, [id, minutesAgo(8 * 60)]);
+  await clockOut(anna, {});
+  const lead = await f.ctx("leadA");
+  const month = localDate(new Date(), TZ).slice(0, 7);
+  const params = () => new URLSearchParams({ monat: month, einheit: f.units.a, art: "lohn" });
+
+  // Ohne Lohnarten gibt es keine Lohndatei; Lohnarten pflegt nur die Leitung.
+  await expectCode(timesheetCsv(lead, params()), "INVALID");
+  await expectCode(saveWageType(anna, { code: "1000", name: "Stundenlohn", source: "ACTUAL_HOURS" }), "FORBIDDEN");
+  await expectCode(saveWageType(lead, { code: "1000", name: "Stundenlohn", source: "ERFUNDEN" }), "INVALID");
+  await saveWageType(lead, { code: "1000", name: "Stundenlohn", source: "ACTUAL_HOURS" });
+  const night = await saveWageType(lead, { code: "1100", name: "Nachtstunden", source: "NIGHT_HOURS" });
+  const duplicate = await saveWageType(lead, { code: "1000", name: "Doppelt", source: "TARGET_HOURS" }).catch(
+    (error: unknown) => toRosterError(error)?.message,
+  );
+  assert.equal(duplicate, "Diese Lohnart-Nummer ist bereits vergeben.");
+  await saveEmployeeProfile(lead, f.people.anna, { employeeNumber: " P-0042 " });
+  const settings = await getSettings(lead, f.units.a);
+  assert.deepEqual(
+    settings.wageTypes.map((w) => w.code),
+    ["1000", "1100"],
+  );
+  assert.equal(settings.employees.find((e) => e.id === f.people.anna)?.employeeNumber, "P-0042");
+
+  const payroll = await timesheetCsv(lead, params());
+  assert.match(payroll.filename, new RegExp(`^arbeitszeit-lohn-wohngruppe-a-${month}\\.csv$`));
+  const lines = payroll.body.replace("\uFEFF", "").trim().split("\r\n");
+  assert.equal(lines[0], "Periode;Personalnummer;Person;Lohnart;Bezeichnung;Menge;Einheit");
+  // Nur Werte ungleich null: Anna hat 7,5 Ist-Stunden; Nachtstunden je nach Uhrzeit des Tests.
+  const annaLines = lines.filter((line) => line.includes("Anna Müller"));
+  assert.ok(annaLines.includes(`${month};P-0042;Anna Müller;1000;Stundenlohn;7,5;Stunden`));
+  assert.ok(lines.slice(1).every((line) => !line.endsWith(";0;Stunden")));
+
+  // Stammwohnbereich B: Anna erscheint nicht mehr im Export von A (keine doppelte Abrechnung).
+  await q(
+    `INSERT INTO carecore_unit_memberships (user_id, care_unit_id, plannable, is_lead) VALUES ($1, $2, TRUE, FALSE)`,
+    [f.people.anna, f.units.b],
+  );
+  await q(`UPDATE carecore_user_profiles SET primary_care_unit_id = $2 WHERE user_id = $1`, [f.people.anna, f.units.b]);
+  const after = await timesheetCsv(lead, params());
+  assert.ok(!after.body.includes("Anna Müller"));
+
+  await deleteWageType(lead, night.id);
+  assert.equal((await getSettings(lead, f.units.a)).wageTypes.length, 1);
+  const audits = await q<{ action: string }>(
+    `SELECT action FROM carecore_roster_audit WHERE entity_type = 'wage_type' AND organization_id = $1 ORDER BY created_at`,
+    [f.org],
+  );
+  assert.deepEqual(
+    audits.map((a) => a.action),
+    ["created", "created", "deleted"],
+  );
+  // Mitarbeitende erhalten keine Lohndatei, auch nicht für die eigenen Zeiten.
+  await expectCode(timesheetCsv(anna, new URLSearchParams({ monat: month, eigene: "1", art: "lohn" })), "INVALID");
 });

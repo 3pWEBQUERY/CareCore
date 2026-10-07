@@ -34,6 +34,26 @@ const zurichMonth = () =>
 
 // Soll/Ist-Auswertung (Spec 8.10/8.11). "own": eigene Zeiten; sonst Leitung mit Filtern,
 // Korrektur und Monatsabschluss.
+// Lohn-Export: Fehler (z. B. noch keine Lohnarten) als Hinweis statt als heruntergeladene Fehlerdatei.
+async function downloadPayroll(url: string, showToast: (message: string) => void) {
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
+      showToast(payload?.error?.message ?? "Der Export konnte nicht erstellt werden.");
+      return;
+    }
+    const name = /filename="([^"]+)"/.exec(response.headers.get("content-disposition") ?? "")?.[1] ?? "lohn.csv";
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(await response.blob());
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  } catch {
+    showToast("Keine Verbindung. Bitte Netzwerk prüfen und erneut versuchen.");
+  }
+}
+
 export default function TimesheetWorkspace({ own }: { own?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -68,7 +88,7 @@ export default function TimesheetWorkspace({ own }: { own?: boolean }) {
   const deviates = (entry: TimesheetEntry) =>
     Math.abs(entry.startDeviationMinutes ?? 0) > threshold || Math.abs(entry.endDeviationMinutes ?? 0) > threshold;
   const own_row = own ? data?.rows[0] : undefined;
-  const exportUrl = (art: "summen" | "eintraege") => {
+  const exportUrl = (art: "summen" | "eintraege" | "lohn") => {
     const next = new URLSearchParams(query);
     if (data?.unitId) next.set("einheit", data.unitId);
     next.set("art", art);
@@ -136,6 +156,14 @@ export default function TimesheetWorkspace({ own }: { own?: boolean }) {
                   <a className="secondary-button" href={exportUrl("eintraege")} download>
                     <DownloadSimple className="button-icon" /> CSV Einträge
                   </a>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    title="Lohnarten gemäss Einstellungen, Personen mit diesem Stammwohnbereich"
+                    onClick={() => void downloadPayroll(exportUrl("lohn"), showToast)}
+                  >
+                    <DownloadSimple className="button-icon" /> CSV Lohn
+                  </button>
                   {!data.period ? null : locked ? (
                     <button className="secondary-button" type="button" onClick={() => setDialog({ kind: "unlock" })}>
                       <LockSimpleOpen className="button-icon" /> Monat wieder öffnen
