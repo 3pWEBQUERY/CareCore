@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/server-data";
 // Ersteinrichtung einer neuen Installation: was die Administration (oder der Betreiber für sie) noch erledigen sollte.
 // Jeder Schritt wird aus den Daten abgeleitet; die Liste verschwindet, sobald alles erledigt oder ausgeblendet ist.
 
+// href: Seite zum Erledigen; ein Anker (#…) öffnet dort den passenden Dialog bzw. springt zur Karte.
 export type SetupStep = { id: string; label: string; detail: string; done: boolean; href: string | null };
 export type SetupChecklist = { steps: SetupStep[]; dismissed: boolean };
 
@@ -40,35 +41,35 @@ export async function setupChecklist(ctx: ApiContext): Promise<SetupChecklist> {
       label: "Name der Einrichtung",
       detail: "Erscheint in der Kopfzeile aller Mitarbeitenden.",
       done: name !== "" && name !== "CareCore",
-      href: "/c/leitung/administration/konfiguration",
+      href: "/c/leitung/administration/konfiguration#name",
     },
     {
       id: "country",
       label: "Land der Einrichtung",
       detail: "Schweiz, Deutschland oder Österreich: bestimmt Pflegestufen, Feiertage und Qualifikationen.",
       done: Boolean(row?.country_set),
-      href: "/c/leitung/administration/konfiguration",
+      href: "/c/leitung/administration/konfiguration#land",
     },
     {
       id: "site",
       label: "Standort mit Adresse",
       detail: "Adresse für Überleitungsbogen und Ausdrucke.",
       done: Boolean(row?.site_address),
-      href: "/c/leitung/administration",
+      href: "/c/leitung/administration#standort",
     },
     {
       id: "units",
       label: "Wohnbereiche anlegen",
       detail: "Mit eigenen Namen, Plätzen und Leitung.",
       done: Number(row?.units) > 1 || Boolean(row?.units_named),
-      href: "/c/leitung/administration",
+      href: "/c/leitung/administration#wohnbereich",
     },
     {
       id: "staff",
       label: "Mitarbeitende erfassen",
       detail: "Mit Rolle, Wohnbereich und am besten mit E-Mail-Adresse; auch per Datenübernahme.",
       done: Number(row?.staff) > 1,
-      href: "/c/leitung/administration/benutzer",
+      href: "/c/leitung/administration/mitarbeiter",
     },
     {
       id: "residents",

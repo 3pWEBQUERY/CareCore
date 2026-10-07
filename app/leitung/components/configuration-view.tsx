@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { EditorDialog, LoadError, formatDateTime, requestJson } from "@/app/components/workspace-ui";
 import { loadWorkContext } from "@/app/components/care-context";
@@ -57,6 +57,17 @@ export function ConfigurationView({
 }) {
   const { data, error, reload } = configuration;
   const [saving, setSaving] = useState<SettingKey | "terminology" | "vitals" | "logo" | null>(null);
+  // Aus der Ersteinrichtung (#name, #land): nach dem Laden zur Karte springen.
+  const loaded = Boolean(data);
+  useEffect(() => {
+    const anchor = loaded ? window.location.hash.slice(1) : "";
+    if (!anchor) return;
+    const timer = window.setTimeout(
+      () => document.getElementById(anchor)?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      50,
+    );
+    return () => window.clearTimeout(timer);
+  }, [loaded]);
   if (error && !data) return <LoadError message={error} onRetry={reload} />;
 
   const save = async (key: SettingKey, change: { enabled?: boolean; value?: number }) => {
@@ -290,7 +301,11 @@ export function ConfigurationView({
             ))}
           </div>
         </section>
-        <section className="card admin-terminology-card admin-branding-card" aria-labelledby="admin-branding-title">
+        <section
+          className="card admin-terminology-card admin-branding-card"
+          id="name"
+          aria-labelledby="admin-branding-title"
+        >
           <div className="card-header">
             <div>
               <p className="eyebrow">Branding</p>

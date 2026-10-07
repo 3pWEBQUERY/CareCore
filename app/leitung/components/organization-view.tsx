@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { ModuleIcon } from "@/app/components/module-icon";
 import { EmptyState, LoadError } from "@/app/components/workspace-ui";
 import {
@@ -15,7 +15,7 @@ import type { Tone } from "./leadership-data";
 import { notifyAdminChanged } from "./admin-board";
 import { LocationEditor } from "./location-editor";
 import { UnitEditor } from "./unit-editor";
-import { SetupChecklistCard } from "./setup-checklist-card";
+import { onSetupStep, SetupChecklistCard } from "./setup-checklist-card";
 
 export type OrganizationData = {
   data?: OrganizationStructure;
@@ -51,6 +51,28 @@ export function OrganizationView({
   const [selection, setSelection] = useState<{ kind: "site" | "unit"; id: string } | null>(null);
   const [unitEditor, setUnitEditor] = useState<{ unit: OrgUnit | null } | null>(null);
   const [siteEditor, setSiteEditor] = useState<OrgSite | null>(null);
+
+  // Ersteinrichtung („Öffnen“ bzw. Adresse mit #standort / #wohnbereich): passenden Dialog direkt öffnen.
+  const sites = data?.sites;
+  useEffect(() => {
+    if (!sites) return;
+    const open = (anchor: string) => {
+      if (anchor === "standort" && sites.length)
+        setSiteEditor(sites.find((site) => !site.addressLine1 || !site.city) ?? sites[0]);
+      if (anchor === "wohnbereich") setUnitEditor({ unit: null });
+    };
+    const fromAddress = window.location.hash.slice(1);
+    if (fromAddress) {
+      const initial = window.setTimeout(() => open(fromAddress), 0);
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      const stop = onSetupStep(open);
+      return () => {
+        window.clearTimeout(initial);
+        stop();
+      };
+    }
+    return onSetupStep(open);
+  }, [sites]);
 
   if (error && !data) return <LoadError message={error} onRetry={reload} />;
   if (!data)

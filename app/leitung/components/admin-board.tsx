@@ -10,6 +10,11 @@ const ADMIN_CHANGED = "carecore:admin-changed";
 
 // Organisation, staff or settings changed: the board reloads its figures and log.
 export const notifyAdminChanged = () => window.dispatchEvent(new Event(ADMIN_CHANGED));
+// Auf Änderungen der Administration hören (Rückgabe meldet ab).
+export function onAdminChanged(listener: () => void) {
+  window.addEventListener(ADMIN_CHANGED, listener);
+  return () => window.removeEventListener(ADMIN_CHANGED, listener);
+}
 
 const SERIES_CLASSES = ["quality", "plan", "actual"];
 

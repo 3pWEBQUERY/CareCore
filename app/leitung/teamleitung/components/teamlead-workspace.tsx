@@ -22,7 +22,8 @@ async function fetchTeamlead(view: View): Promise<TeamleadData> {
   ]);
   return {
     role: context?.profile?.role ?? null,
-    rows: (result?.employees ?? result?.tasks ?? []) as TeamleadRow[],
+    // Die Aufgaben-Antwort enthält zusätzlich die Personen für die Zuweisung: Zeilen sind dort die Aufgaben.
+    rows: ((view === "tasks" ? result?.tasks : result?.employees) ?? []) as TeamleadRow[],
     employees: (result?.employees ?? []) as Employee[],
     units: (result?.units ?? []) as Unit[],
   };
