@@ -7,6 +7,7 @@ export const AI_TASKS = {
   carePlan: { label: "Pflegeplanung vorschlagen", icon: "plan" },
   question: { label: "Freie Frage", icon: "ai" },
   kompassSummary: { label: "Gesamtbild Kompass", icon: "compass" },
+  rephrase: { label: "Text umformulieren", icon: "note" },
 } as const;
 export type AiTask = keyof typeof AI_TASKS;
 
