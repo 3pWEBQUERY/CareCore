@@ -13,7 +13,15 @@ const SUGGESTIONS: AiTask[] = ["handover", "risks", "documentation", "carePlan"]
 // CareCore KI assistant: on the page "Assistenz" and in the header panel.
 type Exchange = { id: string; task: AiTask; prompt: string; draft?: AiDraft; error?: string };
 
-export function AssistantView() {
+// variant „panel“: kompakte Darstellung im KI-Panel der Kopfzeile (Kontextleiste, Gespräch, Aufträge über dem
+// Eingabefeld, Hinweis am Fuss); „page“: Seite „Assistenz“ mit Kontext- und Hinweiskarten.
+export function AssistantView({
+  variant = "page",
+  onOpenDrafts,
+}: {
+  variant?: "page" | "panel";
+  onOpenDrafts?: () => void;
+}) {
   const t = useTerms();
   const router = useRouter();
   const context = useWorkContext();
@@ -62,6 +70,158 @@ export function AssistantView() {
   const canSend =
     !busy && configured && (task !== "question" || prompt.trim().length >= 3) && (task !== "carePlan" || useResident);
 
+  const statusBadge = (
+    <span className="intelligence-status" style={configured ? undefined : { color: "var(--attention)" }}>
+      <i style={configured ? undefined : { background: "var(--attention)" }} />
+      {!configured ? "Nicht eingerichtet" : busy ? "Schreibt …" : "Bereit"}
+    </span>
+  );
+  const suggestionButtons = (
+    <div className="intelligence-suggestions">
+      {SUGGESTIONS.map((item) => (
+        <button
+          className={task === item ? "active" : ""}
+          type="button"
+          key={item}
+          aria-pressed={task === item}
+          onClick={() => setTask(item)}
+        >
+          <ModuleIcon name={AI_TASKS[item].icon as ModuleIconName} />
+          {AI_TASKS[item].label}
+        </button>
+      ))}
+      <button
+        className={task === "question" ? "active" : ""}
+        type="button"
+        aria-pressed={task === "question"}
+        onClick={() => setTask("question")}
+      >
+        <ModuleIcon name="ai" />
+        Freie Frage
+      </button>
+    </div>
+  );
+  const conversationView = (
+    <div className="intelligence-conversation" aria-live="polite">
+      <div className="intelligence-message assistant">
+        <span className="intelligence-avatar">
+          <ModuleIcon name="ai" />
+        </span>
+        <p>
+          {configured
+            ? `Hallo${firstName ? ` ${firstName}` : ""}! Ich kann Übergaben strukturieren, Risiken hervorheben und Dokumentationsentwürfe vorbereiten – auf Basis der Daten in CareCore. Die finale Freigabe bleibt immer bei dir.`
+            : "CareCore KI ist noch nicht eingerichtet. Die Administration muss dafür einen API-Schlüssel (GEMINI_API_KEY) hinterlegen."}
+        </p>
+      </div>
+      {exchanges.map((item) => (
+        <div key={item.id} style={{ display: "contents" }}>
+          <div className="intelligence-message user">
+            <p>
+              {item.task === "question"
+                ? item.prompt
+                : `${AI_TASKS[item.task].label}${item.prompt ? ` · ${item.prompt}` : ""}`}
+            </p>
+          </div>
+          <div className="intelligence-message assistant">
+            <span className="intelligence-avatar">
+              <ModuleIcon name="ai" />
+            </span>
+            <p style={{ whiteSpace: "pre-wrap" }}>
+              {item.draft ? item.draft.content : item.error ? item.error : "Einen Moment, ich werte die Daten aus …"}
+              {item.draft && (
+                <>
+                  {"\n\n"}
+                  <button
+                    className="quiet-button"
+                    type="button"
+                    onClick={() => router.push(`/c/intelligenz/entwuerfe?draft=${item.draft?.id}`)}
+                  >
+                    Als Entwurf prüfen <ModuleIcon name="chevron" />
+                  </button>
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+  const composerForm = (
+    <form
+      className="intelligence-composer"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (canSend) void send();
+      }}
+    >
+      <input
+        value={prompt}
+        onChange={(event) => setPrompt(event.target.value)}
+        placeholder={
+          task === "question"
+            ? "Frage oder Auftrag eingeben…"
+            : task === "documentation"
+              ? "Stichworte zum Dienst (optional)…"
+              : task === "carePlan"
+                ? useResident
+                  ? "Schwerpunkt (optional), z. B. Mobilität oder Ernährung…"
+                  : `Für die Pflegeplanung zuerst ${t.oneOblique} in der Kopfzeile wählen`
+                : "Zusätzliche Hinweise (optional)…"
+        }
+        aria-label="Auftrag an CareCore KI"
+        maxLength={2000}
+      />
+      <button className="primary-button" type="submit" disabled={!canSend}>
+        <ModuleIcon name="ai" />
+        {busy ? "Arbeitet…" : "Senden"}
+      </button>
+    </form>
+  );
+
+  if (variant === "panel")
+    return (
+      <div className="ai-assist">
+        <div className="ai-assist-context">
+          <div>
+            <span>Bezieht sich auf</span>
+            <strong>
+              {useResident
+                ? [resident?.name, resident?.room].filter(Boolean).join(" · ")
+                : (info?.careUnit ?? "alle Wohnbereiche")}
+            </strong>
+          </div>
+          {statusBadge}
+          {resident && (
+            <div className="ai-assist-scope" role="group" aria-label="Bezug">
+              <button type="button" aria-pressed={useResident} onClick={() => setScope("resident")}>
+                Nur {resident.name.split(" ")[0]}
+              </button>
+              <button type="button" aria-pressed={!useResident} onClick={() => setScope("unit")}>
+                Ganzer Wohnbereich
+              </button>
+            </div>
+          )}
+        </div>
+        {conversationView}
+        <div className="ai-assist-compose">
+          {suggestionButtons}
+          {composerForm}
+        </div>
+        <footer className="ai-assist-foot">
+          <p>
+            <ModuleIcon name="quality" />
+            Entwürfe aus den Daten in CareCore – gespeichert wird erst nach deiner Prüfung.
+          </p>
+          {onOpenDrafts && (
+            <button className="quiet-button" type="button" onClick={onOpenDrafts}>
+              KI-Entwürfe prüfen{overview.data?.pending ? ` (${overview.data.pending})` : ""}
+              <ModuleIcon name="chevron" />
+            </button>
+          )}
+        </footer>
+      </div>
+    );
+
   return (
     <div className="intelligence-layout">
       <section className="card intelligence-chat">
@@ -75,110 +235,11 @@ export function AssistantView() {
                 : `Bezieht sich auf ${info?.careUnit ?? "alle Wohnbereiche"}.`}
             </p>
           </div>
-          <span className="intelligence-status" style={configured ? undefined : { color: "var(--attention)" }}>
-            <i style={configured ? undefined : { background: "var(--attention)" }} />
-            {!configured ? "Nicht eingerichtet" : busy ? "Schreibt …" : "Bereit"}
-          </span>
+          {statusBadge}
         </div>
-        <div className="intelligence-suggestions">
-          {SUGGESTIONS.map((item) => (
-            <button
-              className={task === item ? "active" : ""}
-              type="button"
-              key={item}
-              aria-pressed={task === item}
-              onClick={() => setTask(item)}
-            >
-              <ModuleIcon name={AI_TASKS[item].icon as ModuleIconName} />
-              {AI_TASKS[item].label}
-            </button>
-          ))}
-          <button
-            className={task === "question" ? "active" : ""}
-            type="button"
-            aria-pressed={task === "question"}
-            onClick={() => setTask("question")}
-          >
-            <ModuleIcon name="ai" />
-            Freie Frage
-          </button>
-        </div>
-        <div className="intelligence-conversation" aria-live="polite">
-          <div className="intelligence-message assistant">
-            <span className="intelligence-avatar">
-              <ModuleIcon name="ai" />
-            </span>
-            <p>
-              {configured
-                ? `Hallo${firstName ? ` ${firstName}` : ""}! Ich kann Übergaben strukturieren, Risiken hervorheben und Dokumentationsentwürfe vorbereiten – auf Basis der Daten in CareCore. Die finale Freigabe bleibt immer bei dir.`
-                : "CareCore KI ist noch nicht eingerichtet. Die Administration muss dafür einen API-Schlüssel (GEMINI_API_KEY) hinterlegen."}
-            </p>
-          </div>
-          {exchanges.map((item) => (
-            <div key={item.id} style={{ display: "contents" }}>
-              <div className="intelligence-message user">
-                <p>
-                  {item.task === "question"
-                    ? item.prompt
-                    : `${AI_TASKS[item.task].label}${item.prompt ? ` · ${item.prompt}` : ""}`}
-                </p>
-              </div>
-              <div className="intelligence-message assistant">
-                <span className="intelligence-avatar">
-                  <ModuleIcon name="ai" />
-                </span>
-                <p style={{ whiteSpace: "pre-wrap" }}>
-                  {item.draft
-                    ? item.draft.content
-                    : item.error
-                      ? item.error
-                      : "Einen Moment, ich werte die Daten aus …"}
-                  {item.draft && (
-                    <>
-                      {"\n\n"}
-                      <button
-                        className="quiet-button"
-                        type="button"
-                        onClick={() => router.push(`/c/intelligenz/entwuerfe?draft=${item.draft?.id}`)}
-                      >
-                        Als Entwurf prüfen <ModuleIcon name="chevron" />
-                      </button>
-                    </>
-                  )}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-        <form
-          className="intelligence-composer"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (canSend) void send();
-          }}
-        >
-          <input
-            value={prompt}
-            onChange={(event) => setPrompt(event.target.value)}
-            placeholder={
-              task === "question"
-                ? "Frage oder Auftrag eingeben…"
-                : task === "documentation"
-                  ? "Stichworte zum Dienst (optional)…"
-                  : task === "carePlan"
-                    ? useResident
-                      ? "Schwerpunkt (optional), z. B. Mobilität oder Ernährung…"
-                      : `Für die Pflegeplanung zuerst ${t.oneOblique} in der Kopfzeile wählen`
-                    : "Zusätzliche Hinweise (optional)…"
-            }
-            aria-label="Auftrag an CareCore KI"
-            maxLength={2000}
-          />
-          <button className="primary-button" type="submit" disabled={!canSend}>
-            <ModuleIcon name="ai" />
-            {busy ? "Arbeitet…" : "Senden"}
-          </button>
-        </form>
+        {suggestionButtons}
+        {conversationView}
+        {composerForm}
       </section>
       <aside className="intelligence-side">
         <section className="card">

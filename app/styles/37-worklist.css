@@ -344,14 +344,3 @@
     padding: 16px 16px 0;
   }
 }
-
-/* CareCore KI side panel from the header. */
-.ai-panel-body {
-  display: grid;
-  gap: 14px;
-  padding: 24px 28px 32px;
-  overflow-y: auto;
-}
-.ai-panel-body > .secondary-button {
-  justify-self: start;
-}

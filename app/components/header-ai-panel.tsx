@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Sparkle } from "@phosphor-icons/react";
+import { Sparkle, X } from "@phosphor-icons/react";
 import { AssistantView } from "@/app/intelligenz/components/assistant-view";
 import { useWorkContext } from "./care-context";
 
-// CareCore KI from every page: a header button opening the assistant as side panel.
+// CareCore KI from every page: a header button opening the assistant as side panel (right, full screen on phones).
 export function HeaderAiButton() {
   const router = useRouter();
   const context = useWorkContext();
@@ -35,47 +35,35 @@ export function HeaderAiButton() {
       {open &&
         createPortal(
           <div
-            className="area-editor-overlay"
+            className="ai-drawer-overlay"
             role="presentation"
             onMouseDown={(event) => event.currentTarget === event.target && setOpen(false)}
           >
-            <section
-              className="area-editor-panel ai-panel"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="ai-panel-title"
-            >
-              <header className="area-editor-header">
+            <section className="ai-drawer" role="dialog" aria-modal="true" aria-labelledby="ai-panel-title">
+              <header className="ai-drawer-head">
+                <span className="ai-drawer-mark" aria-hidden="true">
+                  <Sparkle weight="fill" />
+                </span>
                 <div>
                   <p className="eyebrow">CareCore KI</p>
                   <h2 id="ai-panel-title">Assistenz</h2>
-                  <p>
-                    Übergaben, Risiken und Dokumentationsentwürfe aus den Daten in CareCore – die Freigabe bleibt bei
-                    dir.
-                  </p>
                 </div>
                 <button
-                  className="area-editor-close"
+                  className="icon-button ai-drawer-close"
                   type="button"
                   aria-label="KI schliessen"
                   onClick={() => setOpen(false)}
                 >
-                  ×
+                  <X aria-hidden="true" />
                 </button>
               </header>
-              <div className="ai-panel-body intelligence-workspace">
-                <AssistantView />
-                <button
-                  className="secondary-button"
-                  type="button"
-                  onClick={() => {
-                    setOpen(false);
-                    router.push("/c/intelligenz/entwuerfe");
-                  }}
-                >
-                  KI-Entwürfe prüfen
-                </button>
-              </div>
+              <AssistantView
+                variant="panel"
+                onOpenDrafts={() => {
+                  setOpen(false);
+                  router.push("/c/intelligenz/entwuerfe");
+                }}
+              />
             </section>
           </div>,
           document.body,
