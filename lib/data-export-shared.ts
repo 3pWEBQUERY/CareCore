@@ -333,6 +333,20 @@ export const EXPORT_COLUMN_LABELS: Record<string, string> = {
   ends_on: "Letzter Tag",
   entry: "Eintrag",
   rate_name: "Taxe",
+  addition: "Adresszusatz",
+  building: "Hausnummer",
+  calculation: "Berechnung des Monats",
+  creditor: "Rechnungssteller",
+  currency: "Währung",
+  issued_on: "Rechnungsdatum",
+  lines: "Positionen",
+  month: "Monat",
+  number: "Rechnungsnummer",
+  recipient: "Rechnungsempfänger",
+  reference: "Zahlungsreferenz",
+  street: "Strasse",
+  total_cents: "Total (Rappen bzw. Cent)",
+  zip: "Postleitzahl",
 };
 
 // Häufige technische Werte in lesbarer Form.

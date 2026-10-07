@@ -51,6 +51,7 @@
     "qrcode": "^1.5.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "swissqrbill": "^4.4.2",
     "three": "^0.186.0",
     "web-push": "^3.6.7"
   },

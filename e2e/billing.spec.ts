@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { ADMIN, login, pickDate, watchErrors } from "./support";
 
+test.describe.configure({ mode: "serial" });
+
 // Abrechnung, Grundlagen: Taxen der Einrichtung, Pflegetarif, Stufe und Abwesenheit je Person mit Monatsvorschau.
 test("Abrechnung: Taxen erfassen, Stufe und Abwesenheit je Person, Vorschau des Monats", async ({ page }) => {
   await login(page, ADMIN);
@@ -74,7 +76,7 @@ test("Abrechnung: Taxen erfassen, Stufe und Abwesenheit je Person, Vorschau des 
   await expect(preview).toContainText("Pflegestufe 3 · Krankenversicherung");
   await expect(preview).toContainText("Total Monat");
 
-  await page.getByRole("button", { name: "Erfassen", exact: true }).click();
+  await page.getByRole("region", { name: "Abwesenheiten" }).getByRole("button", { name: "Erfassen" }).click();
   dialog = page.getByRole("dialog", { name: "Abwesenheit erfassen" });
   await dialog.getByRole("button", { name: "Spital" }).click();
   await pickDate(dialog, "Erster ganzer Tag", firstOfMonth);
@@ -92,5 +94,69 @@ test("Abrechnung: Taxen erfassen, Stufe und Abwesenheit je Person, Vorschau des 
   await dialog.getByRole("button", { name: "Stornieren" }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("list", { name: "Abwesenheiten" })).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("Abrechnung: Zahlungsangaben, Rechnungsadresse und Rechnungslauf", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page, [/^400 PUT \/api\/billing\/invoices\/settings$/]);
+  await page.goto("/c/bewohner/abrechnung");
+  await page.getByRole("button", { name: "Rechnungen" }).click();
+  await expect(page.getByRole("heading", { name: /^Rechnungen / })).toBeVisible();
+
+  // Zahlungsangaben der Einrichtung und Regel zum Austrittstag (unter „Taxen der Einrichtung“).
+  await page.getByRole("button", { name: "Taxen der Einrichtung" }).click();
+  await page
+    .getByRole("group", { name: "Austrittstag" })
+    .getByRole("button", { name: "Austrittstag nicht verrechnen" })
+    .click();
+  const payment = page.getByRole("region", { name: "Zahlungsangaben" });
+  await payment.getByRole("button", { name: /Erfassen|Bearbeiten/ }).click();
+  let dialog = page.getByRole("dialog", { name: "Zahlungsangaben der Einrichtung" });
+  await dialog.getByLabel("Name", { exact: true }).fill("Heim Sonnenhalde");
+  await dialog.getByLabel("Strasse").fill("Seeweg");
+  await dialog.getByLabel("Hausnummer (optional)").fill("4");
+  await dialog.getByLabel("Postleitzahl").fill("8000");
+  await dialog.getByLabel("Ort").fill("Zürich");
+  await dialog.getByLabel("IBAN").fill("CH00 1234");
+  await dialog.getByLabel("Zahlungsfrist (Tage)").fill("30");
+  await dialog.getByRole("button", { name: "Speichern" }).click();
+  await expect(dialog.getByRole("alert")).toContainText("IBAN ist ungültig");
+  await dialog.getByLabel("IBAN").fill("CH44 3199 9123 0008 8901 2");
+  await dialog.getByRole("button", { name: "Speichern" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(payment).toContainText("IBAN …9012");
+  await expect(payment).toContainText("zahlbar innert 30 Tagen");
+
+  // Rechnungsadresse je Person.
+  await page.getByRole("button", { name: "Je Bewohner" }).click();
+  await page
+    .locator(".topbar")
+    .getByRole("button", { name: /^[A-ZÄÖÜ]{1,2} Bewohner / })
+    .click();
+  const picker = page.getByRole("dialog", { name: "Bewohner auswählen" });
+  await picker.getByRole("button", { name: "Alle Wohnbereiche" }).click();
+  await picker.getByLabel("Bewohner suchen").fill("Hans Müller");
+  await picker
+    .getByRole("button", { name: /Hans Müller/ })
+    .first()
+    .click();
+  const addressCard = page.getByRole("region", { name: "Rechnungsadresse" });
+  await addressCard.getByRole("button", { name: /Erfassen|Ändern/ }).click();
+  dialog = page.getByRole("dialog", { name: "Rechnungsadresse" });
+  await dialog.getByLabel("Name", { exact: true }).fill("Claudia Müller");
+  await dialog.getByLabel("Zusatz (optional, z. B. c/o Beistandschaft)").fill("für Hans Müller");
+  await dialog.getByLabel("Strasse").fill("Bergstrasse");
+  await dialog.getByLabel("Postleitzahl").fill("8001");
+  await dialog.getByLabel("Ort").fill("Zürich");
+  await dialog.getByRole("button", { name: "Speichern" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(addressCard).toContainText("Claudia Müller · für Hans Müller · Bergstrasse · 8001 Zürich");
+
+  // Rechnungslauf: der Vormonat ist wählbar; ohne fehlende Angaben kein Hinweis.
+  await page.getByRole("button", { name: "Rechnungen" }).click();
+  await expect(page.getByRole("heading", { name: /^Rechnungen / })).toBeVisible();
+  await expect(page.getByText("Bevor Rechnungen erstellt werden können")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Rechnungen erstellen/ })).toBeVisible();
   expect(errors).toEqual([]);
 });

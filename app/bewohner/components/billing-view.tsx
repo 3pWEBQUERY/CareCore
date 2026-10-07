@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useHeaderResident, useTerms, useWorkContext } from "@/app/components/care-context";
+import { setCareResident, useHeaderResident, useTerms, useWorkContext } from "@/app/components/care-context";
 import { CareDatePicker, CareOptionSelect } from "@/app/components/care-form-controls";
 import HeaderResidentHint from "@/app/components/header-resident-hint";
 import ModulePageShell from "@/app/components/module-page-shell";
@@ -30,9 +30,10 @@ import {
   type CareLevelEntry,
 } from "@/lib/billing-shared";
 import { BillingRates } from "./billing-rates";
+import { AddressDialog, InvoicesView, PaymentCard } from "./billing-invoices";
 import { monthLabel, monthOptions } from "./funds-view";
 
-type View = "person" | "rates";
+type View = "person" | "rates" | "invoices";
 type Cancel = { kind: "level" | "absence" | "rate"; id: string; title: string };
 
 const ABSENCE_KEYS = Object.keys(ABSENCE_KINDS) as AbsenceKind[];
@@ -398,6 +399,30 @@ function PersonCards({
   const current = person.careLevels.find((entry) => entry.validFrom <= person.today) ?? null;
   return (
     <div className="billing-side">
+      <section className="card service-records" aria-labelledby="billing-address-card-title">
+        <header className="fund-cash-head">
+          <div>
+            <h2 className="card-title" id="billing-address-card-title">
+              Rechnungsadresse
+            </h2>
+            <p className="card-subtitle">
+              {person.address
+                ? [
+                    person.address.name,
+                    person.address.addition,
+                    [person.address.street, person.address.building].filter(Boolean).join(" "),
+                    `${person.address.zip} ${person.address.city}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
+                : "Noch nicht erfasst – ohne Adresse gibt es keine Rechnung."}
+            </p>
+          </div>
+          <button className="secondary-button" type="button" onClick={() => onAction({ type: "address" })}>
+            {person.address ? "Ändern" : "Erfassen"}
+          </button>
+        </header>
+      </section>
       <section className="card service-records" aria-labelledby="billing-levels-title">
         <header className="fund-cash-head">
           <div>
@@ -550,6 +575,7 @@ type Action =
   | { type: "absence"; absence: Absence | null }
   | { type: "assign" }
   | { type: "end"; rate: AssignedRate }
+  | { type: "address" }
   | { type: "cancel"; cancel: Cancel };
 
 function BillingContent({ showToast }: { showToast: ShowToast }) {
@@ -586,6 +612,7 @@ function BillingContent({ showToast }: { showToast: ShowToast }) {
             [
               ["person", `Je ${t.one}`],
               ["rates", "Taxen der Einrichtung"],
+              ["invoices", "Rechnungen"],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -614,9 +641,18 @@ function BillingContent({ showToast }: { showToast: ShowToast }) {
         )}
       </section>
       {catalog.error && <LoadError message={catalog.error} onRetry={catalog.reload} />}
-      {view === "rates" ? (
+      {view === "invoices" ? (
+        <InvoicesView
+          onSaved={showToast}
+          onPerson={(id) => {
+            setCareResident(id);
+            setView("person");
+          }}
+        />
+      ) : view === "rates" ? (
         catalog.data && (
           <div className="billing-rates-layout">
+            <PaymentCard onSaved={showToast} />
             <BillingRates catalog={catalog.data} onSaved={done} />
           </div>
         )
@@ -658,6 +694,15 @@ function BillingContent({ showToast }: { showToast: ShowToast }) {
       )}
       {person && catalog.data && action?.type === "assign" && (
         <AssignDialog person={person} catalog={catalog.data} onClose={() => setAction(null)} onSaved={done} />
+      )}
+      {person && action?.type === "address" && (
+        <AddressDialog
+          residentId={person.residentId}
+          residentName={person.resident.name}
+          address={person.address}
+          onClose={() => setAction(null)}
+          onSaved={done}
+        />
       )}
       {person && action?.type === "end" && (
         <EndRateDialog person={person} rate={action.rate} onClose={() => setAction(null)} onSaved={done} />

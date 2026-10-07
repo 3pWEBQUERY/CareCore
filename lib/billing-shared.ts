@@ -101,6 +101,8 @@ export type BillingPerson = {
   assigned: AssignedRate[];
   preview: BillingMonth | null;
   previewMonth: string;
+  // Rechnungsadresse für den Anteil der Person.
+  address: PostalAddress | null;
   settings: BillingSettings;
 };
 
@@ -119,3 +121,73 @@ export const ruleText = (rule: AbsenceRule) =>
     : rule.fullDays === 0
       ? `${rule.percent} % ab dem ersten Tag`
       : `${rule.fullDays} ${rule.fullDays === 1 ? "Tag" : "Tage"} voll, danach ${rule.percent} %`;
+
+// ---------------------------------------------------------------- Rechnungen
+
+export type PostalAddress = {
+  name: string;
+  // Nur auf der Rechnung (z. B. „c/o Beistandschaft“), nicht im QR-Code.
+  addition?: string;
+  street: string;
+  building: string;
+  zip: string;
+  city: string;
+  country: string;
+};
+
+// Zahlungsangaben der Einrichtung; vollständig erst mit Name, Adresse, IBAN und Zahlungsfrist.
+export type InvoiceSettings = {
+  creditor: PostalAddress | null;
+  iban: string;
+  paymentDays: number | null;
+  nextNumber: number;
+};
+
+export type InvoiceLine = Pick<BillingLine, "name" | "priceCents" | "fullDays" | "reduced" | "amountCents">;
+
+export type Invoice = {
+  id: string;
+  number: number;
+  month: string;
+  residentId: string;
+  resident: string;
+  issuedOn: string;
+  dueOn: string;
+  currency: string;
+  lines: InvoiceLine[];
+  totalCents: number;
+  recipient: PostalAddress;
+  creditor: PostalAddress;
+  iban: string;
+  reference: string;
+  author: string;
+  createdAt: string;
+  cancelled: { at: string; by: string; reason: string } | null;
+};
+
+// Stand einer Person im Rechnungslauf eines Monats.
+export type InvoiceRow = {
+  residentId: string;
+  name: string;
+  room: string;
+  // Anteil der Person laut Berechnung (null: keine Berechnung möglich).
+  totalCents: number | null;
+  warnings: string[];
+  hasAddress: boolean;
+  invoice: { id: string; number: number; totalCents: number } | null;
+};
+
+export type InvoiceRun = {
+  month: string;
+  today: string;
+  currency: string;
+  // Was fehlt, bevor Rechnungen erstellt werden können (leer: bereit).
+  missing: string[];
+  // Ob der Monat abgeschlossen ist (Rechnungen erst nach Monatsende).
+  monthClosed: boolean;
+  qrBill: boolean;
+  rows: InvoiceRow[];
+  cancelled: Array<{ id: string; number: number; name: string; reason: string }>;
+};
+
+export const formatInvoiceNumber = (number: number) => String(number).padStart(6, "0");

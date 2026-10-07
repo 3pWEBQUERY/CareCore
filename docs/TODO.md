@@ -602,8 +602,12 @@ weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen ode
         Berechnung). Je Person: Pflegestufe mit Verlauf ab Datum, Abwesenheiten (erster und letzter ganzer Tag),
         zusätzliche Taxen; Vorschau des Monats je Kostenträger, jeder Tag einzeln berechnet. Stornieren mit Grund,
         alles im Protokoll. CareCore gibt keine Beträge vor.
-  - [ ] Schritt B: Monatsabrechnung abschliessen (festgeschrieben, Rechnungsnummer), Rechnung als PDF mit
-        Schweizer QR-Rechnung, Storno bzw. Gutschrift, Sammellauf für alle Personen.
+  - [x] Schritt B: Rechnungen für den Anteil der Person je abgeschlossenem Monat („Rechnungen“, einzeln oder als
+        Lauf für alle bereiten Personen): fortlaufende Nummer ohne Lücken, Positionen beim Erstellen festgehalten,
+        Rechnungsadresse je Person (z. B. Angehörige, Beistandschaft), Zahlungsangaben der Einrichtung mit
+        Zahlungsfrist. Druck A4 mit Zahlteil als Schweizer QR-Rechnung (Bibliothek swissqrbill nach SIX-Vorgaben;
+        QR-Referenz bei QR-IBAN, sonst Creditor Reference); ausserhalb von CH/LI steht die IBAN auf der Rechnung.
+        Storno mit Grund, danach neu verrechnen. Krankenversicherung und öffentliche Hand folgen in Schritt C.
   - [ ] Schritt C: Export für die Finanzbuchhaltung, offene Posten und Zahlungseingang; elektronische Rechnung an
         Versicherer (Forum Datenaustausch) prüfen.
 - [ ] **Statistik der sozialmedizinischen Institutionen (SOMED, BFS):** jährliche Pflichtlieferung der Schweizer
