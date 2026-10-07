@@ -116,7 +116,7 @@ export function RaiRefreshPopover({
             </span>
             <div>
               <strong>Neue Aktualisierung</strong>
-              <p>Erstfassungen nach Eintritt und Folgeerfassungen werden geplant und überfällige markiert.</p>
+              <p>Erste Abklärungen nach Eintritt und Folgeabklärungen werden geplant, überfällige markiert.</p>
             </div>
             <span className="duty-assignment-status">
               <i />

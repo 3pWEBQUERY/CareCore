@@ -83,7 +83,7 @@ export function RecordCareProcess({ r }: { r: ResidentRecordState }) {
               : overdueAssessments.length
                 ? `${overdueAssessments.length} überfällig`
                 : `${latestAssessments.length} Instrument${latestAssessments.length === 1 ? "" : "e"} aktuell`,
-      href: kompass.canOpen ? "/c/rai/erfassung" : "/c/einschaetzungen",
+      href: kompass.canOpen ? "/c/kompass/abklaerung" : "/c/einschaetzungen",
     },
     {
       id: "planning",

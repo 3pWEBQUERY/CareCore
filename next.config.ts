@@ -60,6 +60,14 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Der Kompass hiess früher „RAI“: alte Links (auch in Benachrichtigungen) führen weiter.
+  async redirects() {
+    return [
+      { source: "/c/rai/erfassung", destination: "/c/kompass/abklaerung", permanent: true },
+      { source: "/c/rai", destination: "/c/kompass", permanent: true },
+      { source: "/c/rai/:path*", destination: "/c/kompass/:path*", permanent: true },
+    ];
+  },
   async rewrites() {
     return [{ source: "/c/:path*", destination: "/:path*" }];
   },

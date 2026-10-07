@@ -8,7 +8,7 @@ test("Direkter Aufruf ohne Recht zeigt „Kein Zugriff“, mit Recht die Seite",
   const errors = watchErrors(page);
   for (const path of [
     "/c/leitung/administration/konfiguration",
-    "/c/rai",
+    "/c/kompass",
     "/c/dienstplan/einstellungen",
     "/c/leitung/kennzahlen",
     "/c/intelligenz",

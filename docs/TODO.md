@@ -570,7 +570,7 @@ weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen ode
 
 ### Hoch (ohne diese Punkte ersetzt CareCore careCoach im Heim nicht)
 
-- [ ] **Bedarfsabklärung – eigenes Instrument „CareCore Kompass“** (Entscheid vom 06.10.2026: eigenes Instrument mit
+- [x] **Bedarfsabklärung – eigenes Instrument „CareCore Kompass“** (Entscheid vom 06.10.2026: eigenes Instrument mit
       eigenem Namen statt Lizenz von interRAI oder BESA; kein Medizinprodukt, Zweck siehe `docs/ZWECKBESTIMMUNG.md`).
       Hinweis: Für die Einstufung zur Finanzierung (KVG) bleibt ein vom Kanton anerkanntes Instrument massgebend; der
       Kompass ersetzt es nicht.
@@ -585,7 +585,12 @@ weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen ode
         Ziel und Überprüfungsdatum von der Fachperson; ohne offenen Pflegeplan wird einer angelegt. Pflegeprozess der
         Akte zeigt den Kompass im Schritt „Einschätzung“; Tagesliste „Kompass fällig/fortsetzen“ für Personen mit
         Berechtigung für den Kompass.
-  - [ ] Schritt C: Auswertungen je Wohnbereich, KI-Zusammenfassung als Entwurf, eigene Adresse `/kompass`.
+  - [x] Schritt C: Eigene Adresse `/kompass` mit „Abklärung“ (frühere Links unter `/rai` leiten weiter).
+        Berichte: „Unterstützung je Bereich“ je Wohnbereich oder ganzes Haus – je Bereich Personen mit Unterstützung
+        oder Beobachtung und mit Handlungsbedarf, aufklappbar bis zur Verteilung der Antworten je Frage; nur gezählt,
+        Grundlage ist die letzte abgeschlossene Abklärung je Person; Export als CSV. Im Abschluss „Entwurf mit
+        CareCore KI“ für das Gesamtbild (mit Berechtigung für die KI): ohne Namen, nur aus den Antworten, Notizen und
+        Entscheiden der Fachperson; der Entwurf wird erst auf „Ins Gesamtbild übernehmen“ eingesetzt.
 - [ ] **Bewohneradministration und Abrechnung:** Taxen (Pension, Betreuung, Pflege nach Stufe) mit Aufteilung nach
       Kostenträger (Versicherer, Restfinanzierung, Anteil der Person), Abwesenheiten (Spital, Ferien) mit ihrer Wirkung
       auf die Taxen, Monatsrechnung mit QR-Rechnung, elektronische Rechnung an Versicherer (Forum Datenaustausch) und

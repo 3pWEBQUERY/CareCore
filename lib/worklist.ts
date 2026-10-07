@@ -209,7 +209,7 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
             ? `Abklärung zu ${abklaerung.progress}% erledigt`
             : `${abklaerung.state === "overdue" ? "seit" : "am"} ${abklaerung.dueOn?.split("-").reverse().join(".") ?? ""}`,
         tone: abklaerung.state === "overdue" ? "attention" : "info",
-        href: `/c/rai/erfassung?resident=${id}`,
+        href: `/c/kompass/abklaerung?resident=${id}`,
       });
 
     const plan = plans.find((item) => item.resident_id === id);

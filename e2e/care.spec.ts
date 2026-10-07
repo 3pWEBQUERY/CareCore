@@ -186,7 +186,7 @@ test("Kompass: Abklärung beginnen, alle Bereiche beantworten, automatisch speic
 }) => {
   await login(page, ADMIN);
   const errors = watchErrors(page);
-  await page.goto("/c/rai");
+  await page.goto("/c/kompass");
   await page.getByRole("button", { name: /Peter Aebischer/ }).click();
   await expect(page.getByRole("heading", { name: "Neue Abklärung · Peter Aebischer" })).toBeVisible();
   // Anlass nur mit der Tastatur: öffnen, eine Option weiter, Enter wählt.
@@ -276,7 +276,22 @@ test("Kompass: Abklärung beginnen, alle Bereiche beantworten, automatisch speic
   await expect(page.locator(".kompass-sheet-domain", { hasText: "Gesamtbild" })).toContainText(
     "Selbständig mit Rollator",
   );
-  await page.goto("/c/rai");
+  await page.goto("/c/kompass");
   await expect(page.getByRole("button", { name: /Peter Aebischer.*Zimmer 101/ })).toContainText("Aktuell");
+
+  // Auswertung je Wohnbereich: nur gezählt, je Bereich aufklappbar bis zur einzelnen Frage.
+  await page.goto("/c/kompass/berichte");
+  const statistics = page.getByRole("region", { name: "Unterstützung je Bereich" });
+  await expect(statistics).toContainText("mit abgeschlossener Abklärung");
+  const mobilityRow = statistics.getByRole("button", { name: /Bewegung & Mobilität/ });
+  await mobilityRow.click();
+  await expect(mobilityRow).toHaveAttribute("aria-expanded", "true");
+  await expect(statistics.locator(".kompass-statistics-item", { hasText: "Aufstehen und Hinsetzen" })).toContainText(
+    "Teilweise Hilfe",
+  );
+
+  // Frühere Adressen leiten weiter.
+  await page.goto("/c/rai/erfassung");
+  await expect(page).toHaveURL(/\/c\/kompass\/abklaerung/);
   expect(errors).toEqual([]);
 });

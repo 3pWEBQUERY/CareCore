@@ -600,3 +600,245 @@
     break-inside: avoid-page;
   }
 }
+
+/* Auswertung je Wohnbereich (nur gezählt) */
+.kompass-statistics {
+  margin-top: 20px;
+  overflow: visible;
+}
+.kompass-statistics-share-label {
+  display: none;
+}
+.kompass-statistics-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.kompass-statistics-actions .kompass-unit-select {
+  min-width: 220px;
+}
+.kompass-statistics-list {
+  padding: 0 18px 18px;
+}
+.kompass-statistics-head,
+.kompass-statistics-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) 20px;
+  gap: 16px;
+  align-items: center;
+}
+.kompass-statistics-head {
+  padding: 10px 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+.kompass-statistics-list article {
+  border-top: 1px solid var(--line);
+}
+.kompass-statistics-row {
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.kompass-statistics-row:hover {
+  background: var(--brand-soft);
+}
+.kompass-statistics-row > svg {
+  width: 13px;
+  color: #9aabbe;
+  transition: transform 0.15s ease;
+}
+.kompass-statistics-list article.open .kompass-statistics-row > svg {
+  transform: rotate(90deg);
+}
+.kompass-statistics-domain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.kompass-statistics-domain .kompass-domain-icon {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+}
+.kompass-statistics-domain strong {
+  font-size: 14px;
+}
+.kompass-statistics-share {
+  display: grid;
+  gap: 4px;
+}
+.kompass-statistics-share small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.kompass-statistics-meter {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #e7eef8;
+}
+.kompass-statistics-meter span {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+  background: var(--brand);
+}
+.kompass-statistics-meter span.need {
+  background: var(--attention);
+}
+.kompass-statistics-items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 4px 12px 16px 54px;
+}
+.kompass-statistics-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #f8fbff;
+}
+.kompass-statistics-item strong {
+  font-size: 13px;
+}
+.kompass-statistics-bar {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #e7eef8;
+}
+.kompass-statistics-bar span {
+  flex-basis: 0;
+}
+.kompass-statistics-item ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #4f6478;
+  font-size: 12px;
+}
+.kompass-statistics-item li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.kompass-statistics-item li b {
+  color: var(--ink);
+}
+.kompass-statistics-item i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.kompass-statistics .level-0 {
+  background: #bfdbfe;
+}
+.kompass-statistics .level-1 {
+  background: #60a5fa;
+}
+.kompass-statistics .level-2 {
+  background: #2563eb;
+}
+.kompass-statistics .level-3 {
+  background: #1e40af;
+}
+.kompass-statistics .level-4 {
+  background: #172554;
+}
+.kompass-statistics .level-na {
+  background: #cbd5e1;
+}
+@media (max-width: 760px) {
+  .kompass-statistics-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .kompass-statistics-head {
+    display: none;
+  }
+  .kompass-statistics-actions .kompass-unit-select {
+    width: 100%;
+  }
+  .kompass-statistics-share-label {
+    display: inline;
+  }
+  .kompass-statistics-row {
+    grid-template-columns: minmax(0, 1fr) 20px;
+  }
+  .kompass-statistics-row .kompass-statistics-share {
+    grid-column: 1;
+  }
+  .kompass-statistics-row > svg {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .kompass-statistics-items {
+    grid-template-columns: 1fr;
+    padding-left: 12px;
+  }
+}
+
+/* Entwurf der CareCore KI für das Gesamtbild (nur Vorschlag) */
+.kompass-summary-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 29px;
+}
+.kompass-summary-label .quiet-button {
+  font-size: 12px;
+}
+.kompass-ai-draft {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid #c7d7fe;
+  border-radius: 6px;
+  background: var(--brand-soft);
+}
+.kompass-ai-draft p {
+  margin: 0;
+}
+.kompass-ai-draft-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+}
+.kompass-ai-draft-head svg {
+  width: 15px;
+}
+.kompass-ai-draft-text {
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.kompass-ai-draft-note {
+  color: var(--muted);
+  font-size: 12px;
+}
+.kompass-ai-draft-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

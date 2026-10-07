@@ -16,6 +16,7 @@ import { createEntry } from "@/lib/documentation";
 import { createNote } from "@/lib/handover";
 import { auditOrigin } from "@/lib/audit-origin";
 import { GeminiError, geminiConfigured, geminiModel, geminiText } from "@/lib/gemini";
+import { kompassDraftText } from "@/lib/kompass";
 
 // CareCore KI: drafts from Google Gemini based on the care data of one resident or one care
 // unit. Drafts are never saved to the record automatically; staff review, edit and
@@ -47,6 +48,8 @@ const INSTRUCTIONS: Record<AiTask, string> = {
   carePlan:
     "Schlage Ergänzungen für die Pflegeplanung dieser einen Bewohner:in vor. Gliedere nach Pflegeproblemen; nenne je Problem die Ressourcen, ein überprüfbares Ziel und konkrete Massnahmen (mit Häufigkeit, wo die Daten sie nahelegen) sowie die Datengrundlage (z. B. Einschätzung, Bericht, Vitalwert). Bestehende Ziele und Massnahmen nicht erneut vorschlagen; weise stattdessen auf solche hin, die nach den Daten überprüft werden sollten. Keine Grenzwerte, Fristen oder Skalenwerte erfinden, die nicht in den Daten stehen. Keine Diagnosen, keine Medikation; wo ärztliche Abklärung angezeigt ist, empfiehl sie.",
   question: "Beantworte die Frage der Pflegefachperson auf Basis der Daten.",
+  kompassSummary:
+    "Formuliere einen Entwurf für das Gesamtbild einer Bedarfsabklärung mit dem CareCore Kompass, aus Sicht der Pflegefachperson. Fliesstext mit 4 bis 8 Sätzen, beschreibend und wertschätzend: was den Alltag der Person zurzeit prägt, was ihr wichtig ist (aus Ressourcen, Wünschen und Gewohnheiten), was sich seit der letzten Abklärung verändert hat und in welchen Bereichen die Fachperson Handlungsbedarf festgehalten hat. Übernimm die Entscheide der Fachperson unverändert; bewerte den Bedarf nicht selbst, nenne keine Risiken, Punktzahlen, Stufen oder Diagnosen und füge nichts hinzu, was nicht in den Daten steht.",
 };
 
 function age(dateOfBirth: unknown) {
@@ -269,10 +272,27 @@ async function draftById(ctx: ApiContext, id: string) {
   return rows[0];
 }
 
+async function requestText(user: string, maxOutputTokens: number) {
+  let content = "";
+  try {
+    const response = await draftCall({ system: SYSTEM, user, maxOutputTokens });
+    content = response.text;
+    if (content && response.truncated) content += "\n\n[Antwort gekürzt]";
+  } catch (error) {
+    if (error instanceof GeminiError)
+      throw new ApiError(error.status === 503 ? `CareCore KI: ${error.message}` : error.message, error.status);
+    throw error;
+  }
+  if (!content) throw new ApiError("Die KI hat keinen Text geliefert. Bitte erneut versuchen.", 502);
+  return content;
+}
+
 export async function generateDraft(ctx: ApiContext, body: Record<string, unknown>): Promise<AiDraft> {
   if (!aiConfigured())
     throw new ApiError("CareCore KI ist noch nicht eingerichtet: GEMINI_API_KEY fehlt in der Umgebung.", 503);
-  const task = (typeof body.task === "string" && body.task in AI_TASKS ? body.task : "question") as AiTask;
+  const task = (
+    typeof body.task === "string" && body.task in AI_TASKS && body.task !== "kompassSummary" ? body.task : "question"
+  ) as AiTask;
   const prompt = text(body.prompt, 2000);
   if (task === "question" && prompt.length < 3) throw new ApiError("Bitte eine Frage oder einen Auftrag eingeben.");
   const residentId = body.residentId ? await assertResident(ctx, body.residentId) : null;
@@ -284,28 +304,17 @@ export async function generateDraft(ctx: ApiContext, body: Record<string, unknow
   const residentIds = residentId ? [residentId] : await unitResidentIds(ctx, careUnitId);
   const data = await residentContext(ctx, residentIds, t, task === "carePlan");
 
-  let content = "";
-  try {
-    const response = await draftCall({
-      system: SYSTEM,
-      user: [
-        `Auftrag: ${INSTRUCTIONS[task].replace("Bewohner:in", `${t.one}:in`)}`,
-        prompt ? `Hinweise der Pflegefachperson: ${prompt}` : "",
-        `Daten (${residentId ? `eine ${t.one}:in` : `${residentIds.length} ${t.one}:innen des Wohnbereichs`}, Stand ${when(new Date())}):`,
-        data || "Keine Daten vorhanden.",
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
-      maxOutputTokens: 16000,
-    });
-    content = response.text;
-    if (content && response.truncated) content += "\n\n[Antwort gekürzt]";
-  } catch (error) {
-    if (error instanceof GeminiError)
-      throw new ApiError(error.status === 503 ? `CareCore KI: ${error.message}` : error.message, error.status);
-    throw error;
-  }
-  if (!content) throw new ApiError("Die KI hat keinen Text geliefert. Bitte erneut versuchen.", 502);
+  const content = await requestText(
+    [
+      `Auftrag: ${INSTRUCTIONS[task].replace("Bewohner:in", `${t.one}:in`)}`,
+      prompt ? `Hinweise der Pflegefachperson: ${prompt}` : "",
+      `Daten (${residentId ? `eine ${t.one}:in` : `${residentIds.length} ${t.one}:innen des Wohnbereichs`}, Stand ${when(new Date())}):`,
+      data || "Keine Daten vorhanden.",
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+    16000,
+  );
 
   const id = randomUUID();
   await ctx.sql.transaction([
@@ -365,5 +374,38 @@ export async function reviewDraft(ctx: ApiContext, idInput: string, body: Record
         UPDATE carecore_ai_drafts SET saved_entity_type = ${savedType}, saved_entity_id = ${savedId}, updated_at = NOW()
         WHERE id = ${id}`;
   }
+  return mapDraft(await draftById(ctx, id));
+}
+
+// Entwurf für das Gesamtbild einer laufenden Kompass-Abklärung. Die Person erscheint nur als Kürzel mit Alter; der
+// Entwurf wird nicht gespeichert, bis die Fachperson ihn ins Gesamtbild übernimmt und die Abklärung selbst abschliesst.
+export async function draftKompassSummary(ctx: ApiContext, residentInput: unknown): Promise<AiDraft> {
+  if (!aiConfigured())
+    throw new ApiError("CareCore KI ist noch nicht eingerichtet: GEMINI_API_KEY fehlt in der Umgebung.", 503);
+  const residentId = await assertResident(ctx, residentInput);
+  const [{ assessmentId, text: data }, rows] = await Promise.all([
+    kompassDraftText(ctx, residentId),
+    ctx.sql`SELECT first_name, last_name, date_of_birth FROM carecore_residents WHERE id = ${residentId}` as Promise<
+      Row[]
+    >,
+  ]);
+  const t = await readTerms(ctx);
+  const content = await requestText(
+    [
+      `Auftrag: ${INSTRUCTIONS.kompassSummary}`,
+      `${t.one}:in ${kuerzel(rows[0])} (${age(rows[0].date_of_birth) ?? "?"} J.)`,
+      `Abklärung (Stand ${when(new Date())}):`,
+      data,
+    ].join("\n\n"),
+    4000,
+  );
+  const id = randomUUID();
+  await ctx.sql.transaction([
+    ctx.sql`
+    INSERT INTO carecore_ai_drafts (id, organization_id, resident_id, requested_by, type, prompt, content, model)
+    VALUES (${id}, ${ctx.actor.organizationId}, ${residentId}, ${ctx.actor.id}, 'kompassSummary', NULL, ${content},
+      ${geminiModel()})`,
+    auditStatement(ctx, "ai_draft", id, "created", null, { task: "kompassSummary", residentId, assessmentId }),
+  ]);
   return mapDraft(await draftById(ctx, id));
 }

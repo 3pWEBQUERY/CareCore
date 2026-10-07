@@ -66,6 +66,10 @@ Umsetzung:
 - Der Vergleich mit der letzten Abklärung zählt nur, bei wie vielen Fragen mehr oder weniger Unterstützung bzw.
   Beobachtung angegeben wurde.
 - Fristen für Abklärungen legt die Einrichtung fest; ohne Einstellung wird nichts automatisch fällig.
+- Die Auswertung je Wohnbereich zählt nur, wie viele Personen welche Antwort erhalten haben und bei wie vielen die
+  Fachperson Handlungsbedarf festgehalten hat; sie bildet keine Kennzahl und keine Rangfolge.
+- Der Entwurf der CareCore KI für das Gesamtbild fasst nur die Antworten, Notizen und Entscheide der Fachperson in
+  Worte (ohne Namen); er bewertet den Bedarf nicht und wird erst übernommen, wenn die Fachperson es bestätigt.
 - Der Kompass ersetzt kein vom Kanton bzw. Land anerkanntes Instrument für die Einstufung zur Finanzierung
   (z. B. nach KVG in der Schweiz).
 

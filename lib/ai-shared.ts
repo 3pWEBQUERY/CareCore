@@ -6,6 +6,7 @@ export const AI_TASKS = {
   documentation: { label: "Dokumentation vorbereiten", icon: "note" },
   carePlan: { label: "Pflegeplanung vorschlagen", icon: "plan" },
   question: { label: "Freie Frage", icon: "ai" },
+  kompassSummary: { label: "Gesamtbild Kompass", icon: "compass" },
 } as const;
 export type AiTask = keyof typeof AI_TASKS;
 
