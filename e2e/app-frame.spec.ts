@@ -53,6 +53,27 @@ test("Rahmen bleibt beim Wechsel zwischen Reitern, Bereichen und Startseite steh
   expect(errors).toEqual([]);
 });
 
+test("Handy: untere Menüleiste bleibt beim Seitenwechsel stehen und wird nicht überblendet", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page, ADMIN);
+  await page.goto("/c/pflegeplanung");
+  const bar = page.getByRole("navigation", { name: "Mobile Navigation" });
+  await expect(bar).toBeVisible();
+  await bar.evaluate((element) => ((window as unknown as Record<string, unknown>).frameBar = element));
+  // Eigenständig erfasst: Der wechselnde Inhalt überdeckt die Leiste während des Übergangs nicht.
+  expect(await bar.evaluate((element) => getComputedStyle(element).viewTransitionName)).toBe("app-bottom-nav");
+  await page
+    .getByRole("navigation", { name: /Seiten$/ })
+    .getByRole("link", { name: "Ziele & Massnahmen" })
+    .click();
+  await expect(page).toHaveURL(/ziele-massnahmen$/);
+  await bar.getByRole("button", { name: /Bewohner/ }).click();
+  await expect(page).toHaveURL(/\/c\/bewohner$/);
+  expect(await bar.evaluate((element) => (window as unknown as Record<string, unknown>).frameBar === element)).toBe(
+    true,
+  );
+});
+
 test("Druckansicht steht ohne Rahmen", async ({ page }) => {
   await login(page, ADMIN);
   await page.goto("/c/ernaehrung/kuechenliste");

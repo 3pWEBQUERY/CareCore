@@ -63,6 +63,41 @@
 ::view-transition-group(.page-tab-out) {
   animation: none;
 }
+/* Feste Bedienelemente (Kopfzeilen, untere Menüleiste auf dem Handy, Schnellaktion) eigenständig erfassen: Sie
+   bleiben während des Übergangs ruhig im Vordergrund, statt vom wechselnden Inhalt überdeckt und neu eingeblendet
+   zu werden. */
+.topbar {
+  view-transition-name: app-topbar;
+}
+.mobile-top {
+  view-transition-name: app-mobile-top;
+}
+.bottom-nav {
+  view-transition-name: app-bottom-nav;
+}
+.app-shell > .floating-action {
+  view-transition-name: app-quick-action;
+}
+::view-transition-group(app-topbar),
+::view-transition-group(app-mobile-top),
+::view-transition-group(app-bottom-nav),
+::view-transition-group(app-quick-action) {
+  z-index: 100;
+  animation: none;
+}
+::view-transition-old(app-topbar),
+::view-transition-old(app-mobile-top),
+::view-transition-old(app-bottom-nav),
+::view-transition-old(app-quick-action) {
+  display: none;
+}
+::view-transition-new(app-topbar),
+::view-transition-new(app-mobile-top),
+::view-transition-new(app-bottom-nav),
+::view-transition-new(app-quick-action) {
+  animation: none;
+}
+
 @keyframes page-fade-out {
   to {
     opacity: 0;
