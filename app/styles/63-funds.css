@@ -194,3 +194,114 @@
   border-top: 1px solid #0f172a;
   color: #475569;
 }
+
+/* Kontoauszug am Handy (nur Bildschirm, Druck bleibt A4-Tabelle): jede Buchung als Block mit Datum und Betrag oben,
+   Buchungstext darunter und Beleg sowie Saldo am Fuss; Anfangs- und Endbestand als hervorgehobene Zeilen. */
+@media screen and (max-width: 700px) {
+  .funds-sheet table,
+  .funds-sheet tbody {
+    display: block;
+  }
+  .funds-sheet thead {
+    display: none;
+  }
+  .funds-sheet tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 12px;
+    padding: 12px 2px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .funds-sheet td {
+    padding: 0;
+    border: 0;
+    font-size: 14px;
+  }
+  .funds-sheet .funds-sheet-total {
+    align-items: center;
+    margin: 4px 0;
+    padding: 12px;
+    border: 0;
+    border-radius: 6px;
+    background: #f1f5f9;
+  }
+  .funds-sheet .funds-sheet-total td {
+    background: none;
+    font-size: 15px;
+  }
+  .funds-sheet .funds-sheet-total .funds-sheet-date {
+    display: none;
+  }
+  .funds-sheet-entry {
+    grid-template-areas:
+      "date change"
+      "text text"
+      "receipt balance";
+  }
+  .funds-sheet-entry .funds-sheet-change {
+    grid-area: change;
+    text-align: right;
+  }
+  .funds-sheet-entry .funds-sheet-receipt {
+    grid-area: receipt;
+  }
+  .funds-sheet-entry .funds-sheet-balance {
+    grid-area: balance;
+    text-align: right;
+  }
+  .funds-sheet-entry .funds-sheet-date {
+    grid-area: date;
+    color: #5f6f86;
+    font-size: 13px;
+    font-weight: 650;
+  }
+  .funds-sheet-entry .funds-sheet-change {
+    font-size: 15px;
+    font-weight: 800;
+  }
+  .funds-sheet-entry .funds-sheet-change[data-direction="in"] {
+    color: var(--success);
+  }
+  .funds-sheet-entry .funds-sheet-text {
+    grid-area: text;
+    font-size: 15px;
+    font-weight: 650;
+    line-height: 1.35;
+  }
+  .funds-sheet-entry .funds-sheet-text small {
+    margin-top: 3px;
+    font-size: 13px;
+    font-weight: 400;
+  }
+  .funds-sheet-entry .funds-sheet-receipt,
+  .funds-sheet-entry .funds-sheet-balance {
+    color: #5f6f86;
+    font-size: 13px;
+  }
+  .funds-sheet-entry .funds-sheet-receipt::before,
+  .funds-sheet-entry .funds-sheet-balance::before {
+    content: attr(data-label) " ";
+    font-weight: 650;
+  }
+  .transfer-sheet dl.funds-sheet-sums {
+    width: auto;
+    margin-left: 0;
+    padding: 4px 2px;
+    font-size: 14px;
+  }
+  .funds-sheet .transfer-head h1 {
+    font-size: 24px;
+  }
+  .funds-sheet .transfer-head span,
+  .funds-sheet .transfer-facility span,
+  .funds-sheet .transfer-facility strong {
+    font-size: 13px;
+  }
+  .funds-sheet-signatures span {
+    font-size: 13px;
+  }
+  .funds-sheet-signatures {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+}
