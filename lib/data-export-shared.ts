@@ -39,6 +39,7 @@ export const EXPORT_HIDDEN_COLUMNS = new Set([
   "organization_id",
   "resident_id",
   "rate_id",
+  "invoice_id",
   "account_id",
   "activity_id",
   "administration_id",
@@ -347,6 +348,9 @@ export const EXPORT_COLUMN_LABELS: Record<string, string> = {
   street: "Strasse",
   total_cents: "Total (Rappen bzw. Cent)",
   zip: "Postleitzahl",
+  paid_on: "Bezahlt am",
+  source: "Erfasst über",
+  bank_reference: "Referenz der Bank",
 };
 
 // Häufige technische Werte in lesbarer Form.
@@ -358,7 +362,7 @@ export const EXPORT_SECTION_VALUE_LABELS: Record<string, Record<string, Record<s
   consents: { decision: CONSENT_DECISIONS },
   appointments: { transport: TRANSPORT_LABELS },
   intervention_proofs: { outcome: PROOF_OUTCOMES, day_part: DAY_PART_LABELS },
-  billing: { kind: ABSENCE_KINDS },
+  billing: { kind: ABSENCE_KINDS, source: { manual: "Von Hand", bank: "Bankdatei" } },
   feedback: { kind: FEEDBACK_KINDS, source: FEEDBACK_SOURCES, channel: FEEDBACK_CHANNELS, status: FEEDBACK_STATUSES },
 };
 

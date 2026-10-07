@@ -21,6 +21,7 @@ import {
   type PostalAddress,
 } from "@/lib/billing-shared";
 import { monthLabel } from "./funds-view";
+import { BankImportDialog, OpenItemsCard, PaymentDialog, PaymentsDialog } from "./billing-payments";
 
 // Rechnungen je Monat, Zahlungsangaben der Einrichtung und Rechnungsadresse je Person.
 
@@ -113,7 +114,7 @@ export function AddressDialog({
   );
 }
 
-function PaymentDialog({
+function PaymentSettingsDialog({
   settings,
   onClose,
   onSaved,
@@ -204,7 +205,7 @@ export function PaymentCard({ onSaved }: { onSaved: (message: string) => void })
       </header>
       {settings.error && <LoadError message={settings.error} onRetry={settings.reload} />}
       {editing && data && (
-        <PaymentDialog
+        <PaymentSettingsDialog
           settings={data}
           onClose={() => setEditing(false)}
           onSaved={(message) => {
@@ -228,9 +229,14 @@ function closedMonths(today: string) {
   });
 }
 
-function rowState(row: InvoiceRow, currency: string) {
-  if (row.invoice)
-    return `Rechnung ${formatInvoiceNumber(row.invoice.number)} · ${formatMoney(row.invoice.totalCents, currency)}`;
+function rowState(row: InvoiceRow, currency: string, today: string) {
+  if (row.invoice) {
+    const open = row.invoice.totalCents - row.invoice.paidCents;
+    const state = !open
+      ? "bezahlt"
+      : `${row.invoice.paidCents ? "teilweise bezahlt, " : ""}offen ${formatMoney(open, currency)}${row.invoice.dueOn < today ? " · überfällig" : ""}`;
+    return `Rechnung ${formatInvoiceNumber(row.invoice.number)} · ${formatMoney(row.invoice.totalCents, currency)} · ${state}`;
+  }
   if (row.totalCents === null) return "Keine Berechnung möglich";
   if (!row.totalCents) return "Kein Betrag für die Person";
   if (!row.hasAddress) return `${formatMoney(row.totalCents, currency)} · Rechnungsadresse fehlt`;
@@ -250,7 +256,22 @@ export function InvoicesView({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [cancelling, setCancelling] = useState<InvoiceRow | null>(null);
+  const [payment, setPayment] = useState<{
+    invoiceId: string;
+    label: string;
+    openCents: number;
+    currency: string;
+    today: string;
+  } | null>(null);
+  const [payments, setPayments] = useState<string | null>(null);
+  const [bank, setBank] = useState(false);
+  const [version, setVersion] = useState(0);
   const data = run.data;
+  const refresh = (message: string) => {
+    onSaved(message);
+    run.reload();
+    setVersion((value) => value + 1);
+  };
   const ready = data?.rows.filter((row) => !row.invoice && row.hasAddress && row.totalCents) ?? [];
   const canCreate = Boolean(data && !data.missing.length && data.monthClosed);
 
@@ -290,6 +311,19 @@ export function InvoicesView({
           <ModuleIcon name="check" className="button-icon" />
           {busy ? "Wird erstellt …" : `Rechnungen erstellen (${ready.length})`}
         </button>
+        <button className="secondary-button" type="button" disabled={!data} onClick={() => setBank(true)}>
+          <ModuleIcon name="plus" className="button-icon" /> Bankdatei einlesen
+        </button>
+        {data && (
+          <>
+            <a className="secondary-button" href={`/api/billing/exports?kind=journal&month=${data.month}`} download>
+              <ModuleIcon name="docs" className="button-icon" /> Rechnungsjournal
+            </a>
+            <a className="secondary-button" href={`/api/billing/exports?kind=payers&month=${data.month}`} download>
+              <ModuleIcon name="docs" className="button-icon" /> Kostenträger
+            </a>
+          </>
+        )}
       </section>
       {run.error && <LoadError message={run.error} onRetry={run.reload} />}
       {data && data.missing.length > 0 && (
@@ -329,7 +363,7 @@ export function InvoicesView({
                   <button type="button" className="fund-account-link" onClick={() => onPerson(row.residentId)}>
                     {row.name}
                   </button>
-                  <small>{[row.room, rowState(row, data.currency)].filter(Boolean).join(" · ")}</small>
+                  <small>{[row.room, rowState(row, data.currency, data.today)].filter(Boolean).join(" · ")}</small>
                   {!row.invoice && row.warnings.map((warning) => <small key={warning}>{warning}</small>)}
                 </div>
                 {row.invoice ? (
@@ -342,6 +376,31 @@ export function InvoicesView({
                     >
                       <ModuleIcon name="docs" className="button-icon" /> Rechnung öffnen
                     </a>
+                    {row.invoice.paidCents < row.invoice.totalCents && (
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={() =>
+                          row.invoice &&
+                          setPayment({
+                            invoiceId: row.invoice.id,
+                            label: `Rechnung ${formatInvoiceNumber(row.invoice.number)} · ${row.name}`,
+                            openCents: row.invoice.totalCents - row.invoice.paidCents,
+                            currency: data.currency,
+                            today: data.today,
+                          })
+                        }
+                      >
+                        Zahlung
+                      </button>
+                    )}
+                    <button
+                      className="quiet-button"
+                      type="button"
+                      onClick={() => row.invoice && setPayments(row.invoice.id)}
+                    >
+                      Zahlungen
+                    </button>
                     <button className="quiet-button" type="button" onClick={() => setCancelling(row)}>
                       Stornieren
                     </button>
@@ -386,6 +445,28 @@ export function InvoicesView({
           </div>
         )}
       </section>
+      <OpenItemsCard reload={version} onPayment={setPayment} onPayments={setPayments} />
+      {payment && (
+        <PaymentDialog
+          {...payment}
+          onClose={() => setPayment(null)}
+          onSaved={(message) => {
+            setPayment(null);
+            refresh(message);
+          }}
+        />
+      )}
+      {payments && <PaymentsDialog invoiceId={payments} onClose={() => setPayments(null)} onChanged={refresh} />}
+      {bank && data && (
+        <BankImportDialog
+          currency={data.currency}
+          onClose={() => setBank(false)}
+          onBooked={(message) => {
+            setBank(false);
+            refresh(message);
+          }}
+        />
+      )}
       {cancelling?.invoice && (
         <ReasonDialog
           eyebrow={cancelling.name}
@@ -399,8 +480,7 @@ export function InvoicesView({
           onConfirm={async (reason) => {
             await requestJson(`/api/billing/invoices/${cancelling.invoice?.id}`, { method: "POST", body: { reason } });
             setCancelling(null);
-            onSaved("Rechnung storniert");
-            run.reload();
+            refresh("Rechnung storniert");
           }}
         />
       )}

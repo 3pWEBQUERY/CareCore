@@ -163,6 +163,8 @@ export type Invoice = {
   author: string;
   createdAt: string;
   cancelled: { at: string; by: string; reason: string } | null;
+  payments: InvoicePayment[];
+  paidCents: number;
 };
 
 // Stand einer Person im Rechnungslauf eines Monats.
@@ -174,7 +176,7 @@ export type InvoiceRow = {
   totalCents: number | null;
   warnings: string[];
   hasAddress: boolean;
-  invoice: { id: string; number: number; totalCents: number } | null;
+  invoice: { id: string; number: number; totalCents: number; paidCents: number; dueOn: string } | null;
 };
 
 export type InvoiceRun = {
@@ -191,3 +193,52 @@ export type InvoiceRun = {
 };
 
 export const formatInvoiceNumber = (number: number) => String(number).padStart(6, "0");
+
+// ---------------------------------------------------------------- Zahlungen und offene Posten
+
+export type InvoicePayment = {
+  id: string;
+  paidOn: string;
+  amountCents: number;
+  source: "manual" | "bank";
+  note: string;
+  author: string;
+  cancelled: { at: string; reason: string } | null;
+};
+
+export type OpenItem = {
+  invoiceId: string;
+  number: number;
+  month: string;
+  residentId: string;
+  name: string;
+  recipient: string;
+  issuedOn: string;
+  dueOn: string;
+  totalCents: number;
+  paidCents: number;
+  overdue: boolean;
+};
+
+export type OpenItems = { currency: string; today: string; items: OpenItem[]; totalOpenCents: number };
+
+export const BANK_MATCH = {
+  ready: "Wird verbucht",
+  duplicate: "Bereits verbucht",
+  no_match: "Keine passende Rechnung",
+  paid: "Rechnung bereits bezahlt",
+  too_much: "Höher als der offene Betrag",
+  currency: "Andere Währung",
+  no_date: "Ohne Buchungsdatum",
+} as const;
+export type BankMatch = keyof typeof BANK_MATCH;
+
+export type BankImportLine = {
+  bankReference: string;
+  bookedOn: string;
+  amountCents: number;
+  reference: string;
+  debtor: string;
+  status: BankMatch;
+  invoice: { id: string; number: number; name: string } | null;
+};

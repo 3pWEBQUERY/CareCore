@@ -158,5 +158,26 @@ test("Abrechnung: Zahlungsangaben, Rechnungsadresse und Rechnungslauf", async ({
   await expect(page.getByRole("heading", { name: /^Rechnungen / })).toBeVisible();
   await expect(page.getByText("Bevor Rechnungen erstellt werden können")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^Rechnungen erstellen/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Offene Posten" })).toBeVisible();
+
+  // Bankdatei: Gutschrift ohne passende Rechnung wird nur angezeigt, nicht verbucht.
+  await page.getByRole("button", { name: "Bankdatei einlesen" }).click();
+  dialog = page.getByRole("dialog", { name: "Bankdatei einlesen" });
+  await dialog.getByLabel("Bankdatei (XML)").setInputFiles({
+    name: "gutschriften.xml",
+    mimeType: "application/xml",
+    buffer: Buffer.from(
+      `<?xml version="1.0"?><Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.08"><BkToCstmrDbtCdtNtfctn><Ntfctn>
+      <Ntry><Amt Ccy="CHF">120.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><BookgDt><Dt>2026-10-05</Dt></BookgDt>
+      <AcctSvcrRef>E2E-${Date.now()}</AcctSvcrRef><NtryDtls><TxDtls><Amt Ccy="CHF">120.00</Amt>
+      <RltdPties><Dbtr><Pty><Nm>Claudia Müller</Nm></Pty></Dbtr></RltdPties>
+      <RmtInf><Strd><CdtrRefInf><Ref>RF18539007547034</Ref></CdtrRefInf></Strd></RmtInf></TxDtls></NtryDtls></Ntry>
+      </Ntfctn></BkToCstmrDbtCdtNtfctn></Document>`,
+    ),
+  });
+  await expect(dialog).toContainText("gutschriften.xml: 1 Gutschrift, davon 0 zuordenbar.");
+  await expect(dialog.getByRole("row", { name: /Claudia Müller/ })).toContainText("Keine passende Rechnung");
+  await dialog.getByRole("button", { name: "Abbrechen" }).click();
+  await expect(dialog).toHaveCount(0);
   expect(errors).toEqual([]);
 });

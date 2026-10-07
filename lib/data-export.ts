@@ -71,15 +71,18 @@ export const EXPORT_SECTIONS: Array<{ key: string; title: string; tables: string
       "carecore_resident_rates",
       "carecore_resident_billing_addresses",
       "carecore_invoices",
+      "carecore_invoice_payments",
     ],
     query: async (sql, id) => {
-      const [levels, absences, rates, addresses, invoices] = (await Promise.all([
+      const [levels, absences, rates, addresses, invoices, payments] = (await Promise.all([
         sql`SELECT * FROM carecore_resident_care_levels WHERE resident_id = ${id} ORDER BY valid_from, created_at`,
         sql`SELECT * FROM carecore_resident_absences WHERE resident_id = ${id} ORDER BY starts_on, created_at`,
         sql`SELECT a.*, r.name AS rate_name FROM carecore_resident_rates a
           JOIN carecore_billing_rates r ON r.id = a.rate_id WHERE a.resident_id = ${id} ORDER BY a.valid_from, a.created_at`,
         sql`SELECT * FROM carecore_resident_billing_addresses WHERE resident_id = ${id}`,
         sql`SELECT * FROM carecore_invoices WHERE resident_id = ${id} ORDER BY number`,
+        sql`SELECT p.*, i.number FROM carecore_invoice_payments p JOIN carecore_invoices i ON i.id = p.invoice_id
+          WHERE i.resident_id = ${id} ORDER BY p.paid_on, p.created_at`,
       ])) as Row[][];
       return [
         ...levels.map((row) => ({ entry: "Pflegestufe", ...row })),
@@ -87,6 +90,7 @@ export const EXPORT_SECTIONS: Array<{ key: string; title: string; tables: string
         ...rates.map((row) => ({ entry: "Zusätzliche Taxe", ...row })),
         ...addresses.map((row) => ({ entry: "Rechnungsadresse", ...row })),
         ...invoices.map((row) => ({ entry: "Rechnung", ...row })),
+        ...payments.map((row) => ({ entry: "Zahlung", ...row })),
       ];
     },
   },

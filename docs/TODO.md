@@ -608,8 +608,12 @@ weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen ode
         Zahlungsfrist. Druck A4 mit Zahlteil als Schweizer QR-Rechnung (Bibliothek swissqrbill nach SIX-Vorgaben;
         QR-Referenz bei QR-IBAN, sonst Creditor Reference); ausserhalb von CH/LI steht die IBAN auf der Rechnung.
         Storno mit Grund, danach neu verrechnen. Krankenversicherung und öffentliche Hand folgen in Schritt C.
-  - [ ] Schritt C: Export für die Finanzbuchhaltung, offene Posten und Zahlungseingang; elektronische Rechnung an
-        Versicherer (Forum Datenaustausch) prüfen.
+  - [x] Schritt C: Zahlungseingang von Hand oder aus der Bankdatei (camt.054/053: Zuordnung über die Referenz,
+        verbucht erst nach Bestätigung, nie doppelt und nie über den offenen Betrag), Storno mit Grund, offene Posten
+        mit Fälligkeit; CSV-Exporte „Rechnungsjournal“ (Finanzbuchhaltung) und „Kostenträger“ (Anteile von
+        Krankenversicherung, öffentlicher Hand und anderen je Person mit Versicherung und Tagen).
+  - [ ] Elektronische Rechnung an Versicherer (Forum Datenaustausch, generalInvoice) und Abrechnung der
+        Restfinanzierung: Standard und Vorgaben der Kantone an der Quelle prüfen, dann umsetzen.
 - [ ] **Statistik der sozialmedizinischen Institutionen (SOMED, BFS):** jährliche Pflichtlieferung der Schweizer
       Heime; Inhalt und Format an der Quelle prüfen, Export aus den vorhandenen Daten.
 - [ ] **Datenstandort Schweiz:** Heute Railway, Region Europa. Viele Heime und Kantone erwarten Hosting in der
