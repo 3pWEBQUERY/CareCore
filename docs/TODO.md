@@ -579,8 +579,12 @@ weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen ode
         Handlungsbedarf je Bereich als Entscheid der Fachperson, Abschluss erst vollständig, Verwerfen mit Grund.
         Fristen (erste Abklärung nach Eintritt, Folgeabklärung) legt die Einrichtung in der Konfiguration fest.
         Ersetzt den bisherigen vereinfachten RAI-Arbeitsplatz; frühere Erfassungen bleiben im Verlauf.
-  - [ ] Schritt B: Ergebnis mit Vergleich zur letzten Abklärung, Bericht zum Drucken, Übernahme des Handlungsbedarfs
-        in die Pflegeplanung, Anzeige in Akte und Tagesliste.
+  - [x] Schritt B: Bericht zum Drucken (A4, alle Antworten mit der vorherigen Abklärung daneben, „mehr/weniger als
+        zuvor“, Ressourcen, Wünsche, Handlungsbedarf, Gesamtbild, Unterschriften). Karte „Handlungsbedarf“ der
+        letzten Abklärung: je Bereich „Als Ziel übernehmen“ – Pflegebereich, Problem und Ressourcen aus dem Kompass,
+        Ziel und Überprüfungsdatum von der Fachperson; ohne offenen Pflegeplan wird einer angelegt. Pflegeprozess der
+        Akte zeigt den Kompass im Schritt „Einschätzung“; Tagesliste „Kompass fällig/fortsetzen“ für Personen mit
+        Berechtigung für den Kompass.
   - [ ] Schritt C: Auswertungen je Wohnbereich, KI-Zusammenfassung als Entwurf, eigene Adresse `/kompass`.
 - [ ] **Bewohneradministration und Abrechnung:** Taxen (Pension, Betreuung, Pflege nach Stufe) mit Aufteilung nach
       Kostenträger (Versicherer, Restfinanzierung, Anteil der Person), Abwesenheiten (Spital, Ferien) mit ihrer Wirkung

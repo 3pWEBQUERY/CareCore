@@ -112,6 +112,7 @@ const TITLES: Record<string, string> = {
   "repositioning_entry:created": "Positionswechsel erfasst",
   "repositioning_entry:cancelled": "Positionswechsel storniert",
   "intervention_proof:created": "Massnahme wie geplant nachgewiesen",
+  "rai_assessment:need_adopted": "Handlungsbedarf aus dem Kompass als Ziel übernommen",
   "intervention_proof:deviation": "Abweichung bei Massnahme dokumentiert",
   "intervention_proof:cancelled": "Nachweis storniert",
   "elimination_entry:created": "Ausscheidung erfasst",

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN, field, login, watchErrors } from "./support";
+import { ADMIN, field, login, pickDate, watchErrors } from "./support";
 
 // Wunden, Pflegeplanung und Kompass auf den Demodaten, der Reihe nach.
 test.describe.configure({ mode: "serial" });
@@ -252,6 +252,30 @@ test("Kompass: Abklärung beginnen, alle Bereiche beantworten, automatisch speic
   await expect(page.getByText("Abklärung für Peter Aebischer abgeschlossen")).toBeVisible();
   const history = page.getByRole("region", { name: "Abgeschlossene Abklärungen" });
   await expect(history).toContainText("Handlungsbedarf: Bewegung & Mobilität");
+
+  // Handlungsbedarf als Ziel in die Pflegeplanung übernehmen.
+  const needs = page.getByRole("region", { name: "Handlungsbedarf der letzten Abklärung" });
+  await expect(needs).toContainText("Begleitung beim Aufstehen");
+  await needs.getByRole("button", { name: "Als Ziel übernehmen" }).click();
+  const adopt = page.getByRole("dialog", { name: "Als Ziel in die Pflegeplanung" });
+  await expect(adopt).toContainText("Mobilität");
+  await adopt.getByLabel("Ziel").fill("Steht am Morgen mit Begleitung sicher auf");
+  const inFourWeeks = new Date(Date.now() + 28 * 86_400_000).toLocaleDateString("en-CA", { timeZone: "Europe/Zurich" });
+  await pickDate(adopt, "Überprüfung am", inFourWeeks);
+  await adopt.getByRole("button", { name: "Ziel übernehmen" }).click();
+  await expect(needs.getByRole("link", { name: /Ziel in der Pflegeplanung: Steht am Morgen/ })).toBeVisible();
+  await expect(needs.getByRole("button", { name: "Als Ziel übernehmen" })).toHaveCount(0);
+
+  // Bericht mit allen Antworten und dem übernommenen Ziel.
+  const reportHref = await needs.getByRole("link", { name: "Bericht" }).getAttribute("href");
+  await page.goto(`${reportHref}&dialog=0`);
+  await expect(page.getByRole("heading", { name: "Peter Aebischer", level: 1 })).toBeVisible();
+  const mobility = page.locator(".kompass-sheet-domain", { hasText: "Bewegung & Mobilität" });
+  await expect(mobility.getByRole("row", { name: /Aufstehen und Hinsetzen/ })).toContainText("Teilweise Hilfe");
+  await expect(mobility).toContainText("Ziel in der Pflegeplanung: Steht am Morgen mit Begleitung sicher auf");
+  await expect(page.locator(".kompass-sheet-domain", { hasText: "Gesamtbild" })).toContainText(
+    "Selbständig mit Rollator",
+  );
   await page.goto("/c/rai");
   await expect(page.getByRole("button", { name: /Peter Aebischer.*Zimmer 101/ })).toContainText("Aktuell");
   expect(errors).toEqual([]);

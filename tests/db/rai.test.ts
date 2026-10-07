@@ -1,8 +1,20 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { ApiError } from "@/lib/api-context";
-import { completeKompass, discardKompass, kompassDetail, saveKompassDraft, startKompass } from "@/lib/kompass";
+import { ApiError, type ApiContext } from "@/lib/api-context";
+import {
+  adoptKompassNeed,
+  completeKompass,
+  discardKompass,
+  dueKompass,
+  kompassDetail,
+  kompassReport,
+  kompassStatus,
+  saveKompassDraft,
+  startKompass,
+} from "@/lib/kompass";
+import { recordSummary } from "@/lib/resident-record";
+import { dailyWorklist } from "@/lib/worklist";
 import { KOMPASS_DOMAINS, KOMPASS_INSTRUMENT, NOT_APPLICABLE, SCALES } from "@/lib/kompass-instrument";
 import { raiWorkplace } from "@/lib/rai";
 import { apiContextFor, createResident, fixture, q } from "../support/db";
@@ -196,4 +208,123 @@ test("Kompass: Hinweise aus der Akte je Bereich (nur Fakten, ohne Bewertung)", a
   assert.match(context.falls[0].label, /^Sturz am \d{2}\.\d{2}\.\d{4}$/);
   assert.equal(context.falls[0].detail, "Im Badezimmer ausgerutscht");
   assert.deepEqual(context.wounds, []);
+});
+
+test("Kompass: Bericht mit Vergleich, Handlungsbedarf als Ziel übernehmen, Akte und Tagesliste", async () => {
+  const f = await fixture();
+  const reader = await apiContextFor(f, "anna");
+  const ctx = {
+    ...reader,
+    actor: { ...reader.actor, permissions: [...reader.actor.permissions, "documentation.write", "rai.manage"] },
+  } as ApiContext;
+  const without = {
+    ...reader,
+    actor: { ...reader.actor, permissions: reader.actor.permissions.filter((item) => item !== "documentation.write") },
+  } as ApiContext;
+  const residentId = await createResident(f);
+
+  // Ohne Abklärung: nichts im Pflegeprozess, nichts in der Tagesliste.
+  let status = await kompassStatus(ctx, residentId);
+  assert.deepEqual(status, { lastOn: null, needs: [], dueOn: null, inProgress: null, canOpen: true });
+  assert.equal((await kompassStatus(without, residentId)).canOpen, false);
+
+  // Erste Abklärung (Mobilität mit Handlungsbedarf), dann eine zweite mit mehr Unterstützung.
+  const first = await startKompass(ctx, residentId, { occasion: "admission", assessedOn: zurichDay(-30) });
+  await saveKompassDraft(ctx, residentId, { id: first.id, patch: fullPatch(0) });
+  await completeKompass(ctx, residentId, { id: first.id });
+  const second = await startKompass(ctx, residentId, { occasion: "change", assessedOn: zurichDay(0) });
+  status = await kompassStatus(ctx, residentId);
+  assert.equal(status.inProgress, 0, "begonnene Abklärung");
+  assert.deepEqual(
+    (await dueKompass(ctx)).filter((row) => row.id === residentId).map((row) => row.state),
+    ["in_progress"],
+  );
+  const worklist = await dailyWorklist(ctx, f.units.a);
+  assert.deepEqual(
+    worklist.residents
+      .find((row) => row.id === residentId)
+      ?.items.filter((item) => item.label.startsWith("Kompass"))
+      .map((item) => [item.label, item.detail, item.href]),
+    [["Kompass fortsetzen", "Abklärung zu 0% erledigt", `/c/rai/erfassung?resident=${residentId}`]],
+  );
+  assert.deepEqual(await dueKompass(reader), [], "ohne Berechtigung für den Kompass kein Eintrag");
+  await saveKompassDraft(ctx, residentId, { id: second.id, patch: fullPatch(2) });
+  await completeKompass(ctx, residentId, { id: second.id });
+
+  // Bericht: Antworten, vorherige Abklärung zum Vergleich; die ältere ist nicht mehr übernehmbar.
+  const report = await kompassReport(ctx, second.id);
+  assert.equal(report.previous?.id, first.id);
+  assert.equal(report.assessment.kompass?.answers["mobility.transfer"], "2");
+  assert.equal(report.previous?.kompass?.answers["mobility.transfer"], "0");
+  assert.equal(report.canAdopt, true);
+  assert.equal((await kompassReport(ctx, first.id)).canAdopt, false);
+  assert.equal((await kompassReport(without, second.id)).canAdopt, false);
+  assert.equal((await failure(kompassReport(ctx, randomUUID()))).status, 404);
+  status = await kompassStatus(ctx, residentId);
+  assert.equal(status.lastOn, zurichDay(0));
+  assert.deepEqual(status.needs, ["Bewegung & Mobilität"]);
+  assert.deepEqual((await recordSummary(ctx, residentId)).kompass, status);
+
+  // Übernahme: nur mit Handlungsbedarf und Recht, Ziel überprüfbar, ohne Plan wird einer angelegt.
+  const adopt = {
+    assessmentId: second.id,
+    domainId: "mobility",
+    statement: "Steht mit Begleitung sicher auf",
+    targetDate: zurichDay(28),
+  };
+  assert.equal((await failure(adoptKompassNeed(without, residentId, adopt))).status, 403);
+  assert.equal(
+    (await failure(adoptKompassNeed(ctx, residentId, { ...adopt, domainId: "skin" }))).message,
+    "In diesem Bereich ist kein Handlungsbedarf festgehalten.",
+  );
+  assert.equal(
+    (await failure(adoptKompassNeed(ctx, residentId, { ...adopt, statement: " " }))).message,
+    "Bitte das Ziel überprüfbar formulieren.",
+  );
+  assert.equal(
+    (await failure(adoptKompassNeed(ctx, residentId, { ...adopt, targetDate: zurichDay(-1) }))).message,
+    "Das Überprüfungsdatum liegt in der Vergangenheit.",
+  );
+  assert.equal(
+    (await failure(adoptKompassNeed(ctx, residentId, { ...adopt, assessmentId: first.id }))).status,
+    409,
+    "nur aus der gültigen Abklärung",
+  );
+  const plansBefore = await q(`SELECT id FROM carecore_care_plans WHERE resident_id = $1`, [residentId]);
+  assert.equal(plansBefore.length, 0, "Fehlversuche legen keinen Pflegeplan an");
+  const adopted = await adoptKompassNeed(ctx, residentId, adopt);
+  assert.equal(adopted.createdPlan, true);
+  const [goal] = await q<{
+    category: string;
+    problem: string;
+    resources: string;
+    statement: string;
+    care_plan_id: string;
+  }>(`SELECT category, problem, resources, statement, care_plan_id FROM carecore_care_goals WHERE id = $1`, [
+    adopted.goalId,
+  ]);
+  assert.deepEqual(goal, {
+    category: "Mobilität",
+    problem: "Begleitung beim Aufstehen am Morgen",
+    resources: "Geht gerne spazieren",
+    statement: "Steht mit Begleitung sicher auf",
+    care_plan_id: adopted.planId,
+  });
+  assert.equal(
+    (await failure(adoptKompassNeed(ctx, residentId, adopt))).message,
+    "Dieser Handlungsbedarf ist bereits in die Pflegeplanung übernommen.",
+  );
+  assert.deepEqual((await kompassReport(ctx, second.id)).goals[adopted.goalId], {
+    statement: "Steht mit Begleitung sicher auf",
+    status: "active",
+    targetDate: zurichDay(28),
+  });
+  const log = await q<{ action: string }>(
+    `SELECT action FROM carecore_audit_log WHERE entity_type = 'rai_assessment' AND entity_id = $1 ORDER BY created_at`,
+    [second.id],
+  );
+  assert.deepEqual(
+    log.map((row) => row.action),
+    ["started", "completed", "need_adopted"],
+  );
 });

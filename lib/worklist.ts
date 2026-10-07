@@ -9,6 +9,7 @@ import { activeRestraints } from "@/lib/restraints";
 import { restraintLabel, type RestraintKind } from "@/lib/restraints-shared";
 import { dueRepositioning } from "@/lib/repositioning";
 import { dueStool } from "@/lib/elimination";
+import { dueKompass } from "@/lib/kompass";
 import { formatInterval } from "@/lib/repositioning-shared";
 
 // "Mein Dienst": what is due today per resident of a care unit, gathered from the
@@ -70,6 +71,7 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
     isolations,
     repositioning,
     stool,
+    kompass,
   ] = await Promise.all([
     ctx.sql`
       SELECT r.id, r.first_name, r.last_name, COALESCE(ro.name, '') AS room, COALESCE(cu.name, '') AS care_unit, cu.id AS care_unit_id
@@ -118,6 +120,7 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
     activeIsolations(ctx),
     dueRepositioning(ctx),
     dueStool(ctx),
+    dueKompass(ctx),
   ]);
   // Reminder thresholds of "Leitung · Konfiguration".
   const overdueMs = settings.medicationOverdue.enabled ? (settings.medicationOverdue.value ?? 30) * 60_000 : Infinity;
@@ -193,6 +196,20 @@ export async function dailyWorklist(ctx: ApiContext, careUnitIdInput: string | n
         detail: dueAssess.map((item) => item.name).join(", "),
         tone: dueAssess.some((item) => item.kind === "overdue") ? "attention" : "info",
         href: "/c/einschaetzungen/faelligkeiten",
+      });
+
+    // Abklärung mit dem Kompass: begonnen, fällig oder überfällig (nach den Fristen der Einrichtung).
+    const abklaerung = kompass.find((row) => row.id === id);
+    if (abklaerung)
+      items.push({
+        kind: "assessment",
+        label: abklaerung.state === "in_progress" ? "Kompass fortsetzen" : "Kompass fällig",
+        detail:
+          abklaerung.state === "in_progress"
+            ? `Abklärung zu ${abklaerung.progress}% erledigt`
+            : `${abklaerung.state === "overdue" ? "seit" : "am"} ${abklaerung.dueOn?.split("-").reverse().join(".") ?? ""}`,
+        tone: abklaerung.state === "overdue" ? "attention" : "info",
+        href: `/c/rai/erfassung?resident=${id}`,
       });
 
     const plan = plans.find((item) => item.resident_id === id);
