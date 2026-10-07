@@ -47,6 +47,21 @@ function usesShell(file: string, seen = new Set<string>()): boolean {
 
 const isRedirect = (file: string) => /\bredirect\(/.test(readFileSync(file, "utf8"));
 
+// Druckansicht: Die Seite selbst oder ein direkt eingebundener Baustein öffnet den Druckdialog. Solche Seiten stehen
+// immer ohne Rahmen, auch wenn sie Hilfsfunktionen aus einer Datei mit Rahmen übernehmen.
+function isPrintPage(file: string) {
+  const source = readFileSync(file, "utf8");
+  if (/window\.print\(/.test(source)) return true;
+  return [...source.matchAll(/from\s+["']([^"']+)["']/g)].some((match) => {
+    const next = resolveImport(file, match[1]);
+    return Boolean(
+      next &&
+      /window\.print\(/.test(readFileSync(next, "utf8")) &&
+      !/module-page-shell/.test(readFileSync(next, "utf8")),
+    );
+  });
+}
+
 test("Rahmen: alle Seiten unter /c mit ModulePageShell stehen im festen Rahmen, Druckansichten nicht", () => {
   const mismatches: string[] = [];
   let framed = 0;
@@ -72,7 +87,7 @@ test("Rahmen: alle Seiten unter /c mit ModulePageShell stehen im festen Rahmen, 
       assert.equal(isFramedRoute(address), true);
       continue;
     }
-    const shell = usesShell(file);
+    const shell = !isPrintPage(file) && usesShell(file);
     if (shell) framed += 1;
     if (shell !== isFramedRoute(address)) mismatches.push(`${address}: Seite ${shell ? "mit" : "ohne"} Rahmen`);
   }

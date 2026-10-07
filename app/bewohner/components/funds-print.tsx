@@ -103,27 +103,31 @@ export default function FundsPrint() {
             </thead>
             <tbody>
               <tr className="funds-sheet-total">
-                <td>{formatDate(`${data.month}-01`)}</td>
+                <td className="funds-sheet-date">{formatDate(`${data.month}-01`)}</td>
                 <td colSpan={3}>Anfangsbestand</td>
                 <td className="funds-sheet-amount">{formatMoney(data.openingCents, data.currency)}</td>
               </tr>
               {rows.map((entry, index) => {
                 const signed = fundSign(entry.kind) * entry.amountCents;
                 return (
-                  <tr key={entry.id}>
-                    <td>{formatDate(entry.bookedOn)}</td>
-                    <td>
+                  <tr key={entry.id} className="funds-sheet-entry">
+                    <td className="funds-sheet-date">{formatDate(entry.bookedOn)}</td>
+                    <td className="funds-sheet-text">
                       {FUND_KINDS[entry.kind]} · {entry.purpose}
                       {(entry.party || entry.author) && (
                         <small>{[entry.party, `gebucht von ${entry.author}`].filter(Boolean).join(" · ")}</small>
                       )}
                     </td>
-                    <td>{entry.receipt || "–"}</td>
-                    <td className="funds-sheet-amount">
+                    <td className="funds-sheet-receipt" data-label="Beleg">
+                      {entry.receipt || "–"}
+                    </td>
+                    <td className="funds-sheet-amount funds-sheet-change" data-direction={signed > 0 ? "in" : "out"}>
                       {signed > 0 ? "+" : "−"}
                       {formatMoney(entry.amountCents, data.currency)}
                     </td>
-                    <td className="funds-sheet-amount">{formatMoney(balances[index], data.currency)}</td>
+                    <td className="funds-sheet-amount funds-sheet-balance" data-label="Saldo">
+                      {formatMoney(balances[index], data.currency)}
+                    </td>
                   </tr>
                 );
               })}

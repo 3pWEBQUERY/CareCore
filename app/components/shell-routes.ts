@@ -8,11 +8,14 @@
 
 // Druck- und Vollbildansichten ohne Rahmen (Adresse ohne /c).
 export const PLAIN_ROUTES = [
+  "/bewohner/abrechnung/rechnung",
   "/bewohner/auskunft",
   "/bewohner/belegung/etiketten",
   "/bewohner/belegung/evakuierung",
+  "/bewohner/gelder/drucken",
   "/bewohner/inventar",
   "/bewohner/ueberleitung",
+  "/carecore-one/kalender/fahrdienst/druck",
   "/dienstplan/drucken",
   "/ernaehrung/kuechenliste",
   "/kompass/bericht",
