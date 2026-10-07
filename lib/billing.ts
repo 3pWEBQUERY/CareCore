@@ -22,6 +22,7 @@ import {
   type AbsenceKind,
   type AbsenceRule,
   type BillingCatalog,
+  type BillingMonth,
   type BillingPerson,
   type BillingRate,
   type BillingSettings,
@@ -37,7 +38,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH = /^\d{4}-\d{2}$/;
 const MAX_CENTS = 10_000_000;
 
-function assertWrite(ctx: ApiContext) {
+export function assertWrite(ctx: ApiContext) {
   if (!hasPermission(ctx.actor, "billing.manage")) throw new ApiError("Keine Berechtigung.", 403);
 }
 
@@ -55,7 +56,7 @@ const amount = (value: unknown) => {
 // Nur für Werte, die SQL bereits als „YYYY-MM-DD“ liefert (to_char).
 const day = (value: unknown) => (value ? String(value).slice(0, 10) : null);
 
-async function today(ctx: ApiContext) {
+export async function today(ctx: ApiContext) {
   const [row] = (await ctx.sql`
     SELECT to_char(NOW() AT TIME ZONE timezone, 'YYYY-MM-DD') AS day FROM carecore_organizations
     WHERE id = ${ctx.actor.organizationId}`) as Row[];
@@ -78,13 +79,13 @@ function rule(value: unknown, label: string): AbsenceRule {
 const readRule = (days: unknown, percent: unknown): AbsenceRule =>
   days === null || days === undefined ? null : { fullDays: Number(days), percent: Number(percent) };
 
-async function loadSettings(ctx: ApiContext): Promise<BillingSettings> {
+export async function loadSettings(ctx: ApiContext): Promise<BillingSettings> {
   const [row] = (await ctx.sql`
     SELECT discharge_day_billed FROM carecore_billing_settings WHERE organization_id = ${ctx.actor.organizationId}`) as Row[];
   return { dischargeDayBilled: row ? ((row.discharge_day_billed as boolean | null) ?? null) : null };
 }
 
-async function loadRates(ctx: ApiContext): Promise<BillingRate[]> {
+export async function loadRates(ctx: ApiContext): Promise<BillingRate[]> {
   const [rates, prices] = (await Promise.all([
     ctx.sql`
       SELECT * FROM carecore_billing_rates WHERE organization_id = ${ctx.actor.organizationId}
@@ -283,6 +284,60 @@ export async function saveBillingSettings(ctx: ApiContext, body: Record<string, 
 
 // ---------------------------------------------------------------- Je Person
 
+// Monatsberechnung für mehrere Personen (z. B. für den Rechnungslauf); ohne Regel zum Austrittstag: null.
+export async function monthlyCalculations(
+  ctx: ApiContext,
+  month: string,
+  residentIds: string[],
+  rates: BillingRate[],
+  settings: BillingSettings,
+) {
+  const result = new Map<string, BillingMonth>();
+  if (settings.dischargeDayBilled === null || !residentIds.length) return result;
+  const [stays, levels, absences, assigned] = (await Promise.all([
+    ctx.sql`
+      SELECT s.resident_id, to_char(s.started_at AT TIME ZONE o.timezone, 'YYYY-MM-DD') AS started,
+        to_char(s.ended_at AT TIME ZONE o.timezone, 'YYYY-MM-DD') AS ended
+      FROM carecore_resident_stays s
+      JOIN carecore_residents r ON r.id = s.resident_id
+      JOIN carecore_organizations o ON o.id = r.organization_id
+      WHERE s.resident_id = ANY(${residentIds}) ORDER BY s.started_at`,
+    ctx.sql`
+      SELECT resident_id, care_level, to_char(valid_from, 'YYYY-MM-DD') AS day FROM carecore_resident_care_levels
+      WHERE resident_id = ANY(${residentIds}) AND cancelled_at IS NULL`,
+    ctx.sql`
+      SELECT resident_id, kind, to_char(starts_on, 'YYYY-MM-DD') AS first_day, to_char(ends_on, 'YYYY-MM-DD') AS last_day
+      FROM carecore_resident_absences WHERE resident_id = ANY(${residentIds}) AND cancelled_at IS NULL`,
+    ctx.sql`
+      SELECT resident_id, rate_id, to_char(valid_from, 'YYYY-MM-DD') AS valid_from,
+        to_char(valid_until, 'YYYY-MM-DD') AS valid_until
+      FROM carecore_resident_rates WHERE resident_id = ANY(${residentIds}) AND cancelled_at IS NULL`,
+  ])) as Row[][];
+  const of = (rows: Row[], id: string) => rows.filter((row) => row.resident_id === id);
+  for (const id of residentIds)
+    result.set(
+      id,
+      computeMonth({
+        month,
+        stays: of(stays, id).map((row) => ({ from: String(row.started), until: day(row.ended) })),
+        dischargeDayBilled: settings.dischargeDayBilled,
+        rates,
+        careLevels: of(levels, id).map((row) => ({ level: String(row.care_level), validFrom: String(row.day) })),
+        absences: of(absences, id).map((row) => ({
+          kind: row.kind as AbsenceKind,
+          startsOn: String(row.first_day),
+          endsOn: day(row.last_day),
+        })),
+        assigned: of(assigned, id).map((row) => ({
+          rateId: String(row.rate_id),
+          validFrom: String(row.valid_from),
+          validUntil: day(row.valid_until),
+        })),
+      }),
+    );
+  return result;
+}
+
 export async function billingPerson(
   ctx: ApiContext,
   residentInput: unknown,
@@ -297,7 +352,7 @@ export async function billingPerson(
     today(ctx),
   ]);
   const month = typeof monthInput === "string" && MONTH.test(monthInput) ? monthInput : current.slice(0, 7);
-  const [people, stays, levels, absences, assigned, plans] = (await Promise.all([
+  const [people, levels, absences, assigned, plans, addresses, calculations] = (await Promise.all([
     ctx.sql`
       SELECT r.last_name || ' ' || r.first_name AS name, to_char(r.admitted_on, 'YYYY-MM-DD') AS admitted_on,
         COALESCE(ro.name, '') AS room, COALESCE(cu.name, '') AS unit
@@ -307,13 +362,6 @@ export async function billingPerson(
       LEFT JOIN carecore_rooms ro ON ro.id = st.room_id
       LEFT JOIN carecore_care_units cu ON cu.id = st.care_unit_id
       WHERE r.id = ${residentId}`,
-    ctx.sql`
-      SELECT to_char(s.started_at AT TIME ZONE o.timezone, 'YYYY-MM-DD') AS started,
-        to_char(s.ended_at AT TIME ZONE o.timezone, 'YYYY-MM-DD') AS ended
-      FROM carecore_resident_stays s
-      JOIN carecore_residents r ON r.id = s.resident_id
-      JOIN carecore_organizations o ON o.id = r.organization_id
-      WHERE s.resident_id = ${residentId} ORDER BY s.started_at`,
     ctx.sql`
       SELECT l.*, to_char(l.valid_from, 'YYYY-MM-DD') AS day, COALESCE(u.display_name, 'Unbekannt') AS author
       FROM carecore_resident_care_levels l LEFT JOIN carecore_users u ON u.id = l.created_by
@@ -331,7 +379,10 @@ export async function billingPerson(
     ctx.sql`
       SELECT care_level FROM carecore_care_plans WHERE resident_id = ${residentId}
         AND status IN ('draft', 'active', 'review') ORDER BY updated_at DESC LIMIT 1`,
-  ])) as Row[][];
+    ctx.sql`SELECT * FROM carecore_resident_billing_addresses WHERE resident_id = ${residentId}`,
+    monthlyCalculations(ctx, month, [residentId], rates, settings),
+  ])) as [Row[], Row[], Row[], Row[], Row[], Row[], Map<string, BillingMonth>];
+  const address = addresses[0];
   const person = people[0];
   const careLevels = levels.map((row) => ({
     id: String(row.id),
@@ -371,18 +422,18 @@ export async function billingPerson(
     absences: absenceList,
     assigned: assignedList,
     previewMonth: month,
-    preview:
-      settings.dischargeDayBilled === null
-        ? null
-        : computeMonth({
-            month,
-            stays: stays.map((row) => ({ from: String(row.started), until: day(row.ended) })),
-            dischargeDayBilled: settings.dischargeDayBilled,
-            rates,
-            careLevels,
-            absences: absenceList,
-            assigned: assignedList,
-          }),
+    preview: calculations.get(residentId) ?? null,
+    address: address
+      ? {
+          name: String(address.name),
+          addition: String(address.addition),
+          street: String(address.street),
+          building: String(address.building),
+          zip: String(address.zip),
+          city: String(address.city),
+          country: String(address.country),
+        }
+      : null,
     settings,
   };
 }

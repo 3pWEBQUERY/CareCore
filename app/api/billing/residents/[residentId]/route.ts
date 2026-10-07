@@ -9,6 +9,7 @@ import {
   endAssignedRate,
   updateAbsence,
 } from "@/lib/billing";
+import { saveBillingAddress } from "@/lib/invoices";
 
 export const runtime = "nodejs";
 
@@ -47,6 +48,9 @@ export async function POST(request: Request, { params }: Params) {
         return NextResponse.json(await assignRate(ctx, body), { status: 201 });
       case "updateAbsence":
         await updateAbsence(ctx, body.id, body);
+        break;
+      case "address":
+        await saveBillingAddress(ctx, body);
         break;
       case "endRate":
         await endAssignedRate(ctx, body.id, body);
