@@ -39,6 +39,8 @@ export function RecordCareProcess({ r }: { r: ResidentRecordState }) {
   const evaluations = (plan?.goals ?? []).flatMap((goal) => goal.evaluations);
   const lastEvaluation = evaluations.sort((a, b) => b.evaluatedAt.localeCompare(a.evaluatedAt))[0] ?? null;
   const overdueAssessments = latestAssessments.filter((result) => result.nextDueOn && result.nextDueOn < today);
+  const kompass = summary.kompass;
+  const kompassOverdue = Boolean(kompass.dueOn && kompass.dueOn < today && kompass.inProgress === null);
   const lastDoc = live.docEntries[0] ?? null;
   const documentedRecently = lastDoc ? now - Date.parse(lastDoc.occurredAt) < 24 * 3_600_000 : false;
   const measures = goals.reduce(
@@ -61,15 +63,27 @@ export function RecordCareProcess({ r }: { r: ResidentRecordState }) {
       view: "master-data",
     },
     {
+      // Bedarfsabklärung mit dem Kompass und Einschätzungsinstrumente.
       id: "assessment",
       label: "Einschätzung",
-      state: !latestAssessments.length ? "open" : overdueAssessments.length ? "attention" : "done",
-      detail: !latestAssessments.length
-        ? "noch keine Einschätzung"
-        : overdueAssessments.length
-          ? `${overdueAssessments.length} überfällig`
-          : `${latestAssessments.length} Instrument${latestAssessments.length === 1 ? "" : "e"} aktuell`,
-      href: "/c/einschaetzungen",
+      state:
+        !latestAssessments.length && !kompass.lastOn
+          ? "open"
+          : overdueAssessments.length || kompassOverdue
+            ? "attention"
+            : "done",
+      detail: kompassOverdue
+        ? `Kompass fällig seit ${formatDate(kompass.dueOn ?? "")}`
+        : kompass.inProgress !== null
+          ? `Kompass begonnen · ${kompass.inProgress}%`
+          : kompass.lastOn
+            ? `Kompass ${formatDate(kompass.lastOn)}${kompass.needs.length ? ` · ${kompass.needs.length}× Bedarf` : ""}`
+            : !latestAssessments.length
+              ? "noch keine Einschätzung"
+              : overdueAssessments.length
+                ? `${overdueAssessments.length} überfällig`
+                : `${latestAssessments.length} Instrument${latestAssessments.length === 1 ? "" : "e"} aktuell`,
+      href: kompass.canOpen ? "/c/rai/erfassung" : "/c/einschaetzungen",
     },
     {
       id: "planning",

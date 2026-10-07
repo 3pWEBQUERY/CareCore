@@ -37,3 +37,22 @@ export type KompassDetail = {
   settings: { admissionDays: number | null; intervalMonths: number | null };
   today: string;
 };
+
+export type KompassReport = {
+  resident: { id: string; name: string; birthDate: string | null; room: string; unit: string };
+  assessment: KompassAssessment;
+  // Vorherige abgeschlossene Abklärung mit dem Kompass (für den Vergleich je Frage).
+  previous: KompassAssessment | null;
+  // Aus dem Handlungsbedarf übernommene Ziele der Pflegeplanung.
+  goals: Record<string, { statement: string; status: string; targetDate: string | null }>;
+  canAdopt: boolean;
+};
+
+export type KompassStatusSummary = {
+  lastOn: string | null;
+  needs: string[];
+  dueOn: string | null;
+  // Fortschritt in Prozent, wenn eine Abklärung begonnen ist.
+  inProgress: number | null;
+  canOpen: boolean;
+};

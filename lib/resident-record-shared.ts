@@ -1,5 +1,6 @@
 import type { AdvanceAnswer, Representative } from "./advance-care-shared";
 import type { EvacuationMobility } from "./evacuation-shared";
+import type { KompassStatusSummary } from "./kompass-shared";
 // Resident record (Bewohnerakte): master data, key figures, timeline and documents,
 // shared by the API and the record panel.
 
@@ -127,6 +128,8 @@ export type RecordSummary = {
   canExport: boolean;
   // Vertretungsberechtigte Person aus den Kontaktpersonen (nach Vorrang der Rolle), für den Aktenkopf.
   representative: Representative | null;
+  // Stand der Bedarfsabklärung mit dem CareCore Kompass (für den Pflegeprozess).
+  kompass: KompassStatusSummary;
 };
 
 export type TimelineCategory = "Pflege" | "Vitalwerte" | "Medikation" | "Termine";

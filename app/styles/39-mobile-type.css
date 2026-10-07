@@ -1527,6 +1527,12 @@
   .sheet-chart-label {
     font-size: 12px;
   }
+  .kompass-sheet-domain td small {
+    font-size: 12px;
+  }
+  .kompass-sheet-domain dd small {
+    font-size: 12px;
+  }
   :root .operations-quick a {
     font-size: 11.5px;
   }

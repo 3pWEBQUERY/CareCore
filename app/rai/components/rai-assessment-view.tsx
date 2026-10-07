@@ -33,7 +33,7 @@ import {
   type KompassItem,
   type Occasion,
 } from "@/lib/kompass-instrument";
-import type { KompassAssessment, KompassDetail } from "@/lib/kompass-shared";
+import type { KompassAssessment, KompassDetail, KompassReport } from "@/lib/kompass-shared";
 
 const NOBODY = "";
 
@@ -168,8 +168,171 @@ function StartCard({
           </button>
         </div>
       </section>
-      <HistoryCard history={history} />
+      <div className="kompass-side">
+        {previous?.kompass && (
+          <NeedsCard
+            key={previous.id}
+            assessmentId={previous.id}
+            residentId={resident.id}
+            today={today}
+            showToast={showToast}
+          />
+        )}
+        <HistoryCard history={history} />
+      </div>
     </section>
+  );
+}
+
+// Handlungsbedarf der letzten Abklärung: je Bereich als Ziel in die Pflegeplanung übernehmen.
+function NeedsCard({
+  assessmentId,
+  residentId,
+  today,
+  showToast,
+}: {
+  assessmentId: string;
+  residentId: string;
+  today: string;
+  showToast: (message: string) => void;
+}) {
+  const report = useApiData<KompassReport>(`/api/rai/assessments/${assessmentId}`);
+  const [adopting, setAdopting] = useState<KompassDomain | null>(null);
+  const data = report.data;
+  const kompass = data?.assessment.kompass;
+  const needs = kompass ? KOMPASS_DOMAINS.filter((domain) => kompass.domains[domain.id]?.need) : [];
+  return (
+    <section className="card kompass-needs" aria-label="Handlungsbedarf der letzten Abklärung">
+      <div className="card-header">
+        <div>
+          <p className="eyebrow">Letzte Abklärung{kompass ? ` · ${formatDate(kompass.assessedOn)}` : ""}</p>
+          <h2 className="card-title">Handlungsbedarf</h2>
+        </div>
+        <a className="secondary-button" href={`/c/rai/bericht?id=${assessmentId}`} target="_blank" rel="noreferrer">
+          <ModuleIcon name="docs" className="button-icon" /> Bericht
+        </a>
+      </div>
+      {report.error && <p className="kompass-error">{report.error}</p>}
+      {kompass && !needs.length && <p className="card-subtitle">Kein Handlungsbedarf festgehalten.</p>}
+      <ul>
+        {needs.map((domain) => {
+          const notes = kompass?.domains[domain.id] ?? {};
+          const goal = notes.goalId ? data?.goals[notes.goalId] : null;
+          return (
+            <li key={domain.id}>
+              <strong>{domain.title}</strong>
+              <p>{notes.needText}</p>
+              {goal ? (
+                <Link href="/c/pflegeplanung/ziele-massnahmen" className="kompass-goal">
+                  <ModuleIcon name="check" /> Ziel in der Pflegeplanung: {goal.statement}
+                </Link>
+              ) : data?.canAdopt ? (
+                <button className="secondary-button" type="button" onClick={() => setAdopting(domain)}>
+                  <ModuleIcon name="plan" className="button-icon" /> Als Ziel übernehmen
+                </button>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+      {adopting && kompass && (
+        <AdoptDialog
+          domain={adopting}
+          notes={kompass.domains[adopting.id] ?? {}}
+          residentId={residentId}
+          assessmentId={assessmentId}
+          today={today}
+          onClose={() => setAdopting(null)}
+          onDone={(message) => {
+            setAdopting(null);
+            showToast(message);
+            report.reload();
+          }}
+        />
+      )}
+    </section>
+  );
+}
+
+function AdoptDialog({
+  domain,
+  notes,
+  residentId,
+  assessmentId,
+  today,
+  onClose,
+  onDone,
+}: {
+  domain: KompassDomain;
+  notes: DomainNotes;
+  residentId: string;
+  assessmentId: string;
+  today: string;
+  onClose: () => void;
+  onDone: (message: string) => void;
+}) {
+  const [statement, setStatement] = useState("");
+  const [targetDate, setTargetDate] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  async function submit() {
+    setSaving(true);
+    setError("");
+    try {
+      const result = await requestJson<{ createdPlan: boolean }>(`/api/rai/residents/${residentId}/goals`, {
+        method: "POST",
+        body: { assessmentId, domainId: domain.id, statement, targetDate },
+      });
+      onDone(result.createdPlan ? "Pflegeplan angelegt und Ziel übernommen" : "Ziel in die Pflegeplanung übernommen");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Übernehmen fehlgeschlagen.");
+      setSaving(false);
+    }
+  }
+  return (
+    <EditorDialog
+      id="kompass-adopt"
+      eyebrow={`${KOMPASS_NAME} · ${domain.title}`}
+      title="Als Ziel in die Pflegeplanung"
+      description="Pflegebereich, Problem und Ressourcen stammen aus der Abklärung. Formuliere das Ziel überprüfbar und lege fest, wann es überprüft wird; Massnahmen planst du danach in der Pflegeplanung."
+      onClose={onClose}
+      onSubmit={submit}
+      saving={saving}
+      error={error}
+      submitLabel="Ziel übernehmen"
+    >
+      <dl className="kompass-adopt-facts area-editor-wide">
+        <div>
+          <dt>Pflegebereich</dt>
+          <dd>{domain.planCategory}</dd>
+        </div>
+        <div>
+          <dt>Problem</dt>
+          <dd>{notes.needText}</dd>
+        </div>
+        {notes.resources && (
+          <div>
+            <dt>Ressourcen</dt>
+            <dd>{notes.resources}</dd>
+          </div>
+        )}
+      </dl>
+      <label className="area-editor-wide">
+        <span>Ziel</span>
+        <textarea
+          required
+          rows={3}
+          maxLength={2000}
+          value={statement}
+          onChange={(event) => setStatement(event.target.value)}
+          placeholder="z. B. Steht am Morgen mit Begleitung sicher auf und geht zum Lavabo"
+        />
+      </label>
+      <label>
+        <span>Überprüfung am</span>
+        <CareDatePicker label="Überprüfung am" value={targetDate} min={today} onChange={setTargetDate} />
+      </label>
+    </EditorDialog>
   );
 }
 
@@ -206,6 +369,11 @@ function HistoryCard({ history }: { history: KompassAssessment[] }) {
                     .filter(Boolean)
                     .join(" · ")}
                 </small>
+                {item.kompass && (
+                  <a href={`/c/rai/bericht?id=${item.id}`} target="_blank" rel="noreferrer">
+                    Bericht öffnen
+                  </a>
+                )}
               </li>
             );
           })}

@@ -3,11 +3,15 @@ import { ApiError, assertResident, assertUuid, iso, text, type ApiContext, type 
 import { residentAudit } from "@/lib/resident-audit";
 import { readSettings } from "@/lib/settings";
 import { restraintLabel, type RestraintKind } from "@/lib/restraints-shared";
-import { addMonths, day, orgToday, raiPeople } from "@/lib/rai";
+import { addMonths, day, orgToday, raiPeople, raiWorkplace } from "@/lib/rai";
+import { hasPermission } from "@/lib/server-data";
+import { addGoal, parseGoal } from "@/lib/care-plan-goals";
+import { OPEN as OPEN_PLANS, createPlan, today as planToday } from "@/lib/care-planning";
 import {
   ITEM_BY_KEY,
   KOMPASS_DOMAINS,
   KOMPASS_INSTRUMENT,
+  KOMPASS_NAME,
   OCCASIONS,
   PARTICIPANTS,
   domainProgress,
@@ -24,7 +28,9 @@ import type {
   KompassContext,
   KompassDetail,
   KompassFact,
+  KompassReport,
   KompassStatus,
+  KompassStatusSummary,
 } from "@/lib/kompass-shared";
 
 // CareCore Kompass: Bedarfsabklärung je Person. Die Fachperson beantwortet die Fragen, entscheidet je Bereich über
@@ -45,7 +51,10 @@ function readKompass(value: unknown): KompassData | null {
   const domains: Record<string, DomainNotes> = {};
   for (const domain of KOMPASS_DOMAINS) {
     const notes = ((data.domains ?? {}) as Record<string, unknown>)[domain.id];
-    if (notes && typeof notes === "object") domains[domain.id] = cleanNotes(notes as Record<string, unknown>);
+    if (!notes || typeof notes !== "object") continue;
+    domains[domain.id] = cleanNotes(notes as Record<string, unknown>);
+    const goalId = (notes as Record<string, unknown>).goalId;
+    if (typeof goalId === "string") domains[domain.id].goalId = goalId;
   }
   return {
     kompass: data.kompass,
@@ -496,4 +505,159 @@ export async function discardKompass(ctx: ApiContext, residentInput: unknown, bo
       after: { reason },
     }),
   ]);
+}
+
+// ---------------------------------------------------------------- Bericht und Übernahme
+
+// Abgeschlossene Abklärung mit der vorherigen (zum Vergleich) und den daraus übernommenen Zielen.
+export async function kompassReport(ctx: ApiContext, assessmentInput: unknown): Promise<KompassReport> {
+  const assessmentId = assertUuid(assessmentInput, "Abklärung");
+  const [row] = (await ctx.sql`
+    SELECT a.*, u.display_name AS assessor FROM carecore_rai_assessments a
+    JOIN carecore_residents r ON r.id = a.resident_id AND r.organization_id = ${ctx.actor.organizationId}
+    LEFT JOIN carecore_users u ON u.id = a.responsible_user_id
+    WHERE a.id = ${assessmentId} AND a.completed_at IS NOT NULL`) as Row[];
+  if (!row) throw new ApiError("Abklärung nicht gefunden.", 404);
+  const assessment = mapAssessment(row);
+  if (!assessment.kompass) throw new ApiError("Diese Erfassung wurde nicht mit dem Kompass durchgeführt.", 409);
+  const residentId = String(row.resident_id);
+  const [residentRows, previousRows] = await Promise.all([
+    ctx.sql`
+      SELECT r.first_name, r.last_name, to_char(r.date_of_birth, 'YYYY-MM-DD') AS birth_day,
+        COALESCE(ro.name, '') AS room, COALESCE(cu.name, '') AS unit
+      FROM carecore_residents r
+      LEFT JOIN LATERAL (SELECT care_unit_id, room_id FROM carecore_resident_stays WHERE resident_id = r.id AND ended_at IS NULL
+        ORDER BY started_at DESC LIMIT 1) stay ON TRUE
+      LEFT JOIN carecore_care_units cu ON cu.id = stay.care_unit_id
+      LEFT JOIN carecore_rooms ro ON ro.id = stay.room_id
+      WHERE r.id = ${residentId}` as Promise<Row[]>,
+    ctx.sql`
+      SELECT a.*, u.display_name AS assessor FROM carecore_rai_assessments a
+      LEFT JOIN carecore_users u ON u.id = a.responsible_user_id
+      WHERE a.resident_id = ${residentId} AND a.completed_at IS NOT NULL AND a.completed_at < ${row.completed_at}
+        AND a.assessment_type = ${KOMPASS_INSTRUMENT}
+      ORDER BY a.completed_at DESC LIMIT 1` as Promise<Row[]>,
+  ]);
+  const goalIds = Object.values(assessment.kompass.domains)
+    .map((notes) => notes.goalId)
+    .filter((id): id is string => Boolean(id));
+  const goals = goalIds.length
+    ? ((await ctx.sql`
+        SELECT id, statement, status, to_char(target_date, 'YYYY-MM-DD') AS target_day FROM carecore_care_goals
+        WHERE id = ANY(${goalIds}::uuid[])`) as Row[])
+    : [];
+  const resident = residentRows[0];
+  return {
+    resident: {
+      id: residentId,
+      name: `${resident.first_name} ${resident.last_name}`,
+      birthDate: (resident.birth_day as string | null) ?? null,
+      room: String(resident.room),
+      unit: String(resident.unit),
+    },
+    assessment,
+    previous: previousRows[0] ? mapAssessment(previousRows[0]) : null,
+    goals: Object.fromEntries(
+      goals.map((goal) => [
+        String(goal.id),
+        {
+          statement: String(goal.statement),
+          status: String(goal.status),
+          targetDate: (goal.target_day as string) ?? null,
+        },
+      ]),
+    ),
+    // Übernehmen nur aus der aktuell gültigen Abklärung und mit dem Recht zur Pflegeplanung.
+    canAdopt: row.status === "current" && hasPermission(ctx.actor, "documentation.write"),
+  };
+}
+
+// Handlungsbedarf eines Bereichs als Ziel in die Pflegeplanung übernehmen. Pflegebereich, Problem und Ressourcen
+// stammen aus der Abklärung; das Ziel und das Überprüfungsdatum formuliert die Fachperson. Ohne offenen Pflegeplan
+// wird einer angelegt.
+export async function adoptKompassNeed(ctx: ApiContext, residentInput: unknown, body: Record<string, unknown>) {
+  if (!hasPermission(ctx.actor, "documentation.write"))
+    throw new ApiError("Keine Berechtigung für die Pflegeplanung.", 403);
+  const residentId = await assertResident(ctx, residentInput);
+  const assessmentId = assertUuid(body.assessmentId, "Abklärung");
+  const [row] = (await ctx.sql`
+    SELECT *, updated_at::text AS stamp FROM carecore_rai_assessments
+    WHERE id = ${assessmentId} AND resident_id = ${residentId}`) as Row[];
+  if (!row) throw new ApiError("Abklärung nicht gefunden.", 404);
+  if (row.status !== "current")
+    throw new ApiError("Übernehmen lässt sich nur aus der aktuell gültigen Abklärung.", 409);
+  const data = readKompass(row.data);
+  const domain = KOMPASS_DOMAINS.find((item) => item.id === body.domainId);
+  if (!data || !domain) throw new ApiError("Bereich nicht gefunden.", 404);
+  const notes = data.domains[domain.id] ?? {};
+  if (!notes.need || !notes.needText)
+    throw new ApiError("In diesem Bereich ist kein Handlungsbedarf festgehalten.", 409);
+  if (notes.goalId) {
+    const [goal] = (await ctx.sql`SELECT 1 FROM carecore_care_goals WHERE id = ${notes.goalId}`) as Row[];
+    if (goal) throw new ApiError("Dieser Handlungsbedarf ist bereits in die Pflegeplanung übernommen.", 409);
+  }
+  const goalBody = {
+    category: domain.planCategory,
+    problem: notes.needText,
+    resources: notes.resources ?? "",
+    statement: body.statement,
+    targetDate: body.targetDate,
+  };
+  // Zuerst prüfen, damit kein leerer Pflegeplan entsteht.
+  const goal = parseGoal(goalBody);
+  const day = await planToday(ctx);
+  if (goal.targetDate && goal.targetDate < day) throw new ApiError("Das Überprüfungsdatum liegt in der Vergangenheit.");
+  const [plan] = (await ctx.sql`
+    SELECT id FROM carecore_care_plans WHERE resident_id = ${residentId} AND status = ANY(${OPEN_PLANS})
+    ORDER BY created_at DESC LIMIT 1`) as Row[];
+  const planId = plan
+    ? String(plan.id)
+    : await createPlan(ctx, {
+        residentId,
+        focus: `Aus der Abklärung mit dem ${KOMPASS_NAME} vom ${formatDay(data.assessedOn)}`,
+        startsOn: day,
+        reviewOn: goal.targetDate,
+        ownerId: ctx.actor.id,
+      });
+  const goalId = await addGoal(ctx, planId, goalBody);
+  const next = { ...data, domains: { ...data.domains, [domain.id]: { ...notes, goalId } } };
+  await ctx.sql.transaction([
+    ctx.sql`UPDATE carecore_rai_assessments SET data = data || ${JSON.stringify({ domains: next.domains })}::jsonb
+      WHERE id = ${assessmentId}`,
+    residentAudit(ctx.sql, ctx.actor, {
+      residentId,
+      entityType: "rai_assessment",
+      entityId: assessmentId,
+      action: "need_adopted",
+      after: { domain: domain.title, goalId, planId, createdPlan: !plan },
+    }),
+  ]);
+  return { goalId, planId, createdPlan: !plan };
+}
+
+// ---------------------------------------------------------------- Tagesliste und Akte
+
+// Fällige, überfällige und begonnene Abklärungen (für die Tagesliste derjenigen, die den Kompass nutzen dürfen).
+export async function dueKompass(ctx: ApiContext) {
+  if (!hasPermission(ctx.actor, "rai.manage")) return [];
+  const { residents } = await raiWorkplace(ctx);
+  return residents.filter((row) => row.state === "overdue" || row.state === "due" || row.state === "in_progress");
+}
+
+// Kurzstand für den Pflegeprozess in der Akte.
+export async function kompassStatus(ctx: ApiContext, residentId: string): Promise<KompassStatusSummary> {
+  const rows = (await ctx.sql`
+    SELECT status, due_on, completed_at, progress, data, assessment_type FROM carecore_rai_assessments
+    WHERE resident_id = ${residentId} AND status IN ('new', 'in_progress', 'overdue', 'current')
+    ORDER BY completed_at DESC NULLS LAST`) as Row[];
+  const current = rows.find((row) => row.status === "current" && row.assessment_type === KOMPASS_INSTRUMENT);
+  const data = current ? readKompass(current.data) : null;
+  const open = rows.find((row) => row.status !== "current");
+  return {
+    lastOn: data?.assessedOn ?? null,
+    needs: data ? KOMPASS_DOMAINS.filter((domain) => data.domains[domain.id]?.need).map((domain) => domain.title) : [],
+    dueOn: day(open?.due_on) ?? day(current?.due_on),
+    inProgress: open?.status === "in_progress" ? Number(open.progress ?? 0) : null,
+    canOpen: hasPermission(ctx.actor, "rai.manage"),
+  };
 }

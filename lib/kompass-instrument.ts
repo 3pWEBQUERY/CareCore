@@ -406,6 +406,8 @@ export type DomainNotes = {
   need?: boolean;
   needText?: string;
   notes?: string;
+  // Ziel der Pflegeplanung, in das der Handlungsbedarf übernommen wurde (nur vom Server gesetzt).
+  goalId?: string;
 };
 
 export type KompassData = {

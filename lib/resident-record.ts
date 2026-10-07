@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { kompassStatus } from "@/lib/kompass";
 import { readTerms } from "@/lib/settings";
 import {
   ApiError,
@@ -50,7 +51,7 @@ export function canViewResidentAudit(actor: Parameters<typeof hasPermission>[0])
 
 export async function recordSummary(ctx: ApiContext, residentIdInput: unknown): Promise<RecordSummary> {
   const residentId = await assertResident(ctx, residentIdInput);
-  const [rows, vitals, documents, meds, staff] = await Promise.all([
+  const [rows, vitals, documents, meds, staff, kompass] = await Promise.all([
     ctx.sql`
       SELECT r.*, to_char(r.date_of_birth, 'YYYY-MM-DD') AS birth_day, to_char(r.admitted_on, 'YYYY-MM-DD') AS admitted_day,
         to_char(r.resuscitation_decided_on, 'YYYY-MM-DD') AS resuscitation_day,
@@ -84,6 +85,7 @@ export async function recordSummary(ctx: ApiContext, residentIdInput: unknown): 
     >,
     medsToday(ctx, residentId),
     staffOf(ctx),
+    kompassStatus(ctx, residentId),
   ]);
   const r = rows[0];
   const master: MasterData = {
@@ -153,6 +155,7 @@ export async function recordSummary(ctx: ApiContext, residentIdInput: unknown): 
           phone: (r.representative_phone as string | null) ?? null,
         }
       : null,
+    kompass,
   };
 }
 

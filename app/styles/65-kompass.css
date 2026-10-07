@@ -484,3 +484,119 @@
   min-height: 0;
   margin: -20px -22px 14px;
 }
+
+/* Letzte Abklärung: Handlungsbedarf und Übernahme in die Pflegeplanung */
+.kompass-side {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+.kompass-needs {
+  padding: 20px 22px;
+}
+.kompass-needs > .card-header {
+  min-height: 0;
+  margin: -20px -22px 14px;
+}
+.kompass-needs ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kompass-needs li {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--brand);
+  border-radius: 6px;
+}
+.kompass-needs li strong {
+  font-size: 13px;
+}
+.kompass-needs li p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.kompass-goal {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  color: var(--success);
+  font-size: 12px;
+  font-weight: 700;
+}
+.kompass-history li a {
+  justify-self: start;
+  display: inline-block;
+  margin: -4px 0;
+  padding: 4px 0;
+  color: var(--brand-dark);
+  font-size: 12px;
+  font-weight: 700;
+}
+.kompass-adopt-facts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: var(--surface-soft);
+}
+.kompass-adopt-facts dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.kompass-adopt-facts dd {
+  margin: 2px 0 0;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+/* Bericht (Druck) */
+.kompass-sheet-note {
+  margin: 0 0 10px;
+  color: #475569;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.kompass-sheet-domain {
+  margin-top: 12px;
+}
+.kompass-sheet-domain table th:first-child,
+.kompass-sheet-domain table td:first-child {
+  width: 42%;
+}
+.kompass-sheet-domain td small,
+.kompass-sheet-domain dd small {
+  display: block;
+  margin-top: 2px;
+  color: #475569;
+  font-size: 10px;
+}
+.kompass-sheet-domain dl {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 4px 12px;
+  margin: 8px 0 0;
+}
+.kompass-sheet-domain dd {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.kompass-sheet-domain > p {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+}
+@media print {
+  .kompass-sheet-domain {
+    break-inside: avoid-page;
+  }
+}
