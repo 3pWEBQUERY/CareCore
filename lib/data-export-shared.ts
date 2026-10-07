@@ -1,4 +1,5 @@
 // Auskunft und Datenexport je Person (Server und Oberfläche): alle gespeicherten Daten einer Akte, nach Bereichen.
+import { ABSENCE_KINDS } from "@/lib/billing-shared";
 import { DIAGNOSIS_KINDS, DIAGNOSIS_STATUSES } from "@/lib/diagnoses-shared";
 import { VACCINATION_PLACES } from "@/lib/vaccinations-shared";
 import { BELONGING_KINDS } from "@/lib/belongings-shared";
@@ -37,6 +38,7 @@ export const EXPORT_HIDDEN_COLUMNS = new Set([
   "id",
   "organization_id",
   "resident_id",
+  "rate_id",
   "account_id",
   "activity_id",
   "administration_id",
@@ -328,6 +330,9 @@ export const EXPORT_COLUMN_LABELS: Record<string, string> = {
   day_parts: "Nachweis je Tageszeit",
   proof_date: "Nachgewiesen für den Tag",
   day_part: "Tageszeit",
+  ends_on: "Letzter Tag",
+  entry: "Eintrag",
+  rate_name: "Taxe",
 };
 
 // Häufige technische Werte in lesbarer Form.
@@ -339,6 +344,7 @@ export const EXPORT_SECTION_VALUE_LABELS: Record<string, Record<string, Record<s
   consents: { decision: CONSENT_DECISIONS },
   appointments: { transport: TRANSPORT_LABELS },
   intervention_proofs: { outcome: PROOF_OUTCOMES, day_part: DAY_PART_LABELS },
+  billing: { kind: ABSENCE_KINDS },
   feedback: { kind: FEEDBACK_KINDS, source: FEEDBACK_SOURCES, channel: FEEDBACK_CHANNELS, status: FEEDBACK_STATUSES },
 };
 

@@ -33,7 +33,7 @@ import {
 const KIND_KEYS = Object.keys(FUND_KINDS) as FundKind[];
 
 // Monate zur Auswahl: der aktuelle und die 23 davor.
-function monthOptions(today: string) {
+export function monthOptions(today: string) {
   const [year, month] = today.split("-").map(Number);
   return Array.from({ length: 24 }, (_, index) => {
     const date = new Date(Date.UTC(year, month - 1 - index, 1));

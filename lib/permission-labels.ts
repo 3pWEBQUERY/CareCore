@@ -13,4 +13,5 @@ export const PERMISSION_LABELS: Record<string, string> = {
   "rai.manage": "Kompass (Bedarfsabklärung)",
   "ai.use": "CareCore KI",
   "funds.manage": "Bewohnergelder verwalten",
+  "billing.manage": "Abrechnung verwalten",
 };
