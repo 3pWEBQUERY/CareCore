@@ -165,7 +165,10 @@ async function monthPeople(ctx: ApiContext, month: string) {
   return (await ctx.sql`
     SELECT r.id, r.last_name || ' ' || r.first_name AS name, COALESCE(ro.name, '') AS room,
       (a.resident_id IS NOT NULL) AS has_address,
-      i.id AS invoice_id, i.number AS invoice_number, i.total_cents AS invoice_total
+      i.id AS invoice_id, i.number AS invoice_number, i.total_cents AS invoice_total,
+      to_char(i.due_on, 'YYYY-MM-DD') AS invoice_due,
+      (SELECT COALESCE(SUM(p.amount_cents), 0) FROM carecore_invoice_payments p
+        WHERE p.invoice_id = i.id AND p.cancelled_at IS NULL) AS invoice_paid
     FROM carecore_residents r
     JOIN carecore_organizations o ON o.id = r.organization_id
     LEFT JOIN LATERAL (SELECT room_id FROM carecore_resident_stays WHERE resident_id = r.id
@@ -244,7 +247,13 @@ export async function invoiceRun(ctx: ApiContext, monthInput: unknown): Promise<
         warnings: calculation?.warnings ?? [],
         hasAddress: Boolean(row.has_address),
         invoice: row.invoice_id
-          ? { id: String(row.invoice_id), number: Number(row.invoice_number), totalCents: Number(row.invoice_total) }
+          ? {
+              id: String(row.invoice_id),
+              number: Number(row.invoice_number),
+              totalCents: Number(row.invoice_total),
+              paidCents: Number(row.invoice_paid),
+              dueOn: String(row.invoice_due),
+            }
           : null,
       };
     }),
@@ -374,7 +383,18 @@ export async function createInvoices(ctx: ApiContext, body: Record<string, unkno
   return { created, skipped };
 }
 
-function mapInvoice(row: Row): Invoice {
+function mapInvoice(row: Row, payments: Row[]): Invoice {
+  const list = payments.map((payment) => ({
+    id: String(payment.id),
+    paidOn: String(payment.paid_day),
+    amountCents: Number(payment.amount_cents),
+    source: payment.source === "bank" ? ("bank" as const) : ("manual" as const),
+    note: String(payment.note),
+    author: String(payment.author),
+    cancelled: payment.cancelled_at
+      ? { at: iso(payment.cancelled_at) ?? "", reason: String(payment.cancel_reason) }
+      : null,
+  }));
   const creditor = row.creditor as PostalAddress & { iban?: string };
   return {
     id: String(row.id),
@@ -396,6 +416,8 @@ function mapInvoice(row: Row): Invoice {
     cancelled: row.cancelled_at
       ? { at: iso(row.cancelled_at) ?? "", by: String(row.cancelled_by_name), reason: String(row.cancel_reason) }
       : null,
+    payments: list,
+    paidCents: list.filter((payment) => !payment.cancelled).reduce((sum, payment) => sum + payment.amountCents, 0),
   };
 }
 
@@ -437,7 +459,11 @@ export async function invoiceDetail(ctx: ApiContext, invoiceInput: unknown) {
     LEFT JOIN carecore_users c ON c.id = i.cancelled_by
     WHERE i.id = ${id} AND i.organization_id = ${ctx.actor.organizationId}`) as Row[];
   if (!row) throw new ApiError("Rechnung nicht gefunden.", 404);
-  const invoice = mapInvoice(row);
+  const payments = (await ctx.sql`
+    SELECT p.*, to_char(p.paid_on, 'YYYY-MM-DD') AS paid_day, COALESCE(u.display_name, 'Bankdatei') AS author
+    FROM carecore_invoice_payments p LEFT JOIN carecore_users u ON u.id = p.created_by
+    WHERE p.invoice_id = ${id} ORDER BY p.paid_on, p.created_at`) as Row[];
+  const invoice = mapInvoice(row, payments);
   return { invoice, paymentPart: paymentPart(invoice) };
 }
 
@@ -448,10 +474,12 @@ export async function cancelInvoice(ctx: ApiContext, invoiceInput: unknown, body
   const reason = text(body.reason, 2000);
   if (!reason) throw new ApiError("Bitte einen Grund angeben.");
   const [row] = (await ctx.sql`
-    SELECT id, resident_id, number, cancelled_at FROM carecore_invoices
-    WHERE id = ${id} AND organization_id = ${ctx.actor.organizationId}`) as Row[];
+    SELECT id, resident_id, number, cancelled_at,
+      EXISTS (SELECT 1 FROM carecore_invoice_payments p WHERE p.invoice_id = i.id AND p.cancelled_at IS NULL) AS paid
+    FROM carecore_invoices i WHERE id = ${id} AND organization_id = ${ctx.actor.organizationId}`) as Row[];
   if (!row) throw new ApiError("Rechnung nicht gefunden.", 404);
   if (row.cancelled_at) throw new ApiError("Die Rechnung ist bereits storniert.", 409);
+  if (row.paid) throw new ApiError("Zur Rechnung gibt es Zahlungen. Bitte diese zuerst stornieren.", 409);
   await ctx.sql.transaction([
     ctx.sql`
       UPDATE carecore_invoices SET cancelled_at = NOW(), cancelled_by = ${ctx.actor.id}, cancel_reason = ${reason}

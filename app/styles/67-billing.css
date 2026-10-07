@@ -286,3 +286,53 @@
     -webkit-print-color-adjust: exact;
   }
 }
+
+/* Zahlungen und offene Posten */
+.service-records li.billing-overdue {
+  border-color: var(--attention);
+}
+.billing-toolbar a.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+.billing-payment-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.billing-payment-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.billing-payment-list li > div {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+}
+.billing-payment-list li.cancelled {
+  opacity: 0.6;
+}
+.billing-payment-list small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.billing-bank-summary {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.billing-bank-lines tr[data-status="ready"] td:nth-child(4) {
+  color: var(--success);
+  font-weight: 700;
+}
+.billing-bank-lines tr:not([data-status="ready"]) td:nth-child(4) {
+  color: var(--attention);
+}
