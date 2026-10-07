@@ -595,6 +595,17 @@ weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen ode
       Kostenträger (Versicherer, Restfinanzierung, Anteil der Person), Abwesenheiten (Spital, Ferien) mit ihrer Wirkung
       auf die Taxen, Monatsrechnung mit QR-Rechnung, elektronische Rechnung an Versicherer (Forum Datenaustausch) und
       Export in die Finanzbuchhaltung. Tarife legt die Einrichtung bzw. der Kanton fest. Setzt die Pflegestufe voraus.
+  - [x] Schritt A: Unter „Bewohner › Abrechnung“ (eigenes Recht „Abrechnung verwalten“) erfasst die Einrichtung ihre
+        Taxen (Pension, Betreuung, weitere Leistungen) mit Preis je Tag ab einem Datum, Kostenträger, Geltung (alle
+        oder nur zugewiesene Personen) und Regel bei Spital bzw. Ferien („n Tage voll, danach p %“), dazu die
+        Pflegetarife je Pflegestufe und Kostenträger sowie die Regel zum Austrittstag (ohne Festlegung keine
+        Berechnung). Je Person: Pflegestufe mit Verlauf ab Datum, Abwesenheiten (erster und letzter ganzer Tag),
+        zusätzliche Taxen; Vorschau des Monats je Kostenträger, jeder Tag einzeln berechnet. Stornieren mit Grund,
+        alles im Protokoll. CareCore gibt keine Beträge vor.
+  - [ ] Schritt B: Monatsabrechnung abschliessen (festgeschrieben, Rechnungsnummer), Rechnung als PDF mit
+        Schweizer QR-Rechnung, Storno bzw. Gutschrift, Sammellauf für alle Personen.
+  - [ ] Schritt C: Export für die Finanzbuchhaltung, offene Posten und Zahlungseingang; elektronische Rechnung an
+        Versicherer (Forum Datenaustausch) prüfen.
 - [ ] **Statistik der sozialmedizinischen Institutionen (SOMED, BFS):** jährliche Pflichtlieferung der Schweizer
       Heime; Inhalt und Format an der Quelle prüfen, Export aus den vorhandenen Daten.
 - [ ] **Datenstandort Schweiz:** Heute Railway, Region Europa. Viele Heime und Kantone erwarten Hosting in der

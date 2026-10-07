@@ -102,8 +102,9 @@ export const navigation: NavGroup[] = [
           "Isolation & Ausbruch",
           "Einwilligungen",
           "Bewohnergelder",
+          "Abrechnung",
         ],
-        childPermissions: { Bewohnergelder: "funds.manage" },
+        childPermissions: { Bewohnergelder: "funds.manage", Abrechnung: "billing.manage" },
       },
       {
         id: "chart",
@@ -294,6 +295,7 @@ const routes: Record<string, Record<string, string>> = {
     "Isolation & Ausbruch": "/bewohner/hygiene",
     Einwilligungen: "/bewohner/einwilligungen",
     Bewohnergelder: "/bewohner/gelder",
+    Abrechnung: "/bewohner/abrechnung",
   },
   chart: {
     Schnelldokumentation: "/pflegedokumentation",

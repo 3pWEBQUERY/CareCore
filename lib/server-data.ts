@@ -18,7 +18,8 @@ export type Permission =
   | "administration.manage"
   | "rai.manage"
   | "ai.use"
-  | "funds.manage";
+  | "funds.manage"
+  | "billing.manage";
 
 export function carecoreDb() {
   const url = process.env.DATABASE_URL ?? process.env.POSTGRES_URL;

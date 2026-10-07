@@ -1,0 +1,179 @@
+/* Abrechnung: Grundlagen je Person, Monatsvorschau und Taxen der Einrichtung */
+.billing-toolbar {
+  align-items: center;
+}
+.billing-toolbar p {
+  margin: 0;
+}
+.billing-layout {
+  margin-top: 18px;
+}
+.billing-side {
+  display: grid;
+  gap: 16px;
+}
+.billing-rates-layout {
+  display: grid;
+  gap: 16px;
+}
+.billing-notice {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-soft);
+}
+.billing-notice p {
+  margin: 0;
+  font-size: 13px;
+}
+.billing-warnings {
+  margin: 0 0 12px;
+}
+.service-records .billing-warnings li {
+  border-color: var(--attention);
+  color: var(--attention);
+  background: var(--attention-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+.billing-lines {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.billing-lines th,
+.billing-lines td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.billing-lines thead th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+.billing-lines thead th:last-child {
+  text-align: right;
+}
+.billing-lines .billing-detail {
+  color: #4f6478;
+}
+.billing-lines .billing-amount {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.billing-lines .billing-payer th {
+  padding-top: 14px;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.billing-lines .billing-subtotal td {
+  font-weight: 700;
+}
+.billing-lines tfoot td {
+  border-bottom: 0;
+  font-size: 14px;
+  font-weight: 800;
+  background: #f8fafc;
+}
+.billing-price {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  flex: none;
+}
+.billing-next-price {
+  color: var(--muted);
+  font-size: 12px;
+}
+.billing-care-wrap {
+  overflow-x: auto;
+}
+.billing-care-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.billing-care-table th,
+.billing-care-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.billing-care-table thead th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+.billing-care-table tbody th {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.billing-care-table tbody th small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.billing-care-cell {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  cursor: pointer;
+}
+.billing-care-cell:hover,
+.billing-care-cell:focus-visible {
+  border-color: #93c5fd;
+  background: var(--brand-soft);
+}
+.billing-care-cell small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.billing-rule {
+  display: grid;
+  gap: 8px;
+}
+.billing-rule-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.billing-rule-fields label {
+  display: grid;
+  gap: 5px;
+}
+@media (max-width: 760px) {
+  .billing-rule-fields {
+    grid-template-columns: 1fr;
+  }
+  .billing-lines th,
+  .billing-lines td {
+    padding: 8px 6px;
+  }
+  .billing-lines .billing-detail {
+    font-size: 12px;
+  }
+}
+.billing-page .service-records li .quiet-button {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 13px;
+}
