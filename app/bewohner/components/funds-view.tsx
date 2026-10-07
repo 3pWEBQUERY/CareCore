@@ -416,6 +416,7 @@ function FundsContent({ showToast }: { showToast: ShowToast }) {
           </section>
           <SummaryTiles
             label="Konto"
+            className="fund-summary"
             tiles={[
               { icon: "check", value: money(account?.balanceCents), caption: "Guthaben heute" },
               { icon: "plus", value: money(account?.depositsCents), caption: "Einzahlungen im Monat" },
