@@ -13,6 +13,43 @@ import "./workspace-ui.css";
 
 export type ShowToast = (message: string) => void;
 
+// Zuletzt geladene Daten je Adresse, nur im Arbeitsspeicher dieses Tabs: Beim erneuten Öffnen einer Seite sind sie
+// sofort sichtbar und werden im Hintergrund neu geladen. Jede Änderung an Daten (POST, PATCH, DELETE …) verwirft alles,
+// damit nach dem Speichern nie ein alter Stand erscheint.
+const apiCache = new Map<string, { data: unknown; at: number }>();
+const CACHE_MS = 5 * 60_000;
+const CACHE_ENTRIES = 80;
+
+function cachedData<T>(url: string): T | undefined {
+  const entry = apiCache.get(url);
+  if (!entry) return undefined;
+  if (Date.now() - entry.at > CACHE_MS) {
+    apiCache.delete(url);
+    return undefined;
+  }
+  return entry.data as T;
+}
+
+function remember(url: string, data: unknown) {
+  apiCache.delete(url);
+  apiCache.set(url, { data, at: Date.now() });
+  while (apiCache.size > CACHE_ENTRIES) apiCache.delete(apiCache.keys().next().value!);
+}
+
+export const clearApiCache = () => apiCache.clear();
+
+// Auch Änderungen, die nicht über requestJson laufen (Dienstplan, Warteschlange ohne Verbindung …), leeren den Speicher.
+if (typeof window !== "undefined" && !(window.fetch as { carecoreWatched?: boolean }).carecoreWatched) {
+  const original = window.fetch.bind(window);
+  const watched = ((input: RequestInfo | URL, init?: RequestInit) => {
+    const method = (init?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
+    if (method !== "GET" && method !== "HEAD") apiCache.clear();
+    return original(input, init);
+  }) as typeof window.fetch & { carecoreWatched?: boolean };
+  watched.carecoreWatched = true;
+  window.fetch = watched;
+}
+
 export async function requestJson<T>(url: string, init?: { method?: string; body?: unknown }): Promise<T> {
   const response = await fetch(url, {
     method: init?.method ?? "GET",
@@ -35,7 +72,10 @@ export function useApiData<T>(url: string | null) {
     if (!url || !key) return;
     let cancelled = false;
     requestJson<T>(url).then(
-      (data) => !cancelled && setState({ key, url, data }),
+      (data) => {
+        remember(url, data);
+        if (!cancelled) setState({ key, url, data });
+      },
       (error: Error) => !cancelled && setState({ key, url, error: error.message }),
     );
     return () => {
@@ -49,7 +89,9 @@ export function useApiData<T>(url: string | null) {
     return () => window.removeEventListener(UNLOCK_EVENT, reload);
   }, [reload]);
   const sameUrl = state && state.url === url ? state : null;
-  return { data: sameUrl?.data, error: sameUrl?.error, loading: !state || state.key !== key, reload };
+  // Noch nichts geladen: der letzte Stand dieser Adresse, bis die frischen Daten da sind.
+  const data = sameUrl ? sameUrl.data : url ? cachedData<T>(url) : undefined;
+  return { data, error: sameUrl?.error, loading: !state || state.key !== key, reload };
 }
 
 const zurich = "Europe/Zurich";

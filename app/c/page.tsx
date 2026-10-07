@@ -1,8 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
-import AppHeader from "../components/app-header";
-import AppSidebar from "../components/app-sidebar";
+import ModulePageShell from "../components/module-page-shell";
 import { Icon, DashboardWidgetId } from "./components/dashboard-shared";
 import { useDashboard } from "./components/use-dashboard";
 import {
@@ -17,7 +16,6 @@ import { HomeGreetingCard, HomeHero, HomeNotesCard, HomeShortcutsCard, HomeToday
 import { HomeNews } from "./components/home-news";
 import { DashboardCustomizer } from "./components/dashboard-customizer";
 import { DashboardArea } from "./components/dashboard-frame";
-import { MobileNavigation } from "@/app/components/mobile-navigation";
 import { GlobalSearchDialog } from "@/app/components/global-search-dialog";
 import { NoteViewDialog, NoteEditorDialog } from "./components/note-dialogs";
 
@@ -28,7 +26,6 @@ export default function Home() {
     viewingNote,
     searchOpen,
     toast,
-    setToast,
     dashboardEditing,
     openSearch,
     closeSearch,
@@ -50,39 +47,41 @@ export default function Home() {
   };
 
   return (
-    <div className="app-shell">
-      <AppSidebar activeModule="home" onToast={setToast} />
+    <ModulePageShell activeModule="home" pageClass="home-page" onSearch={openSearch}>
+      {() => (
+        <>
+          <main className="workspace home-workspace">
+            <HomeHero r={r}>
+              <DashboardArea r={r} top className="home-desk-grid" content={dashboardContent} />
+            </HomeHero>
 
-      <div className="main-column">
-        <AppHeader searchOpen={searchOpen} onSearch={openSearch} onToast={setToast} />
+            {dashboardEditing && <DashboardCustomizer r={r} />}
 
-        <main className="workspace home-workspace">
-          <HomeHero r={r}>
-            <DashboardArea r={r} top className="home-desk-grid" content={dashboardContent} />
-          </HomeHero>
+            <DashboardArea r={r} top={false} className="dashboard-custom-grid" content={dashboardContent} />
+          </main>
 
-          {dashboardEditing && <DashboardCustomizer r={r} />}
+          <button
+            className="floating-action"
+            type="button"
+            aria-label="Notiz erstellen"
+            onClick={() => openNote("new")}
+          >
+            <Icon name="plus" />
+          </button>
 
-          <DashboardArea r={r} top={false} className="dashboard-custom-grid" content={dashboardContent} />
-        </main>
-      </div>
+          {searchOpen && <GlobalSearchDialog onClose={closeSearch} />}
 
-      <button className="floating-action" type="button" aria-label="Notiz erstellen" onClick={() => openNote("new")}>
-        <Icon name="plus" />
-      </button>
-      <MobileNavigation activeModule="home" />
+          {viewingNote && <NoteViewDialog r={r} />}
+          {noteEditor && <NoteEditorDialog r={r} />}
 
-      {searchOpen && <GlobalSearchDialog onClose={closeSearch} />}
-
-      {viewingNote && <NoteViewDialog r={r} />}
-      {noteEditor && <NoteEditorDialog r={r} />}
-
-      {toast && (
-        <div className="toast" role="status">
-          <Icon name="check" />
-          {toast}
-        </div>
+          {toast && (
+            <div className="toast" role="status">
+              <Icon name="check" />
+              {toast}
+            </div>
+          )}
+        </>
       )}
-    </div>
+    </ModulePageShell>
   );
 }

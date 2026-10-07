@@ -66,6 +66,22 @@ export const setCareResident = (id: string | null) => write(RESIDENT_KEY, id);
 // navigation reuses it for a minute so new residents appear without a reload.
 let pending: Promise<WorkContext | null> | null = null;
 let loadedAt = 0;
+// Zuletzt geladener Stand für alle Anzeigen: neue Anzeigen (z. B. nach einem Seitenwechsel) starten damit, statt kurz
+// leer zu sein. Beim Hydrieren gilt wie auf dem Server „noch nichts geladen“ (useSyncExternalStore).
+let latest: WorkContext | null = null;
+const contextListeners = new Set<() => void>();
+
+function publish(data: WorkContext) {
+  latest = data;
+  for (const listener of contextListeners) listener();
+}
+
+function subscribeContext(listener: () => void) {
+  contextListeners.add(listener);
+  return () => {
+    contextListeners.delete(listener);
+  };
+}
 
 const WORK_CONTEXT_EVENT = "carecore:work-context";
 
@@ -82,6 +98,9 @@ export function loadWorkContext(refresh = false) {
     pending = fetch("/api/work-context", { cache: "no-store" })
       .then((response) => (response.ok ? (response.json() as Promise<WorkContext>) : null))
       .catch(() => null);
+    void pending.then((data) => {
+      if (data) publish(data);
+    });
     // Nach einer Änderung (z. B. Name der Einrichtung) übernehmen alle Anzeigen den neuen Stand ohne Neuladen.
     if (refresh)
       void pending.then(
@@ -92,15 +111,13 @@ export function loadWorkContext(refresh = false) {
 }
 
 export function useWorkContext() {
-  const [context, setContext] = useState<WorkContext | null>(null);
+  const context = useSyncExternalStore(
+    subscribeContext,
+    () => latest,
+    () => null,
+  );
   useEffect(() => {
-    let live = true;
-    void loadWorkContext().then((data) => live && setContext(data));
-    const stop = onWorkContextRefresh(setContext);
-    return () => {
-      live = false;
-      stop();
-    };
+    void loadWorkContext();
   }, []);
   return context;
 }

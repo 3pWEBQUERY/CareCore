@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import AppFrame from "./components/app-frame";
 import DialogFocus from "./components/dialog-focus";
 import OfflineSync from "./components/offline-sync";
 import Translator from "./components/translator";
@@ -48,7 +49,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Script id="carecore-language" strategy="beforeInteractive">
           {`try{var l=localStorage.getItem("carecore-language");if(l&&l!=="de"){var d=document.documentElement;d.classList.add("i18n-pending");setTimeout(function(){d.classList.remove("i18n-pending")},1500)}}catch(e){}`}
         </Script>
-        {children}
+        <AppFrame>{children}</AppFrame>
         <OfflineSync />
         <Translator />
         <DialogFocus />
