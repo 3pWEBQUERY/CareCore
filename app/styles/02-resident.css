@@ -65,6 +65,10 @@
   height: 24px;
   object-fit: contain;
 }
+.sidebar-flyout-icon .sidebar-kompass-icon {
+  width: 22px;
+  height: 22px;
+}
 .sidebar-flyout-head span,
 .sidebar-flyout-head strong {
   display: block;

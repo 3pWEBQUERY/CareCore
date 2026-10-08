@@ -105,7 +105,11 @@ const icons = {
   care: HandHeart,
 } satisfies Record<Exclude<ModuleIconName, "caretDown" | "sidebar">, typeof House>;
 
-function RailIcon({ name }: { name: ModuleIconName | "carecoreOne" }) {
+type RailIconName = ModuleIconName | "carecoreOne" | "kompass";
+
+function RailIcon({ name }: { name: RailIconName }) {
+  // Logo von CareCore Kompass als Maske: nimmt die Farbe der übrigen Symbole an (auch beim Überfahren und aktiv).
+  if (name === "kompass") return <span className="sidebar-kompass-icon" aria-hidden="true" />;
   if (name === "carecoreOne")
     return (
       <Image
@@ -255,9 +259,10 @@ export default function AppSidebar({ activeModule, activeChild, onToast }: AppSi
   }
 
   const activeGroup = visibleNavigation.find((group) => group.modules.some((module) => module.id === activeModule));
-  const groupIcons: Record<string, ModuleIconName | "carecoreOne"> = {
+  const groupIcons: Record<string, RailIconName> = {
     operations: "calendar",
     clinical: "residents",
+    kompass: "kompass",
     workforce: "team",
     "carecore-one": "carecoreOne",
     management: "chart",

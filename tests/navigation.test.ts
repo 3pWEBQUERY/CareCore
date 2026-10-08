@@ -64,3 +64,18 @@ test("CareCore One bundles calendar, messenger and cloud", () => {
   assert.deepEqual(activePage("/c/carecore-one/ablage"), { moduleId: "cloud", child: "Gemeinsame Ablage" });
   assert.deepEqual(activePage("/c/carecore-one/cloud"), { moduleId: "cloud", child: "Meine Dateien" });
 });
+
+test("CareCore Kompass is its own main area right after Bewohner & Pflege", () => {
+  const groups = sidebarNavigation(["rai.manage"]);
+  const ids = groups.map((group) => group.id);
+  assert.equal(ids[ids.indexOf("clinical") + 1], "kompass");
+  const kompass = groups.find((group) => group.id === "kompass");
+  assert.equal(kompass?.label, "CareCore Kompass");
+  assert.deepEqual(
+    kompass?.modules.map((entry) => entry.id),
+    ["rai"],
+  );
+  assert.ok(!groups.find((group) => group.id === "clinical")?.modules.some((entry) => entry.id === "rai"));
+  assert.ok(!sidebarNavigation([]).some((group) => group.id === "kompass"));
+  assert.deepEqual(activePage("/c/kompass/abklaerung"), { moduleId: "rai", child: "Abklärung" });
+});

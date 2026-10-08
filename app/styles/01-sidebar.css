@@ -515,6 +515,14 @@ input:focus-visible {
 .sidebar-rail-button.active .sidebar-carecore-one-icon {
   filter: brightness(0) invert(1);
 }
+.sidebar-kompass-icon {
+  width: 23px;
+  height: 23px;
+  display: block;
+  background: currentColor;
+  -webkit-mask: url("/icons/kompass.png") center / contain no-repeat;
+  mask: url("/icons/kompass.png") center / contain no-repeat;
+}
 .sidebar-rail-badge {
   min-width: 16px;
   height: 16px;
