@@ -63,7 +63,7 @@ export type NavModule = {
 
 export type NavGroup = { id: string; label: string; modules: NavModule[] };
 
-// Grouped along the working day: my shift, the resident and the care process,
+// Grouped along the working day: my shift, the resident and the care process, CareCore Kompass,
 // team and knowledge, the CareCore One tools, then leadership. Every module is one click in the sidebar;
 // its pages are tabs on the page itself, so there are no nested submenus.
 export const navigation: NavGroup[] = [
@@ -148,6 +148,13 @@ export const navigation: NavGroup[] = [
         icon: "activity",
         children: ["Angebote", "Teilnahme je Person"],
       },
+    ],
+  },
+  {
+    // Its own main area, right after Bewohner & Pflege.
+    id: "kompass",
+    label: "CareCore Kompass",
+    modules: [
       {
         id: "rai",
         label: "Kompass",

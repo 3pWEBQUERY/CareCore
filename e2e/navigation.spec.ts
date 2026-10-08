@@ -92,3 +92,25 @@ test("Bezeichnung der betreuten Personen umstellen: Patient", async ({ page }) =
   }
   expect(errors).toEqual([]);
 });
+
+// CareCore Kompass hat einen eigenen Hauptbereich in der Seitenleiste, gleich nach Bewohner & Pflege, mit eigenem Logo.
+test("Seitenleiste: CareCore Kompass als eigener Hauptbereich nach Bewohner & Pflege", async ({ page }) => {
+  await login(page, ADMIN);
+  const errors = watchErrors(page);
+  await page.goto("/c");
+  const rail = page.locator(".sidebar-rail-scroll > button");
+  const labels = await rail.evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label")));
+  expect(labels[labels.indexOf("Bewohner & Pflege") + 1]).toBe("CareCore Kompass");
+  const button = page.getByRole("button", { name: "CareCore Kompass", exact: true });
+  await expect(button.locator(".sidebar-kompass-icon")).toBeVisible();
+  await button.click();
+  const flyout = page.getByRole("complementary", { name: "CareCore Kompass Untermenü" });
+  await expect(flyout.locator(".sidebar-flyout-icon .sidebar-kompass-icon")).toBeVisible();
+  await flyout
+    .locator(".sidebar-flyout-module:not(.sidebar-flyout-recent)")
+    .getByRole("button", { name: "Kompass" })
+    .click();
+  await expect(page).toHaveURL(/\/c\/kompass$/);
+  await expect(button).toHaveClass(/active/);
+  expect(errors).toEqual([]);
+});
