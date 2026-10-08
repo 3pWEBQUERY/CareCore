@@ -98,11 +98,12 @@ test("Seitenleiste: CareCore Kompass als eigener Hauptbereich nach Bewohner & Pf
   await login(page, ADMIN);
   const errors = watchErrors(page);
   await page.goto("/c");
+  // Erst nach dem Laden der Berechtigungen erscheint der Bereich (Kompass braucht rai.manage).
+  const button = page.getByRole("button", { name: "CareCore Kompass", exact: true });
+  await expect(button.locator(".sidebar-kompass-icon")).toBeVisible();
   const rail = page.locator(".sidebar-rail-scroll > button");
   const labels = await rail.evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label")));
   expect(labels[labels.indexOf("Bewohner & Pflege") + 1]).toBe("CareCore Kompass");
-  const button = page.getByRole("button", { name: "CareCore Kompass", exact: true });
-  await expect(button.locator(".sidebar-kompass-icon")).toBeVisible();
   await button.click();
   const flyout = page.getByRole("complementary", { name: "CareCore Kompass Untermenü" });
   await expect(flyout.locator(".sidebar-flyout-icon .sidebar-kompass-icon")).toBeVisible();
