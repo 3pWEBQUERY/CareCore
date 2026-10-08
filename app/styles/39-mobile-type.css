@@ -954,9 +954,6 @@
   .rai-refresh-preview > span small {
     font-size: 11.5px;
   }
-  .intelligence-trust {
-    font-size: 12px;
-  }
   .intelligence-status {
     font-size: 11.5px;
   }
@@ -973,18 +970,6 @@
     font-size: 12px;
   }
   .intelligence-note {
-    font-size: 12px;
-  }
-  .intelligence-draft-list strong {
-    font-size: 12px;
-  }
-  .intelligence-draft-list small {
-    font-size: 11.5px;
-  }
-  .intelligence-draft-list em {
-    font-size: 11px;
-  }
-  .intelligence-review li {
     font-size: 12px;
   }
   .settings-nav nav button {
