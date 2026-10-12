@@ -18,7 +18,7 @@ export const IMPORT_COLUMNS: Record<ImportKind, Column[]> = {
     { key: "lastName", label: "Nachname", required: true },
     { key: "birthDate", label: "Geburtsdatum", required: true, hint: "TT.MM.JJJJ" },
     { key: "gender", label: "Geschlecht", required: false, hint: "weiblich, männlich, divers" },
-    { key: "unit", label: "Wohnbereich", required: true, hint: "Name wie in CareCore" },
+    { key: "unit", label: "Wohnbereich", required: true, hint: "Name wie in CareOS" },
     { key: "room", label: "Zimmer", required: true },
     { key: "admissionDate", label: "Eintritt", required: true, hint: "TT.MM.JJJJ" },
     { key: "status", label: "Status", required: false, hint: "aktiv oder geplant" },
@@ -31,7 +31,7 @@ export const IMPORT_COLUMNS: Record<ImportKind, Column[]> = {
     { key: "jobTitle", label: "Funktion", required: false },
     { key: "phone", label: "Telefon", required: false },
     { key: "email", label: "E-Mail", required: false },
-    { key: "unit", label: "Wohnbereich", required: false, hint: "Name wie in CareCore" },
+    { key: "unit", label: "Wohnbereich", required: false, hint: "Name wie in CareOS" },
   ],
 };
 
@@ -124,7 +124,7 @@ async function validateResidents(ctx: ApiContext, rows: ImportRow[]) {
     if (v.room.length > 80) row.errors.push("Zimmer zu lang (höchstens 80 Zeichen)");
     if (birth && v.firstName && v.lastName) {
       const key = `${`${v.firstName} ${v.lastName}`.toLowerCase()}|${birth}`;
-      if (existing.has(key)) row.errors.push("Ist bereits in CareCore erfasst");
+      if (existing.has(key)) row.errors.push("Ist bereits in CareOS erfasst");
       else if (seen.has(key)) row.errors.push("Steht doppelt in der Datei");
       seen.add(key);
     }

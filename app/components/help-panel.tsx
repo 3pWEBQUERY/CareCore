@@ -16,6 +16,18 @@ export const openHelp = () => window.dispatchEvent(new Event(HELP_EVENT));
 
 const guides = (t: Terms): Array<{ icon: ModuleIconName; title: string; steps: string[] }> => [
   {
+    icon: "apps",
+    title: "So funktioniert CareOS",
+    steps: [
+      "CareOS ist wie ein Tablet: Jeder Bereich ist eine App mit eigener Farbe und eigenem Symbol.",
+      "„Start“ führt immer zurück zur Startseite. Dort stehen alle deine Apps.",
+      "Die Leiste (am Computer links, auf dem Handy unten) zeigt immer dieselben Apps an derselben Stelle.",
+      "„Alle Apps“ zeigt alle Apps mit einem kurzen Satz, wofür sie da sind. Oben kannst du eine App suchen.",
+      "In einer App stehen die Seiten oben als Knöpfe nebeneinander. Die gewählte Seite ist farbig.",
+      "Eine rote Zahl an einer App heisst: Hier wartet etwas auf dich.",
+    ],
+  },
+  {
     icon: "residents",
     title: `${t.oneOblique} wählen`,
     steps: [
@@ -28,7 +40,7 @@ const guides = (t: Terms): Array<{ icon: ModuleIconName; title: string; steps: s
     icon: "note",
     title: "Dokumentieren",
     steps: [
-      "Unten „Doku“ (Handy) oder „Dokumentieren“ in der Seitenleiste öffnen.",
+      "In der Leiste auf „Doku“ tippen (grünes Symbol).",
       "Art und Einordnung wählen, Text eingeben und speichern.",
       `„Speichern & nächster ${t.one}“ springt direkt zur nächsten Person.`,
     ],
@@ -37,7 +49,7 @@ const guides = (t: Terms): Array<{ icon: ModuleIconName; title: string; steps: s
     icon: "med",
     title: "Medikamentenrunde",
     steps: [
-      "„Medikamentenrunde“ öffnen; die Zahl zeigt überfällige Gaben.",
+      "In der Leiste „Medikamente“ öffnen (rosa Symbol); die Zahl zeigt überfällige Gaben.",
       "Pro Gabe „Gegeben“ oder mit Begründung „Nicht gegeben“ dokumentieren.",
       "Reservemedikation unter „Reserven“ erfassen.",
     ],
@@ -46,7 +58,7 @@ const guides = (t: Terms): Array<{ icon: ModuleIconName; title: string; steps: s
     icon: "handover",
     title: "Übergabe",
     steps: [
-      "„Mein Dienst · Übergabe“ zeigt die offenen Punkte seit deinem letzten Dienst.",
+      "App „Mein Dienst“ öffnen, oben „Übergabe“ wählen: Dort stehen die offenen Punkte seit deinem letzten Dienst.",
       "Punkte lesen und bestätigen, eigene Hinweise für den nächsten Dienst erfassen.",
     ],
   },
@@ -115,7 +127,7 @@ function HelpContent({ onClose }: { onClose: () => void }) {
       <section className="area-editor-panel help-panel" role="dialog" aria-modal="true" aria-labelledby="help-title">
         <header className="area-editor-header">
           <div>
-            <p className="eyebrow">CareCore</p>
+            <p className="eyebrow">CareOS</p>
             <h2 id="help-title">Hilfe & Support</h2>
             <p>Kurzanleitungen, Tastaturkürzel und direkter Kontakt zur Administration.</p>
           </div>

@@ -46,7 +46,7 @@ export default function GoalsView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Plan"
+        eyebrow="Pflegeplanung"
         title="Ziele & Massnahmen"
         description="Alle aktiven Pflegeziele im Haus – fällige Überprüfungen und fehlende Massnahmen auf einen Blick."
       />

@@ -55,7 +55,7 @@ export default function ResidentsPage() {
           <main className="workspace residents-workspace">
             <section className="page-heading residents-heading" aria-labelledby="residents-page-title">
               <div className="heading-copy">
-                <p className="eyebrow">CareCore {t.many}</p>
+                <p className="eyebrow">CareOS {t.many}</p>
                 <h1 id="residents-page-title">{t.many}</h1>
                 <p>Zentrale {t.prefix}akte für den gesamten Wohnbereich.</p>
               </div>

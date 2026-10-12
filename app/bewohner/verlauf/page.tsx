@@ -106,7 +106,7 @@ export default function ResidentHistoryPage() {
         <main className="workspace module-workspace">
           <section className="page-heading residents-heading" aria-labelledby="resident-history-title">
             <div className="heading-copy">
-              <p className="eyebrow">CareCore {t.many}</p>
+              <p className="eyebrow">CareOS {t.many}</p>
               <h1 id="resident-history-title">{t.prefix}verlauf &amp; Archiv</h1>
               <p>Alle aktiven und ehemaligen {t.prefix}akten des gesamten Hauses an einem Ort.</p>
             </div>

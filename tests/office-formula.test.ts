@@ -68,7 +68,7 @@ test("Formeln: Funktionen mit deutschen und englischen Namen, Bereiche und Bedin
   assert.equal(run('UND(A1>1;B1="Ja")', cells), true);
   assert.equal(run('VERKETTEN("A";"-";1)'), "A-1");
   assert.equal(run('LINKS("Pflege";3)&RECHTS("Haus";2)'), "Pflus");
-  assert.equal(run('TEIL("CareCore";5;4)'), "Core");
+  assert.equal(run('TEIL("CareOS";5;2)'), "OS");
   assert.equal(run('GROSS("äb")'), "ÄB");
   assert.equal(run("MEDIAN(1;9;3)"), 3);
 });

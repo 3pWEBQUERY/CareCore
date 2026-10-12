@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 import { Icon } from "./dashboard-shared";
+import { AppGrid, openAppLauncher, useApps } from "@/app/components/app-launcher";
+import { useNavigationBadges } from "@/app/components/care-context";
 import type { DashboardState } from "./use-dashboard";
 
 export function HomeHero({ r, children }: { r: DashboardState; children: ReactNode }) {
@@ -9,10 +11,10 @@ export function HomeHero({ r, children }: { r: DashboardState; children: ReactNo
   return (
     <section className="home-hero" aria-labelledby="home-hero-title">
       {/* Ohne Begrüssung behält die Seite eine Hauptüberschrift für Screenreader. */}
-      {hiddenWidgets.includes("greeting") && <h1 className="home-hero-hidden-title">Mein Arbeitsplatz</h1>}
+      {hiddenWidgets.includes("greeting") && <h1 className="home-hero-hidden-title">Startseite</h1>}
       <div className="home-hero-top">
         <span className="home-kicker" id="home-hero-title">
-          <Icon name="pulse" /> Mein Arbeitsplatz
+          <Icon name="home" /> Startseite
         </span>
         <div className="home-hero-tools">
           <span className="home-scope">
@@ -26,7 +28,7 @@ export function HomeHero({ r, children }: { r: DashboardState; children: ReactNo
             onClick={() => setDashboardEditing((value) => !value)}
           >
             <Icon name="settings" />
-            {dashboardEditing ? "Fertig" : "Arbeitsplatz bearbeiten"}
+            {dashboardEditing ? "Fertig" : "Startseite anpassen"}
           </button>
         </div>
       </div>
@@ -58,44 +60,25 @@ export function HomeGreetingCard({ r }: { r: DashboardState }) {
   );
 }
 
-// Bausteine des Arbeitsplatzes, die bisher fest in der Begrüssung standen; sie lassen sich jetzt wie alle anderen
-// verschieben, in der Breite ändern und ausblenden.
+// Startbildschirm von CareOS: alle Apps, die die Person nutzen darf, als grosse farbige Kacheln mit Zählern
+// (wie auf einem Tablet). Dieselben Kacheln stehen unter „Alle Apps“ in der Leiste.
 export function HomeShortcutsCard({ r }: { r: DashboardState }) {
   const { router } = r;
+  const { groups, terms } = useApps();
+  const badges = useNavigationBadges();
   return (
-    <section className="home-desk-card home-shortcuts" aria-labelledby="home-shortcuts-title">
+    <section className="home-desk-card home-shortcuts careos-home-apps" aria-labelledby="home-shortcuts-title">
       <div className="home-card-head">
         <div>
-          <p className="eyebrow">Direkt weiter</p>
-          <h2 id="home-shortcuts-title">Schnellzugriff</h2>
+          <p className="eyebrow">Antippen zum Öffnen</p>
+          <h2 id="home-shortcuts-title">Meine Apps</h2>
         </div>
-      </div>
-      <div className="home-shortcut-grid">
-        <button type="button" onClick={() => router.push("/c/bewohner")}>
-          <span>
-            <Icon name="residents" />
-          </span>
-          {r.terms.many}
-        </button>
-        <button type="button" onClick={() => router.push("/c/pflegedokumentation")}>
-          <span>
-            <Icon name="note" />
-          </span>
-          Dokumentation
-        </button>
-        <button type="button" onClick={() => router.push("/c/betrieb/aufgaben")}>
-          <span>
-            <Icon name="tasks" />
-          </span>
-          Aufgaben
-        </button>
-        <button type="button" onClick={() => router.push("/c/carecore-one/kalender")}>
-          <span>
-            <Icon name="calendar" />
-          </span>
-          Kalender
+        <button className="careos-home-all" type="button" onClick={openAppLauncher} aria-haspopup="dialog">
+          <Icon name="search" />
+          App suchen
         </button>
       </div>
+      <AppGrid groups={groups} terms={terms} badges={badges} onOpen={(href) => router.push(href)} />
     </section>
   );
 }

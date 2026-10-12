@@ -51,7 +51,7 @@ export default function ActionsView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <LeadershipHeading
-        eyebrow="CareCore Quality"
+        eyebrow="Qualität"
         title="Massnahmen"
         description="Verbesserungen priorisieren, Verantwortlichkeiten klären und Wirkung messen."
         action={

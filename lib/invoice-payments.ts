@@ -280,7 +280,7 @@ export async function invoiceJournal(ctx: ApiContext, monthInput: unknown) {
 }
 
 // Anteile von Krankenversicherung, öffentlicher Hand und anderen je Person für einen Monat (aus der Berechnung; diese
-// Kostenträger erhalten keine Rechnung über CareCore, sondern werden mit dieser Liste abgerechnet).
+// Kostenträger erhalten keine Rechnung über CareOS, sondern werden mit dieser Liste abgerechnet).
 export async function payerStatement(ctx: ApiContext, monthInput: unknown) {
   assertWrite(ctx);
   const month = typeof monthInput === "string" && MONTH.test(monthInput) ? monthInput : null;

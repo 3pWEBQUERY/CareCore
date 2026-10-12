@@ -45,7 +45,7 @@ export default defineConfig({
         // E-Mail-Versand an den Test-Mailserver; Links zeigen auf die Test-App.
         SMTP_HOST: "127.0.0.1",
         SMTP_PORT: String(E2E_SMTP_PORT),
-        MAIL_FROM: "CareCore <noreply@carecore.test>",
+        MAIL_FROM: "CareOS <noreply@carecore.test>",
         APP_URL: `http://localhost:${port}`,
       },
     },

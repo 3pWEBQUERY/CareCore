@@ -143,8 +143,9 @@ export function useDashboard() {
       )
     : 8;
   const greeting = hour < 11 ? "Guten Morgen" : hour < 17 ? "Guten Tag" : "Guten Abend";
-  const firstName =
-    employeeName === "CareCore Administrator" ? employeeName : employeeName.split(" ")[0] || employeeName;
+  const firstName = /^Care(Core|OS) Administrator$/.test(employeeName)
+    ? employeeName
+    : employeeName.split(" ")[0] || employeeName;
   const openTasks = tasks.filter((item) => !item.completed);
   const nextTasks = openTasks
     .filter((item) => item.dueAt)

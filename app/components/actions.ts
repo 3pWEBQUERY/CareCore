@@ -55,7 +55,7 @@ export const CARE_ACTIONS: CareAction[] = [
     label: "Trinkmenge",
     title: "Trinkmenge erfassen",
     icon: "nutrition",
-    moduleId: "vitals",
+    moduleId: "nutrition",
     child: "Trinkprotokoll",
     keywords: ["trinken", "trinkmenge", "flüssigkeit", "getränk", "trinkprotokoll"],
   },

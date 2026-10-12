@@ -269,7 +269,7 @@ function ServicesContent({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Dokumentation"
+        eyebrow="Dokumentation"
         title="Leistungserfassung"
         description={`Erbrachte Pflegeleistungen mit der aufgewendeten Zeit je ${t.one} – vorbelegt aus erledigten Aufgaben und den Massnahmen der Pflegeplanung.`}
         action={

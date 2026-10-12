@@ -49,7 +49,7 @@ export function TaskCompleteDialog({
   return (
     <EditorDialog
       id="task-complete"
-      eyebrow="CareCore Tasks · Abschluss"
+      eyebrow="Aufgaben · Abschluss"
       title={task.title}
       description={
         documented

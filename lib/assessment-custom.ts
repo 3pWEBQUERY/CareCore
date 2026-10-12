@@ -3,10 +3,10 @@ import { ApiError, assertUuid, auditStatement, text, type ApiContext, type Row }
 import { INSTRUMENTS, type Instrument, type InstrumentItem, type RiskBand } from "@/lib/assessment-instruments";
 import { hasPermission } from "@/lib/server-data";
 
-// Eigene Einschätzungsinstrumente der Einrichtung. CareCore liefert nur frei nutzbare Instrumente mit; geschützte
+// Eigene Einschätzungsinstrumente der Einrichtung. CareOS liefert nur frei nutzbare Instrumente mit; geschützte
 // Instrumente (z. B. BESD: kommerzielle und elektronische Nutzung nur mit schriftlicher Erlaubnis der Deutschen
 // Schmerzgesellschaft) erfasst die Einrichtung selbst, wenn sie das Nutzungsrecht hat – mit Quelle und Vermerk.
-// Fragen, Punkte, Bereiche und Intervall stammen vollständig von der Einrichtung; CareCore zählt nur zusammen.
+// Fragen, Punkte, Bereiche und Intervall stammen vollständig von der Einrichtung; CareOS zählt nur zusammen.
 // Eine Änderung nach der ersten Einschätzung ergibt eine neue Fassung, damit frühere Ergebnisse nachvollziehbar bleiben.
 
 type Definition = {

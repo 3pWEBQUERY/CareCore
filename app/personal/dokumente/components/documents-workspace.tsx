@@ -16,7 +16,7 @@ export default function DocumentsWorkspace({ kind }: { kind: DocumentKind }) {
       module="docs"
       child={standards ? "Standards & Weisungen" : "Dokumente"}
       view={standards ? "standards" : "documents"}
-      eyebrow="CareCore Docs"
+      eyebrow="Dokumente"
       title={standards ? "Standards & Weisungen" : "Dokumente"}
       description={
         standards

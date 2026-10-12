@@ -46,7 +46,7 @@ export function StayDialog({
   return (
     <EditorDialog
       id="stay-dialog"
-      eyebrow={`CareCore ${t.many} · ${mode.resident.name}`}
+      eyebrow={`CareOS ${t.many} · ${mode.resident.name}`}
       title={exit ? "Austritt erfassen" : "Rückkehr erfassen"}
       description={
         exit

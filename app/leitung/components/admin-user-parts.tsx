@@ -219,7 +219,7 @@ export function Overlay({ title, onClose, children }: { title: string; onClose: 
       <section className="user-editor-panel" role="dialog" aria-modal="true">
         <header className="user-editor-header">
           <div>
-            <p className="eyebrow">CareCore Admin · Zugriffsverwaltung</p>
+            <p className="eyebrow">Administration · Zugriffsverwaltung</p>
             <h2>{title}</h2>
             <p>Änderungen werden nachvollziehbar im Änderungsprotokoll gespeichert.</p>
           </div>

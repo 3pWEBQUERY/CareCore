@@ -1,6 +1,6 @@
 // Land der Einrichtung: bestimmt die gesetzliche Einstufung des Pflegebedarfs, die Sozialversicherungsnummer, die
 // Bezeichnung der Versicherung, die Feiertage für den Dienstplan und die vorgeschlagenen Qualifikationen.
-// Quellen sind die genannten Gesetze; CareCore stuft nicht selbst ein, die Einstufung erfasst die Einrichtung.
+// Quellen sind die genannten Gesetze; CareOS stuft nicht selbst ein, die Einstufung erfasst die Einrichtung.
 
 export const COUNTRY_CODES = ["CH", "DE", "AT"] as const;
 export type CountryCode = (typeof COUNTRY_CODES)[number];

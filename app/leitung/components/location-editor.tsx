@@ -84,7 +84,7 @@ export function LocationEditor({
       <section className="area-editor-panel" role="dialog" aria-modal="true" aria-labelledby="location-editor-title">
         <header className="area-editor-header">
           <div>
-            <p className="eyebrow">CareCore Admin · Organisation</p>
+            <p className="eyebrow">Administration · Organisation</p>
             <h2 id="location-editor-title">{site ? "Standort bearbeiten" : "Standort erstellen"}</h2>
             <p>
               {site

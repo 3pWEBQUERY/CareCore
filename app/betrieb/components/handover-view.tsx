@@ -138,7 +138,7 @@ function HandoverContent({ lastShift, showToast }: { lastShift: boolean; showToa
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Übergabe"
+        eyebrow="Übergabe"
         title={lastShift ? "Seit letztem Dienst" : "Meine Übergabe"}
         description={
           lastShift

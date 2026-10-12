@@ -174,7 +174,7 @@ function PortalAdminBody({ showToast }: { showToast: ShowToast }) {
     <main className="workspace leadership-workspace leadership-users portal-admin">
       <header className="leadership-heading page-heading">
         <div className="heading-copy">
-          <p className="eyebrow">CareCore Admin</p>
+          <p className="eyebrow">Administration</p>
           <h1>Portal</h1>
           <p>Zugänge für Angehörige und Ärztinnen/Ärzte mit individuellen Freigaben je {t.one} oder Wohnbereich.</p>
         </div>

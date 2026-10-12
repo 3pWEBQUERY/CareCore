@@ -99,7 +99,7 @@ function VisitContent({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Dokumentation"
+        eyebrow="Dokumentation"
         title="Visite vorbereiten"
         description={`Einträge „Für Visite“ gesammelt je Hausärztin bzw. Hausarzt – zum Mitnehmen, Abarbeiten und Dokumentieren der Rückmeldung.`}
       />

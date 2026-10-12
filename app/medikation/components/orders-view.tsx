@@ -48,7 +48,7 @@ export default function OrdersView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Med"
+        eyebrow="Medikamente"
         title="Bestellungen"
         description="Medikamente bei der Apotheke bestellen; die Apotheke antwortet im Apothekenportal."
         action={{

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { FAGE, login, watchErrors } from "./support";
 
-// Arbeitsplatz: alle Bausteine (auch Schnellzugriff, Notizen, Heute wichtig und Neuigkeiten) lassen sich verschieben,
+// Startseite: alle Bausteine (auch Meine Apps, Notizen, Heute wichtig und Neuigkeiten) lassen sich verschieben,
 // in der Breite ändern, zwischen Kopf- und Hauptbereich wechseln und ausblenden; das Layout bleibt nach dem Neuladen.
 test("Arbeitsplatz: alle Bausteine verschieben, Breite und Bereich wählen, ausblenden, gespeichert", async ({
   page,
@@ -22,7 +22,7 @@ test("Arbeitsplatz: alle Bausteine verschieben, Breite und Bereich wählen, ausb
   await expect.poll(() => ids(top)).toEqual(["greeting", "shortcuts", "notes", "today"]);
   expect((await ids(main))[0]).toBe("news");
 
-  await page.getByRole("button", { name: "Arbeitsplatz bearbeiten" }).click();
+  await page.getByRole("button", { name: "Startseite anpassen" }).click();
   // Notizen nach hinten, dann in den Hauptbereich und auf halbe Breite.
   await page.getByRole("button", { name: "Meine Notizen nach hinten" }).click();
   await expect.poll(() => ids(top)).toEqual(["greeting", "shortcuts", "today", "notes"]);
@@ -33,9 +33,9 @@ test("Arbeitsplatz: alle Bausteine verschieben, Breite und Bereich wählen, ausb
   await page.getByRole("combobox", { name: "Breite von Meine Notizen" }).click();
   await page.getByRole("option", { name: "½" }).click();
   await expect(main.locator('[data-widget="notes"]')).toHaveClass(/span-6/);
-  // Neuigkeiten in den Kopfbereich, Schnellzugriff ausblenden, Begrüssung in den Hauptbereich.
+  // Neuigkeiten in den Kopfbereich, Meine Apps ausblenden, Begrüssung in den Hauptbereich.
   await page.getByRole("button", { name: /Neuigkeiten in Kopfbereich/ }).click();
-  await page.getByRole("button", { name: "Schnellzugriff ausblenden" }).click();
+  await page.getByRole("button", { name: "Meine Apps ausblenden" }).click();
   await page.getByRole("button", { name: "Begrüssung in Hauptbereich" }).click();
   await expect.poll(() => ids(top)).toEqual(["today", "news"]);
   expect(await ids(main)).toContain("greeting");
@@ -58,7 +58,7 @@ test("Arbeitsplatz: alle Bausteine verschieben, Breite und Bereich wählen, ausb
   await expect(page.locator(".home-shortcuts")).toHaveCount(0);
 
   // Standard wiederherstellen.
-  await page.getByRole("button", { name: "Arbeitsplatz bearbeiten" }).click();
+  await page.getByRole("button", { name: "Startseite anpassen" }).click();
   await page.getByRole("button", { name: "Standard wiederherstellen" }).click();
   await expect.poll(() => ids(top)).toEqual(["greeting", "shortcuts", "notes", "today"]);
   expect(errors).toEqual([]);

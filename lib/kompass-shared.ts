@@ -1,4 +1,4 @@
-// CareCore Kompass: Typen für API und Oberfläche.
+// CareOS Kompass: Typen für API und Oberfläche.
 import type { ContextKey, KompassData } from "@/lib/kompass-instrument";
 import type { RaiPerson } from "@/lib/rai-shared";
 
@@ -36,7 +36,7 @@ export type KompassDetail = {
   context: KompassContext;
   settings: { admissionDays: number | null; intervalMonths: number | null };
   today: string;
-  // Ob die Fachperson einen Entwurf für das Gesamtbild mit CareCore KI anfordern kann.
+  // Ob die Fachperson einen Entwurf für das Gesamtbild mit CareOS KI anfordern kann.
   aiDraft: boolean;
 };
 

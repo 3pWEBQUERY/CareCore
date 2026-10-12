@@ -43,12 +43,25 @@ export type ModuleIconName =
   | "drop"
   | "shower"
   | "toilet"
-  | "care";
+  | "care"
+  | "news"
+  | "book"
+  | "message"
+  | "cloud"
+  | "staff"
+  | "apps"
+  | "help";
 
 export type NavModule = {
   id: string;
   label: string;
   icon: ModuleIconName;
+  // Farbton der App (0–360): Symbol, Kachel und Kopfzeile tragen überall dieselbe Farbe – wiedererkennen statt lesen.
+  hue: number;
+  // Kurzer Name für die schmale Leiste (sonst der Name).
+  shortLabel?: string;
+  // Ein kurzer Satz in einfacher Sprache: wofür die App da ist (Startbildschirm und „Alle Apps“).
+  hint: string;
   // Pages of the module, shown as tabs at the top of the page (the sidebar links the module only).
   children: string[];
   badge?: number;
@@ -63,9 +76,10 @@ export type NavModule = {
 
 export type NavGroup = { id: string; label: string; modules: NavModule[] };
 
-// Grouped along the working day: my shift, the resident and the care process, CareCore Kompass,
-// team and knowledge, the CareCore One tools, then leadership. Every module is one click in the sidebar;
-// its pages are tabs on the page itself, so there are no nested submenus.
+// CareOS ist wie das Betriebssystem eines Tablets aufgebaut: jeder Bereich ist eine „App“ mit eigenem Namen, Symbol und
+// eigener Farbe. Alle Apps stehen auf dem Startbildschirm und unter „Alle Apps“, gegliedert entlang des Arbeitstags:
+// mein Dienst, Bewohner und Pflege, CareOS Kompass, Team und Wissen, Kommunikation, dann die Leitung. Eine App öffnet
+// sich mit einem Klick; ihre Seiten sind Reiter oben auf der Seite – es gibt keine verschachtelten Menüs.
 export const navigation: NavGroup[] = [
   {
     id: "operations",
@@ -75,13 +89,24 @@ export const navigation: NavGroup[] = [
         id: "shift",
         label: "Mein Dienst",
         icon: "shift",
+        hue: 24,
+        hint: "Mein Tag, Übergabe und was seit dem letzten Dienst passiert ist",
         children: ["Heute", "Übergabe", "Seit letztem Dienst", "Verlauf"],
       },
-      { id: "tasks", label: "Aufgaben", icon: "tasks", children: ["Meine Aufgaben", "Team"] },
+      {
+        id: "tasks",
+        label: "Aufgaben",
+        icon: "tasks",
+        hue: 40,
+        hint: "Was ich heute erledigen muss",
+        children: ["Meine Aufgaben", "Team"],
+      },
       {
         id: "schedule",
         label: "Mein Dienstplan",
         icon: "calendar",
+        hue: 228,
+        hint: "Wann ich arbeite, Wünsche und Zeiten",
         children: ["Meine Dienste", "Teamplan", "Anträge", "Zeiten"],
       },
     ],
@@ -94,6 +119,8 @@ export const navigation: NavGroup[] = [
         id: "residents",
         label: "Bewohner",
         icon: "residents",
+        hue: 212,
+        hint: "Alle Bewohner und ihre Pflegeakte",
         children: [
           "Übersicht",
           "Pflegeakten",
@@ -109,13 +136,18 @@ export const navigation: NavGroup[] = [
       {
         id: "chart",
         label: "Dokumentation",
+        shortLabel: "Doku",
         icon: "note",
+        hue: 150,
+        hint: "Pflegebericht schreiben und nachlesen",
         children: ["Schnelldokumentation", "Nachweis", "Verlauf", "Lagerung", "Ausscheidung", "Visite", "Leistungen"],
       },
       {
         id: "med",
-        label: "Medikation",
+        label: "Medikamente",
         icon: "med",
+        hue: 330,
+        hint: "Medikamente richten, geben und kontrollieren",
         children: [
           "Medikamentenrunde",
           "Medikamentenplan",
@@ -130,35 +162,58 @@ export const navigation: NavGroup[] = [
       },
       {
         id: "vitals",
-        label: "Vitalwerte & Ernährung",
+        label: "Vitalwerte",
         icon: "vitals",
-        children: ["Vitalwerte", "Entwicklung", "Trinkprotokoll", "Ernährungsplan", "Grenzwerte"],
+        hue: 356,
+        hint: "Blutdruck, Puls, Gewicht und mehr messen",
+        children: ["Vitalwerte", "Entwicklung", "Grenzwerte"],
       },
-      { id: "wounds", label: "Wunden", icon: "wounds", children: ["Wundübersicht", "Dokumentation"] },
+      {
+        id: "nutrition",
+        label: "Essen & Trinken",
+        icon: "nutrition",
+        hue: 88,
+        hint: "Trinkmenge und Ernährung festhalten",
+        children: ["Trinkprotokoll", "Ernährungsplan"],
+      },
+      {
+        id: "wounds",
+        label: "Wunden",
+        icon: "wounds",
+        hue: 14,
+        hint: "Wunden beschreiben, fotografieren, verfolgen",
+        children: ["Wundübersicht", "Dokumentation"],
+      },
       {
         id: "plan",
-        label: "Planung & Einschätzungen",
+        label: "Pflegeplanung",
         icon: "plan",
+        hue: 262,
+        hint: "Ziele, Massnahmen und Einschätzungen",
         children: ["Pflegeplanung", "Ziele & Massnahmen", "Auswertung", "Vorlagen", "Einschätzungen", "Fälligkeiten"],
         childPermissions: { Vorlagen: "quality.manage" },
       },
       {
         id: "activities",
-        label: "Alltag & Aktivierung",
+        label: "Aktivitäten",
         icon: "activity",
+        hue: 300,
+        hint: "Angebote im Alltag und wer teilnimmt",
         children: ["Angebote", "Teilnahme je Person"],
       },
     ],
   },
   {
-    // Its own main area, right after Bewohner & Pflege.
+    // Eigener Hauptbereich, gleich nach Bewohner & Pflege.
     id: "kompass",
-    label: "CareCore Kompass",
+    label: "CareOS Kompass",
     modules: [
       {
         id: "rai",
         label: "Kompass",
         icon: "compass",
+        hue: 180,
+        hint: "Pflegebedarf abklären und Berichte",
         permission: "rai.manage",
         children: ["Übersicht", "Abklärung", "Fälligkeiten", "Berichte"],
       },
@@ -168,24 +223,61 @@ export const navigation: NavGroup[] = [
     id: "workforce",
     label: "Team & Wissen",
     modules: [
-      { id: "team", label: "Team", icon: "team", children: ["Neuigkeiten"] },
-      { id: "learn", label: "Schulungen", icon: "learn", children: ["Meine Schulungen", "Pflichtnachweise"] },
+      {
+        id: "team",
+        label: "Neuigkeiten",
+        icon: "news",
+        hue: 196,
+        hint: "Mitteilungen für das ganze Team",
+        children: ["Neuigkeiten"],
+      },
+      {
+        id: "learn",
+        label: "Schulungen",
+        icon: "learn",
+        hue: 280,
+        hint: "Kurse besuchen und Nachweise",
+        children: ["Meine Schulungen", "Pflichtnachweise"],
+      },
       {
         id: "docs",
         label: "Dokumente",
-        icon: "docs",
+        icon: "book",
+        hue: 238,
+        hint: "Standards, Weisungen und Formulare",
         children: ["Standards & Weisungen", "Dokumente"],
       },
     ],
   },
   {
-    // Everyday tools for the whole house: calendar, messenger and file storage.
+    // Werkzeuge für das ganze Haus: Kalender, Nachrichten und Dateien.
     id: "carecore-one",
-    label: "CareCore One",
+    label: "Kommunikation",
     modules: [
-      { id: "one-calendar", label: "Kalender", icon: "calendar", children: ["Kalender", "Fahrdienst"] },
-      { id: "messenger", label: "Messenger", icon: "team", children: ["Nachrichten", "Portal-Nachrichten"] },
-      { id: "cloud", label: "Cloud", icon: "docs", children: ["Gemeinsame Ablage", "Meine Dateien"] },
+      {
+        id: "messenger",
+        label: "Nachrichten",
+        icon: "message",
+        hue: 165,
+        hint: "Mit Kolleginnen, Kollegen und Angehörigen schreiben",
+        children: ["Nachrichten", "Portal-Nachrichten"],
+      },
+      {
+        id: "one-calendar",
+        label: "Kalender",
+        icon: "calendar",
+        hue: 250,
+        hint: "Termine im Haus und Fahrdienst",
+        children: ["Kalender", "Fahrdienst"],
+      },
+      {
+        id: "cloud",
+        label: "Dateien",
+        icon: "cloud",
+        hue: 204,
+        hint: "Gemeinsame und eigene Dateien",
+        children: ["Gemeinsame Ablage", "Meine Dateien"],
+      },
     ],
   },
   {
@@ -196,6 +288,8 @@ export const navigation: NavGroup[] = [
         id: "quality",
         label: "Qualität & Kennzahlen",
         icon: "quality",
+        hue: 140,
+        hint: "Ereignisse, Massnahmen und Zahlen",
         children: [
           "Ereignisse",
           "Massnahmen",
@@ -224,15 +318,19 @@ export const navigation: NavGroup[] = [
       },
       {
         id: "roster",
-        label: "Dienstplan",
+        label: "Dienstplanung",
         icon: "calendar",
+        hue: 232,
+        hint: "Dienstplan für das Team erstellen",
         permission: "schedule.manage",
         children: ["Planung", "Anträge", "Arbeitszeit", "Einstellungen", "Protokoll"],
       },
       {
         id: "staff",
         label: "Mitarbeitende",
-        icon: "team",
+        icon: "staff",
+        hue: 190,
+        hint: "Team, Einarbeitung und Rollen",
         children: ["Mitarbeitende", "Aufgaben", "Einarbeitung", "Profile & Rollen"],
         childPermissions: {
           Mitarbeitende: "team.manage",
@@ -245,6 +343,8 @@ export const navigation: NavGroup[] = [
         id: "admin",
         label: "Administration",
         icon: "settings",
+        hue: 215,
+        hint: "Einrichtung, Portal, Sprachen und Daten",
         permission: "administration.manage",
         children: [
           "Organisation",
@@ -260,12 +360,14 @@ export const navigation: NavGroup[] = [
   },
   {
     id: "intelligence",
-    label: "CareCore KI",
+    label: "CareOS KI",
     modules: [
       {
         id: "ai",
-        label: "CareCore KI",
+        label: "CareOS KI",
         icon: "ai",
+        hue: 270,
+        hint: "Fragen stellen und Texte entwerfen lassen",
         permission: "ai.use",
         hiddenInSidebar: true,
         children: ["Assistenz", "KI-Entwürfe"],
@@ -327,10 +429,9 @@ const routes: Record<string, Record<string, string>> = {
   vitals: {
     Vitalwerte: "/vitalwerte",
     Entwicklung: "/vitalwerte/entwicklung",
-    Trinkprotokoll: "/ernaehrung/trinkprotokoll",
-    Ernährungsplan: "/ernaehrung",
     Grenzwerte: "/vitalwerte/grenzwerte",
   },
+  nutrition: { Trinkprotokoll: "/ernaehrung/trinkprotokoll", Ernährungsplan: "/ernaehrung" },
   wounds: { Wundübersicht: "/wundmanagement", Dokumentation: "/wundmanagement/dokumentation" },
   plan: {
     Pflegeplanung: "/pflegeplanung",
@@ -441,7 +542,7 @@ export const sidebarNavigation = (permissions?: string[] | null) =>
 
 export type BadgeKey = "tasks" | "handover" | "medRound" | "messages";
 
-// Most used functions of a shift: one click from the sidebar, with live counts.
+// Most used functions of a shift: keyboard shortcuts and live counts on their tabs.
 export type QuickLink = {
   moduleId: string;
   child: string;
@@ -483,8 +584,14 @@ export const moduleBadges = (moduleId: string): BadgeKey[] => [
   ...quickLinks.filter((link) => link.moduleId === moduleId && link.badge).map((link) => link.badge!),
   ...(moduleOnlyBadges[moduleId] ?? []),
 ];
-export const groupBadges = (group: NavGroup): BadgeKey[] =>
-  group.modules.flatMap((module) => moduleOnlyBadges[module.id] ?? []);
+
+// Die Leiste von CareOS (am Computer links, auf dem Handy unten): immer dieselben Apps an derselben Stelle, jede mit
+// Symbol und Namen. Alles Weitere öffnet „Alle Apps“. Gezeigt wird nur, was die Person nutzen darf.
+export const DOCK_APPS = ["shift", "residents", "chart", "med", "tasks", "messenger"] as const;
+export const MOBILE_DOCK_APPS = ["residents", "chart", "med"] as const;
+
+// Seite, die eine App beim Öffnen zeigt (ihr erster erlaubter Reiter).
+export const appHref = (module: NavModule) => routeFor(module.id, module.children[0]);
 
 // Recently used pages of this browser, most recent first.
 const RECENT_KEY = "carecore.recent-pages";

@@ -482,9 +482,9 @@ function EmediplanContent({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Medikation"
+        eyebrow="Medikamente"
         title="eMediplan einlesen"
-        description="Medikationsplan (Schweizer Formate CHMED16A und CHMED23A) aus dem QR-Code als Entwurf übernehmen. Jede Zeile prüft eine Fachperson und gibt sie einzeln als Verordnung frei – CareCore prüft und ändert nichts selbst."
+        description="Medikationsplan (Schweizer Formate CHMED16A und CHMED23A) aus dem QR-Code als Entwurf übernehmen. Jede Zeile prüft eine Fachperson und gibt sie einzeln als Verordnung frei – CareOS prüft und ändert nichts selbst."
       />
       {!resident ? (
         <HeaderResidentHint loading={!context} missing={missing} />
@@ -580,7 +580,7 @@ function EmediplanContent({ showToast }: { showToast: ShowToast }) {
                   </div>
                 </div>
                 <p className="emediplan-remark">
-                  GTIN und Pharmacode löst CareCore ohne Arzneimitteldatenbank nicht auf: Beim ersten Mal wird das
+                  GTIN und Pharmacode löst CareOS ohne Arzneimitteldatenbank nicht auf: Beim ersten Mal wird das
                   Präparat zugeordnet oder erfasst; die Zuordnung gilt danach für den nächsten eMediplan.
                 </p>
               </section>

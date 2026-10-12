@@ -10,7 +10,7 @@ import { findAll, parseXml, textOf } from "@/lib/office/xml";
 
 const meta = { title: "Test", author: "Pflege Team" };
 
-// Wie eine Datei aus Excel: ohne das eingebettete CareCore-Modell.
+// Wie eine Datei aus Excel: ohne das eingebettete CareOS-Modell.
 function foreign(bytes: Buffer) {
   const files = readZip(bytes);
   files.delete("carecore/model.json");

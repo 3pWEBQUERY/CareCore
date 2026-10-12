@@ -100,7 +100,7 @@ export default function BtmView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Med"
+        eyebrow="Medikamente"
         title="BtM-Kontrolle"
         description="Betäubungsmittel mit lückenlosem Bestandsbuch: jeder Eingang, jede Gabe, Entsorgung und Kontrolle mit Person und Zweitunterschrift."
         action={canManage ? { label: "BtM-Eingang", onClick: () => setDialog({ kind: "receipt" }) } : undefined}
@@ -295,7 +295,7 @@ export default function BtmView({ showToast }: { showToast: ShowToast }) {
       {dialog?.kind === "book" && <BookPanel item={dialog.item} onClose={() => setDialog(null)} />}
       {dialog?.kind === "unmark" && (
         <ReasonDialog
-          eyebrow="CareCore Med · BtM"
+          eyebrow="Medikamente · BtM"
           title={`${dialog.name} nicht mehr als BtM führen`}
           description="Die bisherigen Buchungen bleiben unverändert erhalten. Die Aufhebung wird mit Begründung protokolliert."
           label="Begründung"

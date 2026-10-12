@@ -88,7 +88,7 @@ export function ShiftStartEditor({
       >
         <header className="area-editor-header">
           <div>
-            <p className="eyebrow">CareCore Shift · Schicht</p>
+            <p className="eyebrow">Mein Dienst</p>
             <h2 id="shift-start-title">Dienst starten</h2>
             <p>
               Starte deinen Dienst mit einem kurzen Check-in und halte fest, dass die wichtigsten Übergabepunkte geprüft

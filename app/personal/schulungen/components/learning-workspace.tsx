@@ -16,7 +16,7 @@ export default function LearningWorkspace({ compliance }: { compliance: boolean 
       module="learn"
       child={compliance ? "Pflichtnachweise" : "Meine Schulungen"}
       view={compliance ? "compliance" : "learning"}
-      eyebrow="CareCore Learn"
+      eyebrow="Schulungen"
       title={compliance ? "Pflichtnachweise" : "Meine Schulungen"}
       description={
         compliance

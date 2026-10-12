@@ -1,4 +1,4 @@
-// Medizinische Qualitätsindikatoren (MQI) der Schweizer Pflegeheime, aus den Daten von CareCore berechnet.
+// Medizinische Qualitätsindikatoren (MQI) der Schweizer Pflegeheime, aus den Daten von CareOS berechnet.
 // Definitionen nach BAG bzw. ARTISET/CURAVIVA (Faktenblätter 2024/2025). Die offizielle Erhebung erfolgt über das
 // Bedarfsabklärungsinstrument (interRAI LTCF, BESA, Plaisir); diese Auswertung dient der internen Steuerung.
 
@@ -10,7 +10,7 @@ export type IndicatorBasis = "exact" | "approximation";
 export type IndicatorResult = {
   key: IndicatorKey;
   title: string;
-  // Offizielle Definition (Kurzfassung) und was CareCore dafür zählt.
+  // Offizielle Definition (Kurzfassung) und was CareOS dafür zählt.
   definition: string;
   method: string;
   basis: IndicatorBasis;

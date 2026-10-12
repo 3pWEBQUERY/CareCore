@@ -131,7 +131,7 @@ export default function NotificationsPage() {
           <main className="workspace notifications-workspace">
             <section className="page-heading notifications-page-heading">
               <div className="heading-copy">
-                <p className="eyebrow">CareCore Inbox</p>
+                <p className="eyebrow">Benachrichtigungen</p>
                 <h1>Benachrichtigungen</h1>
                 <p>Alle relevanten Hinweise für deinen Arbeitsbereich an einem Ort.</p>
               </div>

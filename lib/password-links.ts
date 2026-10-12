@@ -61,10 +61,10 @@ export async function requestPasswordReset(identifier: string) {
     VALUES (gen_random_uuid(), ${user.organization_id ?? null}, ${user.id}, 'user', ${user.id}, 'password_reset_requested')`;
   await sendMail({
     to: String(user.email),
-    subject: "CareCore: Passwort neu setzen",
+    subject: "CareOS: Passwort neu setzen",
     ...linkMail({
       heading: "Passwort neu setzen",
-      intro: `Hallo ${String(user.display_name)}, für dein CareCore-Konto wurde ein neues Passwort angefordert.`,
+      intro: `Hallo ${String(user.display_name)}, für dein CareOS-Konto wurde ein neues Passwort angefordert.`,
       action: "Neues Passwort setzen",
       url,
       note: "Der Link ist 60 Minuten gültig und nur einmal verwendbar. Hast du nichts angefordert, kannst du diese E-Mail ignorieren; dein Passwort bleibt unverändert.",
@@ -91,9 +91,9 @@ export async function sendPasswordLink(actor: AuditActor & { id: string }, userI
     VALUES (gen_random_uuid(), ${user.organization_id ?? null}, ${actor.id}, ${origin.sessionId}, ${origin.userAgent}, 'user', ${userId}, 'password_link_sent')`;
   await sendMail({
     to: String(user.email),
-    subject: "CareCore: Zugang einrichten",
+    subject: "CareOS: Zugang einrichten",
     ...linkMail({
-      heading: "Dein Zugang zu CareCore",
+      heading: "Dein Zugang zu CareOS",
       intro: `Hallo ${String(user.display_name)}, die Administration hat dir einen Link zum Setzen deines Passworts geschickt. Dein Benutzername ist „${String(user.username)}“.`,
       action: "Passwort setzen",
       url,

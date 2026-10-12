@@ -62,7 +62,7 @@ export function SetupChecklistCard({ showToast }: { showToast: (message: string)
         <div>
           <p className="eyebrow">Ersteinrichtung</p>
           <h2 className="card-title" id="setup-checklist-title">
-            CareCore einrichten
+            CareOS einrichten
           </h2>
           <p className="card-subtitle">
             {done} von {checklist.steps.length} Schritten erledigt

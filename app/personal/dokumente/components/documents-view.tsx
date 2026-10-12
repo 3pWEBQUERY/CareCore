@@ -366,7 +366,7 @@ export function DocumentsView({
       {dialog?.kind === "edit" && <EditDialog doc={dialog.doc} onClose={() => setDialog(null)} onSaved={done} />}
       {dialog?.kind === "archive" && (
         <ReasonDialog
-          eyebrow="CareCore Docs"
+          eyebrow="Dokumente"
           title={standards ? "Standard archivieren" : "Dokument archivieren"}
           description={`„${dialog.doc.title}“ wird ins Archiv verschoben und ist nicht mehr gültig. Es bleibt nachvollziehbar.`}
           label="Grund"

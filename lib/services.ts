@@ -24,7 +24,7 @@ import {
   type ServiceSuggestion,
 } from "@/lib/services-shared";
 
-// Leistungserfassung: erbrachte Pflegeleistungen mit Zeit. Der Katalog gehört der Einrichtung; CareCore gibt keine
+// Leistungserfassung: erbrachte Pflegeleistungen mit Zeit. Der Katalog gehört der Einrichtung; CareOS gibt keine
 // Normzeiten vor und berechnet weder Einstufung noch Rechnung. Erfasste Leistungen werden nur storniert, nie gelöscht.
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;

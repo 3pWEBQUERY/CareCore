@@ -1,4 +1,4 @@
-/* Office in der Ablage (CareCore One): Dokument, Tabelle und Präsentation im Vollbild. CareCore-Optik: weisse
+/* Office in der Ablage (CareOS One): Dokument, Tabelle und Präsentation im Vollbild. CareOS-Optik: weisse
    Flächen, Markenblau, 6 px Ecken; Inhalte (Seite, Raster, Folie) wie in Word, Excel und PowerPoint. */
 body.office-open {
   overflow: hidden;

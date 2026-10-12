@@ -24,7 +24,7 @@ const meta = { title: "Test", author: "Pflege Team" };
 const PNG =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
-// Wie eine Datei, die in Word, Excel oder PowerPoint gespeichert wurde: ohne das eingebettete CareCore-Modell.
+// Wie eine Datei, die in Word, Excel oder PowerPoint gespeichert wurde: ohne das eingebettete CareOS-Modell.
 function foreign(bytes: Buffer) {
   const files = readZip(bytes);
   files.delete("carecore/model.json");
@@ -402,7 +402,7 @@ test("Excel: Rahmen, Ausrichtung, Filter, Regeln, Auswahllisten, Diagramme und D
   );
   assert.deepEqual(back.print, sheet.print);
   assert.equal(back.showGrid, false);
-  // Diagramme kommen auch ohne CareCore-Modell zurück (wie aus Excel).
+  // Diagramme kommen auch ohne CareOS-Modell zurück (wie aus Excel).
   assert.deepEqual(
     back.charts.map(({ type, range, title, x, y, w, h }) => ({ type, range, title, x, y, w, h })),
     sheet.charts.map(({ type, range, title, x, y, w, h }) => ({ type, range, title, x, y, w, h })),

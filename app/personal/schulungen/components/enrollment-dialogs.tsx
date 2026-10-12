@@ -26,7 +26,7 @@ export function EnrollDialog({
   return (
     <EditorDialog
       id="learning-enroll"
-      eyebrow={`CareCore Learn · ${TRAINING_FORMATS[training.format]}`}
+      eyebrow={`Schulungen · ${TRAINING_FORMATS[training.format]}`}
       title={training.enrollment ? "Termin wählen" : `Anmelden: ${training.title}`}
       description={training.description ?? undefined}
       onClose={onClose}
@@ -81,7 +81,7 @@ export function ProgressDialog({
   return (
     <EditorDialog
       id="learning-progress"
-      eyebrow="CareCore Learn · Fortschritt"
+      eyebrow="Schulungen · Fortschritt"
       title={training.title}
       description="Melde, wie weit du bist. Den Abschluss erfasst du anschliessend als Nachweis."
       onClose={onClose}

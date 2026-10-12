@@ -30,7 +30,7 @@ async function handle(
         operationOutcome(client.message, client.status === 401 ? "login" : "forbidden"),
         client.status,
       );
-      if (client.status === 401) response.headers.set("WWW-Authenticate", 'Bearer realm="CareCore FHIR"');
+      if (client.status === 401) response.headers.set("WWW-Authenticate", 'Bearer realm="CareOS FHIR"');
       return response;
     }
     const { body, count } = await run(sql, client);

@@ -563,7 +563,7 @@ function OccupancyContent({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow={`CareCore ${t.many}`}
+        eyebrow={`CareOS ${t.many}`}
         title="Belegung & Eintritt"
         description="Freie Plätze je Wohnbereich, geplante Eintritte und die Warteliste an einem Ort."
         action={canWrite ? { label: "Auf Warteliste setzen", onClick: () => setEditing("new") } : undefined}

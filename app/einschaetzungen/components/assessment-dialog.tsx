@@ -81,7 +81,7 @@ export default function AssessmentDialog({
   return (
     <EditorDialog
       id="assessment"
-      eyebrow="CareCore Einschätzungen"
+      eyebrow="Einschätzungen"
       title={instrument.name}
       description={
         instrument.custom

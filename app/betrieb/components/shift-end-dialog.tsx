@@ -26,7 +26,7 @@ export function ShiftEndDialog({
   return (
     <EditorDialog
       id="shift-end"
-      eyebrow="CareCore Shift · Schicht"
+      eyebrow="Mein Dienst"
       title="Dienst beenden"
       description={
         current

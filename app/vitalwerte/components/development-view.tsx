@@ -55,7 +55,7 @@ export default function DevelopmentView() {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Vitalwerte"
+        eyebrow="Vitalwerte"
         title="Entwicklung"
         description="Trends und Veränderungen der Vitalwerte im Zeitverlauf erkennen."
       />

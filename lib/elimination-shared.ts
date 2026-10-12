@@ -10,7 +10,7 @@ export const ELIMINATION_KINDS = {
 } as const;
 export type EliminationKind = keyof typeof ELIMINATION_KINDS;
 
-// Bristol-Stuhlformen-Skala (Lewis & Heaton 1997): deutsche Übersetzung der veröffentlichten Beschreibungen; CareCore
+// Bristol-Stuhlformen-Skala (Lewis & Heaton 1997): deutsche Übersetzung der veröffentlichten Beschreibungen; CareOS
 // bewertet die Form nicht.
 export const BRISTOL_TYPES: Record<number, string> = {
   1: "Typ 1 · einzelne, harte Klumpen (wie Nüsse)",

@@ -84,7 +84,7 @@ export function CareRecordEditor({
       >
         <header className="area-editor-header">
           <div>
-            <p className="eyebrow">CareCore {t.many} · Pflegeakte</p>
+            <p className="eyebrow">CareOS {t.many} · Pflegeakte</p>
             <h2 id="care-record-editor-title">Pflegeakte erstellen</h2>
             <p>
               Lege den Pflegeplan an und definiere direkt die Zuständigkeit und die erste Evaluation. Ziele und

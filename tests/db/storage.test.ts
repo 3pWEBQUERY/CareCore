@@ -53,7 +53,7 @@ test("Medien im Bucket: Datei und Wundfoto nur im Bucket, lesbar, beim Löschen 
 
   const f = await fixture();
   const ctx = await apiContextFor(f, "leadA");
-  const pdf = Buffer.from("%PDF-1.4\n% CareCore Test\n");
+  const pdf = Buffer.from("%PDF-1.4\n% CareOS Test\n");
   const stored = await storeFile(ctx, new File([pdf], "Bericht.pdf", { type: "application/pdf" }), "document", [
     "application/pdf",
   ]);

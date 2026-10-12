@@ -14,6 +14,7 @@ import { usePathname } from "next/navigation";
 import AppHeader from "./app-header";
 import { FrameContext, type FrameApi } from "./app-frame";
 import AppSidebar from "./app-sidebar";
+import { AppLauncher } from "./app-launcher";
 import { GlobalSearchDialog } from "./global-search-dialog";
 import { MobileNavigation } from "./mobile-navigation";
 import { ModuleIcon } from "./module-icon";
@@ -128,6 +129,7 @@ function StandaloneShell({
       </div>
 
       <MobileNavigation activeModule={moduleId} />
+      <AppLauncher />
       {searchOpen && <GlobalSearchDialog onClose={() => setSearchOpen(false)} />}
       {toast && (
         <div className="toast" role="status">

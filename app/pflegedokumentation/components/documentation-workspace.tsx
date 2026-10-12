@@ -87,7 +87,7 @@ function QuickView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Dokumentation"
+        eyebrow="Dokumentation"
         title="Schnelldokumentation"
         description="Beobachtungen und Massnahmen direkt im Arbeitsfluss festhalten – mit Uhrzeit, Einordnung und Textbausteinen."
       />
@@ -258,7 +258,7 @@ function HistoryView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Dokumentation"
+        eyebrow="Dokumentation"
         title="Verlaufsdokumentation"
         description="Chronologischer Pflegeverlauf – Korrekturen erscheinen als Nachtrag, das Original bleibt nachvollziehbar."
         action={data.data?.canWrite ? { label: "Eintrag erfassen", onClick: () => setCreating(true) } : undefined}

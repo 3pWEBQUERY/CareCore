@@ -30,7 +30,7 @@ export function DueView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Einschätzungen"
+        eyebrow="Einschätzungen"
         title="Fälligkeiten"
         description="Überfällige und in den nächsten 7 Tagen fällige Neueinschätzungen sowie fehlende Basis-Assessments."
       />

@@ -121,7 +121,7 @@
   }
 }
 
-/* Breitenwahl der Bausteine (Arbeitsplatz und Kennzahlen): eigenes CareCore-Dropdown, kompakt in der Leiste. */
+/* Breitenwahl der Bausteine (Arbeitsplatz und Kennzahlen): eigenes CareOS-Dropdown, kompakt in der Leiste. */
 .widget-size-select .area-select-trigger {
   width: 100px;
   min-height: 26px;

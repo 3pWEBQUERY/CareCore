@@ -83,7 +83,7 @@ export function UnitEditor({
       <section className="area-editor-panel" role="dialog" aria-modal="true" aria-labelledby="area-editor-title">
         <header className="area-editor-header">
           <div>
-            <p className="eyebrow">CareCore Admin · Organisation</p>
+            <p className="eyebrow">Administration · Organisation</p>
             <h2 id="area-editor-title">{unit ? "Wohnbereich bearbeiten" : "Wohnbereich erstellen"}</h2>
             <p>
               {unit

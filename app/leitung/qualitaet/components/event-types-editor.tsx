@@ -23,7 +23,7 @@ export function EventTypesEditor({
   return (
     <EditorDialog
       id="quality-event-types"
-      eyebrow="CareCore Quality · Ereignisarten"
+      eyebrow="Qualität · Ereignisarten"
       title="Ereignisarten"
       description="Eigene Arten erscheinen beim Melden und in den Ablaufketten. Wird eine Art entfernt, entfällt ihre Ablaufkette; gemeldete Ereignisse behalten ihre Art."
       onClose={onClose}

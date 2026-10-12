@@ -18,7 +18,7 @@ import { PORTAL_KINDS, type PortalKind, type PortalThread } from "@/lib/portal-s
 
 type Payload = { threads: PortalThread[]; recipients: Array<{ id: string; name: string; kind: PortalKind }> };
 
-// CareCore One › Portal-Nachrichten: Unterhaltungen mit Angehörigen, Ärztinnen/Ärzten und der Apotheke.
+// Kommunikation › Portal-Nachrichten: Unterhaltungen mit Angehörigen, Ärztinnen/Ärzten und der Apotheke.
 export default function PortalMessagesWorkspace() {
   return (
     <ModulePageShell activeModule="messenger" activeChild="Portal-Nachrichten" pageClass="portal-messages-page">
@@ -42,7 +42,7 @@ function PortalMessagesBody({ showToast }: { showToast: ShowToast }) {
     <main className="workspace module-workspace portal-messages">
       <section className="page-heading">
         <div className="heading-copy">
-          <p className="eyebrow">CareCore One</p>
+          <p className="eyebrow">Nachrichten</p>
           <h1>Portal-Nachrichten</h1>
           <p>Nachrichten von Angehörigen, Ärztinnen/Ärzten und der Apotheke aus dem Portal beantworten.</p>
         </div>

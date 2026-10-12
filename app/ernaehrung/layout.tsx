@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./nutrition.css";
 
 export const metadata: Metadata = {
-  title: "CareCore · Ernährung",
+  title: "CareOS · Ernährung",
   description: "Ernährungsplanung und Trinkprotokolle für die stationäre Pflege.",
 };
 

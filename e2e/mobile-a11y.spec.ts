@@ -26,12 +26,12 @@ test.describe("Handy-Ansicht (390 px)", () => {
     expect(errors).toEqual([]);
   });
 
-  test("Menü öffnet als Panel, führt zum Modul und schliesst mit Escape", async ({ page }) => {
+  test("„Alle Apps“ öffnet als Panel, führt zur App und schliesst mit Escape", async ({ page }) => {
     await login(page, ADMIN);
     await page.goto("/c");
-    const menuButton = page.locator(".bottom-nav").getByRole("button", { name: "Menü" });
+    const menuButton = page.locator(".bottom-nav").getByRole("button", { name: "Alle Apps" });
     await menuButton.tap();
-    const menu = page.getByRole("dialog", { name: "Hauptmenü" });
+    const menu = page.getByRole("dialog", { name: "Alle Apps" });
     await expect(menu).toBeVisible();
     await expect(menu.locator(":focus")).toHaveCount(1);
     await page.keyboard.press("Escape");

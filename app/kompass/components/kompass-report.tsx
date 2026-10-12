@@ -28,7 +28,7 @@ const GOAL_STATUS: Record<string, string> = {
   cancelled: "abgebrochen",
 };
 
-// Bericht einer Abklärung mit dem CareCore Kompass (A4 hoch): alle Antworten, Vergleich mit der letzten Abklärung,
+// Bericht einer Abklärung mit dem CareOS Kompass (A4 hoch): alle Antworten, Vergleich mit der letzten Abklärung,
 // Ressourcen, Wünsche, Handlungsbedarf mit übernommenem Ziel und Gesamtbild; mit Feldern für die Unterschriften.
 export default function KompassReportView() {
   const context = useWorkContext();

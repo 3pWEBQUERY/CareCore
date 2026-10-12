@@ -5,7 +5,7 @@ export default function NotFound() {
     <StatusPage
       code="404"
       title="Seite nicht gefunden"
-      text="Diese Adresse gibt es in CareCore nicht (mehr). Vielleicht wurde der Link falsch kopiert oder die Seite verschoben."
+      text="Diese Adresse gibt es in CareOS nicht (mehr). Vielleicht wurde der Link falsch kopiert oder die Seite verschoben."
     />
   );
 }

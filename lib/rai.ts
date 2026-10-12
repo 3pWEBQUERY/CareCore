@@ -5,7 +5,7 @@ import { readSettings } from "@/lib/settings";
 import { KOMPASS_DOMAINS, KOMPASS_INSTRUMENT } from "@/lib/kompass-instrument";
 import { type RaiPerson, type RaiResidentRow, type RaiState, type RaiWorkplace } from "@/lib/rai-shared";
 
-// Kompass-Arbeitsplatz: Arbeitskorb, Verantwortliche und Fälligkeiten der Abklärungen mit dem CareCore Kompass
+// Kompass-Arbeitsplatz: Arbeitskorb, Verantwortliche und Fälligkeiten der Abklärungen mit dem CareOS Kompass
 // (Erfassung selbst in lib/kompass.ts). Fristen legt die Einrichtung in den Einstellungen fest.
 
 export const day = (value: unknown) => (value ? (iso(value) ?? "").slice(0, 10) : null);

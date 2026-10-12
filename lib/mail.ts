@@ -47,7 +47,7 @@ const escapeHtml = (value: string) =>
 
 // Einheitliche, schlichte E-Mail mit einem Knopf; der Link steht zusätzlich als Text darunter.
 export function linkMail(input: { heading: string; intro: string; action: string; url: string; note: string }) {
-  const text = `${input.heading}\n\n${input.intro}\n\n${input.action}: ${input.url}\n\n${input.note}\n\nCareCore`;
+  const text = `${input.heading}\n\n${input.intro}\n\n${input.action}: ${input.url}\n\n${input.note}\n\nCareOS`;
   const html = `<!doctype html><html lang="de"><body style="margin:0;background:#f4f7fb;font-family:Arial,Helvetica,sans-serif;color:#132940">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
 <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #d6e4f7;border-radius:12px">

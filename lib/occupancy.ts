@@ -11,7 +11,7 @@ import {
 } from "@/lib/occupancy-shared";
 
 // Belegung und Eintritt: freie Plätze je Wohnbereich, geplante Eintritte und Warteliste. Rein organisatorisch; der Bedarf
-// steht so in der Notiz, wie er mitgeteilt wurde – CareCore stuft nicht ein und ordnet keine Reihenfolge vor.
+// steht so in der Notiz, wie er mitgeteilt wurde – CareOS stuft nicht ein und ordnet keine Reihenfolge vor.
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 

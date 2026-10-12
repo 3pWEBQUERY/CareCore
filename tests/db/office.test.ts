@@ -112,7 +112,7 @@ test("Office in der Ablage: Word-Datei aus einem anderen Programm öffnen und be
   const f = await fixture();
   const anna = await actorOf(f, "anna");
   const model = templateModel("document-leaflet") as DocumentModel;
-  // Ohne eingebettetes CareCore-Modell, wie aus Word.
+  // Ohne eingebettetes CareOS-Modell, wie aus Word.
   const files = readZip(buildDocx(model, { title: "Merkblatt", author: "Word" }));
   files.delete("carecore/model.json");
   const bytes = createZip([...files.entries()].map(([path, content]) => ({ path, content })));

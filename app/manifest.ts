@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 // Installierbar auf Tablet und Handy (Startbildschirm); Offline-Verhalten siehe public/sw.js.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "CareCore · Pflegearbeitsplatz",
-    short_name: "CareCore",
+    name: "CareOS · Pflegearbeitsplatz",
+    short_name: "CareOS",
     description: "Der persönliche digitale Arbeitsplatz für moderne Pflege.",
     lang: "de-CH",
     start_url: "/c",

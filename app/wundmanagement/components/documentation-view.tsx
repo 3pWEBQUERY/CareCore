@@ -59,7 +59,7 @@ export default function DocumentationView({ showToast }: { showToast: ShowToast 
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Wunden"
+        eyebrow="Wunden"
         title="Wunddokumentation"
         description="Alle Befunde und Versorgungen chronologisch – nachvollziehbar mit Zeitpunkt und dokumentierender Person."
       />

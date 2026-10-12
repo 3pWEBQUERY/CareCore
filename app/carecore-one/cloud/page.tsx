@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import FileExplorer from "../files/explorer";
 
-export default function CareCoreCloudPage() {
+export default function CareOSCloudPage() {
   return (
     <Suspense fallback={null}>
       <FileExplorer scope="personal" />

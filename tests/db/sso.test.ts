@@ -39,7 +39,7 @@ const configure = (admin: Awaited<ReturnType<typeof setup>>["admin"], enabled = 
     buttonLabel: "Test-Anmeldung",
   });
 
-// Wie der Browser: Adresse beim Anbieter aufrufen, Weiterleitung zurück zu CareCore abfangen.
+// Wie der Browser: Adresse beim Anbieter aufrufen, Weiterleitung zurück zu CareOS abfangen.
 async function roundTrip(sql: Parameters<typeof completeSso>[0], organizationId: string, next?: string) {
   const authorize = await startSso(sql, organizationId, origin, next);
   const response = await fetch(authorize, { redirect: "manual" });

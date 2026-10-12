@@ -54,7 +54,7 @@ export default function FluidsView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Ernährung"
+        eyebrow="Ernährung"
         title="Trinkprotokoll"
         description={
           isToday

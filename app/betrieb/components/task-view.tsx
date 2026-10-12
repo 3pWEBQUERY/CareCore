@@ -247,7 +247,7 @@ export function MissingTask({ onClose }: { onClose: () => void }) {
   return (
     <EditorDialog
       id="task-missing"
-      eyebrow="CareCore Tasks"
+      eyebrow="Aufgaben"
       title="Aufgabe nicht in dieser Liste"
       description="Die Aufgabe ist erledigt, abgebrochen oder einer anderen Person zugewiesen. In den Teamaufgaben findest du alle sichtbaren Aufgaben."
       onClose={onClose}

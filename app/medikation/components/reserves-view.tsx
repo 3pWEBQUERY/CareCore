@@ -62,7 +62,7 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Med"
+        eyebrow="Medikamente"
         title="Reserven"
         description="Ärztlich verordnete Bedarfsmedikation mit geprüfter Maximaldosis und Mindestabstand."
         action={
@@ -101,7 +101,7 @@ export default function ReservesView({ showToast }: { showToast: ShowToast }) {
         <div>
           <strong>Sicherheitsprüfung bei jeder Gabe</strong>
           <p>
-            CareCore lässt eine Reservegabe nur mit gültiger Verordnung, eingehaltenem Mindestabstand, nicht erreichter
+            CareOS lässt eine Reservegabe nur mit gültiger Verordnung, eingehaltenem Mindestabstand, nicht erreichter
             Maximaldosis und vorhandenem Bestand zu.
           </p>
         </div>
@@ -370,7 +370,7 @@ function AdministerDialog({
   return (
     <EditorDialog
       id="med-prn"
-      eyebrow={`CareCore Med · ${residentName}`}
+      eyebrow={`Medikamente · ${residentName}`}
       title={`${order.name} ${order.strength}`.trim()}
       description={`Einzeldosis ${order.amount} · max. ${order.maxDosesPer24h} Gaben / 24 h · Mindestabstand ${formatNumber(order.minIntervalHours ?? 0)} h · Indikation: ${order.indication}${order.effectCheckMinutes ? ` · Wirkungskontrolle nach ${order.effectCheckMinutes} Min.` : ""}`}
       onClose={onClose}
@@ -431,7 +431,7 @@ function EffectCheckDialog({
   return (
     <EditorDialog
       id="med-effect"
-      eyebrow={`CareCore Med · ${check.residentName}`}
+      eyebrow={`Medikamente · ${check.residentName}`}
       title={`Wirkungskontrolle · ${check.medication}`}
       description={`Gabe ${formatDateTime(check.administeredAt)}${check.reason ? ` · Anlass: ${check.reason}` : ""}`}
       onClose={onClose}

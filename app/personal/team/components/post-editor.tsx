@@ -33,7 +33,7 @@ export function PostEditor({
   return (
     <EditorDialog
       id="post-editor"
-      eyebrow="CareCore Team · Neuigkeiten"
+      eyebrow="Team · Neuigkeiten"
       title={post ? "Beitrag bearbeiten" : "Beitrag erstellen"}
       description="Teile eine Information mit deinem Arbeitsbereich. Dringende Beiträge und Lesebestätigungen benachrichtigen alle Mitglieder des Kanals."
       onClose={onClose}

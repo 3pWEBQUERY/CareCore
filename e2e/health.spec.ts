@@ -18,7 +18,7 @@ test("Health: /api/health meldet „ok“ ohne Anmeldung und ohne Geheimnisse", 
   expect(JSON.stringify(body)).not.toMatch(/postgres(ql)?:\/\/|password/i);
 });
 
-// Sicherheits-Header auf Seiten und Schnittstellen: nur eigene Inhalte, Einbetten nur in CareCore, HTTPS erzwungen.
+// Sicherheits-Header auf Seiten und Schnittstellen: nur eigene Inhalte, Einbetten nur in CareOS, HTTPS erzwungen.
 test("Sicherheits-Header: CSP, HSTS, Einbettschutz auf Seiten und API", async ({ request }) => {
   for (const path of ["/", "/api/health", "/portal"]) {
     const headers = (await request.get(path)).headers();

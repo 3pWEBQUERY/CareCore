@@ -64,7 +64,7 @@ export function HistoryPanel({
       >
         <header className="area-editor-header">
           <div>
-            <p className="eyebrow">CareCore Einschätzungen · {residentName}</p>
+            <p className="eyebrow">Einschätzungen · {residentName}</p>
             <h2 id="assessment-history-title">{result.name}</h2>
             <p>{instrument?.description ?? "Einschätzung aus einer früheren Version ohne hinterlegte Fragen."}</p>
           </div>

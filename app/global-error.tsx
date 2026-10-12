@@ -16,9 +16,9 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
           background: "#f3f7fc",
         }}
       >
-        <title>CareCore · Fehler</title>
+        <title>CareOS · Fehler</title>
         <main style={{ maxWidth: 460, textAlign: "center" }}>
-          <h1 style={{ fontSize: 26 }}>CareCore ist gerade nicht erreichbar</h1>
+          <h1 style={{ fontSize: 26 }}>CareOS ist gerade nicht erreichbar</h1>
           <p style={{ color: "#475569", lineHeight: 1.5 }}>
             Bitte versuche es in einem Moment erneut.{error.digest ? ` Fehlercode: ${error.digest}` : ""}
           </p>

@@ -217,7 +217,7 @@ export async function completeSso(
   if (users.length !== 1)
     return {
       ok: false,
-      reason: "Für dieses Konto gibt es in CareCore keinen aktiven Zugang. Bitte die Administration fragen.",
+      reason: "Für dieses Konto gibt es in CareOS keinen aktiven Zugang. Bitte die Administration fragen.",
     };
   const user = users[0];
   await sql`

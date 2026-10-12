@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "CareCore · Portal",
+  title: "CareOS · Portal",
   description: "Portal für Angehörige und Ärztinnen/Ärzte.",
   robots: { index: false, follow: false },
 };

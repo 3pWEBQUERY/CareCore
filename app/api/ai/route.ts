@@ -10,6 +10,6 @@ export async function GET(request: Request) {
     if (ctx instanceof NextResponse) return ctx;
     return NextResponse.json(await aiOverview(ctx, new URL(request.url).searchParams.get("careUnitId")));
   } catch (error) {
-    return apiErrorResponse(error, "CareCore KI konnte nicht geladen werden.");
+    return apiErrorResponse(error, "CareOS KI konnte nicht geladen werden.");
   }
 }

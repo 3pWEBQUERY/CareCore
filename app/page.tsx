@@ -169,7 +169,7 @@ export default function LoginPage() {
       // Für das Entsperren ohne Verbindung (Schlüssel mit dem Passwort verschlüsselt auf dem Gerät).
       void rememberOfflineUnlock(password).catch(() => undefined);
     } catch {
-      setError("Die Verbindung zum CareCore-Arbeitsplatz konnte nicht hergestellt werden.");
+      setError("Die Verbindung zum CareOS-Arbeitsplatz konnte nicht hergestellt werden.");
     } finally {
       setPending(false);
     }
@@ -185,7 +185,7 @@ export default function LoginPage() {
             <span>
               <Pulse />
             </span>
-            <strong>CareCore</strong>
+            <strong>CareOS</strong>
           </div>
           {forgot ? (
             <ForgotPasswordForm initial={username} onBack={() => setForgot(false)} />
@@ -193,7 +193,7 @@ export default function LoginPage() {
             <>
               <div className="login-heading">
                 <p className="eyebrow">Willkommen zurück</p>
-                <h2>Bei CareCore anmelden</h2>
+                <h2>Bei CareOS anmelden</h2>
                 <p>Melde dich mit deinem persönlichen Benutzerkonto an.</p>
               </div>
               <form className="login-form" method="post" onSubmit={submit}>
@@ -331,7 +331,7 @@ export default function LoginPage() {
             <ShieldCheck />
             <span>
               <strong>Probleme bei der Anmeldung?</strong>
-              <small>Wende dich an deine CareCore-Administration.</small>
+              <small>Wende dich an deine CareOS-Administration.</small>
             </span>
           </div>
         </div>

@@ -38,7 +38,7 @@ import type { KompassAssessment, KompassDetail, KompassReport } from "@/lib/komp
 
 const NOBODY = "";
 
-// Abklärung mit dem CareCore Kompass für die Person in der Kopfzeile.
+// Abklärung mit dem CareOS Kompass für die Person in der Kopfzeile.
 export function AssessmentView({ showToast }: { showToast: (message: string) => void }) {
   const [residentId] = useCareResident();
   const detail = useApiData<KompassDetail>(residentId ? `/api/rai/residents/${residentId}` : null);
@@ -1102,7 +1102,7 @@ function FinishStep({
           <label htmlFor="kompass-summary-text">Gesamtbild aus Sicht der Fachperson</label>
           {requestDraft && (
             <button className="quiet-button" type="button" disabled={drafting} onClick={() => void createDraft()}>
-              <ModuleIcon name="ai" /> {drafting ? "Entwurf wird geschrieben …" : "Entwurf mit CareCore KI"}
+              <ModuleIcon name="ai" /> {drafting ? "Entwurf wird geschrieben …" : "Entwurf mit CareOS KI"}
             </button>
           )}
         </span>
@@ -1121,9 +1121,9 @@ function FinishStep({
         </p>
       )}
       {suggestion && (
-        <div className="kompass-ai-draft" role="region" aria-label="Entwurf der CareCore KI">
+        <div className="kompass-ai-draft" role="region" aria-label="Entwurf der CareOS KI">
           <p className="kompass-ai-draft-head">
-            <ModuleIcon name="ai" /> Entwurf der CareCore KI – bitte prüfen und anpassen
+            <ModuleIcon name="ai" /> Entwurf der CareOS KI – bitte prüfen und anpassen
           </p>
           <p className="kompass-ai-draft-text">{suggestion.content}</p>
           <p className="kompass-ai-draft-note">

@@ -1,5 +1,5 @@
 // Lagerungs- und Bewegungsprotokoll (Server und Oberfläche). Positionen und Hautbefund sind Beobachtungen; das
-// Intervall stammt aus der Pflegeplanung, CareCore schlägt keines vor.
+// Intervall stammt aus der Pflegeplanung, CareOS schlägt keines vor.
 
 export const POSITIONS = {
   back: "Rückenlage",

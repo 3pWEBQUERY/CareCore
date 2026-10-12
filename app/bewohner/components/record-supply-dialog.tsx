@@ -20,7 +20,7 @@ export function SupplyEditorDialog({ r }: { r: ResidentRecordState }) {
       <section className="area-editor-panel" role="dialog" aria-modal="true" aria-labelledby="supply-editor-title">
         <header className="area-editor-header">
           <div>
-            <p className="eyebrow">CareCore {t.many} · Pflegebedarf</p>
+            <p className="eyebrow">CareOS {t.many} · Pflegebedarf</p>
             <h2 id="supply-editor-title">{supplyEditor.id ? "Bedarf bearbeiten" : "Pflegebedarf hinzufügen"}</h2>
             <p>
               {supplyEditor.id

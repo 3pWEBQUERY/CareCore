@@ -1,4 +1,4 @@
-// Ablage (CareCore One): Typen und Regeln für Server und Oberfläche.
+// Ablage (Kommunikation): Typen und Regeln für Server und Oberfläche.
 
 export type FileScope = "personal" | "shared";
 export type ExplorerView = "folder" | "search" | "recent" | "trash";

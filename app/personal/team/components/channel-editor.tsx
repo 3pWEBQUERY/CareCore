@@ -35,7 +35,7 @@ export function ChannelEditor({
   return (
     <EditorDialog
       id="channel-editor"
-      eyebrow="CareCore Team · Kanäle"
+      eyebrow="Team · Kanäle"
       title="Kanal anlegen"
       description="Kanäle bündeln Beiträge zu einem Thema oder Wohnbereich. Bei einem Wohnbereich treten dessen Mitarbeitende automatisch bei."
       onClose={onClose}

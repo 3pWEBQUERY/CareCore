@@ -40,8 +40,8 @@ import type {
   KompassStatusSummary,
 } from "@/lib/kompass-shared";
 
-// CareCore Kompass: Bedarfsabklärung je Person. Die Fachperson beantwortet die Fragen, entscheidet je Bereich über
-// den Handlungsbedarf und schliesst ab; CareCore speichert, vergleicht und zeigt Fakten aus der Akte, ohne zu werten.
+// CareOS Kompass: Bedarfsabklärung je Person. Die Fachperson beantwortet die Fragen, entscheidet je Bereich über
+// den Handlungsbedarf und schliesst ab; CareOS speichert, vergleicht und zeigt Fakten aus der Akte, ohne zu werten.
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const OPEN = ["new", "in_progress", "overdue"];
@@ -115,7 +115,7 @@ const formatDay = (value: unknown) => {
   return date ? date.split("-").reverse().join(".") : "";
 };
 
-// Fakten aus der Akte je Kompass-Bereich (nur Anzeige, keine Bewertung durch CareCore).
+// Fakten aus der Akte je Kompass-Bereich (nur Anzeige, keine Bewertung durch CareOS).
 async function kompassContext(ctx: ApiContext, residentId: string, since: string | null): Promise<KompassContext> {
   const sql = ctx.sql;
   const [
@@ -719,7 +719,7 @@ export async function kompassDraftText(ctx: ApiContext, residentId: string) {
 const noted = (item: KompassItem, value: string | undefined) =>
   (answerRank(item, value) ?? -1) >= (item.scale === "care" ? 2 : 1);
 
-// Zählt die Antworten der letzten abgeschlossenen Abklärung je Person (optional nur ein Wohnbereich). CareCore
+// Zählt die Antworten der letzten abgeschlossenen Abklärung je Person (optional nur ein Wohnbereich). CareOS
 // zählt nur; es gibt keine Punktzahl und keine Einstufung.
 export async function kompassStatistics(ctx: ApiContext, careUnitInput: unknown): Promise<KompassStatistics> {
   let careUnit: KompassStatistics["careUnit"] = null;

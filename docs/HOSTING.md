@@ -3,7 +3,7 @@
 Neue Kundeninstallation (eigenes Projekt je Einrichtung): siehe `docs/INSTALLATION.md`. Überwachung und Backups:
 `docs/BETRIEB.md`.
 
-CareCore läuft auf Railway (Projekt „feisty-achievement“, Region Europa).
+CareOS läuft auf Railway (Projekt „feisty-achievement“, Region Europa).
 
 - **App** (Dienst `carecore`): Next.js aus diesem Repository, Branch `main`. Einstellungen am Dienst in Railway
   (Settings; `railway.json` liest Railway für neue Dienste nicht mehr):
@@ -15,7 +15,7 @@ CareCore läuft auf Railway (Projekt „feisty-achievement“, Region Europa).
   Verbindungspool (`database/pg-fetch.mjs`, Paket `pg`). Neon-Datenbanken (`*.neon.tech`) laufen weiter über HTTP.
 - **Medien** (Bucket `sorted-lunchbox`): Fotos der Bewohner, Wundfotos, Dateien und Dokumente sowie das Logo
   (`lib/storage.ts`, S3-kompatibel).
-  - Der Bucket ist privat; ausgeliefert wird nur über CareCore mit den jeweiligen Rechten.
+  - Der Bucket ist privat; ausgeliefert wird nur über CareOS mit den jeweiligen Rechten.
   - Ohne Bucket (lokal, Tests) bleiben die Inhalte in der Datenbank.
   - Beim Löschen (Foto, Datei, Logo, Akte nach Ablauf der Frist) wird der Inhalt auch im Bucket entfernt.
 - **Erinnerungen und Push** (Dienst `push-dispatch`): Railway Function mit Zeitplan `*/5 * * * *`, ruft
@@ -24,19 +24,19 @@ CareCore läuft auf Railway (Projekt „feisty-achievement“, Region Europa).
 
 ## Variablen des Dienstes `carecore`
 
-| Variable                                                                            | Inhalt                                                                                                |
-| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                                                                      | `${{Postgres.DATABASE_URL}}`                                                                          |
-| `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Verweise auf den Bucket `sorted-lunchbox`                                                             |
-| `S3_FORCE_PATH_STYLE`                                                               | `false` (Railway Buckets: virtuelle Hosts)                                                            |
-| `CARECORE_MFA_KEY`                                                                  | Serverschlüssel (MFA, Webhooks, Offline-Verschlüsselung, SSO), zufällig erzeugt                       |
-| `CRON_SECRET`                                                                       | Geheimnis für den Push-Auftrag, zufällig erzeugt                                                      |
-| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`                            | Schlüssel für Web Push                                                                                |
-| `CARECORE_ADMIN_PASSWORD`                                                           | **von der Betreiberin zu setzen**: Passwort des ersten Administrators (mindestens 12 Zeichen)         |
-| `MISTRAL_API_KEY`                                                                   | **von der Betreiberin zu setzen**: Mistral für CareCore KI, Übersetzungsentwürfe und KI-Dienstplanung |
-| `MISTRAL_MODEL`                                                                     | `mistral-small-latest`                                                                                |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`, `APP_URL`      | optional: E-Mail-Versand (Passwort vergessen, Einladungen), siehe `docs/EMAIL.md`                     |
-| `ALERT_EMAIL`, `ALERT_ERROR_THRESHOLD`                                              | optional: Alarm per E-Mail bei vielen Serverfehlern, siehe `docs/BETRIEB.md`                          |
+| Variable                                                                            | Inhalt                                                                                              |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                                      | `${{Postgres.DATABASE_URL}}`                                                                        |
+| `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Verweise auf den Bucket `sorted-lunchbox`                                                           |
+| `S3_FORCE_PATH_STYLE`                                                               | `false` (Railway Buckets: virtuelle Hosts)                                                          |
+| `CARECORE_MFA_KEY`                                                                  | Serverschlüssel (MFA, Webhooks, Offline-Verschlüsselung, SSO), zufällig erzeugt                     |
+| `CRON_SECRET`                                                                       | Geheimnis für den Push-Auftrag, zufällig erzeugt                                                    |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`                            | Schlüssel für Web Push                                                                              |
+| `CARECORE_ADMIN_PASSWORD`                                                           | **von der Betreiberin zu setzen**: Passwort des ersten Administrators (mindestens 12 Zeichen)       |
+| `MISTRAL_API_KEY`                                                                   | **von der Betreiberin zu setzen**: Mistral für CareOS KI, Übersetzungsentwürfe und KI-Dienstplanung |
+| `MISTRAL_MODEL`                                                                     | `mistral-small-latest`                                                                              |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`, `APP_URL`      | optional: E-Mail-Versand (Passwort vergessen, Einladungen), siehe `docs/EMAIL.md`                   |
+| `ALERT_EMAIL`, `ALERT_ERROR_THRESHOLD`                                              | optional: Alarm per E-Mail bei vielen Serverfehlern, siehe `docs/BETRIEB.md`                        |
 
 Die Werte stehen nur in Railway, nie im Repository.
 

@@ -127,7 +127,7 @@ export function AssessmentInstrumentsCard({ showToast }: { showToast: (message: 
           </h2>
           <p className="card-subtitle">
             Instrumente, die die Einrichtung selbst nutzen darf (z. B. lizenzierte Schmerzinstrumente). Fragen, Punkte,
-            Bereiche und Intervall stammen von der Einrichtung; CareCore zählt nur zusammen.
+            Bereiche und Intervall stammen von der Einrichtung; CareOS zählt nur zusammen.
           </p>
         </div>
         <button

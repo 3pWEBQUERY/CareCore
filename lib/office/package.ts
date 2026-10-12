@@ -66,7 +66,7 @@ export function coreProps(title: string, author: string) {
 }
 
 export const appProps = () =>
-  `${XML_HEAD}<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>CareCore</Application></Properties>`;
+  `${XML_HEAD}<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>CareOS</Application></Properties>`;
 
 // Bild aus einer data:-Adresse (nur PNG, JPEG, GIF – diese kennen Word, Excel und PowerPoint).
 export function dataImage(src: unknown) {

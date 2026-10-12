@@ -24,7 +24,7 @@ export function VersionDialog({
   return (
     <EditorDialog
       id="document-version"
-      eyebrow="CareCore Docs · Versionen"
+      eyebrow="Dokumente · Versionen"
       title={`Neue Version: ${doc.title}`}
       description={`Version ${doc.versionNo + 1} ersetzt die aktuelle Version ${doc.versionNo}; frühere Versionen bleiben abrufbar.${doc.kind === "standard" && doc.requiresAck ? " Alle müssen die neue Version erneut bestätigen." : ""}`}
       onClose={onClose}
@@ -101,7 +101,7 @@ export function EditDialog({
   return (
     <EditorDialog
       id="document-edit"
-      eyebrow="CareCore Docs"
+      eyebrow="Dokumente"
       title="Angaben bearbeiten"
       onClose={onClose}
       onSubmit={async () => {

@@ -59,7 +59,7 @@ export type Item = {
 
 export const VIEWS: Record<SettingsView, { title: string; eyebrow: string; description: string }> = {
   overview: {
-    eyebrow: "CareCore Einstellungen",
+    eyebrow: "Einstellungen",
     title: "Einstellungen",
     description:
       "Profil, Benachrichtigungen, Sicherheit, Darstellung und Datenschutz – und für die Administration die Einstellungen der Einrichtung.",
@@ -82,7 +82,7 @@ export const VIEWS: Record<SettingsView, { title: string; eyebrow: string; descr
   appearance: {
     eyebrow: "Einstellungen · Darstellung",
     title: "Darstellung & Bedienung",
-    description: "Passe CareCore an deine Arbeitsweise an. Gilt auf allen deinen Geräten.",
+    description: "Passe CareOS an deine Arbeitsweise an. Gilt auf allen deinen Geräten.",
   },
   privacy: {
     eyebrow: "Einstellungen · Datenschutz",
@@ -201,7 +201,7 @@ export function itemsFor(
         detail: {
           kind: "open",
           view: "privacy",
-          text: "Lade alle Daten herunter, die CareCore zu deinem Konto speichert, oder räume dieses Gerät auf.",
+          text: "Lade alle Daten herunter, die CareOS zu deinem Konto speichert, oder räume dieses Gerät auf.",
         },
       },
       ...(extras.isAdmin
@@ -241,7 +241,7 @@ export function itemsFor(
         description: "Voreinstellung für Kopfzeile, Tagesliste und Übergaben",
         value: profile.careUnit ?? "Nicht festgelegt",
         icon: "building",
-        detail: { kind: "profile", text: "Der feste Wohnbereich wird beim Öffnen von CareCore vorausgewählt." },
+        detail: { kind: "profile", text: "Der feste Wohnbereich wird beim Öffnen von CareOS vorausgewählt." },
       },
       {
         id: "profile-phone",
@@ -291,7 +291,7 @@ export function itemsFor(
         icon: "bell",
         detail: {
           kind: "push",
-          text: "Neue Benachrichtigungen erscheinen als Mitteilung auf diesem Gerät, auch wenn CareCore geschlossen ist. Angezeigt wird nur der Titel; es gelten die Kategorien oben.",
+          text: "Neue Benachrichtigungen erscheinen als Mitteilung auf diesem Gerät, auch wenn CareOS geschlossen ist. Angezeigt wird nur der Titel; es gelten die Kategorien oben.",
         },
       },
       {
@@ -302,7 +302,7 @@ export function itemsFor(
         icon: "shift",
         detail: {
           kind: "quiet",
-          text: "In der Ruhezeit kommen keine Push-Nachrichten; die Hinweise bleiben in CareCore sichtbar. Kritische Hinweise kommen immer. Es gilt die Uhrzeit der Einrichtung, über Mitternacht (z. B. 22:00–06:00) ist möglich.",
+          text: "In der Ruhezeit kommen keine Push-Nachrichten; die Hinweise bleiben in CareOS sichtbar. Kritische Hinweise kommen immer. Es gilt die Uhrzeit der Einrichtung, über Mitternacht (z. B. 22:00–06:00) ist möglich.",
           value: quiet,
           save: async (value) => {
             await save(
@@ -321,7 +321,7 @@ export function itemsFor(
         icon: "bell",
         detail: {
           kind: "toggle",
-          text: "Ist CareCore geöffnet, erklingt ein kurzer, leiser Ton, sobald eine neue Benachrichtigung eintrifft. Die Liste aktualisiert sich jede Minute.",
+          text: "Ist CareOS geöffnet, erklingt ein kurzer, leiser Ton, sobald eine neue Benachrichtigung eintrifft. Die Liste aktualisiert sich jede Minute.",
           label: "Ton abspielen",
           checked: preferences.sound,
           save: (value) => save({ sound: value }, `Hinweiston ${value ? "eingeschaltet" : "ausgeschaltet"}`),
@@ -350,7 +350,7 @@ export function itemsFor(
         icon: "quality",
         detail: {
           kind: "mfa",
-          text: "Nach dem Passwort fragt CareCore nach einem 6-stelligen Code aus der App auf deinem Handy. Das schützt dein Konto, auch wenn jemand dein Passwort kennt.",
+          text: "Nach dem Passwort fragt CareOS nach einem 6-stelligen Code aus der App auf deinem Handy. Das schützt dein Konto, auch wenn jemand dein Passwort kennt.",
         },
       },
       {
@@ -370,12 +370,12 @@ export function itemsFor(
         description: "Beende Sitzungen auf Geräten, die du nicht mehr verwendest",
         value: `${security.sessions.length} aktiv`,
         icon: "pulse",
-        detail: { kind: "sessions", text: "Hier siehst du, wo du bei CareCore angemeldet bist." },
+        detail: { kind: "sessions", text: "Hier siehst du, wo du bei CareOS angemeldet bist." },
       },
       {
         id: "sec-idle",
         title: "Automatische Abmeldung",
-        description: "Abmelden, wenn CareCore nicht bedient wird",
+        description: "Abmelden, wenn CareOS nicht bedient wird",
         value: autoLogoutLabel(preferences.autoLogout),
         icon: "logout",
         detail: {
@@ -406,7 +406,7 @@ export function itemsFor(
         icon: "docs",
         detail: {
           kind: "action",
-          text: `Enthält alles, was CareCore zu deinem Konto speichert: Profil, Einstellungen, Qualifikationen, angemeldete Geräte, Push-Abonnements und deine protokollierten Aktionen der letzten 12 Monate (ohne Inhalte von ${extras.terms.prefix}akten).`,
+          text: `Enthält alles, was CareOS zu deinem Konto speichert: Profil, Einstellungen, Qualifikationen, angemeldete Geräte, Push-Abonnements und deine protokollierten Aktionen der letzten 12 Monate (ohne Inhalte von ${extras.terms.prefix}akten).`,
           label: "Herunterladen",
           run: extras.actions.exportData,
         },

@@ -139,7 +139,7 @@ export default function WoundPhotos({
       )}
       {hiding && (
         <ReasonDialog
-          eyebrow={`CareCore Wunden · ${wound.residentName}`}
+          eyebrow={`Wunden · ${wound.residentName}`}
           title="Foto ausblenden"
           description="Das Foto bleibt als Teil der Pflegedokumentation gespeichert, wird aber nicht mehr angezeigt."
           label="Grund"
@@ -221,7 +221,7 @@ function PhotoUploadDialog({
   return (
     <EditorDialog
       id="wound-photo"
-      eyebrow={`CareCore Wunden · ${wound.residentName}`}
+      eyebrow={`Wunden · ${wound.residentName}`}
       title="Foto dokumentieren"
       description={`${wound.title}. Das Foto wird verkleinert und ohne Standort- oder Gerätedaten gespeichert.`}
       onClose={() => {

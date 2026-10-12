@@ -114,7 +114,7 @@ export default function RoundView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Med"
+        eyebrow="Medikamente"
         title="Medikamentenrunde"
         description="Geplante Gaben vorbereiten, prüfen und direkt dokumentieren."
       />
@@ -312,7 +312,7 @@ function WitnessDialog({
   return (
     <EditorDialog
       id="med-round-witness"
-      eyebrow={`CareCore Med · ${dose.residentName}`}
+      eyebrow={`Medikamente · ${dose.residentName}`}
       title={`${dose.medication} geben`}
       description={`${dose.time} · ${dose.amount}${dose.route ? ` · ${dose.route}` : ""}. Die Einrichtung verlangt bei Betäubungsmitteln eine Zweitunterschrift.`}
       onClose={onClose}

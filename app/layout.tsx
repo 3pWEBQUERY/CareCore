@@ -18,9 +18,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CareCore · Pflegearbeitsplatz",
+  title: "CareOS · Pflegearbeitsplatz",
   description: "Der persönliche digitale Arbeitsplatz für moderne Pflege.",
-  appleWebApp: { capable: true, title: "CareCore", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "CareOS", statusBarStyle: "default" },
   icons: { apple: "/icons/apple-touch-icon.png" },
 };
 

@@ -58,7 +58,7 @@ export function ProfilePopover({
       <section className="profile-panel" role="dialog" aria-modal="true" aria-labelledby="profile-popover-title">
         <header className="profile-panel-header">
           <div>
-            <p className="eyebrow">CareCore · Persönlicher Bereich</p>
+            <p className="eyebrow">CareOS · Persönlicher Bereich</p>
             <h2 id="profile-popover-title">Mein Profil</h2>
             <p>Verwalte deine persönlichen Angaben und deinen festen Arbeitsbereich.</p>
           </div>

@@ -80,7 +80,7 @@ export default function CareRecordsPage() {
         <main className="workspace module-workspace">
           <section className="page-heading care-page-heading" aria-labelledby="care-records-title">
             <div className="heading-copy">
-              <p className="eyebrow">CareCore {t.many}</p>
+              <p className="eyebrow">CareOS {t.many}</p>
               <h1 id="care-records-title">Pflegeakten</h1>
               <p>Pflegeprofil, Ziele, Massnahmen und Evaluationen des {t.oneGenitive} in der Kopfzeile.</p>
             </div>

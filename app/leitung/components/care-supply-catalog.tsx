@@ -22,7 +22,7 @@ export default function CareSupplyCatalog() {
         <main className="workspace leadership-workspace leadership-users care-supply-catalog">
           <header className="leadership-heading page-heading">
             <div className="heading-copy">
-              <p className="eyebrow">CareCore Admin</p>
+              <p className="eyebrow">Administration</p>
               <h1>Pflegebedarf</h1>
               <p>Pflegeprodukte zentral pflegen und für die {t.prefix}akte bereitstellen.</p>
             </div>

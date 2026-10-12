@@ -4,7 +4,7 @@ import { hasPermission } from "@/lib/server-data";
 import type { Fridge, FridgeOverview, FridgeReading } from "@/lib/fridges-shared";
 
 // Temperaturprotokoll Medikamentenkühlschrank: Kühlschränke mit Grenzen und Messrhythmus der Einrichtung, Messungen mit
-// Wert und Person, Erinnerung bei fälliger Messung bzw. Wert ausserhalb der Grenzen. CareCore gibt keine Grenzen vor.
+// Wert und Person, Erinnerung bei fälliger Messung bzw. Wert ausserhalb der Grenzen. CareOS gibt keine Grenzen vor.
 
 const LOCAL_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 const LINK = "/c/medikation/kuehlschrank";

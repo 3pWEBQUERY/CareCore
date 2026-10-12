@@ -76,7 +76,7 @@ export default function SetPasswordPage() {
             <span>
               <Pulse />
             </span>
-            <strong>CareCore</strong>
+            <strong>CareOS</strong>
           </div>
           <div className="login-heading">
             <p className="eyebrow">{invite ? "Zugang einrichten" : "Passwort neu setzen"}</p>
@@ -86,7 +86,7 @@ export default function SetPasswordPage() {
                 : state.status === "invalid"
                   ? "Link nicht mehr gültig"
                   : invite
-                    ? "Willkommen bei CareCore"
+                    ? "Willkommen bei CareOS"
                     : "Neues Passwort festlegen"}
             </h2>
             <p>

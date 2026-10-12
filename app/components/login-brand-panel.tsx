@@ -3,13 +3,13 @@ import { CheckCircle, Pulse, ShieldCheck } from "@phosphor-icons/react";
 // Linke Seite der Anmeldung (Marke und Hinweise); auch auf „Passwort setzen“.
 export function LoginBrandPanel() {
   return (
-    <section className="login-brand-panel" aria-label="CareCore Produktinformation">
+    <section className="login-brand-panel" aria-label="CareOS Produktinformation">
       <div className="login-brand">
         <span>
           <Pulse weight="regular" />
         </span>
         <div>
-          <strong>CareCore</strong>
+          <strong>CareOS</strong>
           <small>Mehr Zeit für Pflege.</small>
         </div>
       </div>
@@ -37,7 +37,7 @@ export function LoginBrandPanel() {
           </span>
         </span>
       </div>
-      <footer>CareCore · Pflegedokumentation für Alters- und Pflegeheime</footer>
+      <footer>CareOS · Pflegedokumentation für Alters- und Pflegeheime</footer>
     </section>
   );
 }

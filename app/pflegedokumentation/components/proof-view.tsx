@@ -239,7 +239,7 @@ function ProofContent({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Dokumentation"
+        eyebrow="Dokumentation"
         title="Durchführungsnachweis"
         description="Geplante Massnahmen je Tageszeit: alles wie geplant mit einem Klick bestätigen, nur Abweichungen einzeln mit Grund erfassen."
       />

@@ -7,7 +7,7 @@ test("Ersteinrichtung: Checkliste, Name der Einrichtung, ausblenden", async ({ p
   await login(page, ADMIN);
   const errors = watchErrors(page);
   await page.goto("/c/leitung/administration");
-  const checklist = page.getByRole("region", { name: "CareCore einrichten" });
+  const checklist = page.getByRole("region", { name: "CareOS einrichten" });
   await expect(checklist).toBeVisible();
   // Das Administrationskonto der Testdaten hat weder Zwei-Faktor noch Passkey.
   await expect(checklist.getByRole("listitem").filter({ hasText: "Eigenes Konto absichern" })).toContainText("offen");

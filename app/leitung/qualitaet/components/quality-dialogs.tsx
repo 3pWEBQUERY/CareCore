@@ -96,7 +96,7 @@ export function ReportEventDialog({
   return (
     <EditorDialog
       id="quality-event"
-      eyebrow="CareCore Quality · Ereignis"
+      eyebrow="Qualität · Ereignis"
       title="Ereignis melden"
       description="Meldungen gehen direkt an das Qualitätsmanagement. Beschreibe sachlich, was passiert ist und was sofort unternommen wurde."
       onClose={onClose}
@@ -224,7 +224,7 @@ export function HandleEventDialog({
   return (
     <EditorDialog
       id="quality-event-handle"
-      eyebrow={`CareCore Quality · ${event.title}`}
+      eyebrow={`Qualität · ${event.title}`}
       title={status === event.status ? "Ereignis bearbeiten" : EVENT_STATUS[status].label}
       description={
         closing
@@ -316,7 +316,7 @@ export function ActionDialog({
   return (
     <EditorDialog
       id="quality-action"
-      eyebrow="CareCore Quality · Massnahme"
+      eyebrow="Qualität · Massnahme"
       title={action ? "Massnahme bearbeiten" : "Massnahme planen"}
       description="Verbesserungen mit klarer Verantwortung und Termin; die Wirksamkeit wird beim Abschluss bewertet."
       onClose={onClose}
@@ -415,7 +415,7 @@ export function CompleteActionDialog({
   return (
     <EditorDialog
       id="quality-action-complete"
-      eyebrow={`CareCore Quality · ${action.title}`}
+      eyebrow={`Qualität · ${action.title}`}
       title={cancel ? "Massnahme verwerfen" : "Massnahme abschliessen"}
       description={
         cancel

@@ -46,7 +46,7 @@ export function TaskDetailDialog({
   if (escalating)
     return (
       <ReasonDialog
-        eyebrow="CareCore Tasks"
+        eyebrow="Aufgaben"
         title="Aufgabe eskalieren"
         description={`„${task.title}“ bleibt offen. Die Leitung wird sofort benachrichtigt.`}
         label="Grund"
@@ -64,7 +64,7 @@ export function TaskDetailDialog({
   if (cancelling)
     return (
       <ReasonDialog
-        eyebrow="CareCore Tasks"
+        eyebrow="Aufgaben"
         title="Aufgabe abbrechen"
         description={`„${task.title}“ wird nicht mehr durchgeführt. Die Aufgabe bleibt mit Begründung nachvollziehbar.`}
         label="Grund"
@@ -83,7 +83,7 @@ export function TaskDetailDialog({
   return (
     <EditorDialog
       id="task-detail"
-      eyebrow={`CareCore Tasks · ${task.category}`}
+      eyebrow={`Aufgaben · ${task.category}`}
       title={task.title}
       description={task.description || undefined}
       onClose={onClose}

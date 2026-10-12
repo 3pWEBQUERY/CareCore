@@ -1,6 +1,6 @@
 # Lösch- und Aufbewahrungskonzept
 
-CareCore legt keine Fristen fest. Die Einrichtung bestimmt die Aufbewahrungsfrist selbst (Leitung › Konfiguration ›
+CareOS legt keine Fristen fest. Die Einrichtung bestimmt die Aufbewahrungsfrist selbst (Leitung › Konfiguration ›
 „Aufbewahrungsfrist Akten“, 1–30 Jahre). Ohne festgelegte Frist wird nichts zur Löschung vorgeschlagen.
 
 ## Wann eine Akte zur Löschung ansteht
@@ -33,7 +33,7 @@ CareCore legt keine Fristen fest. Die Einrichtung bestimmt die Aufbewahrungsfris
 
 Mit der Akte werden auch Medikationsdaten gelöscht, darunter bewohnereigene Betäubungsmittel-Bestände und ihre
 Buchungen. Für solche Unterlagen können gesetzliche Aufbewahrungspflichten gelten. Die Einrichtung wählt die Frist so,
-dass sie alle für sie geltenden Pflichten erfüllt; CareCore gibt dafür keinen Wert vor.
+dass sie alle für sie geltenden Pflichten erfüllt; CareOS gibt dafür keinen Wert vor.
 
 ## Warteliste
 
@@ -50,4 +50,4 @@ dass sie alle für sie geltenden Pflichten erfüllt; CareCore gibt dafür keinen
 ## Grenzen
 
 - Freitext ausserhalb der Akte (z. B. Messenger-Nachrichten, Dokumente ohne Aktenbezug) wird nicht durchsucht.
-- Datensicherungen der Datenbank unterliegen dem Betriebskonzept des Hostings und werden von CareCore nicht verändert.
+- Datensicherungen der Datenbank unterliegen dem Betriebskonzept des Hostings und werden von CareOS nicht verändert.

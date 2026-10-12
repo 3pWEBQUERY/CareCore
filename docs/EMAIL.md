@@ -1,9 +1,9 @@
 # E-Mail-Versand
 
-CareCore verschickt E-Mails über SMTP. Damit funktioniert jeder Anbieter, auch der Mailserver der Einrichtung.
+CareOS verschickt E-Mails über SMTP. Damit funktioniert jeder Anbieter, auch der Mailserver der Einrichtung.
 Ohne Einrichtung bleibt alles wie bisher: kein „Passwort vergessen?“, Startpasswörter vergibt die Administration.
 
-## Was CareCore verschickt
+## Was CareOS verschickt
 
 - **Passwort vergessen** (Anmeldeseite): Link an die hinterlegte E-Mail-Adresse, 60 Minuten gültig. Die Antwort ist
   immer gleich, damit sich nicht erraten lässt, welche Konten es gibt. Höchstens 3 Links je Person und Stunde, 5
@@ -23,7 +23,7 @@ Setzen eines Passworts enden alle Sitzungen der Person. Anfrage, Versand und Ein
 | `SMTP_PORT`     | `587` (STARTTLS, Standard) oder `465` (TLS von Anfang an)                                           |
 | `SMTP_USER`     | Benutzername beim Anbieter                                                                          |
 | `SMTP_PASSWORD` | Passwort bzw. SMTP-Schlüssel beim Anbieter                                                          |
-| `MAIL_FROM`     | Absender, z. B. `CareCore Sonnengarten <noreply@sonnengarten.ch>` (Domain beim Anbieter bestätigen) |
+| `MAIL_FROM`     | Absender, z. B. `CareOS Sonnengarten <noreply@sonnengarten.ch>` (Domain beim Anbieter bestätigen)   |
 | `APP_URL`       | Adresse der App für Links, z. B. `https://carecore.sonnengarten.ch`; ohne Angabe die Railway-Domain |
 
 Links bauen nie auf dem Host der Anfrage auf, sondern nur auf `APP_URL` bzw. der Railway-Domain

@@ -418,7 +418,7 @@
   }
 }
 
-/* Teamleitung: profile rows and icon actions use the shared CareCore tooltip surface. */
+/* Teamleitung: profile rows and icon actions use the shared CareOS tooltip surface. */
 .teamlead-employee-row {
   cursor: pointer;
   transition: background 140ms ease;

@@ -30,7 +30,7 @@ function RoomScanContent() {
   return (
     <>
       <PageHeading
-        eyebrow={`CareCore ${t.many}`}
+        eyebrow={`CareOS ${t.many}`}
         title={data.data ? `Zimmer ${data.data.room.name}` : "Zimmer"}
         description={data.data ? data.data.room.careUnit : "QR-Code am Zimmer"}
       />

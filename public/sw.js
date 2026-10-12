@@ -1,4 +1,4 @@
-// CareCore Service Worker: die App öffnet sich auch ohne Verbindung.
+// CareOS Service Worker: die App öffnet sich auch ohne Verbindung.
 // - Programmdateien (/_next/static, Symbole): aus dem Speicher, sie ändern sich nie.
 // - Seiten: aus dem Netz, ohne Verbindung die zuletzt geladene Fassung.
 // - Daten (GET /api/…): aus dem Netz, ohne Verbindung die zuletzt geladenen Daten; die Seite erfährt davon
@@ -92,8 +92,8 @@ self.addEventListener("push", (event) => {
     message = {};
   }
   event.waitUntil(
-    self.registration.showNotification(message.title || "CareCore", {
-      body: "In CareCore öffnen",
+    self.registration.showNotification(message.title || "CareOS", {
+      body: "In CareOS öffnen",
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-192.png",
       tag: message.tag,
@@ -151,7 +151,7 @@ async function page(request) {
       (await cache.match(request, { ignoreSearch: true })) ?? (await cache.match(`${url.pathname.replace(/\/$/, "")}`));
     if (cached) return cached;
     return new Response(
-      `<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>CareCore · Offline</title><body style="font-family:system-ui,sans-serif;background:#f3f7fc;color:#102a43;display:grid;place-items:center;min-height:100vh;margin:0"><main style="max-width:420px;padding:24px;text-align:center"><h1 style="font-size:22px">Keine Verbindung</h1><p>Diese Seite wurde auf diesem Gerät noch nicht geöffnet und ist offline nicht verfügbar. Sobald die Verbindung zurück ist, lädt sie wieder.</p></main></body></html>`,
+      `<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>CareOS · Offline</title><body style="font-family:system-ui,sans-serif;background:#f3f7fc;color:#102a43;display:grid;place-items:center;min-height:100vh;margin:0"><main style="max-width:420px;padding:24px;text-align:center"><h1 style="font-size:22px">Keine Verbindung</h1><p>Diese Seite wurde auf diesem Gerät noch nicht geöffnet und ist offline nicht verfügbar. Sobald die Verbindung zurück ist, lädt sie wieder.</p></main></body></html>`,
       { status: 503, headers: { "content-type": "text/html; charset=utf-8" } },
     );
   }

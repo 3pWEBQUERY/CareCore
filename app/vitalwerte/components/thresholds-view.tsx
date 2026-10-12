@@ -57,7 +57,7 @@ export default function ThresholdsView({ showToast }: { showToast: ShowToast }) 
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Vitalwerte"
+        eyebrow="Vitalwerte"
         title="Grenzwerte"
         description="Zielbereiche und Alarmgrenzen für die automatische Einstufung jeder Messung."
         action={
@@ -192,7 +192,7 @@ export default function ThresholdsView({ showToast }: { showToast: ShowToast }) 
       )}
       {removing && (
         <ReasonDialog
-          eyebrow="CareCore Vitalwerte"
+          eyebrow="Vitalwerte"
           title={removing.residentId ? "Persönlichen Zielbereich entfernen" : "Haus-Grenzwert zurücksetzen"}
           description={
             removing.residentId
@@ -286,7 +286,7 @@ function ThresholdDialog({
   return (
     <EditorDialog
       id="vital-threshold"
-      eyebrow="CareCore Vitalwerte · Grenzwerte"
+      eyebrow="Vitalwerte · Grenzwerte"
       title={personal ? "Persönlicher Zielbereich" : "Haus-Grenzwert festlegen"}
       description="Ausserhalb des Zielbereichs wird eine Messung als „Beobachten“ eingestuft, ausserhalb der Alarmgrenzen als „Kritisch“. Der bisherige Wert bleibt als Verlauf erhalten."
       onClose={onClose}

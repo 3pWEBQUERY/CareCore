@@ -94,7 +94,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Wunden"
+        eyebrow="Wunden"
         title="Wundübersicht"
         description="Aktive Wunden, fällige Versorgungen und Heilungsverläufe im Blick."
         action={
@@ -451,7 +451,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
       {dialog?.kind === "entry" && <EntryDialog wound={dialog.wound} onClose={() => setDialog(null)} onSaved={done} />}
       {dialog?.kind === "close" && (
         <ReasonDialog
-          eyebrow={`CareCore Wunden · ${dialog.wound.residentName}`}
+          eyebrow={`Wunden · ${dialog.wound.residentName}`}
           title="Wunde abschliessen"
           description={`${dialog.wound.title}. Abgeschlossene Wunden bleiben mit ihrem Verlauf erhalten und können wieder eröffnet werden.`}
           label="Grund des Abschlusses"

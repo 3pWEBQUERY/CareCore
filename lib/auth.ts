@@ -67,7 +67,7 @@ async function bootstrapAdmin(sql: ReturnType<typeof database>) {
   const passwordHash = await hashPassword(password);
   await sql`
     INSERT INTO carecore_users (id, username, display_name, role, password_hash)
-    VALUES (${ADMIN_USER_ID}, 'Admin', 'CareCore Administrator', 'admin', ${passwordHash})
+    VALUES (${ADMIN_USER_ID}, 'Admin', 'CareOS Administrator', 'admin', ${passwordHash})
     ON CONFLICT DO NOTHING
   `;
   await sql`UPDATE carecore_users SET password_hash = ${passwordHash}, updated_at = NOW() WHERE password_hash = ${LEGACY_DEFAULT_ADMIN_HASH}`;
@@ -77,7 +77,7 @@ async function bootstrapAdmin(sql: ReturnType<typeof database>) {
 // On an empty database, create the organization with one site and care unit so
 // the admin can start working; an existing organization is only assigned.
 async function ensureAdminOrganization(sql: ReturnType<typeof database>) {
-  const organizationName = process.env.CARECORE_ORGANIZATION_NAME?.trim().slice(0, 180) || "CareCore";
+  const organizationName = process.env.CARECORE_ORGANIZATION_NAME?.trim().slice(0, 180) || "CareOS";
   // Land aus der Installation (CARECORE_COUNTRY = CH, DE oder AT); ohne Angabe die Schweiz, noch nicht bestätigt.
   const countryInput = process.env.CARECORE_COUNTRY?.trim().toUpperCase();
   const country = COUNTRY_CODES.includes(countryInput as CountryCode) ? (countryInput as CountryCode) : null;
@@ -91,7 +91,7 @@ async function ensureAdminOrganization(sql: ReturnType<typeof database>) {
     sql`INSERT INTO carecore_care_units (id, site_id, name) SELECT ${randomUUID()}, ${siteId}, 'Wohnbereich 1' WHERE EXISTS (SELECT 1 FROM carecore_sites WHERE id = ${siteId})`,
     sql`
       INSERT INTO carecore_user_profiles (user_id, organization_id, job_title)
-      VALUES (${ADMIN_USER_ID}, (SELECT id FROM carecore_organizations ORDER BY created_at LIMIT 1), 'CareCore Administrator')
+      VALUES (${ADMIN_USER_ID}, (SELECT id FROM carecore_organizations ORDER BY created_at LIMIT 1), 'CareOS Administrator')
       ON CONFLICT (user_id) DO UPDATE SET organization_id = COALESCE(carecore_user_profiles.organization_id, EXCLUDED.organization_id)`,
   ]);
 }

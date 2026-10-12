@@ -1,11 +1,11 @@
 # Neue Kundeninstallation
 
-Jede Einrichtung bekommt ihre eigene CareCore-Installation: eigenes Railway-Projekt, eigene Datenbank, eigener
+Jede Einrichtung bekommt ihre eigene CareOS-Installation: eigenes Railway-Projekt, eigene Datenbank, eigener
 Speicher für Dateien, eigene Domain. Daten verschiedener Kunden liegen nie zusammen. Alle Installationen laufen mit
 demselben Code aus diesem Repository (Branch `main`); ein Merge aktualisiert alle Installationen.
 
 Dauer: etwa 30 Minuten. Danach richtet die Einrichtung den Rest selbst ein (oder ihr macht es für sie), geführt
-von der Checkliste „CareCore einrichten“ unter Leitung › Administration.
+von der Checkliste „CareOS einrichten“ unter Leitung › Administration.
 
 ## 1. Geheimnisse erzeugen
 
@@ -40,7 +40,7 @@ Unter **Variables** › **Raw Editor** einfügen:
 - `DATABASE_URL=${{Postgres.DATABASE_URL}}`,
 - die Bucket-Variablen über **Add Reference** (`S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`,
   `S3_SECRET_ACCESS_KEY`) und `S3_FORCE_PATH_STYLE=false`,
-- optional `MISTRAL_API_KEY` und `MISTRAL_MODEL` für CareCore KI,
+- optional `MISTRAL_API_KEY` und `MISTRAL_MODEL` für CareOS KI,
 - optional die E-Mail-Variablen (`docs/EMAIL.md`).
 
 ## 4. Einstellungen des Dienstes
@@ -61,7 +61,7 @@ Im Projekt **+ Create** › **Function**, Name `push-dispatch`, Laufzeit Bun, Ze
 `CRON_SECRET=${{carecore.CRON_SECRET}}` und `CARECORE_URL=https://<Domain der Installation>`. Code:
 
 ```ts
-// Ruft alle 5 Minuten die fälligen Erinnerungen und Push-Nachrichten von CareCore ab.
+// Ruft alle 5 Minuten die fälligen Erinnerungen und Push-Nachrichten von CareOS ab.
 const base = Bun.env.CARECORE_URL;
 const secret = Bun.env.CRON_SECRET;
 if (!base || !secret) {
@@ -83,7 +83,7 @@ if (!response.ok) process.exit(1);
 1. Deploy abwarten; `https://<Domain>/api/health` meldet `"status": "ok"` und keine offenen Migrationen.
 2. Mit `Admin` und dem Passwort aus Schritt 1 anmelden. Die Einrichtung (Name aus `CARECORE_ORGANIZATION_NAME`), ein
    Standort und „Wohnbereich 1“ sind angelegt.
-3. Leitung › Administration zeigt „CareCore einrichten“: Name, Land, Standort mit Adresse, Wohnbereiche, Mitarbeitende,
+3. Leitung › Administration zeigt „CareOS einrichten“: Name, Land, Standort mit Adresse, Wohnbereiche, Mitarbeitende,
    Bewohner, E-Mail-Versand, Zwei-Faktor für das Administrationskonto. Diese Schritte erledigt die Einrichtung selbst
    oder ihr gemeinsam mit ihr. Bestehende Listen (Bewohner, Mitarbeitende) lassen sich unter Leitung ›
    Administration › Datenübernahme aus CSV übernehmen.

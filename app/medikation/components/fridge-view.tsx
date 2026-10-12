@@ -83,7 +83,7 @@ export default function FridgeView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Med"
+        eyebrow="Medikamente"
         title="Kühlschrank-Temperatur"
         description="Temperaturprotokoll der Medikamentenkühlschränke. Grenzen und Messrhythmus legt die Einrichtung je Kühlschrank fest; ohne Vorgabe erscheint kein Hinweis."
         action={

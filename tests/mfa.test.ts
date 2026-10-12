@@ -63,7 +63,7 @@ test("Geheimnis verschlüsselt, Schlüssel geprüft, Wiederherstellungscodes geh
   assert.match(codes[0], /^[A-Z2-9]{5}-[A-Z2-9]{5}$/);
   assert.equal(hashRecoveryCode(codes[0].toLowerCase().replace("-", " ")), hashRecoveryCode(codes[0]));
   assert.match(
-    otpauthUri(secret, "anna", "CareCore"),
-    /^otpauth:\/\/totp\/CareCore%3Aanna\?secret=[A-Z2-7]+&issuer=CareCore/,
+    otpauthUri(secret, "anna", "CareOS"),
+    /^otpauth:\/\/totp\/CareOS%3Aanna\?secret=[A-Z2-7]+&issuer=CareOS/,
   );
 });

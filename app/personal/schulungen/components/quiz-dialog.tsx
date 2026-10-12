@@ -27,7 +27,7 @@ export function QuizDialog({
   return (
     <EditorDialog
       id="learning-quiz"
-      eyebrow="CareCore Learn · Quiz"
+      eyebrow="Schulungen · Quiz"
       title={training.title}
       description={`${quiz.questions.length} ${quiz.questions.length === 1 ? "Frage" : "Fragen"} · bestanden ab ${quiz.passPercent} % richtigen Antworten.`}
       onClose={onClose}

@@ -34,7 +34,7 @@ export const operationOutcome = (message: string, code = "invalid") => ({
 type Coding = { system: string; code: string; display: string };
 type ObservationCode = { category: "vital-signs" | "laboratory"; coding: Coding[]; components?: [Coding, Coding] };
 
-// Messwerte von CareCore → LOINC.
+// Messwerte von CareOS → LOINC.
 export const OBSERVATION_CODES: Record<string, ObservationCode> = {
   Blutdruck: {
     category: "vital-signs",
@@ -204,7 +204,7 @@ function residentReference(value: string) {
   return id;
 }
 
-// `code=8867-4`, `code=http://loinc.org|8867-4,29463-7` → Messwerte von CareCore.
+// `code=8867-4`, `code=http://loinc.org|8867-4,29463-7` → Messwerte von CareOS.
 function metricsForCodes(value: string) {
   const metrics = new Set<string>();
   for (const token of value.split(",")) {
@@ -361,8 +361,8 @@ export function capabilityStatement(base: string) {
     status: "active",
     date: "2026-09-29",
     kind: "instance",
-    software: { name: "CareCore" },
-    implementation: { description: "CareCore FHIR-Schnittstelle (nur lesend)", url: base },
+    software: { name: "CareOS" },
+    implementation: { description: "CareOS FHIR-Schnittstelle (nur lesend)", url: base },
     fhirVersion: FHIR_VERSION,
     format: ["json"],
     rest: [

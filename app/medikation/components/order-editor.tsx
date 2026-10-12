@@ -128,7 +128,7 @@ export default function OrderEditor({
   return (
     <EditorDialog
       id="med-order"
-      eyebrow={`CareCore Med · ${residentName}`}
+      eyebrow={`Medikamente · ${residentName}`}
       title={order ? "Verordnung bearbeiten" : isPrn ? "Reserve verordnen" : "Verordnung erfassen"}
       description={
         isPrn

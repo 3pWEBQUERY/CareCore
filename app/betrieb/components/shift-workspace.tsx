@@ -33,7 +33,7 @@ export default function ShiftWorkspace({ view }: { view: ShiftPageView }) {
       module="shift"
       child={view === "shift" ? "Mein Dienst" : "Schichtverlauf"}
       view={view}
-      eyebrow="CareCore Shift"
+      eyebrow="Mein Dienst"
       title={view === "shift" ? "Mein Dienst" : "Schichtverlauf"}
       description={
         view === "shift"

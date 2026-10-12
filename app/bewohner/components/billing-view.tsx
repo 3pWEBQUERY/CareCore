@@ -602,7 +602,7 @@ function BillingContent({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow={`CareCore ${t.many}`}
+        eyebrow={`CareOS ${t.many}`}
         title="Abrechnung"
         description={`Taxen der Einrichtung, ${catalog.data?.levelLabel ?? "Pflegestufe"} und Abwesenheiten je ${t.one} – mit Vorschau des Monats nach Kostenträger.`}
       />

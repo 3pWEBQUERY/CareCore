@@ -505,16 +505,6 @@ input:focus-visible {
   width: 21px;
   height: 21px;
 }
-.sidebar-rail-button .sidebar-carecore-one-icon {
-  width: 23px;
-  height: 23px;
-  object-fit: contain;
-}
-.sidebar-rail-button:hover .sidebar-carecore-one-icon,
-.sidebar-rail-button:focus-visible .sidebar-carecore-one-icon,
-.sidebar-rail-button.active .sidebar-carecore-one-icon {
-  filter: brightness(0) invert(1);
-}
 .sidebar-kompass-icon {
   width: 23px;
   height: 23px;

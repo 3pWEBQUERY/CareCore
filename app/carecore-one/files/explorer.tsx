@@ -572,7 +572,7 @@ export default function FileExplorer({ scope }: { scope: FileScope }) {
         <main className="workspace files-workspace">
           <header className="page-heading">
             <div className="heading-copy">
-              <p className="eyebrow">CareCore One · Ablage</p>
+              <p className="eyebrow">Ablage</p>
               <h1>{copy.title}</h1>
               <p>{copy.lead}</p>
             </div>

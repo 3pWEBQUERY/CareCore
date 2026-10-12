@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 type Params = { params: Promise<{ residentId: string }> };
 
-// Entwurf der CareCore KI für das Gesamtbild der laufenden Abklärung (nur Vorschlag, die Fachperson entscheidet).
+// Entwurf der CareOS KI für das Gesamtbild der laufenden Abklärung (nur Vorschlag, die Fachperson entscheidet).
 export async function POST(_request: Request, { params }: Params) {
   try {
     const ctx = await apiContext("rai.manage");

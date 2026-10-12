@@ -678,7 +678,7 @@ await seed("carecore_quality_actions", [
   },
 ]);
 await seed("carecore_rai_assessments", [
-  // Begonnene Abklärung mit dem CareCore Kompass (Mobilität teilweise beantwortet) und eine geplante.
+  // Begonnene Abklärung mit dem CareOS Kompass (Mobilität teilweise beantwortet) und eine geplante.
   {
     id: id("rai-hans"),
     resident_id: resident[0],
@@ -740,4 +740,4 @@ await seed("carecore_notifications", [
     link_url: "/c/medikation/runde",
   },
 ]);
-console.log("CareCore demo seed completed. Existing table contents were preserved.");
+console.log("CareOS demo seed completed. Existing table contents were preserved.");

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAppRouter } from "./app-navigation";
 import { ModuleIcon } from "./module-icon";
-import { openHelp } from "./help-panel";
+import { AppIcon, openAppLauncher } from "./app-launcher";
 import {
   openResidentPicker,
   useCareResident,
@@ -11,23 +11,14 @@ import {
   useWorkContext,
   type NavigationBadges,
 } from "./care-context";
-import { moduleBadges, quickLinks, routeFor, sidebarNavigation, type ModuleIconName } from "./navigation";
+import { MOBILE_DOCK_APPS, appHref, sidebarNavigation } from "./navigation";
 import { availableActions, runAction, type CareAction } from "./actions";
 import { navigationLabel, termsFor } from "@/lib/terminology";
 
-type BarItem = { id: string; label: string; icon: ModuleIconName; moduleId: string; child: string };
-
-// Always the same buttons in the same place, so staff find them blind during a shift.
-const BAR: BarItem[] = [
-  { id: "residents", label: "Bewohner", icon: "residents", moduleId: "residents", child: "Übersicht" },
-  { id: "chart", label: "Doku", icon: "note", moduleId: "chart", child: "Schnelldokumentation" },
-  { id: "med", label: "Medikation", icon: "med", moduleId: "med", child: "Medikamentenrunde" },
-];
-
-// Mobile bottom bar and main menu; shows only the areas the signed-in person may use.
+// Untere Leiste auf dem Handy: Start, die drei meistgenutzten Apps und „Alle Apps“ – immer gleich, damit man sie
+// blind findet. Gezeigt wird nur, was die angemeldete Person nutzen darf.
 export function MobileNavigation({ activeModule }: { activeModule?: string }) {
   const router = useAppRouter();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const context = useWorkContext();
   const terms = termsFor(context?.terminology);
@@ -39,20 +30,18 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
   const badges = useNavigationBadges();
   const count = (keys: Array<keyof NavigationBadges>) =>
     badges ? keys.reduce((sum, key) => sum + (badges[key] ?? 0), 0) : 0;
-  const allowed = new Set(groups.flatMap((group) => group.modules.map((module) => module.id)));
-  const bar = BAR.filter((item) => allowed.has(item.moduleId));
-  const quick = quickLinks.filter((link) => allowed.has(link.moduleId));
+  const modules = groups.flatMap((group) => group.modules);
+  const bar = MOBILE_DOCK_APPS.map((id) => modules.find((module) => module.id === id)).filter((module) => !!module);
   // Schnellaktionen (Knopf über der unteren Leiste): häufige Erfassungen für den Bewohner aus der Kopfzeile.
   const actions = availableActions(permissions);
-  const inBar = activeModule === "home" || bar.some((item) => item.moduleId === activeModule);
-  const menuCount = count(["tasks", "handover", "messages"]);
+  const inBar = activeModule === "home" || bar.some((item) => item.id === activeModule);
+  // Zähler der Apps, die nicht in der Leiste stehen (Aufgaben, Übergabe, Nachrichten), an „Alle Apps“.
+  const otherCount = count(["tasks", "handover", "messages"]);
 
-  const sheetOpen = menuOpen || actionsOpen;
   useEffect(() => {
-    if (!sheetOpen) return;
+    if (!actionsOpen) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      setMenuOpen(false);
       setActionsOpen(false);
     };
     window.addEventListener("keydown", onKey);
@@ -61,122 +50,20 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
       window.removeEventListener("keydown", onKey);
       document.body.classList.remove("mobile-menu-open");
     };
-  }, [sheetOpen]);
+  }, [actionsOpen]);
 
   function act(action: CareAction) {
-    setMenuOpen(false);
     setActionsOpen(false);
     runAction(action, (href) => router.push(href));
   }
 
-  function go(moduleId: string, child: string) {
-    const href = routeFor(moduleId, child);
-    setMenuOpen(false);
+  function go(href: string | null) {
     setActionsOpen(false);
     if (href) router.push(href);
   }
 
   return (
     <>
-      {menuOpen && (
-        <>
-          <div className="mobile-nav-backdrop" role="presentation" onClick={() => setMenuOpen(false)} />
-          <div className="mobile-nav-menu" role="dialog" aria-modal="true" aria-label="Hauptmenü">
-            <div className="mobile-nav-menu-head">
-              <div>
-                <p className="eyebrow">CareCore</p>
-                <strong>Menü</strong>
-              </div>
-              <button type="button" aria-label="Menü schliessen" onClick={() => setMenuOpen(false)}>
-                <ModuleIcon name="close" />
-              </button>
-            </div>
-            {quick.length > 0 && (
-              <section className="mobile-nav-section">
-                <h3>Schnellzugriff</h3>
-                <div className="mobile-nav-quick">
-                  {quick.map((link) => {
-                    const value = link.badge ? count([link.badge]) : 0;
-                    return (
-                      <button
-                        type="button"
-                        key={`${link.moduleId}:${link.child}`}
-                        onClick={() => go(link.moduleId, link.child)}
-                      >
-                        <ModuleIcon name={link.icon} />
-                        <span>{L(link.label)}</span>
-                        {value > 0 && <em>{value}</em>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-            {groups.map((group) => (
-              <section className="mobile-nav-section" key={group.id}>
-                <h3>{L(group.label)}</h3>
-                <div className="mobile-nav-groups">
-                  {group.modules.map((module) => {
-                    const value = count(moduleBadges(module.id));
-                    return (
-                      <button
-                        className={module.id === activeModule ? "active" : ""}
-                        type="button"
-                        key={module.id}
-                        aria-current={module.id === activeModule ? "page" : undefined}
-                        onClick={() => go(module.id, module.children[0])}
-                      >
-                        <span className="mobile-nav-group-icon">
-                          <ModuleIcon name={module.icon} />
-                        </span>
-                        <span>
-                          <strong>{L(module.label)}</strong>
-                          {module.children.length > 1 && <small>{module.children.join(" · ")}</small>}
-                        </span>
-                        {value > 0 ? <em className="mobile-nav-count">{value}</em> : <ModuleIcon name="chevron" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
-            <section className="mobile-nav-section">
-              <div className="mobile-nav-groups">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    router.push("/c/einstellungen");
-                  }}
-                >
-                  <span className="mobile-nav-group-icon">
-                    <ModuleIcon name="settings" />
-                  </span>
-                  <span>
-                    <strong>Einstellungen</strong>
-                  </span>
-                  <ModuleIcon name="chevron" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    openHelp();
-                  }}
-                >
-                  <span className="mobile-nav-group-icon">
-                    <ModuleIcon name="docs" />
-                  </span>
-                  <span>
-                    <strong>Hilfe & Support</strong>
-                  </span>
-                  <ModuleIcon name="chevron" />
-                </button>
-              </div>
-            </section>
-          </div>
-        </>
-      )}
       {actionsOpen && (
         <>
           <div className="mobile-nav-backdrop" role="presentation" onClick={() => setActionsOpen(false)} />
@@ -241,51 +128,65 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
           <ModuleIcon name={actionsOpen ? "close" : "plus"} />
         </button>
       )}
-      <nav className="bottom-nav" aria-label="Mobile Navigation">
+      <nav className="bottom-nav careos-bottom-dock" aria-label="Mobile Navigation">
         <button
-          className={activeModule === "home" && !menuOpen ? "active" : ""}
+          className={activeModule === "home" ? "active" : ""}
           type="button"
           aria-current={activeModule === "home" ? "page" : undefined}
-          onClick={() => {
-            setMenuOpen(false);
-            setActionsOpen(false);
-            router.push("/c");
-          }}
+          onClick={() => go("/c")}
         >
-          <ModuleIcon name="home" />
+          <span
+            className="careos-app-icon careos-app-icon-sm careos-app-icon-plain"
+            style={{ ["--app-hue" as string]: 214 }}
+          >
+            <ModuleIcon name="home" />
+          </span>
           <span>Start</span>
         </button>
-        {bar.map((item) => {
-          const value = item.id === "med" ? count(["medRound"]) : 0;
-          const active = activeModule === item.moduleId && !menuOpen;
+        {bar.map((module) => {
+          const value = module.id === "med" ? count(["medRound"]) : 0;
+          const active = activeModule === module.id;
+          const label = L(module.shortLabel ?? module.label);
           return (
             <button
               className={active ? "active" : ""}
               type="button"
-              key={item.id}
+              key={module.id}
               aria-current={active ? "page" : undefined}
-              aria-label={value ? `${L(item.label)} (${value} überfällig)` : undefined}
-              onClick={() => go(item.moduleId, item.child)}
+              onClick={() => go(appHref(module))}
             >
-              <ModuleIcon name={item.icon} />
-              <span>{L(item.label)}</span>
-              {value > 0 && <em className="bottom-nav-badge">{value > 99 ? "99+" : value}</em>}
+              <AppIcon module={module} size="sm" />
+              <span>{label}</span>
+              {value > 0 && (
+                <em className="bottom-nav-badge" aria-hidden="true">
+                  {value > 99 ? "99+" : value}
+                </em>
+              )}
+              {value > 0 && <span className="sr-only"> ({value} überfällig)</span>}
             </button>
           );
         })}
         <button
-          className={menuOpen || !inBar ? "active" : ""}
+          className={!inBar && activeModule !== "settings" ? "active" : ""}
           type="button"
           aria-haspopup="dialog"
-          aria-expanded={menuOpen}
           onClick={() => {
             setActionsOpen(false);
-            setMenuOpen((value) => !value);
+            openAppLauncher();
           }}
         >
-          <ModuleIcon name={menuOpen ? "close" : "sidebar"} />
-          <span>Menü</span>
-          {menuCount > 0 && !menuOpen && <em className="bottom-nav-badge">{menuCount > 99 ? "99+" : menuCount}</em>}
+          <span
+            className="careos-app-icon careos-app-icon-sm careos-app-icon-plain"
+            style={{ ["--app-hue" as string]: 214 }}
+          >
+            <ModuleIcon name="apps" />
+          </span>
+          <span>Alle Apps</span>
+          {otherCount > 0 && (
+            <em className="bottom-nav-badge" aria-hidden="true">
+              {otherCount > 99 ? "99+" : otherCount}
+            </em>
+          )}
         </button>
       </nav>
     </>

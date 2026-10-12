@@ -1,4 +1,4 @@
-# CareCore – Modul Dienstplan, Diensttausch, Wunschfrei, KI-Planung & Zeiterfassung
+# CareOS – Modul Dienstplan, Diensttausch, Wunschfrei, KI-Planung & Zeiterfassung
 
 > Spezifikation für Claude Code. Ablage im Repo: `docs/specs/dienstplan.md`.
 > Diese Datei ist die fachliche Source of Truth. Abschnitt 0 regelt, **wie** gearbeitet wird, und ist verbindlich.
@@ -20,7 +20,7 @@ Beginne nie mit der nächsten Phase ohne ausdrückliche Freigabe.
 
 ### 0.2 Was gilt bei Widersprüchen
 
-- **Technik** (Ordnerstruktur, Namen, Libraries, Auth, UI-Komponenten, Notification-System): der **bestehende CareCore-Code** gewinnt gegen diese Spec.
+- **Technik** (Ordnerstruktur, Namen, Libraries, Auth, UI-Komponenten, Notification-System): der **bestehende CareOS-Code** gewinnt gegen diese Spec.
 - **Fachliche Regeln** (Validierung, Berechtigungen, Tausch-Ablauf, Zeitberechnung): **diese Spec** gewinnt.
 - Jede Abweichung von der Spec wird in `docs/dienstplan/DECISIONS.md` mit Begründung festgehalten.
 
@@ -75,14 +75,14 @@ npx prisma db seed           # zweimal hintereinander fehlerfrei (idempotent)
 
 ## 1. Ziel und Scope
 
-CareCore erhält ein vollständig integriertes Modul für Pflege-/Wohngruppen: Dienstplanung (Raster, Drag & Drop, Entwurf/Veröffentlichung), Diensttypen und Mindestbesetzung, Wunschfrei, Dienstwünsche, Diensttausch (automatisch oder mit Genehmigung), KI-gestützte Planung und Analyse (Mistral), Zeiterfassung mit Soll/Ist-Auswertung, Benachrichtigungen und ein unveränderliches Audit-Log.
+CareOS erhält ein vollständig integriertes Modul für Pflege-/Wohngruppen: Dienstplanung (Raster, Drag & Drop, Entwurf/Veröffentlichung), Diensttypen und Mindestbesetzung, Wunschfrei, Dienstwünsche, Diensttausch (automatisch oder mit Genehmigung), KI-gestützte Planung und Analyse (Mistral), Zeiterfassung mit Soll/Ist-Auswertung, Benachrichtigungen und ein unveränderliches Audit-Log.
 
 Produktionsnah: Datenbank, Server-Logik, Berechtigungen, Validierung und UI sind verbunden. Alle Daten liegen in PostgreSQL.
 
 **Nicht im Scope** (nur umsetzen, wenn ausdrücklich freigegeben):
 
 - Lohnexport, Zuschlagsberechnung in Geldbeträgen
-- E-Mail/Push-Versand (außer CareCore hat das bereits – dann anbinden)
+- E-Mail/Push-Versand (außer CareOS hat das bereits – dann anbinden)
 - Stempelterminals, Geofencing, native Apps
 - Automatischer Feiertagsimport per externer API (Feiertage werden gepflegt/geseedet)
 
@@ -104,13 +104,13 @@ Produktionsnah: Datenbank, Server-Logik, Berechtigungen, Validierung und UI sind
 | Zeiteintrag               | `TimeEntry`            |                                                         |
 | Leitung / Mitarbeitende   | bestehende Rollen      |                                                         |
 
-Konvention: Code, Typen, DB-Modelle und Funktionsnamen auf Englisch; UI-Texte, Fehlermeldungen und Routen (`/dienstplan`, `/mein-dienstplan`) auf Deutsch. Bestehende CareCore-Konventionen (z. B. `@@map` auf snake_case) übernehmen.
+Konvention: Code, Typen, DB-Modelle und Funktionsnamen auf Englisch; UI-Texte, Fehlermeldungen und Routen (`/dienstplan`, `/mein-dienstplan`) auf Deutsch. Bestehende CareOS-Konventionen (z. B. `@@map` auf snake_case) übernehmen.
 
 ### 2.2 Klarstellungen gegenüber der ursprünglichen Anforderung
 
 1. **Differenz = Netto-Ist minus Netto-Soll.** Beispiel: Soll 06:30–15:00 mit 30 Min Pause = 480 Min; Ist 06:42–15:18 mit 30 Min Pause = 486 Min → **Differenz +6 Min**. Zusätzlich werden Beginn-Abweichung (+12 Min) und Ende-Abweichung (+18 Min) separat angezeigt. Die „+18 Min“ im alten Abschnitt 18 waren nur die Ende-Abweichung.
-2. **„Frei“ wird nicht gespeichert.** Ein Tag ohne Dienst ist frei. Nur wenn CareCore explizite Frei-Einträge braucht, gibt es einen Diensttyp `FREI` mit 0 Minuten.
-3. **Urlaub, Krankheit, Fortbildung** sind Diensttypen mit eigener Kategorie (siehe 5.3), keine separaten Systeme. `TimeOffRequest` ist ausschließlich für **Wunschfrei**. Existiert in CareCore bereits ein Abwesenheitsmodell, wird dieses verwendet und angebunden.
+2. **„Frei“ wird nicht gespeichert.** Ein Tag ohne Dienst ist frei. Nur wenn CareOS explizite Frei-Einträge braucht, gibt es einen Diensttyp `FREI` mit 0 Minuten.
+3. **Urlaub, Krankheit, Fortbildung** sind Diensttypen mit eigener Kategorie (siehe 5.3), keine separaten Systeme. `TimeOffRequest` ist ausschließlich für **Wunschfrei**. Existiert in CareOS bereits ein Abwesenheitsmodell, wird dieses verwendet und angebunden.
 4. **Entwurf/Veröffentlichung** braucht eine Plan-Entität (`SchedulePeriod`). Es gibt keine doppelten Dienst-Datensätze für Entwurf und veröffentlichte Version; der Periodenstatus steuert die Sichtbarkeit.
 5. **Die KI plant nicht allein.** Jede KI-Zuweisung läuft durch dieselbe deterministische Regel-Engine wie manuelle Änderungen (Abschnitt 7 und 9).
 6. **Eine Regel-Engine für alles:** manuelles Bearbeiten, Drag & Drop, Tauschpartner-Suche, Tausch-Ausführung, KI-Validierung, Veröffentlichungsprüfung und KI-Optimierung nutzen dieselben Funktionen.
@@ -171,7 +171,7 @@ Die Seed-Werte werden in UI und Seed als **„Beispielwerte – rechtlich prüfe
 
 **EmployeeProfile** (Erweiterung des bestehenden Users, 1:1)
 `userId`, `primaryUnitId`, `pensumPercent` (Beschäftigungsgrad), `weeklyTargetMinutesOverride?`, `employmentStart`, `employmentEnd?`, `active`, `excludedShiftCategories[]` (z. B. keine Nachtdienste – **ohne** Angabe eines Grundes speichern).
-Zusätzliche Wohngruppen-Zugehörigkeiten (Springer) über eine Membership-Tabelle, falls CareCore keine hat.
+Zusätzliche Wohngruppen-Zugehörigkeiten (Springer) über eine Membership-Tabelle, falls CareOS keine hat.
 
 **Qualification**, **EmployeeQualification** (`validFrom`, `validUntil?`).
 
@@ -265,7 +265,7 @@ CREATE TRIGGER audit_log_no_truncate
   FOR EACH STATEMENT EXECUTE FUNCTION audit_log_immutable();
 ```
 
-Achtung: Keine Foreign Keys von `AuditLog` mit `onDelete: Cascade` oder `SetNull` – das würde ein UPDATE/DELETE auslösen und am Trigger scheitern. Deshalb `actorLabel` als Snapshot; `actorId` ohne kaskadierende FK. Prüfe, ob CareCore User löscht oder nur deaktiviert.
+Achtung: Keine Foreign Keys von `AuditLog` mit `onDelete: Cascade` oder `SetNull` – das würde ein UPDATE/DELETE auslösen und am Trigger scheitern. Deshalb `actorLabel` als Snapshot; `actorId` ohne kaskadierende FK. Prüfe, ob CareOS User löscht oder nur deaktiviert.
 
 Die DB-Constraints sind die letzte Verteidigungslinie. Die Regel-Engine muss dieselben Fälle vorher mit verständlicher Meldung abfangen; ein DB-Constraint-Fehler wird trotzdem in eine verständliche Meldung übersetzt, nie roh an den Client gereicht.
 
@@ -275,7 +275,7 @@ Die DB-Constraints sind die letzte Verteidigungslinie. Die Regel-Engine muss die
 
 ### 6.1 Modell
 
-Rollenbasierte Permissions **plus Scope** (welche Wohngruppen). Bestehendes CareCore-Rollensystem verwenden; falls keins existiert: typisierte Konstante `ROLE_PERMISSIONS` im Code (testbar), keine DB-Tabellen ohne Bedarf.
+Rollenbasierte Permissions **plus Scope** (welche Wohngruppen). Bestehendes CareOS-Rollensystem verwenden; falls keins existiert: typisierte Konstante `ROLE_PERMISSIONS` im Code (testbar), keine DB-Tabellen ohne Bedarf.
 
 Permissions:
 `dienstplan:read`, `dienstplan:read_own`, `dienstplan:create`, `dienstplan:update`, `dienstplan:delete`, `dienstplan:publish`, `diensttypen:manage`, `regelwerk:manage`, `diensttausch:create`, `diensttausch:approve`, `wunschfrei:create`, `wunschfrei:decide`, `dienstwunsch:create`, `zeiterfassung:read`, `zeiterfassung:read_own`, `zeiterfassung:write_own`, `zeiterfassung:update`, `zeiterfassung:lock`, `ki:use`, `audit:read`.
@@ -494,7 +494,7 @@ Jede schreibende Operation schreibt einen Eintrag mit Vorher/Nachher-Snapshot, A
 
 ### 8.13 Aktualisierung ohne Neuladen
 
-Erst prüfen, ob CareCore Realtime nutzt – dann anbinden. Sonst:
+Erst prüfen, ob CareOS Realtime nutzt – dann anbinden. Sonst:
 
 - Basis: Polling alle 20–30 s auf eine leichte Route (`/api/dienstplan/changes?since=…` liefert nur geänderte IDs/Version der Periode), danach gezielt neu laden; Pausieren bei inaktivem Tab.
 - Optional später: SSE mit Postgres `LISTEN/NOTIFY`.
@@ -652,7 +652,7 @@ Keine Codeänderungen. Ergebnis `docs/dienstplan/ANALYSE.md`: Stack und Versione
 
 **Phase 1 – Fundament**
 Prisma-Modelle, Migration inkl. Raw-SQL-Constraints, Permission-/Scope-Helfer, Audit-Service, Notification-Erweiterung, Seed.
-DoD: Migration auf frischer DB und auf DB mit bestehenden CareCore-Daten erfolgreich; Seed idempotent; DB- und Permission-Tests grün; bestehende Tests weiterhin grün.
+DoD: Migration auf frischer DB und auf DB mit bestehenden CareOS-Daten erfolgreich; Seed idempotent; DB- und Permission-Tests grün; bestehende Tests weiterhin grün.
 
 **Phase 2 – Regel-Engine und Zeitberechnung**
 Reine Funktionen aus Abschnitt 3, 4, 7, 8.10.
@@ -680,7 +680,7 @@ DoD: KI-Tests grün; mit echtem Key (lokal) ein Wochenplan erzeugt, validiert, a
 
 **Phase 8 – Aktualisierung, Feinschliff, Abnahme**
 Polling/Realtime, Mobile-Feinschliff, Accessibility, Performance (Raster mit 40 Personen × 31 Tagen flüssig), E2E-Tests der Kernabläufe falls Playwright vorhanden, Abschluss-DoD:
-Alle Checks aus 0.7 grün · alle Funktionen aus Abschnitt 8 und 9 über die UI nutzbar · keine Mock-Daten · Berechtigungen serverseitig getestet · bestehende CareCore-Funktionen unverändert funktionsfähig · README-Abschnitt zum Modul (Setup, Env-Variablen, Demo-Logins, bekannte Grenzen).
+Alle Checks aus 0.7 grün · alle Funktionen aus Abschnitt 8 und 9 über die UI nutzbar · keine Mock-Daten · Berechtigungen serverseitig getestet · bestehende CareOS-Funktionen unverändert funktionsfähig · README-Abschnitt zum Modul (Setup, Env-Variablen, Demo-Logins, bekannte Grenzen).
 
 ---
 

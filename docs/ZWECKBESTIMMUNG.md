@@ -1,10 +1,10 @@
-# Zweckbestimmung von CareCore (Entwurf)
+# Zweckbestimmung von CareOS (Entwurf)
 
 Stand: 03.10.2026. Entwurf zur Prüfung durch eine Fachperson für Medizinprodukte-Regulierung; keine Rechtsberatung.
 
 ## Zweck
 
-CareCore ist Software für **Pflegedokumentation, Organisation und Kommunikation** in Pflegeheimen und ähnlichen
+CareOS ist Software für **Pflegedokumentation, Organisation und Kommunikation** in Pflegeheimen und ähnlichen
 Einrichtungen (Schweiz, Deutschland, Österreich). Sie dient dazu,
 
 - Angaben zu betreuten Personen zu erfassen, zu speichern, anzuzeigen, zu suchen, zu drucken und zu exportieren;
@@ -15,14 +15,14 @@ Einrichtungen (Schweiz, Deutschland, Österreich). Sie dient dazu,
 
 ## Nicht Zweck
 
-CareCore ist **nicht** dafür bestimmt, für einzelne Personen
+CareOS ist **nicht** dafür bestimmt, für einzelne Personen
 
 - Diagnosen zu stellen oder vorzuschlagen;
 - Dosierungen zu berechnen oder Therapien bzw. Behandlungen zu empfehlen;
 - Krankheiten, Risiken oder Vitalfunktionen selbständig zu überwachen, vorherzusagen oder zu bewerten;
 - Wechselwirkungen von Arzneimitteln aus einer Wirkstoffdatenbank automatisch zu beurteilen.
 
-Alle Beurteilungen und Entscheide treffen Fachpersonen. CareCore enthält keine eigenen klinischen Grenzwerte,
+Alle Beurteilungen und Entscheide treffen Fachpersonen. CareOS enthält keine eigenen klinischen Grenzwerte,
 Intervalle oder Regeln; wo Hinweise erscheinen, beruhen sie auf Vorgaben, die die Einrichtung selbst festlegt.
 
 ## Grundlage der Abgrenzung
@@ -38,25 +38,25 @@ dieser Zweckbestimmung an der Quelle zu prüfen.
 Diese Funktionen sind so gebaut, dass sie nur zählen, anzeigen oder an Vorgaben der Einrichtung erinnern. Sie sollten
 mit der Zweckbestimmung zusammen fachlich geprüft werden.
 
-| Funktion                        | Wie CareCore sie umsetzt                                                                                                                                                                                |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Hinweise zu Wechselwirkungen    | Nur Hinweise, die die Einrichtung selbst mit Quelle erfasst; keine Wirkstoffdatenbank.                                                                                                                  |
-| Einschätzungsinstrumente        | Erfassung nach veröffentlichter Methode bzw. Vorgabe der Einrichtung; CareCore zählt Punkte und zeigt die von der Quelle bzw. Einrichtung festgelegten Bereiche; die Beurteilung trifft die Fachperson. |
-| Vitalwerte, Gewicht, Trinkmenge | Grenzen und Zeiträume legt die Einrichtung bzw. die Ärztin oder der Arzt fest; ohne Vorgabe kein Hinweis.                                                                                               |
-| CareCore Kompass                | Eigenes Instrument zur Bedarfsabklärung: beschreibende Antworten, keine Punktzahl, keine Pflegestufe, kein Risiko; Handlungsbedarf entscheidet die Fachperson je Bereich (siehe unten).                 |
-| CareCore KI                     | Erstellt nur Entwürfe (z. B. für die Pflegeplanung), die eine Fachperson prüft und übernimmt; keine Diagnosen, keine Medikation.                                                                        |
+| Funktion                        | Wie CareOS sie umsetzt                                                                                                                                                                                |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hinweise zu Wechselwirkungen    | Nur Hinweise, die die Einrichtung selbst mit Quelle erfasst; keine Wirkstoffdatenbank.                                                                                                                |
+| Einschätzungsinstrumente        | Erfassung nach veröffentlichter Methode bzw. Vorgabe der Einrichtung; CareOS zählt Punkte und zeigt die von der Quelle bzw. Einrichtung festgelegten Bereiche; die Beurteilung trifft die Fachperson. |
+| Vitalwerte, Gewicht, Trinkmenge | Grenzen und Zeiträume legt die Einrichtung bzw. die Ärztin oder der Arzt fest; ohne Vorgabe kein Hinweis.                                                                                             |
+| CareOS Kompass                  | Eigenes Instrument zur Bedarfsabklärung: beschreibende Antworten, keine Punktzahl, keine Pflegestufe, kein Risiko; Handlungsbedarf entscheidet die Fachperson je Bereich (siehe unten).               |
+| CareOS KI                       | Erstellt nur Entwürfe (z. B. für die Pflegeplanung), die eine Fachperson prüft und übernimmt; keine Diagnosen, keine Medikation.                                                                      |
 
-## CareCore Kompass (Bedarfsabklärung)
+## CareOS Kompass (Bedarfsabklärung)
 
-Zweck, wörtlich: „CareCore ermöglicht Pflegefachpersonen, das Assessment mit dem CareCore Kompass digital
+Zweck, wörtlich: „CareOS ermöglicht Pflegefachpersonen, das Assessment mit dem CareOS Kompass digital
 durchzuführen, Ergebnisse zu dokumentieren und die daraus resultierende Pflegeplanung zu verwalten.“
 
-Nicht Zweck: „CareCore analysiert die Gesundheitsdaten automatisch und bestimmt den medizinischen Pflegebedarf bzw.
+Nicht Zweck: „CareOS analysiert die Gesundheitsdaten automatisch und bestimmt den medizinischen Pflegebedarf bzw.
 diagnostiziert Risiken.“
 
 Umsetzung:
 
-- Die Fragen und Antwortstufen sind eigenständig für CareCore verfasst und beschreiben Beobachtungen und
+- Die Fragen und Antwortstufen sind eigenständig für CareOS verfasst und beschreiben Beobachtungen und
   Unterstützung im Alltag (z. B. „Teilweise Hilfe“, „Häufig beobachtet“). Es gibt keine Punkte, Summen, Stufen oder
   Ampeln, die aus den Antworten errechnet werden.
 - Ob in einem Bereich Handlungsbedarf besteht, entscheidet die Fachperson und beschreibt ihn selbst; ohne diesen
@@ -68,7 +68,7 @@ Umsetzung:
 - Fristen für Abklärungen legt die Einrichtung fest; ohne Einstellung wird nichts automatisch fällig.
 - Die Auswertung je Wohnbereich zählt nur, wie viele Personen welche Antwort erhalten haben und bei wie vielen die
   Fachperson Handlungsbedarf festgehalten hat; sie bildet keine Kennzahl und keine Rangfolge.
-- Der Entwurf der CareCore KI für das Gesamtbild fasst nur die Antworten, Notizen und Entscheide der Fachperson in
+- Der Entwurf der CareOS KI für das Gesamtbild fasst nur die Antworten, Notizen und Entscheide der Fachperson in
   Worte (ohne Namen); er bewertet den Bedarf nicht und wird erst übernommen, wenn die Fachperson es bestätigt.
 - Der Kompass ersetzt kein vom Kanton bzw. Land anerkanntes Instrument für die Einstufung zur Finanzierung
   (z. B. nach KVG in der Schweiz).
@@ -76,4 +76,4 @@ Umsetzung:
 ## Offen
 
 - Prüfung dieser Zweckbestimmung und der Funktionen oben durch eine Fachperson für Medizinprodukte-Regulierung.
-- Danach: Zweckbestimmung in Vertrag, Website und Hilfe von CareCore gleichlautend verwenden.
+- Danach: Zweckbestimmung in Vertrag, Website und Hilfe von CareOS gleichlautend verwenden.

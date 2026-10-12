@@ -106,7 +106,7 @@ export function TaskEditor({
       >
         <header className="area-editor-header">
           <div>
-            <p className="eyebrow">CareCore Tasks · Aufgaben</p>
+            <p className="eyebrow">Aufgaben</p>
             <h2 id="task-editor-title">{task ? "Aufgabe bearbeiten" : "Aufgabe erstellen"}</h2>
             <p>Plane eine klare Intervention und weise sie direkt einer verantwortlichen Person zu.</p>
           </div>

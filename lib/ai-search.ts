@@ -2,9 +2,9 @@ import { readTerms } from "@/lib/settings";
 import { ApiError, auditStatement, iso, text, type ApiContext, type Row } from "@/lib/api-context";
 import { MistralError, mistralConfigured, mistralJson } from "@/lib/mistral";
 
-// Such-Assistenz von CareCore KI: eine Frage in Alltagssprache („Wer ist diese Woche gestürzt?“) über die
+// Such-Assistenz von CareOS KI: eine Frage in Alltagssprache („Wer ist diese Woche gestürzt?“) über die
 // Bewohnenden eines Wohnbereichs oder der ganzen Einrichtung. Die KI bekommt die Daten pseudonymisiert (Kennung R1,
-// R2 …, Kürzel, Zimmer) und antwortet nur daraus; CareCore ordnet die genannten Kennungen wieder den Akten zu.
+// R2 …, Kürzel, Zimmer) und antwortet nur daraus; CareOS ordnet die genannten Kennungen wieder den Akten zu.
 // Nichts wird gespeichert ausser einem Protokolleintrag ohne Fragetext.
 
 export type AiSearchResult = {
@@ -19,7 +19,7 @@ export const setSearchCall = (call: JsonCall) => {
   searchCall = call;
 };
 
-const SYSTEM = `Du bist die Such-Assistenz von CareCore, einer Pflegedokumentation für Alters- und Pflegeheime.
+const SYSTEM = `Du bist die Such-Assistenz von CareOS, einer Pflegedokumentation für Alters- und Pflegeheime.
 Beantworte die Frage einer Pflegefachperson ausschliesslich aus den mitgelieferten Daten. Erfinde nichts; steht die
 Antwort nicht in den Daten, sage das klar. Schreibe auf Deutsch, knapp (höchstens etwa 8 Sätze oder Aufzählungspunkte).
 Bewohnende sind pseudonymisiert: nenne sie mit ihrer Kennung in eckigen Klammern, z. B. [R3], und führe alle Kennungen,
@@ -48,7 +48,7 @@ const initials = (row: Row) => `${String(row.first_name)[0] ?? ""}${String(row.l
 
 export async function aiSearch(ctx: ApiContext, body: Record<string, unknown>): Promise<AiSearchResult> {
   if (!mistralConfigured())
-    throw new ApiError("CareCore KI ist noch nicht eingerichtet: MISTRAL_API_KEY fehlt in der Umgebung.", 503);
+    throw new ApiError("CareOS KI ist noch nicht eingerichtet: MISTRAL_API_KEY fehlt in der Umgebung.", 503);
   const question = text(body.question, 400);
   if (question.length < 5) throw new ApiError("Bitte eine Frage eingeben.");
   const careUnitId =
@@ -145,7 +145,7 @@ export async function aiSearch(ctx: ApiContext, body: Record<string, unknown>): 
     ) as { answer?: unknown; residents?: unknown };
   } catch (error) {
     if (error instanceof MistralError)
-      throw new ApiError(error.status === 503 ? `CareCore KI: ${error.message}` : error.message, error.status);
+      throw new ApiError(error.status === 503 ? `CareOS KI: ${error.message}` : error.message, error.status);
     if (error instanceof SyntaxError) throw new ApiError("Die KI hat keine verwertbare Antwort geliefert.", 502);
     throw error;
   }
