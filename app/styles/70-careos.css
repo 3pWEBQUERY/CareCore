@@ -1,63 +1,50 @@
-/* CareOS: Bedienung wie ein Betriebssystem. Jede App hat eine Farbe (--app-hue), ein Symbol und einen Namen – auf dem
-   Startbildschirm, unter „Alle Apps“, in der Leiste und im Kopf jeder Seite. Grosse Flächen, Text immer neben dem
-   Symbol, keine Untermenüs. */
+/* CareOS: Bedienung wie ein Betriebssystem – jede App mit Namen und eigenem Symbol, Text immer neben dem Symbol, keine
+   Untermenüs. Gestaltet wie der Rest der Anwendung: weisse Flächen, feine Ränder (--line), Markenblau, 6 px Ecken. */
 
 /* ---------- App-Symbol ---------- */
 .careos-app-icon {
-  --app-hue: 214;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   display: inline-grid;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 28%;
-  color: white;
-  background: linear-gradient(150deg, hsl(var(--app-hue) 78% 52%), hsl(var(--app-hue) 72% 38%));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    0 2px 6px hsl(var(--app-hue) 60% 30% / 0.25);
+  border: 1px solid #cfe1fa;
+  border-radius: 6px;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
 }
 .careos-app-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 21px;
+  height: 21px;
 }
 .careos-app-icon .sidebar-kompass-icon {
-  width: 26px;
-  height: 26px;
-  color: white;
+  width: 21px;
+  height: 21px;
 }
 .careos-app-icon-sm {
   width: 32px;
   height: 32px;
-  border-radius: 9px;
 }
 .careos-app-icon-sm svg,
 .careos-app-icon-sm .sidebar-kompass-icon {
-  width: 19px;
-  height: 19px;
+  width: 18px;
+  height: 18px;
 }
 .careos-app-icon-lg {
-  width: 58px;
-  height: 58px;
-  border-radius: 17px;
+  width: 44px;
+  height: 44px;
 }
 .careos-app-icon-lg svg,
 .careos-app-icon-lg .sidebar-kompass-icon {
-  width: 31px;
-  height: 31px;
-}
-/* Systemknöpfe (Start, Alle Apps, Einstellungen, Hilfe): hell statt farbig. */
-.careos-app-icon-plain {
-  color: hsl(var(--app-hue) 45% 26%);
-  background: hsl(var(--app-hue) 40% 93%);
-  box-shadow: inset 0 0 0 1px hsl(var(--app-hue) 30% 84%);
+  width: 23px;
+  height: 23px;
 }
 .careos-badge {
-  min-width: 20px;
-  height: 20px;
+  min-width: 18px;
+  height: 18px;
   position: absolute;
-  top: -7px;
-  right: -9px;
+  top: -6px;
+  right: -8px;
   padding: 0 5px;
   border: 2px solid white;
   border-radius: 999px;
@@ -66,16 +53,16 @@
   font-size: 11px;
   font-style: normal;
   font-weight: 800;
-  line-height: 16px;
+  line-height: 14px;
   text-align: center;
 }
 
 /* ---------- Leiste links (Computer und Tablet quer) ---------- */
 .app-shell {
-  grid-template-columns: 104px minmax(0, 1fr);
+  grid-template-columns: 100px minmax(0, 1fr);
 }
 .sidebar-rail.careos-dock {
-  width: 104px;
+  width: 100px;
 }
 .careos-dock .sidebar-rail-head {
   min-height: 0;
@@ -84,36 +71,49 @@
 }
 .careos-dock-brand {
   color: white;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 750;
   letter-spacing: 0.02em;
 }
 .careos-dock-scroll {
-  gap: 4px;
+  gap: 2px;
   padding: 4px 8px 12px;
 }
+/* In der dunklen Leiste wie bisher: Symbol ohne Feld, der gewählte Knopf blau hinterlegt. */
 .careos-dock .careos-dock-button {
   width: 88px;
   height: auto;
-  min-height: 66px;
+  min-height: 58px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 8px 4px;
-  border-radius: 14px;
-  color: #dbe7f8;
+  gap: 4px;
+  padding: 7px 4px;
+  border-radius: 6px;
+  color: #b8c9e3;
+}
+.careos-dock .careos-app-icon {
+  width: auto;
+  height: auto;
+  border: 0;
+  color: inherit;
+  background: none;
+}
+.careos-dock .careos-app-icon svg,
+.careos-dock .careos-app-icon .sidebar-kompass-icon {
+  width: 21px;
+  height: 21px;
 }
 .careos-dock .careos-dock-button:hover,
 .careos-dock .careos-dock-button:focus-visible {
   color: white;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(96, 165, 250, 0.16);
 }
 .careos-dock .careos-dock-button.active {
   color: white;
-  background: rgba(255, 255, 255, 0.16);
-  box-shadow: inset 3px 0 0 hsl(var(--app-hue) 90% 68%);
+  background: linear-gradient(145deg, #2563eb, #1d4ed8);
+  box-shadow: 0 7px 18px rgba(9, 39, 92, 0.3);
 }
 .careos-dock .careos-dock-button:focus-visible {
   outline: 2px solid #93c5fd;
@@ -124,29 +124,26 @@
   display: inline-grid;
 }
 .careos-dock .careos-badge {
+  top: -7px;
+  right: -11px;
   border-color: var(--nav);
 }
 .careos-dock-label {
   max-width: 100%;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 650;
   line-height: 1.15;
   text-align: center;
-  overflow-wrap: anywhere;
-  hyphens: auto;
-}
-.careos-dock .careos-dock-button.active .careos-dock-label {
-  font-weight: 800;
 }
 .careos-dock .sidebar-rail-divider {
-  width: 56px;
+  width: 48px;
 }
 .careos-dock-footer {
-  gap: 4px;
+  gap: 2px;
   padding: 10px 8px 14px;
 }
 .careos-dock-footer .careos-dock-button {
-  min-height: 58px;
+  min-height: 54px;
 }
 
 /* ---------- Kopf jeder App: Symbol, Name, Reiter ---------- */
@@ -154,7 +151,7 @@
   width: min(100%, 1640px);
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 16px;
   margin: 0 auto;
   padding: 20px 34px 0;
 }
@@ -166,8 +163,8 @@
 }
 .careos-app-bar-name strong {
   color: var(--ink);
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 750;
   white-space: nowrap;
 }
 .careos-app-bar .page-tabs {
@@ -176,29 +173,14 @@
   flex: 1;
   gap: 6px;
   margin: 0;
-  padding: 2px 0;
+  padding: 0 0 0 16px;
+  border-left: 1px solid var(--line);
 }
+/* Reiter wie die übrigen Knöpfe (6 px Ecken), etwas grösser zum Antippen und Lesen. */
 .careos-app-bar .page-tabs a {
-  min-height: 40px;
-  padding: 0 16px;
-  border-radius: 999px;
-  color: #3d4f66;
-  font-size: 13.5px;
-  font-weight: 700;
-}
-.careos-app-bar .page-tabs a:hover {
-  color: hsl(var(--app-hue) 60% 26%);
-  border-color: hsl(var(--app-hue) 55% 78%);
-  background: hsl(var(--app-hue) 80% 97%);
-}
-.careos-app-bar .page-tabs a.active {
-  color: white;
-  border-color: hsl(var(--app-hue) 70% 36%);
-  background: hsl(var(--app-hue) 70% 36%);
-}
-.careos-app-bar .page-tabs a.active em {
-  color: var(--critical);
-  background: white;
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 12.5px;
 }
 .careos-app-bar + .workspace,
 .careos-app-bar + main {
@@ -212,61 +194,65 @@
   }
   .careos-app-bar .page-tabs {
     flex-basis: 100%;
+    padding-left: 0;
+    border-left: 0;
+  }
+  .careos-app-bar .page-tabs a {
+    min-height: 38px;
+    font-size: 13px;
   }
   .careos-app-bar-name strong {
-    font-size: 17px;
+    font-size: 16px;
   }
 }
 
 /* ---------- App-Kacheln (Startbildschirm und „Alle Apps“) ---------- */
 .careos-app-groups {
   display: grid;
-  gap: 22px;
+  gap: 20px;
 }
 .careos-app-group h3 {
   margin: 0 0 10px;
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 11.5px;
+  font-weight: 750;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 .careos-app-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 10px;
 }
 .careos-app-tile {
-  min-height: 112px;
+  min-height: 104px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 9px;
-  padding: 14px 6px 12px;
-  border: 1px solid transparent;
-  border-radius: 18px;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
   color: var(--ink);
-  background: transparent;
+  background: white;
   font: inherit;
   text-align: center;
   cursor: pointer;
   transition:
-    background 140ms ease,
     border-color 140ms ease,
-    transform 140ms ease;
+    background 140ms ease,
+    box-shadow 140ms ease;
 }
 .careos-app-tile:hover,
 .careos-app-tile:focus-visible {
-  border-color: hsl(var(--app-hue) 55% 82%);
-  background: hsl(var(--app-hue) 80% 97%);
+  border-color: #93c5fd;
+  background: #f8fbff;
+  box-shadow: 0 4px 14px rgba(24, 64, 105, 0.06);
 }
 .careos-app-tile:focus-visible {
-  outline: 2px solid hsl(var(--app-hue) 70% 40%);
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
-}
-.careos-app-tile:active {
-  transform: scale(0.97);
 }
 .careos-app-tile-icon {
   position: relative;
@@ -277,7 +263,7 @@
   gap: 3px;
 }
 .careos-app-tile-copy strong {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -289,45 +275,38 @@
 /* Mit Beschreibung: Symbol links, Name und ein Satz rechts – lesbar wie eine Liste. */
 .careos-app-grid.with-hints {
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 8px;
 }
 .careos-app-grid.with-hints .careos-app-tile {
-  min-height: 84px;
+  min-height: 76px;
   flex-direction: row;
   align-items: center;
+  justify-content: flex-start;
   gap: 14px;
   padding: 12px 14px;
-  border-color: var(--line);
-  background: white;
   text-align: left;
 }
-.careos-app-grid.with-hints .careos-app-tile:hover,
-.careos-app-grid.with-hints .careos-app-tile:focus-visible {
-  border-color: hsl(var(--app-hue) 55% 70%);
-  background: hsl(var(--app-hue) 80% 97%);
-}
 .careos-app-grid.with-hints .careos-app-tile-copy strong {
-  font-size: 15px;
+  font-size: 14px;
 }
 @media (max-width: 960px) {
   .careos-app-grid {
-    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
-    gap: 4px;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 8px;
   }
   .careos-app-tile {
-    min-height: 100px;
-    padding: 10px 2px;
+    min-height: 96px;
+    padding: 12px 4px 10px;
   }
   .careos-app-tile-copy strong {
     font-size: 12.5px;
     overflow-wrap: anywhere;
-    hyphens: auto;
   }
   .careos-app-grid.with-hints {
     grid-template-columns: 1fr;
-    gap: 8px;
   }
   .careos-app-grid.with-hints .careos-app-tile {
-    min-height: 72px;
+    min-height: 68px;
   }
 }
 
@@ -341,29 +320,30 @@
 .careos-home-apps .home-card-head > .careos-home-all {
   width: auto;
   height: auto;
-  min-height: 40px;
+  min-height: 36px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 0 14px;
+  padding: 0 12px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 6px;
   color: var(--ink);
   background: white;
   font: inherit;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
 }
 .careos-home-apps .home-card-head > .careos-home-all:hover,
 .careos-home-apps .home-card-head > .careos-home-all:focus-visible {
-  border-color: #93c5fd;
+  color: var(--brand-dark);
+  border-color: #bfdbfe;
   background: var(--brand-soft);
 }
 .careos-home-all svg {
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
 }
 
 /* ---------- „Alle Apps“ ---------- */
@@ -371,11 +351,11 @@
   position: fixed;
   inset: 0;
   z-index: 70;
-  background: rgba(8, 23, 45, 0.48);
+  background: rgba(8, 23, 45, 0.42);
   animation: careos-fade-in 160ms ease;
 }
 .careos-launcher {
-  width: min(1120px, calc(100vw - 48px));
+  width: min(1080px, calc(100vw - 48px));
   max-height: calc(100dvh - 48px);
   position: fixed;
   top: 24px;
@@ -385,54 +365,69 @@
   flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: 8px;
   color: var(--ink);
   background: var(--bg);
-  box-shadow: 0 30px 80px rgba(8, 23, 45, 0.35);
+  box-shadow: 0 24px 60px rgba(8, 23, 45, 0.28);
   transform: translateX(-50%);
-  animation: careos-launcher-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: careos-launcher-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .careos-launcher-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 22px 28px 12px;
+  padding: 20px 24px 12px;
+  border-bottom: 1px solid var(--line);
+  background: white;
 }
 .careos-launcher-head h2 {
   margin: 2px 0 0;
-  font-size: 26px;
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 750;
   letter-spacing: -0.02em;
 }
-.careos-launcher-close {
-  min-height: 44px;
+.careos-launcher-close,
+.careos-recent button,
+.careos-launcher-system button {
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 0 16px;
+  padding: 0 14px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 6px;
   color: var(--ink);
   background: white;
   font: inherit;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 650;
   cursor: pointer;
 }
-.careos-launcher-close svg {
-  width: 18px;
-  height: 18px;
+.careos-launcher-close:hover,
+.careos-launcher-close:focus-visible,
+.careos-recent button:hover,
+.careos-recent button:focus-visible,
+.careos-launcher-system button:hover,
+.careos-launcher-system button:focus-visible {
+  color: var(--brand-dark);
+  border-color: #bfdbfe;
+  background: var(--brand-soft);
+}
+.careos-launcher-close svg,
+.careos-launcher-system svg {
+  width: 17px;
+  height: 17px;
 }
 .careos-launcher-search {
-  min-height: 52px;
+  min-height: 46px;
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0 28px 6px;
-  padding: 0 16px;
+  margin: 16px 24px 4px;
+  padding: 0 14px;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 6px;
   background: white;
 }
 .careos-launcher-search:focus-within {
@@ -440,8 +435,8 @@
   box-shadow: 0 0 0 3px var(--brand-soft);
 }
 .careos-launcher-search svg {
-  width: 20px;
-  height: 20px;
+  width: 19px;
+  height: 19px;
   color: var(--muted);
 }
 .careos-launcher-search input {
@@ -456,16 +451,16 @@
 }
 .careos-launcher-body {
   display: grid;
-  gap: 22px;
-  padding: 14px 28px 28px;
+  gap: 20px;
+  padding: 14px 24px 24px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 .careos-recent h3 {
   margin: 0 0 10px;
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 11.5px;
+  font-weight: 750;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -475,30 +470,13 @@
   gap: 8px;
 }
 .careos-recent button {
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 14px 6px 6px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--ink);
-  background: white;
-  font: inherit;
-  font-size: 13.5px;
-  font-weight: 650;
-  cursor: pointer;
-}
-.careos-recent button:hover,
-.careos-recent button:focus-visible {
-  border-color: #93c5fd;
-  background: var(--brand-soft);
+  padding: 4px 12px 4px 4px;
 }
 .careos-launcher-empty {
   margin: 0;
   padding: 30px 0;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 14px;
   text-align: center;
 }
 .careos-launcher-system {
@@ -508,25 +486,6 @@
   padding-top: 16px;
   border-top: 1px solid var(--line);
 }
-.careos-launcher-system button {
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 16px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--ink);
-  background: white;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 650;
-  cursor: pointer;
-}
-.careos-launcher-system svg {
-  width: 18px;
-  height: 18px;
-}
 @media (max-width: 960px) {
   .careos-launcher {
     width: 100%;
@@ -535,16 +494,16 @@
     border: 0;
     border-radius: 0;
     transform: none;
-    animation: careos-sheet-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: careos-sheet-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
   .careos-launcher-head {
-    padding: max(16px, env(safe-area-inset-top)) 16px 10px;
+    padding: max(14px, env(safe-area-inset-top)) 16px 10px;
   }
   .careos-launcher-head h2 {
-    font-size: 23px;
+    font-size: 20px;
   }
   .careos-launcher-search {
-    margin: 0 16px 4px;
+    margin: 12px 16px 4px;
   }
   .careos-launcher-body {
     padding: 12px 16px max(24px, env(safe-area-inset-bottom));
@@ -558,13 +517,13 @@
 @keyframes careos-launcher-in {
   from {
     opacity: 0;
-    transform: translate(-50%, 10px) scale(0.985);
+    transform: translate(-50%, 8px);
   }
 }
 @keyframes careos-sheet-in {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(12px);
   }
 }
 
@@ -592,37 +551,18 @@
     text-overflow: clip;
     white-space: nowrap;
   }
+  /* Wie bisher: Symbol ohne Feld, der gewählte Knopf blau hinterlegt. */
   .careos-bottom-dock .careos-app-icon {
-    width: 30px;
-    height: 30px;
-    border-radius: 9px;
-  }
-  .careos-bottom-dock .careos-app-icon svg,
-  .careos-bottom-dock button.active .careos-app-icon svg {
-    width: 18px;
-    height: 18px;
+    width: auto;
+    height: auto;
+    border: 0;
     color: inherit;
+    background: none;
   }
-  .careos-bottom-dock .careos-app-icon:not(.careos-app-icon-plain) svg,
-  .careos-bottom-dock button.active .careos-app-icon:not(.careos-app-icon-plain) svg {
-    color: white;
+  .careos-bottom-dock .careos-app-icon svg {
+    width: 20px;
+    height: 20px;
   }
-  .careos-bottom-dock button.active {
-    color: white;
-    border-color: rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.16);
-    box-shadow: none;
-  }
-}
-
-/* ---------- Dunkles Erscheinungsbild: die Farben der Apps bleiben gleich ---------- */
-html.theme-dark .careos-app-icon,
-html.theme-dark .careos-badge {
-  filter: invert(1) hue-rotate(180deg);
-}
-html.theme-dark .sidebar .careos-app-icon,
-html.theme-dark .sidebar .careos-badge {
-  filter: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

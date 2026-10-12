@@ -2,11 +2,11 @@ CareOS ist eine Next.js-Anwendung mit geschütztem Pflegearbeitsplatz unter `/c`
 
 ## Bedienkonzept: CareOS
 
-CareOS (früher CareCore) wird wie ein Pflege-Betriebssystem bedient: Jeder Bereich ist eine App mit eigenem Namen,
-Symbol und eigener Farbe. Der Startbildschirm zeigt alle Apps der Person, die beschriftete Leiste (Computer links,
+CareOS (früher CareCore) wird wie ein Pflege-Betriebssystem bedient: Jeder Bereich ist eine App mit eigenem Namen und
+Symbol. Der Startbildschirm zeigt alle Apps der Person, die beschriftete Leiste (Computer links,
 Handy unten) immer dieselben Apps, „Alle Apps“ alle Apps mit einem erklärenden Satz und Suche. Über jeder Seite stehen
 Symbol und Name der App und ihre Seiten als Reiter – ohne Untermenüs. Die Apps sind in
-`app/components/navigation.ts` beschrieben (Name, Farbe, Satz, Reiter, Berechtigung); Analyse, Regeln und nächste
+`app/components/navigation.ts` beschrieben (Name, Symbol, Satz, Reiter, Berechtigung); Analyse, Regeln und nächste
 Schritte: `docs/CAREOS-UX.md`. Technische Kennungen (Tabellen `carecore_…`, Variablen `CARECORE_…`, Webhook-Kopfzeilen
 `X-CareCore-…`) behalten den alten Namen, damit bestehende Installationen unverändert weiterlaufen.
 

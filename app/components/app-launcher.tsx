@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useAppRouter } from "./app-navigation";
 import { ModuleIcon } from "./module-icon";
 import { useNavigationBadges, useWorkContext, type NavigationBadges } from "./care-context";
@@ -19,27 +19,25 @@ import {
 } from "./navigation";
 import { navigationLabel, termsFor, type Terms } from "@/lib/terminology";
 
-// CareOS: jeder Bereich ist eine App mit eigenem Symbol und eigener Farbe. Dieselben Kacheln stehen auf dem
+// CareOS: jeder Bereich ist eine App mit eigenem Namen und eigenem Symbol. Dieselben Kacheln stehen auf dem
 // Startbildschirm, unter „Alle Apps“ (Leiste links bzw. unten) und als Symbol über jeder Seite – wer eine App einmal
-// gesehen hat, erkennt sie überall wieder.
+// gesehen hat, erkennt sie überall wieder. Gestaltet wie der Rest der Anwendung: Markenblau, feine Ränder, 6 px Ecken.
 
 const APPS_EVENT = "careos:apps";
 
 // Öffnet „Alle Apps“ von überall (Leiste, Startseite, Tastatur).
 export const openAppLauncher = () => window.dispatchEvent(new Event(APPS_EVENT));
 
-export const appStyle = (hue: number) => ({ "--app-hue": hue }) as CSSProperties;
-
-// Farbiges App-Symbol (weisses Zeichen auf der Farbe der App). Kompass trägt sein eigenes Logo.
+// Symbol einer App in einem ruhigen Feld; Kompass trägt sein eigenes Logo.
 export function AppIcon({
   module,
   size = "md",
 }: {
-  module: Pick<NavModule, "id" | "icon" | "hue">;
+  module: Pick<NavModule, "id" | "icon">;
   size?: "sm" | "md" | "lg";
 }) {
   return (
-    <span className={`careos-app-icon careos-app-icon-${size}`} style={appStyle(module.hue)} aria-hidden="true">
+    <span className={`careos-app-icon careos-app-icon-${size}`} aria-hidden="true">
       {module.id === "rai" ? <span className="sidebar-kompass-icon" /> : <ModuleIcon name={module.icon} />}
     </span>
   );
@@ -87,7 +85,6 @@ export function AppGrid({ groups, terms, badges, withHints = false, onOpen }: Gr
                   className="careos-app-tile"
                   type="button"
                   key={module.id}
-                  style={appStyle(module.hue)}
                   aria-describedby={withHints ? `${hintId}-${module.id}` : undefined}
                   onPointerEnter={() => router.prefetch(href)}
                   onFocus={() => router.prefetch(href)}

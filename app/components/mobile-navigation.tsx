@@ -135,10 +135,7 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
           aria-current={activeModule === "home" ? "page" : undefined}
           onClick={() => go("/c")}
         >
-          <span
-            className="careos-app-icon careos-app-icon-sm careos-app-icon-plain"
-            style={{ ["--app-hue" as string]: 214 }}
-          >
+          <span className="careos-app-icon careos-app-icon-sm">
             <ModuleIcon name="home" />
           </span>
           <span>Start</span>
@@ -175,10 +172,7 @@ export function MobileNavigation({ activeModule }: { activeModule?: string }) {
             openAppLauncher();
           }}
         >
-          <span
-            className="careos-app-icon careos-app-icon-sm careos-app-icon-plain"
-            style={{ ["--app-hue" as string]: 214 }}
-          >
+          <span className="careos-app-icon careos-app-icon-sm">
             <ModuleIcon name="apps" />
           </span>
           <span>Alle Apps</span>
