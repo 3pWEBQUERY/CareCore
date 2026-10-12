@@ -104,7 +104,7 @@ export default function MeasurementDialog({
   return (
     <EditorDialog
       id="vital-measurement"
-      eyebrow="CareCore Vitalwerte"
+      eyebrow="Vitalwerte"
       title="Vitalwerte erfassen"
       description={`Nur ausgefüllte Felder werden gespeichert. Die Einstufung erfolgt anhand der Grenzwerte des ${t.oneGenitive}.`}
       onClose={onClose}

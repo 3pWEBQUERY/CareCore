@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
-// Sicherheits-Header für alle Antworten. Inhalte kommen nur von CareCore selbst (Schriften sind eingebunden, Medien
-// liefert CareCore aus); eingebettet werden darf nur in CareCore (Dateivorschau). Inline-Skripte braucht Next.js
+// Sicherheits-Header für alle Antworten. Inhalte kommen nur von CareOS selbst (Schriften sind eingebunden, Medien
+// liefert CareOS aus); eingebettet werden darf nur in CareOS (Dateivorschau). Inline-Skripte braucht Next.js
 // für statisch erzeugte Seiten; im Entwicklungsmodus zusätzlich eval für die Fehleranzeige von React.
 const contentSecurityPolicy = [
   "default-src 'self'",

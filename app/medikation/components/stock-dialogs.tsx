@@ -100,7 +100,7 @@ export function ReceiptDialog({
   return (
     <EditorDialog
       id="med-receipt"
-      eyebrow="CareCore Med · Bestand"
+      eyebrow="Medikamente · Bestand"
       title={preset?.residentName ? `Eingang für ${preset.residentName}` : "Wareneingang buchen"}
       description="Jeder Eingang wird mit Menge, Person und Zeitpunkt im Bestandsjournal protokolliert."
       onClose={onClose}
@@ -314,7 +314,7 @@ export function CorrectionDialog({
   return (
     <EditorDialog
       id="med-correction"
-      eyebrow={`CareCore Med · ${item.owner}`}
+      eyebrow={`Medikamente · ${item.owner}`}
       title={`${item.name} ${item.strength}`.trim()}
       description={`Aktueller Bestand: ${formatNumber(item.quantity)} ${item.unit}. Abweichungen werden mit Grund im Journal protokolliert.`}
       onClose={onClose}

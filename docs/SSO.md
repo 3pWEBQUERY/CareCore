@@ -1,6 +1,6 @@
 # SSO über OpenID Connect
 
-CareCore meldet Mitarbeitende auf Wunsch über den Identity-Provider (IdP) der Einrichtung an. Umgesetzt ist das
+CareOS meldet Mitarbeitende auf Wunsch über den Identity-Provider (IdP) der Einrichtung an. Umgesetzt ist das
 selbst, mit Open-Source-Bausteinen: [openid-client](https://github.com/panva/openid-client) (MIT, OpenID-zertifiziert).
 Es funktioniert mit jedem Anbieter, der OpenID Connect spricht, zum Beispiel Keycloak, Authentik, Microsoft Entra ID,
 Google Workspace oder HIN.
@@ -8,12 +8,12 @@ Google Workspace oder HIN.
 ## Einrichten
 
 1. Beim IdP eine Anwendung (Client, vertraulich) anlegen und diese Rücksprungadresse eintragen:
-   `https://<CareCore-Adresse>/api/auth/sso/callback`. Sie steht auch auf der Karte in CareCore.
-2. In CareCore unter **Leitung › Konfiguration › SSO (OpenID Connect)** folgende Angaben eintragen:
+   `https://<CareOS-Adresse>/api/auth/sso/callback`. Sie steht auch auf der Karte in CareOS.
+2. In CareOS unter **Leitung › Konfiguration › SSO (OpenID Connect)** folgende Angaben eintragen:
    - Adresse des IdP (Issuer), Client-ID und Client-Secret.
-   - Welcher Claim dem CareCore-Benutzernamen entspricht: `preferred_username`, `email`, `upn` oder `sub`.
+   - Welcher Claim dem CareOS-Benutzernamen entspricht: `preferred_username`, `email`, `upn` oder `sub`.
    - Die Bezeichnung für den Knopf auf der Anmeldeseite.
-3. Mit **Verbindung prüfen** testen, ob CareCore das Discovery-Dokument des IdP lesen kann, dann einschalten.
+3. Mit **Verbindung prüfen** testen, ob CareOS das Discovery-Dokument des IdP lesen kann, dann einschalten.
 
 ## Ablauf und Sicherheit
 

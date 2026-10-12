@@ -243,7 +243,7 @@ export default function DayPanel({
       )}
       {hiding && (
         <ReasonDialog
-          eyebrow={`CareCore Ernährung · ${resident.name}`}
+          eyebrow={`Ernährung · ${resident.name}`}
           title="Eintrag korrigieren"
           description={
             hiding.kind === "fluid"

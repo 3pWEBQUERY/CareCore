@@ -44,7 +44,7 @@ export function OverviewView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Einschätzungen"
+        eyebrow="Einschätzungen"
         title="Einschätzungen"
         description="Standardisierte Assessments mit automatisch berechnetem Ergebnis – jeweils die letzte gültige Einschätzung."
         action={data.data?.canWrite ? { label: "Einschätzung erfassen", onClick: () => setCreating(true) } : undefined}

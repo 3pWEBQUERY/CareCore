@@ -36,13 +36,13 @@ mit der Einrichtung vereinbaren (Region, Anbieter).
   Better Stack (Gratisplan), Prüfung von `https://<Domain>/api/health` alle 5 Minuten, Alarm per E-Mail oder SMS.
   `/api/health` antwortet nur mit `200`, wenn die Datenbank erreichbar ist und keine Migration fehlt.
 
-### 4. Alarm bei vielen Serverfehlern (CareCore)
+### 4. Alarm bei vielen Serverfehlern (CareOS)
 
-CareCore hält jeden Serverfehler (HTTP 500) kurz fest: Zeitpunkt, Herkunft und erste Zeile der Fehlermeldung, nie
+CareOS hält jeden Serverfehler (HTTP 500) kurz fest: Zeitpunkt, Herkunft und erste Zeile der Fehlermeldung, nie
 Anfragedaten; Einträge werden nach 30 Tagen gelöscht. Die Administration sieht die Zahl der letzten 24 Stunden
 unter Leitung › Konfiguration › Systemstatus.
 
-Mit eingerichtetem E-Mail-Versand (`docs/EMAIL.md`) und diesen Variablen schickt CareCore einen Alarm:
+Mit eingerichtetem E-Mail-Versand (`docs/EMAIL.md`) und diesen Variablen schickt CareOS einen Alarm:
 
 | Variable                | Inhalt                                                                                |
 | ----------------------- | ------------------------------------------------------------------------------------- |
@@ -64,7 +64,7 @@ Mindestens zweimal im Jahr und nach jeder Änderung an den Backups:
 
 ## Ernstfall
 
-1. Ursache eingrenzen (Railway › Deployments und Logs, Systemstatus in CareCore).
+1. Ursache eingrenzen (Railway › Deployments und Logs, Systemstatus in CareOS).
 2. Bei fehlerhaftem Deploy: in Railway das letzte funktionierende Deployment mit **Rollback** zurückholen.
    Migrationen laufen nur vorwärts; ein Rollback der App mit einer bereits neueren Datenbank vorher prüfen.
 3. Bei verlorenen oder beschädigten Daten: Backup bzw. PITR-Zeitpunkt in Railway wiederherstellen (Railway legt

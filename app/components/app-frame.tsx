@@ -4,6 +4,7 @@ import { createContext, useCallback, useEffect, useMemo, useRef, useState, type 
 import { usePathname, useRouter } from "next/navigation";
 import AppHeader from "./app-header";
 import AppSidebar from "./app-sidebar";
+import { AppLauncher } from "./app-launcher";
 import { beginNavigation, NavigationProgress, settleNavigation, useNavigationTarget } from "./app-navigation";
 import { GlobalSearchDialog } from "./global-search-dialog";
 import { MobileNavigation } from "./mobile-navigation";
@@ -135,6 +136,7 @@ function FramedShell({ pathname, children }: { pathname: string; children: React
           {children}
         </div>
         <MobileNavigation activeModule={moduleId} />
+        <AppLauncher />
         {searchOpen && <GlobalSearchDialog onClose={() => setSearchOpen(false)} />}
         {toast && (
           <div className="toast" role="status">

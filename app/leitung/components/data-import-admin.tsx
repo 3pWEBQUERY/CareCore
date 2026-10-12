@@ -111,10 +111,10 @@ function DataImportBody({ showToast }: { showToast: ShowToast }) {
     <main className="workspace leadership-workspace leadership-users data-import">
       <header className="leadership-heading page-heading">
         <div className="heading-copy">
-          <p className="eyebrow">CareCore Admin</p>
+          <p className="eyebrow">Administration</p>
           <h1>Datenübernahme</h1>
           <p>
-            Beim Umstieg Bewohnerinnen, Bewohner und Mitarbeitende aus einer CSV-Datei übernehmen. Erst prüft CareCore
+            Beim Umstieg Bewohnerinnen, Bewohner und Mitarbeitende aus einer CSV-Datei übernehmen. Erst prüft CareOS
             jede Zeile; übernommen wird erst, wenn alle Zeilen stimmen.
           </p>
         </div>

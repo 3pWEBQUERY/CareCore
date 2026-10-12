@@ -95,7 +95,7 @@ export function RaiRefreshPopover({
       >
         <header className="area-editor-header">
           <div>
-            <p className="eyebrow">CareCore Kompass · Arbeitskorb</p>
+            <p className="eyebrow">CareOS Kompass · Arbeitskorb</p>
             <h2 id="rai-refresh-title">Fälligkeiten aktualisieren</h2>
             <p>Gleiche die Fälligkeiten mit dem aktuellen {t.prefix}bestand und informiere die Verantwortlichen.</p>
           </div>

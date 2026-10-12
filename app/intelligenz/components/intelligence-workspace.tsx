@@ -12,7 +12,7 @@ type IntelligenceView = "assistant" | "drafts";
 const viewMeta: Record<IntelligenceView, { child: string; title: string; description: string }> = {
   assistant: {
     child: "Assistenz",
-    title: "CareCore Assistenz",
+    title: "CareOS Assistenz",
     description: "Kontextbezogene Unterstützung für deine nächste Pflegeentscheidung.",
   },
   drafts: {
@@ -35,7 +35,7 @@ export default function IntelligenceWorkspace({ view }: { view: IntelligenceView
         <main className="workspace intelligence-workspace">
           <section className="intelligence-heading page-heading">
             <div className="heading-copy">
-              <p className="eyebrow">CareCore KI</p>
+              <p className="eyebrow">CareOS KI</p>
               <h1>{meta.title}</h1>
               <p>{meta.description}</p>
             </div>
@@ -102,7 +102,7 @@ function DraftsView({ showToast }: { showToast: (message: string) => void }) {
                   </strong>
                   <small>{draft.content.slice(0, 110).replace(/\s+/g, " ")}…</small>
                   <em>
-                    {formatDateTime(draft.createdAt)} · {draft.requestedBy ?? "CareCore KI"}
+                    {formatDateTime(draft.createdAt)} · {draft.requestedBy ?? "CareOS KI"}
                     {draft.status === "accepted"
                       ? ` · übernommen von ${draft.reviewedBy}`
                       : draft.status === "discarded"
@@ -209,7 +209,7 @@ function DraftReview({
   return (
     <EditorDialog
       id="ai-draft"
-      eyebrow="CareCore KI · Entwurf prüfen"
+      eyebrow="CareOS KI · Entwurf prüfen"
       title={`${AI_TASKS[draft.task].label} · ${draft.residentName ?? "Wohnbereich"}`}
       description={`Erstellt ${formatDateTime(draft.createdAt)}${draft.prompt ? ` · Hinweis: ${draft.prompt}` : ""}`}
       submitLabel={done ? "Schliessen" : SAVE_LABEL(draft)}

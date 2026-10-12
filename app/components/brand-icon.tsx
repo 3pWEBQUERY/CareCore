@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useBranding } from "./care-context";
 
 // Kachel oben in der Sidebar (und in der Kopfzeile auf dem Telefon): das Logo der Einrichtung wie ein App-Icon,
-// ohne Logo das CareCore-Zeichen. Das Logo steht verkleinert mit Rand in der Kachel.
+// ohne Logo das CareOS-Zeichen. Das Logo steht verkleinert mit Rand in der Kachel.
 export function BrandIcon({ size }: { size: number }) {
   const branding = useBranding();
   // Noch unbekannt (erster Besuch, Daten laden): leere Kachel statt eines Logos, das gleich wieder wechselt.
@@ -12,7 +12,7 @@ export function BrandIcon({ size }: { size: number }) {
   const logo = branding.logoUpdatedAt;
   if (!logo)
     return (
-      <span className="brand-mark" aria-label="CareCore">
+      <span className="brand-mark" aria-label="CareOS">
         <Image
           className={size === 32 ? "sidebar-brand-logo" : undefined}
           src="/carecore-sidebar-logo.png"

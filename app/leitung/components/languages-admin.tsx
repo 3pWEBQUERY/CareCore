@@ -120,7 +120,7 @@ function LanguagesBody({ showToast }: { showToast: ShowToast }) {
     <main className="workspace leadership-workspace leadership-users languages-admin">
       <header className="leadership-heading page-heading">
         <div className="heading-copy">
-          <p className="eyebrow">CareCore Admin</p>
+          <p className="eyebrow">Administration</p>
           <h1>Sprachen</h1>
           <p>
             Übersetzungen der Oberfläche prüfen und freigeben. Mitarbeitende sehen nur geprüfte Texte freigegebener

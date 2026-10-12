@@ -6,7 +6,7 @@ import type { DashboardState } from "./use-dashboard";
 export function DashboardCustomizer({ r }: { r: DashboardState }) {
   const { hiddenWidgets, toggleWidget, resetDashboardLayout } = r;
   return (
-    <section className="dashboard-customizer" aria-label="Arbeitsplatz bearbeiten">
+    <section className="dashboard-customizer" aria-label="Startseite anpassen">
       <div>
         <p className="eyebrow">Bausteine</p>
         <h2>Arbeitsplatz anpassen</h2>

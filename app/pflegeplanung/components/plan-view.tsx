@@ -66,7 +66,7 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Plan"
+        eyebrow="Pflegeplanung"
         title="Pflegeplanung"
         description={`Probleme, Ressourcen, Ziele und Massnahmen je ${t.one} – nachvollziehbar im Pflegeprozess.`}
         action={

@@ -5,7 +5,7 @@ import type { PortalResidentDetail } from "@/lib/portal-shared";
 
 // Visite im Portal: die Ärztin bzw. der Arzt sieht die offenen Fragen der Pflege („Für Visite“) und erfasst die
 // Rückmeldung selbst. Die Rückmeldung wird wie in der Pflege als Eintrag „Arztvisite“ dokumentiert und schliesst die
-// Frage; die Pflege des Wohnbereichs erhält einen Hinweis. CareCore wertet die Rückmeldung nicht aus.
+// Frage; die Pflege des Wohnbereichs erhält einen Hinweis. CareOS wertet die Rückmeldung nicht aus.
 
 export async function portalVisitItems(
   sql: Sql,

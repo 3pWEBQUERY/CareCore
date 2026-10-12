@@ -100,7 +100,7 @@ export default function MfaControl({
     return (
       <div className="settings-mfa">
         <p>
-          Eingeschaltet. Bei der Anmeldung fragt CareCore nach dem Code aus der Authenticator-App. Noch{" "}
+          Eingeschaltet. Bei der Anmeldung fragt CareOS nach dem Code aus der Authenticator-App. Noch{" "}
           {status.recoveryRemaining} Wiederherstellungscodes übrig.
         </p>
         {codeField("Aktueller Code aus der App")}

@@ -80,7 +80,7 @@ test("Datenübernahme Bewohner: Prüfung je Zeile, nur vollständig gültige Dat
   const again = await previewImport(admin, "residents", good);
   assert.deepEqual(
     again.rows.map((row) => row.errors),
-    [["Ist bereits in CareCore erfasst"], ["Ist bereits in CareCore erfasst"]],
+    [["Ist bereits in CareOS erfasst"], ["Ist bereits in CareOS erfasst"]],
   );
 });
 
@@ -89,7 +89,7 @@ test("Datenübernahme Mitarbeitende: Rollen per Name, Einladung mit E-Mail, sons
   const tag = randomUUID().slice(0, 6);
   process.env.SMTP_HOST = "127.0.0.1";
   process.env.SMTP_PORT = String(smtp.port);
-  process.env.MAIL_FROM = "CareCore <noreply@carecore.test>";
+  process.env.MAIL_FROM = "CareOS <noreply@carecore.test>";
   process.env.APP_URL = "https://carecore.test";
   const csv = [
     "Name,Benutzername,Rolle,Funktion,Telefon,E-Mail,Wohnbereich",

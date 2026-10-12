@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 type Params = { params: Promise<{ residentId: string }> };
 
-// Abklärung mit dem CareCore Kompass: laufender Entwurf, Verlauf, Hinweise aus der Akte.
+// Abklärung mit dem CareOS Kompass: laufender Entwurf, Verlauf, Hinweise aus der Akte.
 export async function GET(_request: Request, { params }: Params) {
   try {
     const ctx = await apiContext("rai.manage");

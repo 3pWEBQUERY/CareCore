@@ -1,4 +1,4 @@
-/* CareCore Kompass: Abklärung Schritt für Schritt */
+/* CareOS Kompass: Abklärung Schritt für Schritt */
 .kompass-start-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
@@ -793,7 +793,7 @@
   }
 }
 
-/* Entwurf der CareCore KI für das Gesamtbild (nur Vorschlag) */
+/* Entwurf der CareOS KI für das Gesamtbild (nur Vorschlag) */
 .kompass-summary-label {
   display: flex;
   align-items: center;

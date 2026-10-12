@@ -46,11 +46,11 @@ protokolliert. Hat ein Zugang mehrere Freigaben für dieselbe Person, gelten die
 - Im Portal unter **Nachrichten**: neue Nachricht mit Betreff, zu einer freigegebenen Person oder (nur Apotheken)
   allgemein an die Einrichtung. Zu einer Person geht das nur, wenn die Freigabe den Bereich „Nachrichten mit der
   Pflege“ enthält.
-- In CareCore unter **CareCore One › Portal-Nachrichten**: alle Unterhaltungen, ungelesene markiert. Antworten darf,
+- In CareOS unter **CareOS One › Portal-Nachrichten**: alle Unterhaltungen, ungelesene markiert. Antworten darf,
   wer die Person bearbeiten darf (`residents.write`); Unterhaltungen mit Apotheken beantwortet, wer Verordnungen
   verwaltet oder administriert, allgemeine die Administration. Von dort lassen sich auch neue Unterhaltungen
   beginnen.
-- Eine neue Nachricht aus dem Portal meldet CareCore den Mitarbeitenden des Wohnbereichs, die antworten dürfen.
+- Eine neue Nachricht aus dem Portal meldet CareOS den Mitarbeitenden des Wohnbereichs, die antworten dürfen.
 
 ## Apothekenportal
 
@@ -61,7 +61,7 @@ protokolliert. Hat ein Zugang mehrere Freigaben für dieselbe Person, gelten die
   voraussichtlichem Liefertag), geliefert oder abgelehnt (nur mit Grund). Jede Änderung wird den Mitarbeitenden
   gemeldet, die Verordnungen verwalten.
 - Medikationspläne sieht die Apotheke über eine Freigabe mit dem Bereich Medikation, wie alle anderen Zugänge.
-- Präparate werden als Text erfasst; eine lizenzierte Arzneimitteldatenbank wird nicht angebunden (CareCore ist kein
+- Präparate werden als Text erfasst; eine lizenzierte Arzneimitteldatenbank wird nicht angebunden (CareOS ist kein
   Medizinprodukt).
 
 ## Hilfe

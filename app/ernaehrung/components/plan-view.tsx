@@ -57,7 +57,7 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Ernährung"
+        eyebrow="Ernährung"
         title="Ernährungsplan"
         description={`Kostform, Konsistenz, Trinkziele und Hilfestellung je ${t.one} – mit Tagesverlauf und Gewicht.`}
         action={

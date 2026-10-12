@@ -33,7 +33,7 @@ export default function EvaluationView() {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Plan"
+        eyebrow="Pflegeplanung"
         title="Auswertung"
         description="Zielerreichung aus den dokumentierten Evaluationen und anstehende Überprüfungen."
       />

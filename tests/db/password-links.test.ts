@@ -17,7 +17,7 @@ import { startMockSmtp } from "../support/mock-smtp.mjs";
 const smtp = await startMockSmtp(0);
 process.env.SMTP_HOST = "127.0.0.1";
 process.env.SMTP_PORT = String(smtp.port);
-process.env.MAIL_FROM = "CareCore <noreply@carecore.test>";
+process.env.MAIL_FROM = "CareOS <noreply@carecore.test>";
 process.env.APP_URL = "https://carecore.test";
 after(() => smtp.close());
 

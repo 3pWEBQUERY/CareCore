@@ -1,17 +1,18 @@
-// CareCore Kompass: eigenes Instrument zur strukturierten Bedarfsabklärung (Server und Oberfläche).
+// CareOS Kompass: eigenes Instrument zur strukturierten Bedarfsabklärung (Server und Oberfläche).
 //
 // Zweck (Zweckbestimmung): Pflegefachpersonen führen die Abklärung digital durch, dokumentieren die Ergebnisse und
 // verwalten die daraus folgende Pflegeplanung. Der Kompass beschreibt, was beobachtet und erfragt wurde, in einer
 // einheitlichen Sprache. Er berechnet keine Punktzahl, keine Pflegestufe und kein Risiko und stellt keine Diagnose:
 // Ob und welcher Handlungsbedarf besteht, entscheidet und begründet die Fachperson je Bereich selbst.
 //
-// Inhalte und Formulierungen sind eigenständig für CareCore verfasst (keine Items, Codes oder Algorithmen anderer
+// Inhalte und Formulierungen sind eigenständig für CareOS verfasst (keine Items, Codes oder Algorithmen anderer
 // Instrumente). Für die Einstufung zur Finanzierung bleibt das vom Kanton bzw. Land anerkannte Instrument massgebend.
 
 import type { ModuleIconName } from "@/app/components/navigation";
 import type { GOAL_CATEGORIES } from "@/lib/care-planning-shared";
 
-export const KOMPASS_NAME = "CareCore Kompass";
+export const KOMPASS_NAME = "CareOS Kompass";
+// Gespeicherte Kennung der Abklärungen (Datenbank), bleibt beim Namenswechsel zu CareOS unverändert.
 export const KOMPASS_INSTRUMENT = "CareCore Kompass 1";
 export const KOMPASS_VERSION = 1;
 

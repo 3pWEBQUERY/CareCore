@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { StatusPage } from "./components/status-page";
 
-// Unexpected error on a page: the rest of CareCore keeps working, the page can be retried.
+// Unexpected error on a page: the rest of CareOS keeps working, the page can be retried.
 export default function PageError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => {
     console.error(error);

@@ -4,7 +4,7 @@ import { hasPermission } from "@/lib/server-data";
 import { readSettings } from "@/lib/settings";
 
 // Aufbewahrung und Löschung von Akten: Die Frist legt die Einrichtung fest (Leitung › Konfiguration). Nach Ablauf
-// schlägt CareCore Akten ausgetretener und verstorbener Personen zur endgültigen Löschung vor; gelöscht wird nur auf
+// schlägt CareOS Akten ausgetretener und verstorbener Personen zur endgültigen Löschung vor; gelöscht wird nur auf
 // ausdrückliche Bestätigung der Administration, nie automatisch.
 
 export type RetentionCase = {

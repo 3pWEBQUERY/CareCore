@@ -466,7 +466,7 @@ export default function ChatWorkspace() {
             <aside className="chat-list" aria-label="Chats">
               <header className="chat-list-head">
                 <div>
-                  <p className="eyebrow">CareCore One</p>
+                  <p className="eyebrow">Nachrichten</p>
                   <h1>Chat</h1>
                 </div>
                 <button

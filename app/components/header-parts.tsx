@@ -33,10 +33,10 @@ export function initials(name: string) {
 
 export function Brand() {
   return (
-    <div className="brand" aria-label="CareCore">
+    <div className="brand" aria-label="CareOS">
       <BrandIcon size={24} />
       <span className="brand-copy">
-        <span className="brand-name">CareCore</span>
+        <span className="brand-name">CareOS</span>
         <small>Mehr Zeit für Pflege.</small>
       </span>
     </div>

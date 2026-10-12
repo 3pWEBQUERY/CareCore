@@ -82,7 +82,7 @@ test("Bezeichnung der betreuten Personen umstellen: Patient", async ({ page }) =
     await expect(page.locator(".resident-context-copy small").first()).toHaveText("Patient");
     await page.goto("/c/bewohner");
     await expect(page.getByRole("heading", { level: 1, name: "Patienten" })).toBeVisible();
-    await expect(page).toHaveTitle("CareCore · Patienten");
+    await expect(page).toHaveTitle("CareOS · Patienten");
     await expect(page.getByRole("button", { name: "Patienten aufnehmen" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Patientenverzeichnis" })).toBeVisible();
     await page.goto("/c/leitung/kennzahlen/bewohner");
@@ -93,25 +93,46 @@ test("Bezeichnung der betreuten Personen umstellen: Patient", async ({ page }) =
   expect(errors).toEqual([]);
 });
 
-// CareCore Kompass hat einen eigenen Hauptbereich in der Seitenleiste, gleich nach Bewohner & Pflege, mit eigenem Logo.
-test("Seitenleiste: CareCore Kompass als eigener Hauptbereich nach Bewohner & Pflege", async ({ page }) => {
+// CareOS: die Leiste zeigt jede App mit Symbol und Namen; „Alle Apps“ öffnet alle Apps mit kurzer Beschreibung.
+// CareOS Kompass ist ein eigener Bereich gleich nach Bewohner & Pflege, mit eigenem Logo.
+test("CareOS: Leiste mit Namen, „Alle Apps“ mit Suche, Kompass nach Bewohner & Pflege", async ({ page }) => {
   await login(page, ADMIN);
   const errors = watchErrors(page);
   await page.goto("/c");
-  // Erst nach dem Laden der Berechtigungen erscheint der Bereich (Kompass braucht rai.manage).
-  const button = page.getByRole("button", { name: "CareCore Kompass", exact: true });
-  await expect(button.locator(".sidebar-kompass-icon")).toBeVisible();
-  const rail = page.locator(".sidebar-rail-scroll > button");
-  const labels = await rail.evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label")));
-  expect(labels[labels.indexOf("Bewohner & Pflege") + 1]).toBe("CareCore Kompass");
-  await button.click();
-  const flyout = page.getByRole("complementary", { name: "CareCore Kompass Untermenü" });
-  await expect(flyout.locator(".sidebar-flyout-icon .sidebar-kompass-icon")).toBeVisible();
-  await flyout
-    .locator(".sidebar-flyout-module:not(.sidebar-flyout-recent)")
-    .getByRole("button", { name: "Kompass" })
-    .click();
+  const dock = page.getByRole("complementary", { name: "Hauptnavigation" });
+  // Jeder Knopf der Leiste hat einen sichtbaren Namen, nicht nur ein Symbol.
+  for (const name of ["Start", "Mein Dienst", "Bewohner", "Doku", "Medikamente", "Alle Apps"])
+    await expect(dock.locator(".careos-dock-label", { hasText: new RegExp(`^${name}$`) })).toBeVisible();
+
+  await dock.getByRole("button", { name: "Alle Apps" }).click();
+  const launcher = page.getByRole("dialog", { name: "Alle Apps" });
+  await expect(launcher).toBeVisible();
+  const groups = await launcher
+    .locator(".careos-app-group > h3")
+    .evaluateAll((nodes) => nodes.map((node) => node.textContent));
+  expect(groups[groups.indexOf("Bewohner & Pflege") + 1]).toBe("CareOS Kompass");
+  const kompass = launcher.getByRole("button", { name: "Kompass", exact: true });
+  await expect(kompass.locator(".sidebar-kompass-icon")).toBeVisible();
+  await expect(kompass).toContainText("Pflegebedarf abklären");
+
+  // Suche: nur passende Apps, auch über die Seiten einer App.
+  await launcher.getByRole("searchbox", { name: "App suchen" }).fill("btm");
+  await expect(launcher.locator(".careos-app-tile")).toHaveCount(1);
+  await expect(launcher.getByRole("button", { name: /^Medikamente/ })).toBeVisible();
+  await launcher.getByRole("searchbox", { name: "App suchen" }).fill("");
+
+  await kompass.click();
   await expect(page).toHaveURL(/\/c\/kompass$/);
-  await expect(button).toHaveClass(/active/);
+  await expect(launcher).toHaveCount(0);
+  // Kopf der App: Symbol und Name, „Alle Apps“ ist in der Leiste markiert (Kompass steht nicht in der Leiste).
+  await expect(page.locator(".careos-app-bar-name")).toHaveText("Kompass");
+  await expect(dock.getByRole("button", { name: "Alle Apps" })).toHaveClass(/active/);
+
+  // Taste L öffnet „Alle Apps“, Escape schliesst.
+  await page.locator("body").click({ position: { x: 600, y: 600 } });
+  await page.keyboard.press("l");
+  await expect(launcher).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(launcher).toHaveCount(0);
   expect(errors).toEqual([]);
 });

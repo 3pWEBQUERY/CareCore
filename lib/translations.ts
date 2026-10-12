@@ -146,7 +146,7 @@ export async function setLanguageReleased(ctx: ApiContext, localeInput: unknown,
   ]);
 }
 
-const SYSTEM = `Du übersetzt Oberflächentexte von CareCore, einer Software für Pflegedokumentation in Alters- und Pflegeheimen in der Schweiz.
+const SYSTEM = `Du übersetzt Oberflächentexte von CareOS, einer Software für Pflegedokumentation in Alters- und Pflegeheimen in der Schweiz.
 Übersetze fachlich korrekt und knapp, wie in einer Software üblich (Knöpfe kurz, Anrede wie im Ausgangstext).
 Behalte Platzhalter wie {0}, {1} unverändert bei, ebenso Zeichen wie ·, „ “, Zahlen, Einheiten und Abkürzungen wie BtM, REA, FHIR, SSO.
 Pflegefachbegriffe wählst du so, wie sie in Pflegeeinrichtungen der Zielsprache gebräuchlich sind.

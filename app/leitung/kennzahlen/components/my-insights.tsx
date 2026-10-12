@@ -47,7 +47,7 @@ function PinPicker({
   return (
     <EditorDialog
       id="my-insights"
-      eyebrow="CareCore Insights · Meine Kennzahlen"
+      eyebrow="Kennzahlen · Meine Kennzahlen"
       title="Kennzahlen auswählen"
       description={`Die gewählten Kennzahlen erscheinen auf „Meine Kennzahlen“ – höchstens ${INSIGHT_PINS_MAX}.`}
       onClose={onClose}
@@ -157,7 +157,7 @@ export default function MyInsights() {
       {(showToast) => (
         <main className="workspace leadership-workspace">
           <LeadershipHeading
-            eyebrow="CareCore Insights"
+            eyebrow="Kennzahlen"
             title="Meine Kennzahlen"
             description={`Dein persönliches Dashboard: die Kennzahlen aus Pflege, ${t.manyDative}, Leitung und Personal, die du im Blick behalten willst.`}
             action={{ label: "Kennzahlen auswählen", icon: "plus", onClick: () => setPicking(true) }}

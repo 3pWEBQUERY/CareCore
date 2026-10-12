@@ -34,7 +34,7 @@ export function EvidenceDialog({
   return (
     <EditorDialog
       id="learning-evidence"
-      eyebrow="CareCore Learn · Nachweise"
+      eyebrow="Schulungen · Nachweise"
       title="Nachweis erfassen"
       description={
         data.canManage

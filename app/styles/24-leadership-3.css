@@ -52,7 +52,6 @@
     display: block;
   }
   .sidebar,
-  .sidebar-flyout,
   .topbar {
     display: none;
   }

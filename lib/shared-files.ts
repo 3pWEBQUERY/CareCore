@@ -40,7 +40,7 @@ import {
   type SheetModel,
 } from "@/lib/office/model";
 
-// Ablage von CareCore One, aufgebaut wie der Dateibereich eines Teams:
+// Ablage von Kommunikation, aufgebaut wie der Dateibereich eines Teams:
 // - „Meine Dateien“ (purpose 'cloud', nur für die Person) und „Gemeinsame Ablage“ (purpose 'shared', ganzes Haus)
 // - Ordner in Ordnern (carecore_shared_folders; owner_user_id gesetzt = persönlicher Ordner)
 // - Papierkorb: Löschen verschiebt Dateien und Ordner samt Inhalt; nach 30 Tagen werden sie endgültig entfernt

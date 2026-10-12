@@ -79,7 +79,7 @@ export default function EventsView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <LeadershipHeading
-        eyebrow="CareCore Quality"
+        eyebrow="Qualität"
         title="Ereignisse"
         description={
           canManage

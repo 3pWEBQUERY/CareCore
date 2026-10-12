@@ -32,7 +32,7 @@ import {
 
 // Abrechnung, Grundlagen: Taxen der Einrichtung (Preis je Tag ab einem Datum), Pflegestufe je Person mit Verlauf,
 // Abwesenheiten und zusätzliche Taxen. Die Monatsvorschau rechnet jeden Tag einzeln (lib/billing-calc.ts).
-// Alle Tarife und Regeln kommen von der Einrichtung; CareCore gibt keine Beträge vor.
+// Alle Tarife und Regeln kommen von der Einrichtung; CareOS gibt keine Beträge vor.
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH = /^\d{4}-\d{2}$/;

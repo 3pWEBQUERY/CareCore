@@ -96,7 +96,7 @@ export default function OverviewView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Vitalwerte"
+        eyebrow="Vitalwerte"
         title="Vitalwerte im Überblick"
         description={`Aktuelle Messungen aller ${t.many}, Auffälligkeiten und empfohlene Kontrollen an einem Ort.`}
         action={

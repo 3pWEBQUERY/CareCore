@@ -171,7 +171,7 @@ export function EntryDialog({
   return (
     <EditorDialog
       id="documentation-entry"
-      eyebrow="CareCore Dokumentation"
+      eyebrow="Dokumentation"
       title="Eintrag erfassen"
       description="Der Eintrag wird mit Zeitpunkt und deinem Namen gespeichert und kann danach nur noch per Nachtrag korrigiert werden."
       onClose={onClose}
@@ -211,7 +211,7 @@ export function AmendDialog({
   return (
     <EditorDialog
       id="documentation-amend"
-      eyebrow={`CareCore Dokumentation · ${entry.residentName}`}
+      eyebrow={`Dokumentation · ${entry.residentName}`}
       title="Nachtrag / Korrektur"
       description={`Original vom ${formatDateTime(entry.occurredAt)} (${entry.author ?? "unbekannt"}) bleibt unverändert sichtbar und wird als korrigiert markiert.`}
       onClose={onClose}

@@ -94,7 +94,7 @@ export default function PlanView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Med"
+        eyebrow="Medikamente"
         title="Medikamentenplan"
         description="Ärztliche Verordnungen, Dosierungen und Einnahmezeiten sicher im Blick."
         action={

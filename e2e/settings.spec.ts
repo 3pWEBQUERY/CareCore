@@ -178,12 +178,12 @@ test("Branding: Logo der Einrichtung hochladen und in der Kopfzeile sehen", asyn
     await expect(card.getByRole("img", { name: "Aktuelles Logo" })).toBeVisible();
     await page.reload();
     await expect(page.locator(".location-icon.has-logo img").first()).toBeVisible();
-    // Auch in der Sidebar: als App-Icon-Kachel statt des CareCore-Zeichens.
+    // Auch in der Sidebar: als App-Icon-Kachel statt des CareOS-Zeichens.
     const sidebarLogo = page.locator(".sidebar-rail-head .brand-mark-app img");
     await expect(sidebarLogo).toBeVisible();
     await expect(sidebarLogo).toHaveAttribute("src", /\/api\/branding\/logo\?v=/);
 
-    // Beim Neuladen blitzen weder das CareCore-Zeichen noch das Gebäude-Symbol kurz auf: ab dem ersten Bild
+    // Beim Neuladen blitzen weder das CareOS-Zeichen noch das Gebäude-Symbol kurz auf: ab dem ersten Bild
     // festhalten, was Sidebar und Kopfzeile zeigen.
     await page.addInitScript(() => {
       const seen: string[] = [];
@@ -242,7 +242,7 @@ test("Branding: grosses Logo wird verkleinert und gespeichert", async ({ page })
   expect(errors).toEqual([]);
 });
 
-// Datenschutz: ohne Frist schlägt CareCore nichts vor; mit Frist zeigt die Karte den Stand.
+// Datenschutz: ohne Frist schlägt CareOS nichts vor; mit Frist zeigt die Karte den Stand.
 test("Löschfristen: Karten folgen den Aufbewahrungsfristen der Einrichtung", async ({ page }) => {
   await login(page, ADMIN);
   const errors = watchErrors(page);
@@ -428,7 +428,7 @@ test("SSO: einrichten, Verbindung prüfen, über den Identity-Provider anmelden"
     await card.getByRole("button", { name: "Verbindung prüfen" }).click();
     await expect(page.locator(".toast")).toContainText("Verbindung in Ordnung");
 
-    // Der Identity-Provider meldet Lena Bucher an; CareCore kennt sie über den Benutzernamen.
+    // Der Identity-Provider meldet Lena Bucher an; CareOS kennt sie über den Benutzernamen.
     expect((await page.request.get(`${idp}/__user?username=${FAGE.username}`)).ok()).toBe(true);
     // Erst die Seite verlassen, damit keine Hintergrundabfrage ohne Sitzung (401) mehr läuft.
     await page.goto("about:blank");

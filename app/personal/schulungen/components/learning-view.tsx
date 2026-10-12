@@ -63,7 +63,7 @@ export function LearningView(props: {
       {dialog?.kind === "archive" && (
         <EditorDialog
           id="training-archive"
-          eyebrow="CareCore Learn · Kurskatalog"
+          eyebrow="Schulungen · Kurskatalog"
           title="Schulung archivieren"
           description={`„${dialog.training.title}“ wird aus dem Katalog und den Pflichtnachweisen entfernt. Bestehende Nachweise bleiben im Protokoll erhalten.`}
           onClose={() => setDialog(null)}

@@ -12,7 +12,7 @@ import {
 } from "@/lib/repositioning-shared";
 
 // Lagerungs- und Bewegungsprotokoll: Positionswechsel mit Hautbefund. Das Intervall legt eine Fachperson fest (aus der
-// Pflegeplanung); CareCore errechnet daraus nur den nächsten Wechsel und gibt keine eigenen Intervalle vor.
+// Pflegeplanung); CareOS errechnet daraus nur den nächsten Wechsel und gibt keine eigenen Intervalle vor.
 
 const HOURS = [24, 72, 168] as const;
 

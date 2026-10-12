@@ -1,5 +1,5 @@
 // eMediplan (Schweiz, CHMED16A): eingelesener Medikationsplan als Entwurf. Jede Zeile übernimmt eine Fachperson
-// einzeln als Verordnung; CareCore prüft und ändert nichts selbst.
+// einzeln als Verordnung; CareOS prüft und ändert nichts selbst.
 
 export const EMEDIPLAN_SLOTS = ["morning", "noon", "evening", "night"] as const;
 export type EmediplanSlot = (typeof EMEDIPLAN_SLOTS)[number];
@@ -23,7 +23,7 @@ export type EmediplanLine = {
   idType: number;
   // Kennung wie im Plan (bei Freitext die Bezeichnung).
   id: string;
-  // Bezeichnung nur bei Freitext; GTIN und Pharmacode löst CareCore ohne Arzneimitteldatenbank nicht auf.
+  // Bezeichnung nur bei Freitext; GTIN und Pharmacode löst CareOS ohne Arzneimitteldatenbank nicht auf.
   freeText: string | null;
   unit: string;
   route: string;
@@ -56,7 +56,7 @@ export type EmediplanDraft = {
   lines: EmediplanLine[];
 };
 
-// Verordnungen einer Zeile: je verschiedene Dosis eine Verordnung mit ihren Tageszeiten (CareCore führt pro Verordnung
+// Verordnungen einer Zeile: je verschiedene Dosis eine Verordnung mit ihren Tageszeiten (CareOS führt pro Verordnung
 // eine Dosis). Beispiel: 1 morgens und 0.5 abends ergibt zwei Verordnungen.
 export function dosesBySlot(lineDoses: Record<EmediplanSlot, number>) {
   const groups = new Map<number, EmediplanSlot[]>();

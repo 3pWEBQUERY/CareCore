@@ -289,7 +289,7 @@ export function EditorDialog({
 
 // Asks for a mandatory reason, e.g. for declined doses or stopped orders.
 export function ReasonDialog({
-  eyebrow = "CareCore · Dokumentation",
+  eyebrow = "CareOS · Dokumentation",
   title,
   description,
   label,

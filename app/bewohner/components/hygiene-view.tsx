@@ -89,7 +89,7 @@ function IsolationDialog({
       id="isolation-create"
       eyebrow="Isolation & Ausbruch"
       title="Isolation erfassen"
-      description="Anlass und Massnahmen so, wie sie angeordnet wurden (Ärztin/Arzt, Hygienefachperson). CareCore stellt keine Diagnose."
+      description="Anlass und Massnahmen so, wie sie angeordnet wurden (Ärztin/Arzt, Hygienefachperson). CareOS stellt keine Diagnose."
       onClose={onClose}
       onSubmit={submit}
       saving={saving}
@@ -479,7 +479,7 @@ function HygieneContent({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow={`CareCore ${t.many}`}
+        eyebrow={`CareOS ${t.many}`}
         title="Isolation & Ausbruch"
         description={`Laufende Isolationen je Wohnbereich mit Überprüfung, Ausbrüche der Einrichtung und der Verlauf. Organisatorisch – Anlass und Massnahmen gemäss Anordnung.`}
         action={overview?.canWrite ? { label: "Isolation erfassen", onClick: () => setCreating(true) } : undefined}
@@ -500,7 +500,7 @@ function HygieneContent({ showToast }: { showToast: ShowToast }) {
           </button>
         )}
         <p>
-          CareCore stellt keine Diagnose und erklärt keinen Ausbruch selbst. Neue Isolationen und Ausbrüche werden der
+          CareOS stellt keine Diagnose und erklärt keinen Ausbruch selbst. Neue Isolationen und Ausbrüche werden der
           Leitung gemeldet.
         </p>
       </section>

@@ -35,7 +35,7 @@ test("Überwachung: Serverfehler festhalten, Zusammenfassung, Alarm höchstens e
   process.env.ALERT_ERROR_THRESHOLD = "3";
   process.env.SMTP_HOST = "127.0.0.1";
   process.env.SMTP_PORT = String(smtp.port);
-  process.env.MAIL_FROM = "CareCore <noreply@carecore.test>";
+  process.env.MAIL_FROM = "CareOS <noreply@carecore.test>";
   process.env.APP_URL = "https://carecore.test";
   // Unter der Schwelle: kein Alarm.
   assert.deepEqual(await checkErrorAlert(sql), { alerted: false });

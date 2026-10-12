@@ -2,7 +2,7 @@ import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } fro
 
 // Ablage für Medien (Fotos, Dateien, Logo) in einem S3-kompatiblen Bucket, z. B. Railway Buckets. Eingerichtet über
 // S3_ENDPOINT, S3_BUCKET, S3_REGION, S3_ACCESS_KEY_ID und S3_SECRET_ACCESS_KEY (S3_FORCE_PATH_STYLE=true für
-// Pfad-Adressen). Der Bucket ist privat; ausgeliefert wird immer über die Schnittstelle von CareCore mit den
+// Pfad-Adressen). Der Bucket ist privat; ausgeliefert wird immer über die Schnittstelle von CareOS mit den
 // jeweiligen Rechten. Ohne Bucket (lokal, Tests) bleiben die Inhalte in der Datenbank.
 
 let client: S3Client | null = null;

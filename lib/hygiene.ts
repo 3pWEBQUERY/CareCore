@@ -23,7 +23,7 @@ import {
   type Outbreak,
 } from "@/lib/hygiene-shared";
 
-// Isolation und Ausbruch: organisatorische Übersicht. CareCore stellt keine Diagnose, schlägt keine Isolation vor und
+// Isolation und Ausbruch: organisatorische Übersicht. CareOS stellt keine Diagnose, schlägt keine Isolation vor und
 // erklärt keinen Ausbruch anhand eigener Schwellen – Anlass, Anordnung und Ausbruch erfassen Fachpersonen bzw. die Leitung.
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;

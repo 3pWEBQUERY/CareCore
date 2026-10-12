@@ -26,7 +26,7 @@ export function SessionDialog({
   return (
     <EditorDialog
       id="training-session"
-      eyebrow="CareCore Learn · Termine"
+      eyebrow="Schulungen · Termine"
       title={`Termin für „${training.title}“`}
       onClose={onClose}
       onSubmit={async () => {
@@ -95,7 +95,7 @@ export function AssignDialog({
   return (
     <EditorDialog
       id="training-assign"
-      eyebrow="CareCore Learn · Zuweisung"
+      eyebrow="Schulungen · Zuweisung"
       title={`„${training.title}“ zuweisen`}
       description="Die Personen werden benachrichtigt und sehen die Schulung in ihrem Lernplan."
       onClose={onClose}

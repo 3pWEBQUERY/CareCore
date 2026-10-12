@@ -98,7 +98,7 @@ export default function StockView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Med"
+        eyebrow="Medikamente"
         title="Medikamentenbestände"
         description="Bestände, Mindestmengen und Verfalldaten zentral überwachen."
         action={data?.canManage ? { label: "Wareneingang", onClick: () => setDialog({ kind: "receipt" }) } : undefined}

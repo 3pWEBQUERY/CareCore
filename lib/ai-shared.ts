@@ -1,4 +1,4 @@
-// CareCore KI: types and labels shared by API and pages.
+// CareOS KI: types and labels shared by API and pages.
 
 export const AI_TASKS = {
   handover: { label: "Übergabe zusammenfassen", icon: "handover" },

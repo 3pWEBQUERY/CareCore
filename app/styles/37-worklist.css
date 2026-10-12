@@ -174,23 +174,6 @@
   margin: 4px 0;
   background: rgba(184, 201, 227, 0.22);
 }
-.sidebar-flyout-link span {
-  flex: 1;
-}
-.sidebar-flyout-badge {
-  min-width: 20px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  color: white;
-  background: var(--critical);
-  font-size: 10px;
-  font-style: normal;
-  font-weight: 800;
-  text-align: center;
-}
-.sidebar-flyout-recent > strong {
-  color: #bfdbfe;
-}
 
 /* Header: keyboard shortcut overview. */
 .shortcut-menu-wrap {

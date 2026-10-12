@@ -3,7 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import { X } from "@phosphor-icons/react";
 
-// Rechtes Seitenpanel (70 %) wie alle Dialoge in CareCore, für Ansichten ohne Formular.
+// Rechtes Seitenpanel (70 %) wie alle Dialoge in CareOS, für Ansichten ohne Formular.
 export function SidePanel({
   id,
   eyebrow,

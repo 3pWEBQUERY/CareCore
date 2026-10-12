@@ -6,6 +6,7 @@ import { Keyboard } from "@phosphor-icons/react";
 import { usePersonalPreferences } from "./appearance";
 import { TERMINOLOGIES, type Terms } from "@/lib/terminology";
 import { useCareResident, useResidentNavigation, useTerms, useWorkContext } from "./care-context";
+import { openAppLauncher } from "./app-launcher";
 
 // Keyboard shortcuts of the whole app. They apply when no text field is focused;
 // with a dialog open only J/K (inside the resident record) and "?" are active.
@@ -31,7 +32,7 @@ export const shortcutGroups = (t: Terms): Array<{ title: string; items: Shortcut
       { keys: ["R"], label: "Medikamentenrunde", href: "/c/medikation/runde" },
       { keys: ["P"], label: "Pflegeplanung", href: "/c/pflegeplanung" },
       { keys: ["E"], label: "Einschätzungen", href: "/c/einschaetzungen" },
-      { keys: ["W"], label: "Wundmanagement", href: "/c/wundmanagement" },
+      { keys: ["W"], label: "Wunden", href: "/c/wundmanagement" },
       { keys: ["T"], label: "Trinkprotokoll", href: "/c/ernaehrung/trinkprotokoll" },
     ],
   },
@@ -39,6 +40,7 @@ export const shortcutGroups = (t: Terms): Array<{ title: string; items: Shortcut
     title: "Dienst",
     items: [
       { keys: ["H"], label: "Startseite", href: "/c" },
+      { keys: ["L"], label: "Alle Apps" },
       { keys: ["A"], label: "Meine Aufgaben", href: "/c/betrieb/aufgaben" },
       { keys: ["Ü"], label: "Übergabe", href: "/c/betrieb/uebergabe" },
       { keys: ["S"], label: "Mein Dienst", href: "/c/betrieb/schicht" },
@@ -103,6 +105,7 @@ export function KeyboardShortcutsMenu() {
       const key = event.key.toLowerCase();
       if (key === "j") navigation.next();
       else if (key === "k") navigation.previous();
+      else if (key === "l") openAppLauncher();
       else if (key === "b" && residentId) router.push(`/c/bewohner?resident=${residentId}`);
       else if (ROUTES[key] || (key === "u" && ROUTES["ü"])) router.push(ROUTES[key] ?? ROUTES["ü"]);
       else return;

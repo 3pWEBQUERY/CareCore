@@ -255,7 +255,7 @@ function SettingsCard({ catalog, onSaved }: { catalog: BillingCatalog; onSaved: 
         </h2>
         <p className="card-subtitle">
           Der Eintrittstag wird immer verrechnet. Ob der Tag des Austritts (auch der Todestag) verrechnet wird, legt die
-          Einrichtung fest{value === null ? " – ohne diese Festlegung rechnet CareCore nicht." : "."}
+          Einrichtung fest{value === null ? " – ohne diese Festlegung rechnet CareOS nicht." : "."}
         </p>
       </header>
       <div className="repositioning-choices" role="group" aria-label="Austrittstag">

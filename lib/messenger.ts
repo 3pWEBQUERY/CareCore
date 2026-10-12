@@ -23,7 +23,7 @@ import { mediaContent, storeMedia } from "@/lib/storage";
 import { onDutyPeople, onDutyRows } from "@/lib/team-news";
 import { FILE_MAX_BYTES } from "@/lib/files-shared";
 
-// Messenger von CareCore One (wie der Chat eines Teams, ergänzt um den Pflegealltag):
+// Messenger von Kommunikation (wie der Chat eines Teams, ergänzt um den Pflegealltag):
 // Direktnachrichten und Gruppen, Antworten mit Zitat, Reaktionen, @Erwähnungen (auch @alle), Wichtigkeit
 // („wichtig“, „dringend“), Dateien (hochgeladen oder aus der Ablage verknüpft), angeheftete Nachrichten,
 // Bearbeiten und Löschen eigener Nachrichten, Gelesen-Status und wer gerade im Dienst ist.

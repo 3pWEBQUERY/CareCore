@@ -15,7 +15,7 @@ export const meta: Record<
   organization: {
     module: "admin",
     child: "Organisation",
-    eyebrow: "CareCore Admin",
+    eyebrow: "Administration",
     title: "Organisation",
     description: "Standorte, Wohnbereiche und Verantwortlichkeiten zentral steuern.",
     action: "Standort hinzufügen",
@@ -29,7 +29,7 @@ export const meta: Record<
   users: {
     module: "admin",
     child: "Mitarbeiter",
-    eyebrow: "CareCore Admin",
+    eyebrow: "Administration",
     title: "Mitarbeiter",
     description: "Mitarbeiterprofile, Rollen und Zugriffe sicher verwalten.",
     action: "Mitarbeiter erstellen",
@@ -43,7 +43,7 @@ export const meta: Record<
   configuration: {
     module: "admin",
     child: "Konfiguration",
-    eyebrow: "CareCore Admin",
+    eyebrow: "Administration",
     title: "Konfiguration",
     description: "Systemweite Einstellungen, Integrationen und Aufbewahrung sicher pflegen.",
     action: "Einstellung ändern",

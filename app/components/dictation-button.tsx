@@ -7,7 +7,7 @@ import { usePersonalPreferences } from "./appearance";
 // Spracheingabe nur mit Erkennung auf dem Gerät (Entscheidung vom 30.09.2026): Der Knopf erscheint nur, wenn der
 // Browser die Erkennung lokal anbietet (Web Speech API mit `processLocally`); die Aufnahme verlässt das Gerät nicht.
 // Ohne lokale Erkennung gibt es keine Spracheingabe – kein Rückgriff auf die Cloud-Erkennung des Browsers.
-// Eingeschaltet in den persönlichen Einstellungen; erst dann fragt CareCore den Browser (manche Chromium-Builds ohne
+// Eingeschaltet in den persönlichen Einstellungen; erst dann fragt CareOS den Browser (manche Chromium-Builds ohne
 // Sprachmodul beenden die Seite bei dieser Abfrage).
 
 type Availability = "available" | "downloadable" | "downloading" | "unavailable";

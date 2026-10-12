@@ -38,7 +38,7 @@ export function TrainingEditor({
   return (
     <EditorDialog
       id="training-editor"
-      eyebrow="CareCore Learn · Kurskatalog"
+      eyebrow="Schulungen · Kurskatalog"
       title={training ? "Schulung bearbeiten" : "Schulung anlegen"}
       description="Pflichtschulungen erscheinen im Kompetenzprofil der betroffenen Rollen; mit Gültigkeit werden Auffrischungen automatisch fällig."
       onClose={onClose}

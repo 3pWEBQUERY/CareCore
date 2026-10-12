@@ -11,7 +11,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   "insights.read": "Kennzahlen",
   "administration.manage": "Administration",
   "rai.manage": "Kompass (Bedarfsabklärung)",
-  "ai.use": "CareCore KI",
+  "ai.use": "CareOS KI",
   "funds.manage": "Bewohnergelder verwalten",
   "billing.manage": "Abrechnung verwalten",
 };

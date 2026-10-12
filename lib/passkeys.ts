@@ -88,7 +88,7 @@ export async function startRegistration(sql: Sql, actor: CarecoreActor, rp: Rely
   if (existing.length >= PASSKEYS_MAX)
     throw new ApiError(`Höchstens ${PASSKEYS_MAX} Passkeys. Bitte zuerst einen entfernen.`);
   const options = await generateRegistrationOptions({
-    rpName: "CareCore",
+    rpName: "CareOS",
     rpID: rp.rpID,
     userName: actor.username,
     userDisplayName: actor.display_name,

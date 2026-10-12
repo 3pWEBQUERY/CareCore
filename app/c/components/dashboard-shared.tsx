@@ -208,9 +208,10 @@ export const dashboardWidgets: Array<{
   top?: boolean;
 }> = [
   { id: "greeting", label: "Begrüssung", description: "Datum, Begrüssung und Uhrzeit", span: 12, top: true },
-  { id: "shortcuts", label: "Schnellzugriff", description: "Direkt zu häufigen Bereichen", span: 4, top: true },
-  { id: "notes", label: "Meine Notizen", description: "Nur für dich sichtbar", span: 4, top: true },
-  { id: "today", label: "Heute wichtig", description: "Offene Aufgaben auf einen Blick", span: 4, top: true },
+  // Die Apps von CareOS wie auf dem Startbildschirm eines Tablets (Kennung „shortcuts“ bleibt für gespeicherte Layouts).
+  { id: "shortcuts", label: "Meine Apps", description: "Alle Apps auf einen Blick", span: 12, top: true },
+  { id: "notes", label: "Meine Notizen", description: "Nur für dich sichtbar", span: 6, top: true },
+  { id: "today", label: "Heute wichtig", description: "Offene Aufgaben auf einen Blick", span: 6, top: true },
   { id: "news", label: "Neuigkeiten", description: "Letzte Dokumentation je Bewohner", span: 12 },
   { id: "summary", label: "Schichtübersicht", description: "Kennzahlen für den aktuellen Dienst", span: 12 },
   { id: "worklist", label: "Tagesliste", description: "Was heute je Bewohner fällig ist", span: 12 },

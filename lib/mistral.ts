@@ -2,7 +2,7 @@ import "server-only";
 import { Mistral } from "@mistralai/mistralai";
 import { MistralError as MistralApiError } from "@mistralai/mistralai/models/errors";
 
-// Mistral für CareCore KI, Übersetzungsentwürfe und KI-Dienstplanung (offizielles SDK, ohne Telemetrie). Der
+// Mistral für CareOS KI, Übersetzungsentwürfe und KI-Dienstplanung (offizielles SDK, ohne Telemetrie). Der
 // Schlüssel bleibt serverseitig; Prompt-Inhalte werden nicht geloggt.
 
 export const MISTRAL_DEFAULT_MODEL = "mistral-small-latest";
@@ -70,7 +70,7 @@ export async function mistralJson(request: { system: string; user: string; schem
   }
 }
 
-// Freier Text (CareCore KI). `truncated`, wenn die Antwort an der Längengrenze abgeschnitten wurde.
+// Freier Text (CareOS KI). `truncated`, wenn die Antwort an der Längengrenze abgeschnitten wurde.
 export async function mistralText(request: { system: string; user: string; maxOutputTokens?: number }) {
   if (!mistralConfigured()) throw new MistralError("MISTRAL_API_KEY fehlt.", 503);
   try {

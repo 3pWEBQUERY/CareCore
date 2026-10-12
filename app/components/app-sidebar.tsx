@@ -3,128 +3,13 @@
 import { useAppRouter } from "./app-navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
-import {
-  ArrowsLeftRight,
-  Bell,
-  Buildings,
-  CalendarDots,
-  CaretRight,
-  ChartBar,
-  ChatsCircle,
-  Check,
-  ClipboardText,
-  Files,
-  FirstAidKit,
-  ForkKnife,
-  GearSix,
-  GraduationCap,
-  Heartbeat,
-  House,
-  ListChecks,
-  MagnifyingGlass,
-  NotePencil,
-  Pill,
-  Plus,
-  Pulse,
-  PuzzlePiece,
-  ShieldCheck,
-  SignOut,
-  Sparkle,
-  Stethoscope,
-  UsersThree,
-  Warning,
-  X,
-  Compass,
-  Drop,
-  Eye,
-  Footprints,
-  HandHeart,
-  Moon,
-  Shower,
-  Toilet,
-} from "@phosphor-icons/react";
-import { useNavigationBadges, useWorkContext, type NavigationBadges } from "./care-context";
+import { useNavigationBadges, useWorkContext } from "./care-context";
 import { BrandIcon } from "./brand-icon";
 import { openHelp } from "./help-panel";
-import {
-  groupBadges,
-  moduleBadges,
-  moduleLabel,
-  sidebarNavigation,
-  quickLinks,
-  readRecentPages,
-  rememberPage,
-  routeFor,
-  type ModuleIconName,
-  type RecentPage,
-} from "./navigation";
+import { ModuleIcon } from "./module-icon";
+import { AppIcon, appStyle, openAppLauncher } from "./app-launcher";
+import { DOCK_APPS, appHref, moduleBadges, rememberPage, sidebarNavigation, type ModuleIconName } from "./navigation";
 import { navigationLabel, termsFor } from "@/lib/terminology";
-
-const icons = {
-  home: House,
-  residents: UsersThree,
-  tasks: ListChecks,
-  handover: ArrowsLeftRight,
-  calendar: CalendarDots,
-  team: ChatsCircle,
-  learn: GraduationCap,
-  docs: Files,
-  chart: ChartBar,
-  quality: ShieldCheck,
-  settings: GearSix,
-  search: MagnifyingGlass,
-  bell: Bell,
-  building: Buildings,
-  chevron: CaretRight,
-  alert: Warning,
-  check: Check,
-  plus: Plus,
-  pulse: Pulse,
-  note: NotePencil,
-  vitals: Heartbeat,
-  plan: ClipboardText,
-  med: Pill,
-  wounds: FirstAidKit,
-  nutrition: ForkKnife,
-  assess: Stethoscope,
-  shift: Heartbeat,
-  ai: Sparkle,
-  sparkle: Sparkle,
-  filter: MagnifyingGlass,
-  logout: SignOut,
-  close: X,
-  activity: PuzzlePiece,
-  compass: Compass,
-  eye: Eye,
-  walk: Footprints,
-  moon: Moon,
-  drop: Drop,
-  shower: Shower,
-  toilet: Toilet,
-  care: HandHeart,
-} satisfies Record<Exclude<ModuleIconName, "caretDown" | "sidebar">, typeof House>;
-
-type RailIconName = ModuleIconName | "carecoreOne" | "kompass";
-
-function RailIcon({ name }: { name: RailIconName }) {
-  // Logo von CareCore Kompass als Maske: nimmt die Farbe der übrigen Symbole an (auch beim Überfahren und aktiv).
-  if (name === "kompass") return <span className="sidebar-kompass-icon" aria-hidden="true" />;
-  if (name === "carecoreOne")
-    return (
-      <Image
-        className="sidebar-carecore-one-icon"
-        src="/carecore-one-icon.png"
-        width={28}
-        height={28}
-        alt=""
-        aria-hidden="true"
-        unoptimized
-      />
-    );
-  const Component = icons[name as keyof typeof icons] ?? Pulse;
-  return <Component aria-hidden="true" weight="regular" />;
-}
 
 type AppSidebarProps = {
   activeModule?: string;
@@ -203,211 +88,127 @@ export function SidebarTooltip({
   );
 }
 
-export default function AppSidebar({ activeModule, activeChild, onToast }: AppSidebarProps) {
+export default function AppSidebar({ activeModule, activeChild }: AppSidebarProps) {
   const router = useAppRouter();
-  const [flyoutGroup, setFlyoutGroup] = useState<string | null>(null);
   const context = useWorkContext();
   const terms = termsFor(context?.terminology);
   const L = (label: string) => navigationLabel(label, terms);
-  const visibleNavigation = sidebarNavigation(context?.profile.permissions);
   const badges = useNavigationBadges();
-  const [recentPages, setRecentPages] = useState<RecentPage[]>([]);
-  const badgeCount = (key?: keyof NavigationBadges) => (key && badges ? badges[key] : 0);
+  const modules = sidebarNavigation(context?.profile.permissions).flatMap((group) => group.modules);
+  const dock = DOCK_APPS.map((id) => modules.find((module) => module.id === id)).filter((module) => !!module);
+  const count = (moduleId: string) =>
+    badges ? moduleBadges(moduleId).reduce((sum, key) => sum + (badges[key] ?? 0), 0) : 0;
+  // Eine App ausserhalb der Leiste ist offen: „Alle Apps“ zeigt das an.
+  const otherApp =
+    !!activeModule &&
+    activeModule !== "home" &&
+    activeModule !== "settings" &&
+    !dock.some((m) => m.id === activeModule);
 
-  // Every visited page is remembered for "Zuletzt benutzt".
+  // Every visited page is remembered for "Zuletzt geöffnet".
   useEffect(() => {
     if (activeModule && activeChild) rememberPage(activeModule, activeChild);
   }, [activeModule, activeChild]);
 
-  useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setFlyoutGroup(null);
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, []);
-
-  function openGroup(groupId: string) {
-    setRecentPages(readRecentPages());
-    setFlyoutGroup((current) => (current === groupId ? null : groupId));
+  function go(href: string | null) {
+    if (href) router.push(href);
   }
-  const allowedChildren = new Set(
-    visibleNavigation.flatMap((group) =>
-      group.modules.flatMap((module) => module.children.map((child) => `${module.id}:${child}`)),
-    ),
-  );
-  const visibleQuickLinks = quickLinks.filter((link) => allowedChildren.has(`${link.moduleId}:${link.child}`));
-  const recent = recentPages
-    .filter((page) => allowedChildren.has(`${page.moduleId}:${page.child}`))
-    .filter((page) => page.moduleId !== activeModule || page.child !== activeChild)
-    .slice(0, 4);
-
-  // Seite schon beim Darüberfahren laden, damit der Wechsel sofort erscheint.
-  function prefetchChild(moduleId: string, child: string) {
-    const href = routeFor(moduleId, child);
-    if (href) router.prefetch(href);
-  }
-
-  function selectChild(moduleId: string, child: string) {
-    const href = routeFor(moduleId, child);
-    if (href) {
-      setFlyoutGroup(null);
-      router.push(href);
-    } else {
-      onToast?.(`${L(child)} geöffnet`);
-    }
-  }
-
-  const activeGroup = visibleNavigation.find((group) => group.modules.some((module) => module.id === activeModule));
-  const groupIcons: Record<string, RailIconName> = {
-    operations: "calendar",
-    clinical: "residents",
-    kompass: "kompass",
-    workforce: "team",
-    "carecore-one": "carecoreOne",
-    management: "chart",
-    intelligence: "ai",
-  };
-  const flyout = visibleNavigation.find((group) => group.id === flyoutGroup);
 
   return (
-    <>
-      <aside className="sidebar sidebar-rail" aria-label="Hauptnavigation">
-        <div className="sidebar-rail-head">
-          <BrandIcon size={32} />
-        </div>
-        <nav className="sidebar-rail-scroll">
-          <button
-            className={`sidebar-rail-button ${activeModule === "home" ? "active" : ""}`}
-            type="button"
-            aria-label="Startseite"
-            onPointerEnter={() => router.prefetch("/c")}
-            onClick={() => {
-              setFlyoutGroup(null);
-              router.push("/c");
-            }}
-          >
-            <RailIcon name="home" />
-            <SidebarTooltip label="Startseite" shortcut="H" />
-          </button>
-          {visibleQuickLinks.map((link) => {
-            const count = badgeCount(link.badge);
-            return (
-              <button
-                className={`sidebar-rail-button ${activeModule === link.moduleId && activeChild === link.child ? "active" : ""}`}
-                type="button"
-                key={`${link.moduleId}:${link.child}`}
-                aria-label={count ? `${link.label} (${count})` : link.label}
-                onClick={() => selectChild(link.moduleId, link.child)}
-                onPointerEnter={() => prefetchChild(link.moduleId, link.child)}
-                onFocus={() => prefetchChild(link.moduleId, link.child)}
-              >
-                <RailIcon name={link.icon} />
-                {count > 0 && <span className="sidebar-rail-badge">{count > 99 ? "99+" : count}</span>}
-                <SidebarTooltip label={`${link.label}${count ? ` · ${count}` : ""}`} shortcut={link.shortcut} />
-              </button>
-            );
-          })}
-          <span className="sidebar-rail-divider" aria-hidden="true" />
-          {visibleNavigation.map((group) => {
-            const count = groupBadges(group).reduce((sum, key) => sum + badgeCount(key), 0);
-            return (
-              <button
-                className={`sidebar-rail-button ${activeGroup?.id === group.id && !visibleQuickLinks.some((link) => link.moduleId === activeModule && link.child === activeChild) ? "active" : ""}`}
-                type="button"
-                key={group.id}
-                aria-label={count ? `${L(group.label)} (${count} ungelesen)` : L(group.label)}
-                aria-expanded={flyoutGroup === group.id}
-                onClick={() => openGroup(group.id)}
-              >
-                <RailIcon name={groupIcons[group.id] ?? "pulse"} />
-                {count > 0 && <span className="sidebar-rail-badge">{count > 99 ? "99+" : count}</span>}
-                <SidebarTooltip label={`${L(group.label)}${count ? ` · ${count} ungelesen` : ""}`} />
-              </button>
-            );
-          })}
-        </nav>
-        <div className="sidebar-rail-footer">
-          <button
-            className={`sidebar-rail-button ${activeModule === "settings" ? "active" : ""}`}
-            type="button"
-            aria-label="Einstellungen"
-            onPointerEnter={() => router.prefetch("/c/einstellungen")}
-            onClick={() => {
-              setFlyoutGroup(null);
-              router.push("/c/einstellungen");
-            }}
-          >
-            <RailIcon name="settings" />
-            <SidebarTooltip label="Einstellungen" />
-          </button>
-          <button className="sidebar-rail-button" type="button" aria-label="Hilfe & Support" onClick={openHelp}>
-            <RailIcon name="docs" />
-            <SidebarTooltip label="Hilfe & Support" />
-          </button>
-        </div>
-      </aside>
+    <aside className="sidebar sidebar-rail careos-dock" aria-label="Hauptnavigation">
+      <div className="sidebar-rail-head">
+        <BrandIcon size={32} />
+        <span className="careos-dock-brand">CareOS</span>
+      </div>
+      <nav className="sidebar-rail-scroll careos-dock-scroll">
+        <DockButton
+          label="Start"
+          icon="home"
+          hue={214}
+          active={activeModule === "home"}
+          onPointerEnter={() => router.prefetch("/c")}
+          onClick={() => go("/c")}
+        />
+        {dock.map((module) => {
+          const href = appHref(module);
+          const value = count(module.id);
+          return (
+            <DockButton
+              key={module.id}
+              label={L(module.shortLabel ?? module.label)}
+              module={module}
+              hue={module.hue}
+              count={value}
+              active={activeModule === module.id}
+              onPointerEnter={() => href && router.prefetch(href)}
+              onClick={() => go(href)}
+            />
+          );
+        })}
+        <span className="sidebar-rail-divider" aria-hidden="true" />
+        <DockButton label="Alle Apps" icon="apps" hue={214} active={otherApp} onClick={openAppLauncher} haspopup />
+      </nav>
+      <div className="sidebar-rail-footer careos-dock-footer">
+        <DockButton
+          label="Einstellungen"
+          icon="settings"
+          hue={215}
+          active={activeModule === "settings"}
+          onPointerEnter={() => router.prefetch("/c/einstellungen")}
+          onClick={() => go("/c/einstellungen")}
+        />
+        <DockButton label="Hilfe" icon="help" hue={215} onClick={openHelp} haspopup />
+      </div>
+    </aside>
+  );
+}
 
-      {flyout && (
-        <aside
-          className="sidebar-flyout"
-          aria-label={`${flyout.label} Untermenü`}
-          onMouseLeave={() => setFlyoutGroup(null)}
-        >
-          <div className="sidebar-flyout-head">
-            <div className="sidebar-flyout-icon">
-              <RailIcon name={groupIcons[flyout.id] ?? "pulse"} />
-            </div>
-            <div>
-              <span>Hauptbereich</span>
-              <strong>{flyout.label}</strong>
-            </div>
-            <button type="button" aria-label="Untermenü schliessen" onClick={() => setFlyoutGroup(null)}>
-              <RailIcon name="close" />
-            </button>
-          </div>
-          <div className="sidebar-flyout-body">
-            {recent.length > 0 && (
-              <section className="sidebar-flyout-module sidebar-flyout-recent">
-                <strong>Zuletzt benutzt</strong>
-                {recent.map((page) => (
-                  <button
-                    className="sidebar-flyout-link"
-                    type="button"
-                    key={`${page.moduleId}:${page.child}`}
-                    onClick={() => selectChild(page.moduleId, page.child)}
-                    onPointerEnter={() => prefetchChild(page.moduleId, page.child)}
-                    onFocus={() => prefetchChild(page.moduleId, page.child)}
-                  >
-                    <span>{moduleLabel(page.moduleId, page.child, terms)}</span>
-                    <RailIcon name="chevron" />
-                  </button>
-                ))}
-              </section>
-            )}
-            <section className="sidebar-flyout-module">
-              <strong>Bereiche</strong>
-              {flyout.modules.map((module) => {
-                const count = moduleBadges(module.id).reduce((sum, key) => sum + badgeCount(key), 0);
-                return (
-                  <button
-                    className={`sidebar-flyout-link ${module.id === activeModule ? "active" : ""}`}
-                    type="button"
-                    key={module.id}
-                    onClick={() => selectChild(module.id, module.children[0])}
-                    onPointerEnter={() => prefetchChild(module.id, module.children[0])}
-                    onFocus={() => prefetchChild(module.id, module.children[0])}
-                  >
-                    <span>{L(module.label)}</span>
-                    {count > 0 && <em className="sidebar-flyout-badge">{count}</em>}
-                    <RailIcon name="chevron" />
-                  </button>
-                );
-              })}
-            </section>
-          </div>
-        </aside>
-      )}
-    </>
+// Ein Knopf der Leiste: farbiges Symbol und darunter immer der Name (keine Bedeutung nur über ein Symbol).
+function DockButton({
+  label,
+  icon,
+  module,
+  hue,
+  count = 0,
+  active = false,
+  haspopup = false,
+  onClick,
+  onPointerEnter,
+}: {
+  label: string;
+  icon?: ModuleIconName;
+  module?: Parameters<typeof AppIcon>[0]["module"];
+  hue: number;
+  count?: number;
+  active?: boolean;
+  haspopup?: boolean;
+  onClick: () => void;
+  onPointerEnter?: () => void;
+}) {
+  return (
+    <button
+      className={`sidebar-rail-button careos-dock-button ${active ? "active" : ""}`}
+      type="button"
+      style={appStyle(hue)}
+      aria-current={active && !haspopup ? "page" : undefined}
+      aria-haspopup={haspopup ? "dialog" : undefined}
+      onClick={onClick}
+      onPointerEnter={onPointerEnter}
+      onFocus={onPointerEnter}
+    >
+      {/* Name aus dem sichtbaren Text (übersetzbar), die Zahl nur für Screenreader dahinter. */}
+      <span className="careos-dock-icon" aria-hidden="true">
+        {module ? (
+          <AppIcon module={module} size="sm" />
+        ) : (
+          <span className="careos-app-icon careos-app-icon-sm careos-app-icon-plain">
+            <ModuleIcon name={icon ?? "home"} />
+          </span>
+        )}
+        {count > 0 && <em className="careos-badge">{count > 99 ? "99+" : count}</em>}
+      </span>
+      <span className="careos-dock-label">{label}</span>
+      {count > 0 && <span className="sr-only"> ({count})</span>}
+    </button>
   );
 }

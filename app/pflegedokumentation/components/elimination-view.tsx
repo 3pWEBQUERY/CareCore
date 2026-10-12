@@ -249,7 +249,7 @@ function EliminationContent({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Dokumentation"
+        eyebrow="Dokumentation"
         title="Ausscheidung & Kontinenz"
         description={`Stuhlgang, Wasserlassen, Inkontinenz und Materialwechsel je ${t.one}. Ein Hinweis in der Tagesliste erscheint nur mit der Tageszahl der Einrichtung.`}
         action={resident && canWrite ? { label: "Ausscheidung erfassen", onClick: () => setAdding(true) } : undefined}

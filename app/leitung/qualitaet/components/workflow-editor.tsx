@@ -79,7 +79,7 @@ export function WorkflowEditor({ onClose, onSaved }: { onClose: () => void; onSa
   return (
     <EditorDialog
       id="quality-workflows"
-      eyebrow="CareCore Quality · Ablaufketten"
+      eyebrow="Qualität · Ablaufketten"
       title="Ablaufketten festlegen"
       description="Beim Melden eines Ereignisses entstehen aus den Schritten Aufgaben für das Team, fällig ab dem Zeitpunkt des Ereignisses. Ohne Schritte entsteht nichts."
       onClose={onClose}

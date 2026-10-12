@@ -18,7 +18,7 @@ export default function NewsWorkspace() {
       module="team"
       child="Neuigkeiten & Kanäle"
       view="teamNews"
-      eyebrow="CareCore Team"
+      eyebrow="Team"
       title="Neuigkeiten & Kanäle"
       description="Updates, Absprachen und Fachdialoge im gesamten Haus."
       action={canPost ? { label: "Beitrag erstellen", onClick: () => setDialog({ kind: "post", post: null }) } : null}

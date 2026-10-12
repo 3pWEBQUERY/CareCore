@@ -19,7 +19,7 @@ function ConsentsContent() {
   return (
     <>
       <PageHeading
-        eyebrow={`CareCore ${t.many}`}
+        eyebrow={`CareOS ${t.many}`}
         title="Einwilligungen"
         description="Stand je Thema und Wohnbereich – z. B. wer keine Fotos möchte. Erfasst wird in der Akte unter Stammdaten › Einwilligungen & Freigaben."
       />

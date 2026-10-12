@@ -10,7 +10,7 @@ import { AI_TASKS, type AiDraft, type AiOverview, type AiTask } from "@/lib/ai-s
 
 const SUGGESTIONS: AiTask[] = ["handover", "risks", "documentation", "carePlan"];
 
-// CareCore KI assistant: on the page "Assistenz" and in the header panel.
+// CareOS KI assistant: on the page "Assistenz" and in the header panel.
 type Exchange = { id: string; task: AiTask; prompt: string; draft?: AiDraft; error?: string };
 
 // variant „panel“: kompakte Darstellung im KI-Panel der Kopfzeile (Kontextleiste, Gespräch, Aufträge über dem
@@ -109,8 +109,8 @@ export function AssistantView({
         </span>
         <p>
           {configured
-            ? `Hallo${firstName ? ` ${firstName}` : ""}! Ich kann Übergaben strukturieren, Risiken hervorheben und Dokumentationsentwürfe vorbereiten – auf Basis der Daten in CareCore. Die finale Freigabe bleibt immer bei dir.`
-            : "CareCore KI ist noch nicht eingerichtet. Die Administration muss dafür einen API-Schlüssel (MISTRAL_API_KEY) hinterlegen."}
+            ? `Hallo${firstName ? ` ${firstName}` : ""}! Ich kann Übergaben strukturieren, Risiken hervorheben und Dokumentationsentwürfe vorbereiten – auf Basis der Daten in CareOS. Die finale Freigabe bleibt immer bei dir.`
+            : "CareOS KI ist noch nicht eingerichtet. Die Administration muss dafür einen API-Schlüssel (MISTRAL_API_KEY) hinterlegen."}
         </p>
       </div>
       {exchanges.map((item) => (
@@ -168,7 +168,7 @@ export function AssistantView({
                   : `Für die Pflegeplanung zuerst ${t.oneOblique} in der Kopfzeile wählen`
                 : "Zusätzliche Hinweise (optional)…"
         }
-        aria-label="Auftrag an CareCore KI"
+        aria-label="Auftrag an CareOS KI"
         maxLength={2000}
       />
       <button className="primary-button" type="submit" disabled={!canSend}>
@@ -210,7 +210,7 @@ export function AssistantView({
         <footer className="ai-assist-foot">
           <p>
             <ModuleIcon name="quality" />
-            Entwürfe aus den Daten in CareCore – gespeichert wird erst nach deiner Prüfung.
+            Entwürfe aus den Daten in CareOS – gespeichert wird erst nach deiner Prüfung.
           </p>
           {onOpenDrafts && (
             <button className="quiet-button" type="button" onClick={onOpenDrafts}>
@@ -281,8 +281,8 @@ export function AssistantView({
             </div>
           </div>
           <p className="intelligence-note">
-            KI-Vorschläge sind Entwürfe und werden erst nach deiner Prüfung in CareCore gespeichert. Bewohnende werden
-            nur mit Kürzel, Alter und Zimmer übermittelt.
+            KI-Vorschläge sind Entwürfe und werden erst nach deiner Prüfung in CareOS gespeichert. Bewohnende werden nur
+            mit Kürzel, Alter und Zimmer übermittelt.
             {overview.data?.pending ? ` ${overview.data.pending} Entwürfe warten auf Prüfung.` : ""}
           </p>
         </section>

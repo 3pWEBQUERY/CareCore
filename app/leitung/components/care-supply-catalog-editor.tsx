@@ -19,7 +19,7 @@ export function CatalogEditorDialog({ r }: { r: CareSupplyCatalogState }) {
       <section className="area-editor-panel" role="dialog" aria-modal="true" aria-labelledby="care-supply-editor-title">
         <header className="area-editor-header">
           <div>
-            <p className="eyebrow">CareCore Administration · Pflegebedarf</p>
+            <p className="eyebrow">Administration · Pflegebedarf</p>
             <h2 id="care-supply-editor-title">{editor.id ? "Pflegeprodukt bearbeiten" : "Pflegeprodukt anlegen"}</h2>
             <p>Der Katalog wird für die Pflegebedarfsbuchung in allen {t.prefix}akten verwendet.</p>
           </div>

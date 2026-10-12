@@ -123,7 +123,7 @@ const textRun = (text: string, props: string, tag = "w:t") =>
 // Nachverfolgte Änderung um einen Lauf legen (<w:ins> eingefügt, <w:del> gelöscht – wie in Word).
 function revision(tag: "ins" | "del", mark: DocMark, content: string, writer: Writer) {
   writer.revisions += 1;
-  const author = typeof mark.attrs?.author === "string" && mark.attrs.author ? mark.attrs.author : "CareCore";
+  const author = typeof mark.attrs?.author === "string" && mark.attrs.author ? mark.attrs.author : "CareOS";
   const date = typeof mark.attrs?.date === "string" ? wordDate(mark.attrs.date) : "";
   return `<w:${tag} w:id="${writer.revisions + 1000}" w:author="${esc(author)}"${date ? ` w:date="${date}"` : ""}>${content}</w:${tag}>`;
 }

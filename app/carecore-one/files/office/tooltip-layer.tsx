@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-// Tooltips in der CareCore-Optik für alle Elemente mit `data-tip` (Text) und optional `data-shortcut`
+// Tooltips in der CareOS-Optik für alle Elemente mit `data-tip` (Text) und optional `data-shortcut`
 // (Tastenkürzel). Erscheinen nach kurzem Verweilen mit der Maus oder sofort bei Tastaturfokus.
 type Tip = { text: string; shortcut: string; rect: DOMRect };
 

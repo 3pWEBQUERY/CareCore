@@ -69,7 +69,7 @@ function OutingsContent({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore One · Kalender"
+        eyebrow="Kalender"
         title="Fahrdienst"
         description="Termine ausser Haus mit Abholung, Transport, Begleitung und mitzugebenden Unterlagen. Abfahrt und Rückkehr hier vermerken. Termine ausser Haus werden im Kalender erfasst."
       />
@@ -202,7 +202,7 @@ function OutingsContent({ showToast }: { showToast: ShowToast }) {
   );
 }
 
-// CareCore One › Kalender › Fahrdienst: Tagesliste für den Empfang.
+// Kommunikation › Kalender › Fahrdienst: Tagesliste für den Empfang.
 export default function OutingsView() {
   return (
     <ModulePageShell

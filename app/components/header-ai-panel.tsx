@@ -7,7 +7,7 @@ import { Sparkle, X } from "@phosphor-icons/react";
 import { AssistantView } from "@/app/intelligenz/components/assistant-view";
 import { useWorkContext } from "./care-context";
 
-// CareCore KI from every page: a header button opening the assistant as side panel (right, full screen on phones).
+// CareOS KI from every page: a header button opening the assistant as side panel (right, full screen on phones).
 export function HeaderAiButton() {
   const router = useRouter();
   const context = useWorkContext();
@@ -24,8 +24,8 @@ export function HeaderAiButton() {
       <button
         className={`icon-button shortcut-trigger ${open ? "open" : ""}`}
         type="button"
-        aria-label="CareCore KI öffnen"
-        title="CareCore KI"
+        aria-label="CareOS KI öffnen"
+        title="CareOS KI"
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen(true)}
@@ -45,7 +45,7 @@ export function HeaderAiButton() {
                   <Sparkle weight="fill" />
                 </span>
                 <div>
-                  <p className="eyebrow">CareCore KI</p>
+                  <p className="eyebrow">CareOS KI</p>
                   <h2 id="ai-panel-title">Assistenz</h2>
                 </div>
                 <button

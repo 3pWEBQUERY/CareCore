@@ -21,7 +21,7 @@ export async function POST(request: Request) {
         {
           error: result.expired
             ? "Die Anmeldung ist abgelaufen. Bitte erneut versuchen."
-            : "Dieser Passkey ist bei CareCore nicht (mehr) gültig.",
+            : "Dieser Passkey ist bei CareOS nicht (mehr) gültig.",
         },
         { status: 401 },
       );

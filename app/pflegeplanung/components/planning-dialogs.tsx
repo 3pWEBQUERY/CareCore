@@ -69,7 +69,7 @@ export function PlanDialog({
   return (
     <EditorDialog
       id="care-plan"
-      eyebrow={`CareCore Plan · ${residentName}`}
+      eyebrow={`Pflegeplanung · ${residentName}`}
       title={plan ? "Pflegeplan bearbeiten" : "Pflegeplan anlegen"}
       description="Der Pflegeplan bündelt Probleme, Ziele und Massnahmen. Zum Überprüfungsdatum erscheint er unter „Auswertung“."
       onClose={onClose}
@@ -175,7 +175,7 @@ export function GoalDialog({
   return (
     <EditorDialog
       id="care-goal"
-      eyebrow={`CareCore Plan · ${residentName}`}
+      eyebrow={`Pflegeplanung · ${residentName}`}
       title={goal ? "Pflegeziel bearbeiten" : "Pflegeziel hinzufügen"}
       description="Problem → Ressourcen → Ziel. Das Ziel möglichst konkret und überprüfbar formulieren (wer, was, wie gut, bis wann)."
       onClose={onClose}
@@ -314,7 +314,7 @@ export function InterventionDialog({
   return (
     <EditorDialog
       id="care-intervention"
-      eyebrow={`CareCore Plan · ${residentName}`}
+      eyebrow={`Pflegeplanung · ${residentName}`}
       title={intervention ? "Massnahme bearbeiten" : "Massnahme planen"}
       description={`Zum Ziel: ${goal.statement}`}
       onClose={onClose}
@@ -452,7 +452,7 @@ export function EvaluationDialog({ goal, residentName, onClose, onSaved }: Dialo
   return (
     <EditorDialog
       id="care-evaluation"
-      eyebrow={`CareCore Plan · ${residentName}`}
+      eyebrow={`Pflegeplanung · ${residentName}`}
       title="Ziel evaluieren"
       description={goal.statement}
       onClose={onClose}

@@ -15,7 +15,7 @@ import {
 
 // Durchführungsnachweis nach Abweichungen: Je Person und Tageszeit bestätigt eine Pflegeperson die geplanten
 // Massnahmen („wie geplant“); nur Abweichungen werden mit Grund einzeln erfasst und als wichtiger Eintrag in die
-// Pflegedokumentation übernommen. Was wann geplant ist, legt die Pflegeplanung fest; CareCore vermerkt nichts von
+// Pflegedokumentation übernommen. Was wann geplant ist, legt die Pflegeplanung fest; CareOS vermerkt nichts von
 // sich aus als durchgeführt.
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;

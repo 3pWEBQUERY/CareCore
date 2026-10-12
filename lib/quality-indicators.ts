@@ -1,8 +1,8 @@
 import { assertUuid, iso, type ApiContext, type Row } from "@/lib/api-context";
 import type { IndicatorResult, QualityIndicators } from "@/lib/quality-indicators-shared";
 
-// Medizinische Qualitätsindikatoren (MQI) aus den Daten von CareCore, Stichtag heute. Nur Statistik für das interne
-// Qualitätsmanagement: CareCore beurteilt keine einzelne Person. Wo die Daten die Definition nicht vollständig
+// Medizinische Qualitätsindikatoren (MQI) aus den Daten von CareOS, Stichtag heute. Nur Statistik für das interne
+// Qualitätsmanagement: CareOS beurteilt keine einzelne Person. Wo die Daten die Definition nicht vollständig
 // abbilden, steht das als „Annäherung“ beim Indikator.
 
 const DAY = 86_400_000;

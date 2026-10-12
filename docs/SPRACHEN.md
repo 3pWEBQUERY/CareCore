@@ -1,6 +1,6 @@
 # Sprachen der Oberfläche
 
-CareCore ist in Deutsch geschrieben. Diese Sprachen lassen sich einrichten:
+CareOS ist in Deutsch geschrieben. Diese Sprachen lassen sich einrichten:
 
 - Französisch
 - Italienisch

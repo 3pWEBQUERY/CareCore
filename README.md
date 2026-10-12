@@ -1,4 +1,14 @@
-CareCore ist eine Next.js-Anwendung mit geschütztem Pflegearbeitsplatz unter `/c` und einer Neon-Postgres-basierten Anmeldung.
+CareOS ist eine Next.js-Anwendung mit geschütztem Pflegearbeitsplatz unter `/c` und einer Neon-Postgres-basierten Anmeldung.
+
+## Bedienkonzept: CareOS
+
+CareOS (früher CareCore) wird wie ein Pflege-Betriebssystem bedient: Jeder Bereich ist eine App mit eigenem Namen,
+Symbol und eigener Farbe. Der Startbildschirm zeigt alle Apps der Person, die beschriftete Leiste (Computer links,
+Handy unten) immer dieselben Apps, „Alle Apps“ alle Apps mit einem erklärenden Satz und Suche. Über jeder Seite stehen
+Symbol und Name der App und ihre Seiten als Reiter – ohne Untermenüs. Die Apps sind in
+`app/components/navigation.ts` beschrieben (Name, Farbe, Satz, Reiter, Berechtigung); Analyse, Regeln und nächste
+Schritte: `docs/CAREOS-UX.md`. Technische Kennungen (Tabellen `carecore_…`, Variablen `CARECORE_…`, Webhook-Kopfzeilen
+`X-CareCore-…`) behalten den alten Namen, damit bestehende Installationen unverändert weiterlaufen.
 
 ## Lokale Einrichtung
 
@@ -10,7 +20,7 @@ Beim ersten Anmeldeversuch wird der Administrator `Admin` mit dem Passwort aus `
 
 ## Offline-Betrieb und App-Installation
 
-CareCore lässt sich auf Tablet und Handy zum Startbildschirm hinzufügen (`app/manifest.ts`, Symbole in `public/icons`). Ein Service Worker (`public/sw.js`, nur im Produktivbetrieb) hält die App ohne Verbindung nutzbar:
+CareOS lässt sich auf Tablet und Handy zum Startbildschirm hinzufügen (`app/manifest.ts`, Symbole in `public/icons`). Ein Service Worker (`public/sw.js`, nur im Produktivbetrieb) hält die App ohne Verbindung nutzbar:
 
 - **Anzeigen:** Programmdateien bleiben auf dem Gerät. Seiten und Daten kommen aus dem Netz; ohne Verbindung erscheint die zuletzt geladene Fassung. Die Statusanzeige unten links nennt „Offline · Stand der Daten HH:MM“. Die wichtigsten Seiten (Start, Schicht, Übergabe, Aufgaben, Bewohner, Dokumentation, Medikation, Vitalwerte, Ernährung, Wunden, Mein Dienstplan) werden nach der Anmeldung einmal täglich vorab geladen. Anmeldung, Dateien, Fotos, Exporte und KI werden nie zwischengespeichert.
 - **Erfassen:** Dokumentation, Vitalwerte, Trinkmenge, Mahlzeiten, Übergabenotizen, Wundverlauf und der Abschluss von Aufgaben (✓ △ ✕) lassen sich offline erfassen. Sie werden auf dem Gerät vorgemerkt (IndexedDB, `app/components/offline-queue.ts`) und nach der Rückkehr der Verbindung mit dem erfassten Zeitpunkt der Reihe nach gesendet. Jede Anfrage trägt eine Kennung; der Server quittiert sie in derselben Transaktion wie den Eintrag (`carecore_request_receipts`, Migration `0028`), sodass kein Eintrag doppelt entsteht. Gesendet wird nur mit der Sitzung der Person, die den Eintrag erfasst hat; ist die Anmeldung abgelaufen, bittet die Statusanzeige um erneute Anmeldung. Vom Server abgelehnte Einträge bleiben mit Grund sichtbar, bis sie verworfen werden. Den Text eines vorgemerkten oder abgelehnten Eintrags (Dokumentation, Bemerkung, Übergabenotiz) kann die Person in der Statusanzeige unter „Bearbeiten“ vor dem Senden korrigieren. Nachgereicht werden Einträge bis drei Tage rückwirkend; die Quittungen werden nach 30 Tagen gelöscht.
@@ -22,7 +32,7 @@ CareCore lässt sich auf Tablet und Handy zum Startbildschirm hinzufügen (`app/
 
 ## Einstellungen
 
-Unter `/c/einstellungen` stellt jede Person CareCore für sich ein. Die Werte liegen in der Datenbank (`carecore_user_profiles.preferences`, `lib/user-settings.ts`), gelten auf allen Geräten und wirken sofort:
+Unter `/c/einstellungen` stellt jede Person CareOS für sich ein. Die Werte liegen in der Datenbank (`carecore_user_profiles.preferences`, `lib/user-settings.ts`), gelten auf allen Geräten und wirken sofort:
 
 - **Profil & Präferenzen:** Name, Funktion, Telefon, fester Wohnbereich; Rolle und Berechtigungen zur Ansicht.
 - **Benachrichtigungen:** Kategorien ein/aus (kritische immer), Push-Nachrichten je Gerät, **Ruhezeit** (in dieser Zeit nur kritische Push-Nachrichten, Uhrzeit der Einrichtung, auch über Mitternacht), **Hinweiston** bei neuen Benachrichtigungen (die Liste aktualisiert sich jede Minute).
@@ -35,7 +45,7 @@ Ungültige Werte lehnt der Server ab (400), statt sie stillschweigend zu ersetze
 
 ## Push-Benachrichtigungen (Web Push)
 
-Benachrichtigungen (fällige Aufgaben, BtM-Kontrollen, Dienstplan, Schulungen, kritische Qualitätsereignisse …) erscheinen auf Wunsch als Mitteilung auf dem Gerät, auch wenn CareCore geschlossen ist (`lib/push.ts`, Migration `0030_push_subscriptions.sql`).
+Benachrichtigungen (fällige Aufgaben, BtM-Kontrollen, Dienstplan, Schulungen, kritische Qualitätsereignisse …) erscheinen auf Wunsch als Mitteilung auf dem Gerät, auch wenn CareOS geschlossen ist (`lib/push.ts`, Migration `0030_push_subscriptions.sql`).
 
 - **Einrichten:** Schlüsselpaar einmalig mit `npx web-push generate-vapid-keys` erzeugen und als `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` sowie `VAPID_SUBJECT` (`mailto:…` oder `https://…`) in den Umgebungsvariablen setzen. Fehlt ein Wert, ist Push ausgeschaltet und die Einstellungen sagen das.
 - **Einschalten:** Jede Person unter Einstellungen › Benachrichtigungen › „Push-Nachrichten“, je Gerät. Auf dem iPhone nur in der zum Home-Bildschirm hinzugefügten App.
@@ -58,7 +68,7 @@ Auf dem Handy (bis 960 px Breite) sitzt rechts über der unteren Leiste ein „+
 
 - `npm test`: Unit-Tests ohne Datenbank.
 - `npm run test:db`: Integrationstests gegen eine echte Postgres (`TEST_DATABASE_URL`, vorher `npm run test:db:setup` auf einer leeren Datenbank).
-- `npm run test:e2e`: Klicktests mit Playwright gegen die gebaute App (`npx next build`). Vorher auf einer **leeren** Datenbank `npm run test:e2e:setup` (Migrationen, Dienstplan- und Demodaten); die Tests verändern die Demodaten. Die App beantwortet ihre Datenbankanfragen dabei aus `TEST_DATABASE_URL` (`tests/support/neon-pg.mjs`), der Administrator erhält ein festes Testpasswort (`playwright.config.ts`). Geprüft werden alle Seiten der Navigation (ohne Skript-, Server- und API-Fehler) sowie Anmeldung, Offline-Erfassung mit späterem Senden, BtM mit Zweitunterschrift, Medikationsrecht nach Qualifikation, Änderungsprotokoll nur für die Leitung, das Bearbeiten von Qualitätsmassnahmen, Dienstplan (Kürzel planen, veröffentlichen, Tausch annehmen, Tausch gegen die Ruhezeit wird abgewiesen), Wunde anlegen und dokumentieren, Pflegeplan mit Ziel und Evaluation, RAI-Erfassung (auch per Tastatur), Tastaturbedienung der Seitenpanels, die Einstellungen (Darstellung sofort wirksam, Ruhezeit, Datenexport, Einrichtung) sowie die Handy-Ansicht (390 px, keine Seite breiter als der Bildschirm, Menü).
+- `npm run test:e2e`: Klicktests mit Playwright gegen die gebaute App (`npx next build`). Vorher auf einer **leeren** Datenbank `npm run test:e2e:setup` (Migrationen, Dienstplan- und Demodaten); die Tests verändern die Demodaten. Die App beantwortet ihre Datenbankanfragen dabei aus `TEST_DATABASE_URL` (`tests/support/neon-pg.mjs`), der Administrator erhält ein festes Testpasswort (`playwright.config.ts`). Geprüft werden alle Seiten der Navigation (ohne Skript-, Server- und API-Fehler) sowie Anmeldung, Offline-Erfassung mit späterem Senden, BtM mit Zweitunterschrift, Medikationsrecht nach Qualifikation, Änderungsprotokoll nur für die Leitung, das Bearbeiten von Qualitätsmassnahmen, Dienstplan (Kürzel planen, veröffentlichen, Tausch annehmen, Tausch gegen die Ruhezeit wird abgewiesen), Wunde anlegen und dokumentieren, Pflegeplan mit Ziel und Evaluation, RAI-Erfassung (auch per Tastatur), Tastaturbedienung der Seitenpanels, die Einstellungen (Darstellung sofort wirksam, Ruhezeit, Datenexport, Einrichtung) sowie die Handy-Ansicht (390 px, keine Seite breiter als der Bildschirm, „Alle Apps“).
 
 Alle drei laufen in der CI bei jedem Pull Request.
 
@@ -70,15 +80,15 @@ Alle drei laufen in der CI bei jedem Pull Request.
 
 Jede Einrichtung hat ihre eigene Installation (eigenes Railway-Projekt, eigene Datenbank und eigener Speicher).
 Anleitung: `docs/INSTALLATION.md`; die Geheimnisse erzeugt `node scripts/new-installation.mjs`. Nach dem ersten
-Anmelden führt die Checkliste „CareCore einrichten“ (Leitung › Administration) durch die Ersteinrichtung: Name der
+Anmelden führt die Checkliste „CareOS einrichten“ (Leitung › Administration) durch die Ersteinrichtung: Name der
 Einrichtung (Leitung › Konfiguration), Standort mit Adresse, Wohnbereiche, Mitarbeitende, Bewohner, E-Mail-Versand und
 Zwei-Faktor für das Administrationskonto. Sie verschwindet, sobald alles erledigt oder ausgeblendet ist.
 
 ## Datenübernahme (CSV)
 
 Leitung › Administration › Datenübernahme (`administration.manage`): Bewohnerinnen/Bewohner und Mitarbeitende aus
-einer CSV-Datei (Vorlage zum Herunterladen, Semikolon oder Komma, Datum TT.MM.JJJJ). CareCore prüft erst jede Zeile
-(Pflichtfelder, Datum, Wohnbereich, Rolle, Dubletten in der Datei und in CareCore) und übernimmt nur, wenn alle
+einer CSV-Datei (Vorlage zum Herunterladen, Semikolon oder Komma, Datum TT.MM.JJJJ). CareOS prüft erst jede Zeile
+(Pflichtfelder, Datum, Wohnbereich, Rolle, Dubletten in der Datei und in CareOS) und übernimmt nur, wenn alle
 Zeilen stimmen; Bewohner in einer Transaktion, protokolliert als „imported“. Mitarbeitende mit E-Mail-Adresse werden
 eingeladen (mit eingerichtetem E-Mail-Versand), die übrigen erhalten ein zufälliges Startpasswort, das nur einmal als
 Liste zum Herunterladen erscheint (`lib/data-import.ts`, `lib/csv-import.ts`).
@@ -93,7 +103,7 @@ Hash wird gespeichert, danach enden alle Sitzungen der Person. Einzelheiten: `do
 
 ## Überwachung und Backups
 
-Serverfehler (HTTP 500) hält CareCore kurz fest (`lib/error-log.ts`, Migration `0058_error_events.sql`, ohne
+Serverfehler (HTTP 500) hält CareOS kurz fest (`lib/error-log.ts`, Migration `0058_error_events.sql`, ohne
 Anfragedaten, 30 Tage); die Administration sieht sie unter Leitung › Konfiguration › Systemstatus. Mit `ALERT_EMAIL`
 und eingerichtetem E-Mail-Versand kommt ein Alarm bei vielen Fehlern. Backups (Railway), Benachrichtigungen,
 Verfügbarkeitstest und Wiederherstellung: `docs/BETRIEB.md`.
@@ -162,7 +172,7 @@ Medikation (`medication.manage`: Gaben dokumentieren, Verordnungen, Bestände, B
 
 ## Betäubungsmittel (BtM)
 
-Unter Medikation › „BtM-Kontrolle“ (`/medikation/btm`) werden als BtM gekennzeichnete Präparate mit lückenlosem Bestandsbuch geführt (Migration `0026_btm.sql`, `lib/medication-btm.ts`). Welche Präparate als BtM gelten und in welchen Abständen kontrolliert wird, legt die Einrichtung fest; CareCore gibt dafür keine Regeln vor.
+Unter Medikation › „BtM-Kontrolle“ (`/medikation/btm`) werden als BtM gekennzeichnete Präparate mit lückenlosem Bestandsbuch geführt (Migration `0026_btm.sql`, `lib/medication-btm.ts`). Welche Präparate als BtM gelten und in welchen Abständen kontrolliert wird, legt die Einrichtung fest; CareOS gibt dafür keine Regeln vor.
 
 - **Kennzeichnung:** Personen mit `medication.manage` kennzeichnen Präparate als BtM. Das Aufheben verlangt eine Begründung; beides wird protokolliert.
 - **Zweitunterschrift:** Eingang, Entsorgung, Bestandskorrektur und Bestandskontrolle eines BtM verlangen eine zweite Person. Sie bestätigt mit eigenem Benutzernamen und Passwort; sie muss aktiv, in derselben Organisation und für Medikation berechtigt sein. Fehlversuche werden wie bei der Anmeldung gedrosselt. Gaben aus der Medikamentenrunde und Reservegaben werden mit der verabreichenden Person gebucht. Verlangt die Einrichtung auch dort eine Zweitunterschrift, schaltet sie unter Leitung › Konfiguration › „Zweitunterschrift bei BtM-Gaben“ ein (anfangs aus); dann fragt „Gegeben“ bei BtM nach der zweiten Person, die im BtM-Buch erscheint (Migration `0029`).
@@ -200,10 +210,10 @@ Jede Änderung läuft serverseitig durch die Regel-Engine (`lib/roster/rules.ts`
 
 **Umgebungsvariablen**
 
-| Variable          | Pflicht | Zweck                                                                                                                          |
-| ----------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `MISTRAL_API_KEY` | nein    | Mistral für CareCore KI, KI-Dienstplanung und Übersetzungsentwürfe. Ohne Schlüssel sind diese deaktiviert, alles andere läuft. |
-| `MISTRAL_MODEL`   | nein    | Modell, Standard `mistral-small-latest`.                                                                                       |
+| Variable          | Pflicht | Zweck                                                                                                                        |
+| ----------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `MISTRAL_API_KEY` | nein    | Mistral für CareOS KI, KI-Dienstplanung und Übersetzungsentwürfe. Ohne Schlüssel sind diese deaktiviert, alles andere läuft. |
+| `MISTRAL_MODEL`   | nein    | Modell, Standard `mistral-small-latest`.                                                                                     |
 
 An die KI gehen nur pseudonymisierte Daten (E1, E2, …, Diensttyp-Codes, Zahlen) – keine Namen, Abwesenheitsgründe oder Freitexte. Jede vorgeschlagene Zuweisung wird von der Regel-Engine geprüft; übernommen wird nur in Entwürfe.
 

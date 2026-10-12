@@ -114,7 +114,7 @@ function AllergyDialog({
   return (
     <EditorDialog
       id="med-allergies"
-      eyebrow={`CareCore Med · ${resident.name}`}
+      eyebrow={`Medikamente · ${resident.name}`}
       title="Medikamentenallergien"
       description="Wird in Plan, Runde und Reserven angezeigt. „Keine bekannt“ eintragen, wenn keine Allergien vorliegen."
       onClose={onClose}

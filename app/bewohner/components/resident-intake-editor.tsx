@@ -129,7 +129,7 @@ function IntakeForm({ onClose, onSuccess }: Props) {
       >
         <header className="area-editor-header">
           <div>
-            <p className="eyebrow">CareCore {t.many} · Aufnahme</p>
+            <p className="eyebrow">CareOS {t.many} · Aufnahme</p>
             <h2 id="resident-intake-title">{t.oneOblique} aufnehmen</h2>
             <p>Erstelle die {t.prefix}akte und weise die Person direkt einem Zimmer und einer Bezugspflege zu.</p>
           </div>

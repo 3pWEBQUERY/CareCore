@@ -198,7 +198,7 @@ function PlanDialog({
       id="repositioning-plan"
       eyebrow={residentName}
       title={view.plan ? "Lagerungsplan ändern" : "Lagerungsplan festlegen"}
-      description="Das Intervall stammt aus der Pflegeplanung bzw. der Einschätzung der Fachperson. CareCore gibt kein Intervall vor und berechnet daraus nur den nächsten Wechsel."
+      description="Das Intervall stammt aus der Pflegeplanung bzw. der Einschätzung der Fachperson. CareOS gibt kein Intervall vor und berechnet daraus nur den nächsten Wechsel."
       onClose={onClose}
       onSubmit={submit}
       saving={saving}
@@ -315,7 +315,7 @@ function RepositioningContent({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Dokumentation"
+        eyebrow="Dokumentation"
         title="Lagerung & Bewegung"
         description={`Positionswechsel mit Hautbefund je ${t.one}. Das Intervall stammt aus der Pflegeplanung; die Tagesliste zeigt den nächsten Wechsel.`}
         action={

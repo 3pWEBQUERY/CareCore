@@ -67,7 +67,7 @@ export function usePlanningDialogs({
   if (dialog?.kind === "closePlan")
     dialogs = (
       <ReasonDialog
-        eyebrow={`CareCore Plan · ${dialog.residentName}`}
+        eyebrow={`Pflegeplanung · ${dialog.residentName}`}
         title="Pflegeplan abschliessen"
         description="Der abgeschlossene Plan bleibt mit allen Zielen und Evaluationen erhalten. Danach kann ein neuer Plan angelegt werden."
         label="Grund"
@@ -97,7 +97,7 @@ export function usePlanningDialogs({
   if (dialog?.kind === "cancelGoal")
     dialogs = (
       <ReasonDialog
-        eyebrow={`CareCore Plan · ${dialog.residentName}`}
+        eyebrow={`Pflegeplanung · ${dialog.residentName}`}
         title="Pflegeziel abbrechen"
         description={dialog.goal.statement}
         label="Grund"

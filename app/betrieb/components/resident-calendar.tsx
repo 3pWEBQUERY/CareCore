@@ -24,7 +24,7 @@ export default function ResidentCalendar() {
         <main className="workspace resident-calendar-workspace">
           <header className="page-heading resident-calendar-heading">
             <div className="heading-copy">
-              <p className="eyebrow">CareCore One · Kalender</p>
+              <p className="eyebrow">Kalender</p>
               <h1>Kalender</h1>
               <p>{t.prefix}termine und geplante Aufgaben im Wohnbereich an einem Ort.</p>
             </div>

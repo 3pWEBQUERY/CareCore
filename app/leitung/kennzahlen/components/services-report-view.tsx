@@ -129,7 +129,7 @@ export default function ServicesReportView() {
               Summen als CSV
             </button>
             <p>
-              Der Export dient als Grundlage, z. B. für Einstufung und Abrechnung. CareCore berechnet daraus weder eine
+              Der Export dient als Grundlage, z. B. für Einstufung und Abrechnung. CareOS berechnet daraus weder eine
               Pflegestufe noch eine Rechnung; massgebend bleiben die Instrumente und Tarife der Einrichtung.
             </p>
           </section>

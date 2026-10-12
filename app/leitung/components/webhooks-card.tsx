@@ -103,7 +103,7 @@ export function WebhooksCard({ showToast }: { showToast: (message: string) => vo
           id="webhook-create"
           eyebrow="Schnittstelle · Webhooks"
           title="Webhook anlegen"
-          description="CareCore meldet gewählte Ereignisse per POST an die Adresse, signiert mit einem Geheimnis. Die Meldung enthält nur den Verweis auf die FHIR-Ressource."
+          description="CareOS meldet gewählte Ereignisse per POST an die Adresse, signiert mit einem Geheimnis. Die Meldung enthält nur den Verweis auf die FHIR-Ressource."
           onClose={() => setCreating(false)}
           onSubmit={async () => {
             setSaving(true);

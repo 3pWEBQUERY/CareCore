@@ -18,8 +18,8 @@ test("Sitzungen beenden: Person ist überall abgemeldet", async ({ page, browser
   expect(errors).toEqual([]);
 });
 
-// Such-Assistenz: Frage in der Suche ⌘K geht an CareCore KI (ohne Schlüssel kommt eine klare Meldung).
-test("Such-Assistenz: Frage in der Suche an CareCore KI stellen", async ({ page }) => {
+// Such-Assistenz: Frage in der Suche ⌘K geht an CareOS KI (ohne Schlüssel kommt eine klare Meldung).
+test("Such-Assistenz: Frage in der Suche an CareOS KI stellen", async ({ page }) => {
   await login(page, ADMIN);
   await page.goto("/c");
   const dialog = page.getByRole("dialog", { name: "Globale Suche" });
@@ -29,7 +29,7 @@ test("Such-Assistenz: Frage in der Suche an CareCore KI stellen", async ({ page 
     await expect(dialog).toBeVisible({ timeout: 1000 });
   }).toPass();
   await dialog.getByLabel("Suchbegriff").fill("Wer ist diese Woche gestürzt?");
-  const ask = dialog.getByRole("button", { name: /CareCore KI fragen/ });
+  const ask = dialog.getByRole("button", { name: /CareOS KI fragen/ });
   await expect(ask).toBeVisible();
   await ask.click();
   await expect(dialog.locator(".search-ai-answer")).toContainText(/MISTRAL_API_KEY|Antwort|gestürzt/);

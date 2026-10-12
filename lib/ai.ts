@@ -19,7 +19,7 @@ import { MistralError, mistralConfigured, mistralModel, mistralText } from "@/li
 import { kompassDraftText } from "@/lib/kompass";
 import { pseudonymize } from "@/lib/pseudonymize";
 
-// CareCore KI: drafts from Mistral based on the care data of one resident or one care
+// CareOS KI: drafts from Mistral based on the care data of one resident or one care
 // unit. Drafts are never saved to the record automatically; staff review, edit and
 // accept or discard them. Residents are sent pseudonymised (initials, age, room).
 
@@ -32,7 +32,7 @@ export const setDraftCall = (call: DraftCall) => {
   draftCall = call;
 };
 
-const SYSTEM = `Du bist die Assistenz von CareCore, einer Pflegedokumentation für Alters- und Pflegeheime in der Schweiz.
+const SYSTEM = `Du bist die Assistenz von CareOS, einer Pflegedokumentation für Alters- und Pflegeheime in der Schweiz.
 Du unterstützt Pflegefachpersonen mit Entwürfen. Schreibe auf Deutsch (Schweizer Rechtschreibung, kein ß), sachlich, knapp und fachlich korrekt.
 Stütze dich ausschliesslich auf die mitgelieferten Daten. Erfinde keine Werte, Diagnosen oder Ereignisse; fehlt etwas, sage das.
 Bewohnende sind pseudonymisiert (Kürzel). Verwende nur diese Kürzel.
@@ -52,7 +52,7 @@ const INSTRUCTIONS: Record<AiTask, string> = {
   rephrase:
     "Formuliere den diktierten Rohtext der Pflegefachperson als sachlichen Eintrag für den Pflegebericht um: vollständige Sätze, Fachsprache der Pflege, dritte Person, Präsens oder Perfekt, ohne Wertungen. Korrigiere offensichtliche Fehler der Spracherkennung, Grammatik und Zeichensetzung. Übernimm alle Fakten, Zeiten, Mengen und Beobachtungen vollständig und unverändert; füge nichts hinzu und lass nichts weg. Platzhalter in eckigen Klammern wie [Person 1] übernimmst du genau so. Nur der Berichtstext, ohne Einleitung.",
   kompassSummary:
-    "Formuliere einen Entwurf für das Gesamtbild einer Bedarfsabklärung mit dem CareCore Kompass, aus Sicht der Pflegefachperson. Fliesstext mit 4 bis 8 Sätzen, beschreibend und wertschätzend: was den Alltag der Person zurzeit prägt, was ihr wichtig ist (aus Ressourcen, Wünschen und Gewohnheiten), was sich seit der letzten Abklärung verändert hat und in welchen Bereichen die Fachperson Handlungsbedarf festgehalten hat. Übernimm die Entscheide der Fachperson unverändert; bewerte den Bedarf nicht selbst, nenne keine Risiken, Punktzahlen, Stufen oder Diagnosen und füge nichts hinzu, was nicht in den Daten steht.",
+    "Formuliere einen Entwurf für das Gesamtbild einer Bedarfsabklärung mit dem CareOS Kompass, aus Sicht der Pflegefachperson. Fliesstext mit 4 bis 8 Sätzen, beschreibend und wertschätzend: was den Alltag der Person zurzeit prägt, was ihr wichtig ist (aus Ressourcen, Wünschen und Gewohnheiten), was sich seit der letzten Abklärung verändert hat und in welchen Bereichen die Fachperson Handlungsbedarf festgehalten hat. Übernimm die Entscheide der Fachperson unverändert; bewerte den Bedarf nicht selbst, nenne keine Risiken, Punktzahlen, Stufen oder Diagnosen und füge nichts hinzu, was nicht in den Daten steht.",
 };
 
 function age(dateOfBirth: unknown) {
@@ -283,7 +283,7 @@ async function requestText(user: string, maxOutputTokens: number) {
     if (content && response.truncated) content += "\n\n[Antwort gekürzt]";
   } catch (error) {
     if (error instanceof MistralError)
-      throw new ApiError(error.status === 503 ? `CareCore KI: ${error.message}` : error.message, error.status);
+      throw new ApiError(error.status === 503 ? `CareOS KI: ${error.message}` : error.message, error.status);
     throw error;
   }
   if (!content) throw new ApiError("Die KI hat keinen Text geliefert. Bitte erneut versuchen.", 502);
@@ -292,7 +292,7 @@ async function requestText(user: string, maxOutputTokens: number) {
 
 export async function generateDraft(ctx: ApiContext, body: Record<string, unknown>): Promise<AiDraft> {
   if (!aiConfigured())
-    throw new ApiError("CareCore KI ist noch nicht eingerichtet: MISTRAL_API_KEY fehlt in der Umgebung.", 503);
+    throw new ApiError("CareOS KI ist noch nicht eingerichtet: MISTRAL_API_KEY fehlt in der Umgebung.", 503);
   const task = (
     typeof body.task === "string" && body.task in AI_TASKS && !["kompassSummary", "rephrase"].includes(body.task)
       ? body.task
@@ -386,7 +386,7 @@ export async function reviewDraft(ctx: ApiContext, idInput: string, body: Record
 // Entwurf wird nicht gespeichert, bis die Fachperson ihn ins Gesamtbild übernimmt und die Abklärung selbst abschliesst.
 export async function draftKompassSummary(ctx: ApiContext, residentInput: unknown): Promise<AiDraft> {
   if (!aiConfigured())
-    throw new ApiError("CareCore KI ist noch nicht eingerichtet: MISTRAL_API_KEY fehlt in der Umgebung.", 503);
+    throw new ApiError("CareOS KI ist noch nicht eingerichtet: MISTRAL_API_KEY fehlt in der Umgebung.", 503);
   const residentId = await assertResident(ctx, residentInput);
   const [{ assessmentId, text: data }, rows] = await Promise.all([
     kompassDraftText(ctx, residentId),
@@ -418,7 +418,7 @@ export async function draftKompassSummary(ctx: ApiContext, residentInput: unknow
 // Diktierten oder getippten Rohtext als Pflegebericht umformulieren (nur Entwurf; die Fachperson übernimmt ihn).
 export async function rephraseText(ctx: ApiContext, body: Record<string, unknown>): Promise<AiDraft> {
   if (!aiConfigured())
-    throw new ApiError("CareCore KI ist noch nicht eingerichtet: MISTRAL_API_KEY fehlt in der Umgebung.", 503);
+    throw new ApiError("CareOS KI ist noch nicht eingerichtet: MISTRAL_API_KEY fehlt in der Umgebung.", 503);
   const raw = text(body.text, 4000);
   if (raw.length < 10) throw new ApiError("Bitte zuerst etwas diktieren oder schreiben.");
   const residentId = body.residentId ? await assertResident(ctx, body.residentId) : null;

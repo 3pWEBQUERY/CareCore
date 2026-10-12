@@ -40,7 +40,7 @@ export async function setupChecklist(ctx: ApiContext): Promise<SetupChecklist> {
       id: "name",
       label: "Name der Einrichtung",
       detail: "Erscheint in der Kopfzeile aller Mitarbeitenden.",
-      done: name !== "" && name !== "CareCore",
+      done: name !== "" && name !== "CareOS" && name !== "CareCore",
       href: "/c/leitung/administration/konfiguration#name",
     },
     {
@@ -81,7 +81,7 @@ export async function setupChecklist(ctx: ApiContext): Promise<SetupChecklist> {
     {
       id: "mail",
       label: "E-Mail-Versand",
-      detail: "Für „Passwort vergessen“ und Einladungen; richtet der Betreiber von CareCore ein.",
+      detail: "Für „Passwort vergessen“ und Einladungen; richtet der Betreiber von CareOS ein.",
       done: mailConfigured(),
       href: null,
     },

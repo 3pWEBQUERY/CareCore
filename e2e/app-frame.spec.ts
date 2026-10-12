@@ -39,7 +39,7 @@ test("Rahmen bleibt beim Wechsel zwischen Reitern, Bereichen und Startseite steh
   expect(await sameFrame()).toBe(true);
 
   // Startseite über die Seitenleiste und zurück in einen anderen Bereich über einen Link.
-  await page.getByRole("button", { name: "Startseite" }).first().click();
+  await page.getByRole("complementary", { name: "Hauptnavigation" }).getByRole("button", { name: "Start" }).click();
   await expect(page).toHaveURL(/\/c$/);
   expect(await sameFrame()).toBe(true);
   await page.getByRole("button", { name: "Einstellungen", exact: true }).first().click();

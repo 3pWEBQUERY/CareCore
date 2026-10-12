@@ -1,9 +1,9 @@
-# CareCore Sidebar – Design QA
+# CareOS Sidebar – Design QA
 
 ## Prüfgrundlage
 
 - Source of visual truth (Aufbau): `/Users/alexander/Downloads/ChatGPT Image 7. Sept. 2026, 23_17_02.png`
-- Source of visual truth (Farbsemantik): `/Users/alexander/Downloads/CareCore – Product Requirements Document (PRD).md`, Kapitel 50–52
+- Source of visual truth (Farbsemantik): `/Users/alexander/Downloads/CareOS – Product Requirements Document (PRD).md`, Kapitel 50–52
 - Source of visual truth (Körperkarte): `/Users/alexander/Desktop/Bildschirmfoto 2026-09-09 um 21.26.37.png`
 - Implementierung, ausgeklappt: `./qa-sidebar-blue-final.png`
 - Implementierung, eingeklappt: `./qa-sidebar-blue-collapsed-final.png`
@@ -56,11 +56,11 @@
 
 ## Full-view comparison evidence
 
-Der direkte Vergleich bestätigt, dass Aufbau, Breite, dunkle Seitenleiste, Markenbereich, aktive Navigationsfläche, Menügruppen und unterer Servicebereich der Referenz folgen. Die neue CareCore-Fassung verwendet bewusst ein deutlich blaues Navy-Spektrum statt des neutralen Anthrazits der Referenz.
+Der direkte Vergleich bestätigt, dass Aufbau, Breite, dunkle Seitenleiste, Markenbereich, aktive Navigationsfläche, Menügruppen und unterer Servicebereich der Referenz folgen. Die neue CareOS-Fassung verwendet bewusst ein deutlich blaues Navy-Spektrum statt des neutralen Anthrazits der Referenz.
 
 ## Focused region comparison evidence
 
-Die Sidebar wurde zusätzlich separat in beiden Zuständen geprüft. Der aktive Menüpunkt verwendet ein klares Informationsblau, der aktive Unterpunkt Hellblau und die eingeklappte Navigation bewahrt alle Module als erkennbare Icon-Buttons. Primäre, sekundäre und leise Aktionen nutzen abgestufte Blauzustände. Für die neue Körperübersicht wurden Quelle und Implementierung bei identischen 658 × 1356 Pixeln in einer gemeinsamen Vergleichsdatei geprüft: Ganzkörperfigur, farbige Marker und klare Stellenlokalisierung entsprechen dem Referenzprinzip; das aufklappbare CareCore-Detail ergänzt die fachlich benötigten Informationen und Verlinkungen.
+Die Sidebar wurde zusätzlich separat in beiden Zuständen geprüft. Der aktive Menüpunkt verwendet ein klares Informationsblau, der aktive Unterpunkt Hellblau und die eingeklappte Navigation bewahrt alle Module als erkennbare Icon-Buttons. Primäre, sekundäre und leise Aktionen nutzen abgestufte Blauzustände. Für die neue Körperübersicht wurden Quelle und Implementierung bei identischen 658 × 1356 Pixeln in einer gemeinsamen Vergleichsdatei geprüft: Ganzkörperfigur, farbige Marker und klare Stellenlokalisierung entsprechen dem Referenzprinzip; das aufklappbare CareOS-Detail ergänzt die fachlich benötigten Informationen und Verlinkungen.
 
 ## Required fidelity surfaces
 
@@ -76,7 +76,7 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 
 ## Vergleichsverlauf
 
-1. Vorherige Fassung: CareCore Primary und mehrere Interaktionszustände waren türkis; die Sidebar wirkte dunkelgrünlich. Das widersprach dem expliziten Wunsch nach Blau.
+1. Vorherige Fassung: CareOS Primary und mehrere Interaktionszustände waren türkis; die Sidebar wirkte dunkelgrünlich. Das widersprach dem expliziten Wunsch nach Blau.
 2. Korrektur: Globale Primary-Tokens, Sidebar-Verlauf, aktive Navigation, Untermenüs, Fokus, Avatare, Filter, Suchzustände, Toast und Button-Schatten wurden auf Blau umgestellt. Semantische Statusfarben wurden bewusst nicht vereinheitlicht.
 3. Post-Fix-Evidenz: Ausgeklappte und eingeklappte Desktop-Screenshots bestätigen die konsistente Palette; Browser-Konsole ohne Fehler.
 4. Radius-Normalisierung: Karten, Buttons, Dialoge, Badges, Statusmarken und Navigation wurden auf exakt `6px` vereinheitlicht. Profil- und Bewohneravatare wurden anschließend gezielt auf `50%` gesetzt. Der berechnete Browserstil enthält ausschließlich `6px` und die Avatar-Ausnahme `50%`.
@@ -101,15 +101,15 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 23. Sidebar-Gruppenzustand: Der gemeinsame Seitenshell leitet die geöffnete Hauptgruppe jetzt aus dem aktiven Modul ab. Dadurch bleibt auf jeder Unterseite automatisch der passende Bereich (z. B. „Betrieb“ bei Schicht, Aufgaben und Übergaben) geöffnet, während andere Bereiche geschlossen starten.
 24. Personal und Leitung: Alle Unterseiten der Sidebar-Bereiche „Personal“ und „Leitung“ sind als eigenständige statische Arbeitsflächen umgesetzt. Team, Schulungen und Dokumente decken Kommunikation, Nachweise und Standards ab; Qualität, Kennzahlen & Analysen und Administration bieten Ereignisse, Auswertungen, Benutzer- und Organisationseinstellungen.
 25. Bereichsspezifische Arbeitsflächen: „Betrieb“ nutzt jetzt einen operativen Puls mit Live-Status, Schichtkennzahlen und Tagesaktionen. „Leitung“ verwendet ein eigenständiges Management-Cockpit mit KPI-Kacheln, Entwicklungschart, Führungskreis, Arbeitsliste und Entscheidungsdetail statt des Personal-Layouts.
-26. Intelligenz und Einstellungen: „CareCore KI“ bietet Assistenz und KI-Entwürfe mit Prüf- und Datenschutzkontext. „Einstellungen“ ist über die Sidebar erreichbar und enthält Übersicht, Profil, Benachrichtigungen, Sicherheit und Darstellung als separate Routen.
+26. Intelligenz und Einstellungen: „CareOS KI“ bietet Assistenz und KI-Entwürfe mit Prüf- und Datenschutzkontext. „Einstellungen“ ist über die Sidebar erreichbar und enthält Übersicht, Profil, Benachrichtigungen, Sicherheit und Darstellung als separate Routen.
 27. Einstellungslesbarkeit: Die zunächst zu kompakte Typografie der Einstellungsseite wurde gezielt angehoben. Navigation nutzt 14px, Bereichstitel 15px, Beschreibungen 12–15px und die Detailansicht 15px bei unverändertem Layout.
 28. Darstellungsauswahl: Auf den Einstellungsseiten werden die Arbeitsbereich-Optionen jetzt je Seite als horizontale Karten nebeneinander angeordnet (Übersicht 4, Profil 2, Benachrichtigungen/Sicherheit/Darstellung 3); auf schmalen Viewports bleiben sie in einer horizontal scrollbaren Reihe erreichbar.
 29. Einstellungsdetails: Der Bereich „Ausgewählt“ zeigt nun kontextbezogene Inhalte für alle fünf Seiten. Profil, Benachrichtigungen, Sicherheit und Darstellung verwenden jeweils passende Schalter, Auswahlfelder oder Aktionen statt des generischen Aktiv-Schalters.
-30. Custom Selects: Alle Auswahlfelder im Bereich „Ausgewählt“ verwenden jetzt ein eigenes CareCore-Dropdown mit blauer Oberfläche, sichtbarer Auswahl, Fokuszustand und Klick-aussen-Schliessen statt der Browser-/Betriebssystem-UI.
+30. Custom Selects: Alle Auswahlfelder im Bereich „Ausgewählt“ verwenden jetzt ein eigenes CareOS-Dropdown mit blauer Oberfläche, sichtbarer Auswahl, Fokuszustand und Klick-aussen-Schliessen statt der Browser-/Betriebssystem-UI.
 31. Dropdown-Platzierung: Das Darstellungsprofil öffnet sein Dropdown bei wenig Platz automatisch nach oben. So bleibt das vollständige Menü sichtbar und wird weder von der Detailkarte noch vom Viewport abgeschnitten.
-32. Passwortdialog: „Passwort ändern“ öffnet in der Sicherheitsansicht ein eigenes, responsives CareCore-Popover. Aktuelles Passwort, neues Passwort und Bestätigung werden validiert; Sichtbarkeitsschalter, Escape, Abbrechen und Speichern sind vollständig innerhalb des Dialogs umgesetzt.
+32. Passwortdialog: „Passwort ändern“ öffnet in der Sicherheitsansicht ein eigenes, responsives CareOS-Popover. Aktuelles Passwort, neues Passwort und Bestätigung werden validiert; Sichtbarkeitsschalter, Escape, Abbrechen und Speichern sind vollständig innerhalb des Dialogs umgesetzt.
 33. Benachrichtigungsübersicht: Der Bereich „Benachrichtigungen“ in der Einstellungsübersicht zeigt jetzt alle sieben aktiven Hinweisarten mit Auslöser und Frequenz sowie einen direkten Link zur vollständigen Verwaltung.
-34. Profilmenü: Der Kopfbereich öffnet über Avatar und Namen ein CareCore-Dropdown mit Dienstplan, Nachrichten, Einstellungen und Ausloggen. Die Navigation schliesst bei Auswahl, Klick ausserhalb oder Escape.
+34. Profilmenü: Der Kopfbereich öffnet über Avatar und Namen ein CareOS-Dropdown mit Dienstplan, Nachrichten, Einstellungen und Ausloggen. Die Navigation schliesst bei Auswahl, Klick ausserhalb oder Escape.
 35. Profilmenü-Bedienbarkeit: Das Menü ist auch in der kompakten mobilen Kopfzeile über den runden Avatar erreichbar; die vier Ziele bleiben dort identisch und funktionieren per Tastatur und Klick.
 36. Benachrichtigungsmenü: Die Glocke im globalen Kopfbereich öffnet ein eigenes Dropdown mit vier aktuellen Hinweisen, Prioritätsfarben, Zeitstempeln, ungelesenen Markierungen und einem Link zur vollständigen Benachrichtigungsseite.
 37. Benachrichtigungsstatus: Im Dropdown lässt sich der Zähler über „Alle gelesen“ zurücksetzen; der Glockenpunkt und die ungelesenen Markierungen verschwinden konsistent.
@@ -174,16 +174,16 @@ Keine verbleibenden P0-, P1- oder P2-Abweichungen. Die PRD nennt keine festen He
 - Personal und Leitung: individuelle Team-, Lern-, Dokument-, Qualitäts-, Kennzahlen-, Organisations-, Benutzer- und Konfigurationslayouts auf Desktop/Mobilstruktur geprüft
 - Administration Organisation: „Wohnbereich“ öffnet den vollflächigen Editor mit Stammdaten, Kapazität, Leitung, Diensten und Hinweisfeld; Abbrechen/Erstellen geprüft
 - Geplante Dienste: Checkboxen im Bereichseditor überschreiben nicht mehr die Formularbreite; Frühdienst, Spätdienst und Nachtwache bleiben als drei klar lesbare Auswahlkarten sichtbar
-- Etage-Auswahl: Der Bereichseditor verwendet ein eigenes CareCore-Dropdown mit Fokuszustand, Auswahlmarkierung, Klick-aussen-Schliessen und Aufwärtsöffnung bei wenig Platz statt der nativen Browserauswahl
-- Verantwortliche Leitung: Die Personenauswahl nutzt dieselbe eigene CareCore-Dropdown-UI mit vier Leitungsprofilen statt eines nativen Browser-Selects
-- Standortverwaltung: „Bereich hinzufügen“ öffnet einen vollflächigen Standorteditor mit Stammdaten, Standorttyp, Land, Leitung und Status; sämtliche Auswahlfelder verwenden die eigene CareCore-Dropdown-UI
+- Etage-Auswahl: Der Bereichseditor verwendet ein eigenes CareOS-Dropdown mit Fokuszustand, Auswahlmarkierung, Klick-aussen-Schliessen und Aufwärtsöffnung bei wenig Platz statt der nativen Browserauswahl
+- Verantwortliche Leitung: Die Personenauswahl nutzt dieselbe eigene CareOS-Dropdown-UI mit vier Leitungsprofilen statt eines nativen Browser-Selects
+- Standortverwaltung: „Bereich hinzufügen“ öffnet einen vollflächigen Standorteditor mit Stammdaten, Standorttyp, Land, Leitung und Status; sämtliche Auswahlfelder verwenden die eigene CareOS-Dropdown-UI
 - Startseite-Profil: „Mein Profil“ steht im Profilmenü an erster Stelle und öffnet einen vollflächigen Profilbereich; „Bearbeiten“ schaltet die persönlichen Angaben direkt im selben Bereich in editierbare Felder um
 - Einheitlicher Kopfbereich: Startseite und alle Modul-Seiten verwenden dieselbe AppHeader-Komponente mit Standort, Suche, Benachrichtigungen und Profilmenü inklusive „Mein Profil"
-- Dienstplanung: „Abwesenheit melden“ öffnet einen vollflächigen Editor mit Zeitraum, Abwesenheitsart, Stellvertretung und Priorität; Auswahlfelder nutzen die eigene CareCore-Dropdown-UI
-- Abwesenheitskalender: „Von“ und „Bis“ verwenden einen eigenen CareCore-Monatskalender mit Monatsnavigation, Wochentagen, Auswahlzustand und „Heute“-Aktion statt des nativen Datepickers
-- Operations-Aktionen: „Aufgabe erstellen“ und „Dienst starten“ öffnen vollflächige CareCore-Editoren mit Aufgabenfeldern, Schicht-Check-in, Statuszusammenfassung und eigener Auswahl-UI
+- Dienstplanung: „Abwesenheit melden“ öffnet einen vollflächigen Editor mit Zeitraum, Abwesenheitsart, Stellvertretung und Priorität; Auswahlfelder nutzen die eigene CareOS-Dropdown-UI
+- Abwesenheitskalender: „Von“ und „Bis“ verwenden einen eigenen CareOS-Monatskalender mit Monatsnavigation, Wochentagen, Auswahlzustand und „Heute“-Aktion statt des nativen Datepickers
+- Operations-Aktionen: „Aufgabe erstellen“ und „Dienst starten“ öffnen vollflächige CareOS-Editoren mit Aufgabenfeldern, Schicht-Check-in, Statuszusammenfassung und eigener Auswahl-UI
 - Bewohnerverwaltung: „Bewohner aufnehmen“ und „Pflegeakte erstellen“ öffnen vollflächige Aufnahmeeditoren mit Stammdaten, Zuweisung, Pflegefokus, Evaluation und eigener Auswahl-UI
-- CareCore RAI: Neuer Sidebar-Bereich mit Übersicht, interRAI-Erfassung, Fälligkeiten und Berichten; Verantwortliche, Bewohnerzuweisung, Bewertungsbereiche, Freigaben und responsive Arbeitskörbe geprüft
+- CareOS RAI: Neuer Sidebar-Bereich mit Übersicht, interRAI-Erfassung, Fälligkeiten und Berichten; Verantwortliche, Bewohnerzuweisung, Bewertungsbereiche, Freigaben und responsive Arbeitskörbe geprüft
 - Sidebar-Deep-Links: Untermenüpunkte ohne eigenes Ziel routen über eine zentrale Zuordnung (z. B. Administration → Organisation); Vercel- und Lokalrouting geprüft
 - Sidebar-Routing auf Einstiegseiten: Startseite, Bewohner und Wundmanagement verwenden nun dieselbe vollständige Routenzuordnung wie die Modulansicht; Administration, Qualität, Kennzahlen, Personal und Intelligenz öffnen statt Toast direkt ihre Seiten
 - Browser-Konsole auf Fehler geprüft
@@ -211,7 +211,7 @@ Ergebnis: passed
 
 - Source of visual truth: `/Users/alexander/Desktop/Bildschirmfoto 2026-09-17 um 08.41.02.png`
 - Der Tooltip wird als eigene `SidebarTooltip`-Komponente per Portal in `document.body` gerendert. Dadurch wird er nicht mehr vom scrollenden Sidebar-Container oder dessen Overflow abgeschnitten.
-- Position und Sichtbarkeit werden bei Hover, Fokus, Scrollen und Resize aktualisiert; die gestaltete CareCore-Fläche bleibt vollständig rechts neben dem jeweiligen Icon sichtbar.
+- Position und Sichtbarkeit werden bei Hover, Fokus, Scrollen und Resize aktualisiert; die gestaltete CareOS-Fläche bleibt vollständig rechts neben dem jeweiligen Icon sichtbar.
 - `npm run lint` und `npm run build -- --webpack` erfolgreich.
 
 Ergebnis: passed
@@ -220,8 +220,8 @@ Ergebnis: passed
 
 - Source of visual truth: `/Users/alexander/Desktop/Bildschirmfoto 2026-09-17 um 08.48.39.png`
 - Implementation: `http://localhost:3000/` und `http://localhost:3000/betrieb/dienstplanung` (Desktop, 1440 × 900 CSS-Pixel)
-- Die permanente Navigation entspricht auf Startseite und Modul-Seiten derselben blauen Icon-Rail mit ausschließlich den sechs Hauptkategorien (Pflege & Klinik, Betrieb, Personal, Leitung, Intelligenz und CareCore RAI); Unterseiten sind nicht dauerhaft in der geschlossenen Rail sichtbar.
-- Jeder Hauptpunkt besitzt die eigene `SidebarTooltip`-Komponente mit gestalteter CareCore-Fläche bei Hover/Fokus. Ein Klick öffnet rechts neben der Rail das passende Untermenü.
+- Die permanente Navigation entspricht auf Startseite und Modul-Seiten derselben blauen Icon-Rail mit ausschließlich den sechs Hauptkategorien (Pflege & Klinik, Betrieb, Personal, Leitung, Intelligenz und CareOS RAI); Unterseiten sind nicht dauerhaft in der geschlossenen Rail sichtbar.
+- Jeder Hauptpunkt besitzt die eigene `SidebarTooltip`-Komponente mit gestalteter CareOS-Fläche bei Hover/Fokus. Ein Klick öffnet rechts neben der Rail das passende Untermenü.
 - Das Untermenü schließt beim Verlassen per Maus oder Escape. Aktive Unterseiten bleiben markiert.
 - Beim Öffnen verschiebt sich der Inhaltsbereich mit einer kurzen, GPU-freundlichen 180-ms-Animation nach rechts; beim Schließen fährt er sauber zurück.
 - Mobile Breakpoints behalten die bestehende Bottom-Navigation bei und blenden die Desktop-Rail aus.

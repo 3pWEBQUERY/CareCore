@@ -382,7 +382,7 @@ function FundsContent({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow={`CareCore ${t.many}`}
+        eyebrow={`CareOS ${t.many}`}
         title={`${t.prefix}gelder`}
         description={`Barbetrag bzw. Taschengeld je ${t.one} in der Kasse der Einrichtung: Einzahlungen, Auszahlungen und Ausgaben mit Beleg, Kontoauszug je Monat und Kassenkontrolle.`}
         action={

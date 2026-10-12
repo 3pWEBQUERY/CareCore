@@ -8,9 +8,9 @@ type PushState = "loading" | "unsupported" | "unconfigured" | "denied" | "off" |
 const hints: Record<PushState, string> = {
   loading: "Wird geprüft …",
   unsupported:
-    "Dieser Browser unterstützt keine Push-Nachrichten. Auf dem iPhone zuerst CareCore zum Home-Bildschirm hinzufügen und von dort öffnen.",
+    "Dieser Browser unterstützt keine Push-Nachrichten. Auf dem iPhone zuerst CareOS zum Home-Bildschirm hinzufügen und von dort öffnen.",
   unconfigured: "Push-Nachrichten sind auf diesem Server noch nicht eingerichtet (VAPID-Schlüssel fehlen).",
-  denied: "Mitteilungen sind für CareCore in den Browser- oder Geräteeinstellungen blockiert.",
+  denied: "Mitteilungen sind für CareOS in den Browser- oder Geräteeinstellungen blockiert.",
   off: "Auf diesem Gerät ausgeschaltet.",
   on: "Auf diesem Gerät eingeschaltet. Abmelden beendet die Push-Nachrichten.",
 };

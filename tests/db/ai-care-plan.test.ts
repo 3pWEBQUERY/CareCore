@@ -74,7 +74,7 @@ test("Pflegeplanung: ohne gewählte Person abgelehnt, bevor etwas an die KI geht
   }
 });
 
-test("CareCore KI mit Mistral: Entwurf pseudonymisiert, gekürzte Antwort markiert, Fehler verständlich", async () => {
+test("CareOS KI mit Mistral: Entwurf pseudonymisiert, gekürzte Antwort markiert, Fehler verständlich", async () => {
   const f = await fixture();
   const ctx = await apiContextFor(f, "anna");
   const resident = await createResident(f, "Erna Muster");

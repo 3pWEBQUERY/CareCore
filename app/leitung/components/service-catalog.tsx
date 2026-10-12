@@ -132,7 +132,7 @@ function CatalogContent({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <LeadershipHeading
-        eyebrow="CareCore Admin"
+        eyebrow="Administration"
         title="Leistungskatalog"
         description="Die Pflegeleistungen der Einrichtung für die Leistungserfassung – mit eigenem Code für Einstufung und Abrechnung."
         action={{ label: "Leistung anlegen", onClick: () => setEditing(draftOf(null)) }}

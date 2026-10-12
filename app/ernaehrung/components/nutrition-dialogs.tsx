@@ -79,7 +79,7 @@ export function PlanDialog({
   return (
     <EditorDialog
       id="nutrition-plan"
-      eyebrow={`CareCore Ernährung · ${residentName}`}
+      eyebrow={`Ernährung · ${residentName}`}
       title={plan ? "Ernährungsplan anpassen" : "Ernährungsplan anlegen"}
       description="Beim Speichern wird eine neue Fassung aktiv; die bisherige bleibt im Verlauf erhalten."
       onClose={onClose}
@@ -189,7 +189,7 @@ export function FluidDialog({ residentId, residentName, onClose, onSaved }: Base
   return (
     <EditorDialog
       id="nutrition-fluid"
-      eyebrow={`CareCore Ernährung · ${residentName}`}
+      eyebrow={`Ernährung · ${residentName}`}
       title="Trinkmenge erfassen"
       onClose={onClose}
       onSubmit={() =>
@@ -252,7 +252,7 @@ export function MealDialog({
   return (
     <EditorDialog
       id="nutrition-meal"
-      eyebrow={`CareCore Ernährung · ${residentName}`}
+      eyebrow={`Ernährung · ${residentName}`}
       title="Mahlzeit dokumentieren"
       description="Gegessene Menge bezogen auf die angebotene Portion."
       onClose={onClose}

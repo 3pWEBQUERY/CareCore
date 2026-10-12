@@ -507,7 +507,7 @@ export default function InsightsWorkspace({ view }: { view: InsightsView }) {
       {(showToast) => (
         <main className="workspace leadership-workspace">
           <LeadershipHeading
-            eyebrow="CareCore Insights"
+            eyebrow="Kennzahlen"
             title={page.title}
             description={page.description}
             action={{

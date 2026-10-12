@@ -572,7 +572,7 @@ export const DECK_THEMES: Record<
   DeckTheme,
   { label: string; background: string; text: string; accent: string; muted: string }
 > = {
-  carecore: { label: "CareCore", background: "#ffffff", text: "#102a43", accent: "#2563eb", muted: "#5f6f86" },
+  carecore: { label: "CareOS", background: "#ffffff", text: "#102a43", accent: "#2563eb", muted: "#5f6f86" },
   hell: { label: "Hell", background: "#f7f7f5", text: "#202124", accent: "#2563eb", muted: "#5f6368" },
   dunkel: { label: "Dunkel", background: "#1f2933", text: "#f5f7fa", accent: "#5eead4", muted: "#c3ccd5" },
   wald: { label: "Wald", background: "#eef5ef", text: "#1d3324", accent: "#2f7d4f", muted: "#4d6655" },
@@ -727,7 +727,7 @@ export const OFFICE_TEMPLATES: OfficeTemplate[] = [
     id: "deck-blank",
     kind: "deck",
     label: "Leere Präsentation",
-    description: "Titelfolie im CareCore-Design",
+    description: "Titelfolie im CareOS-Design",
     name: "Präsentation",
   },
   {

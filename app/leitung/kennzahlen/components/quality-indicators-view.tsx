@@ -111,7 +111,7 @@ export default function QualityIndicatorsView() {
                       </div>
                     </header>
                     <p className="quality-indicator-method">
-                      <strong>So zählt CareCore:</strong> {indicator.method}
+                      <strong>So zählt CareOS:</strong> {indicator.method}
                       {indicator.notAssessable > 0 &&
                         ` ${indicator.notAssessable} ${indicator.notAssessable === 1 ? t.one : t.many} ohne ausreichende Daten (nicht im Nenner).`}
                     </p>

@@ -131,7 +131,7 @@ export type ThresholdRow = EffectiveThreshold & {
   residentName: string | null;
 };
 
-// Clinical values use a decimal comma like the rest of CareCore (de-CH would print "36.8").
+// Clinical values use a decimal comma like the rest of CareOS (de-CH would print "36.8").
 export function formatDecimal(value: number, digits: { min?: number; max?: number } = {}) {
   return value.toLocaleString("de-DE", {
     minimumFractionDigits: digits.min ?? 0,

@@ -20,7 +20,7 @@ export default function TaskWorkspace({ team }: { team: boolean }) {
       module="tasks"
       child={team ? "Teamaufgaben" : "Meine Aufgaben"}
       view={team ? "teamTasks" : "tasks"}
-      eyebrow="CareCore Tasks"
+      eyebrow="Aufgaben"
       title={team ? "Teamaufgaben" : "Meine Aufgaben"}
       description={
         team

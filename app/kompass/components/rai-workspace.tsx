@@ -32,7 +32,7 @@ export default function RaiWorkspace({ view }: { view: RaiView }) {
           <main className="workspace module-workspace rai-workspace">
             <section className="page-heading care-page-heading" aria-labelledby="rai-title">
               <div className="heading-copy">
-                <p className="eyebrow">CareCore Kompass</p>
+                <p className="eyebrow">CareOS Kompass</p>
                 <h1 id="rai-title">{current.title}</h1>
                 <p>{current.description.replace("Bewohner", t.prefix)}</p>
               </div>

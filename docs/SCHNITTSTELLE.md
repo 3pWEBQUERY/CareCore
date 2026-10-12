@@ -1,6 +1,6 @@
 # Öffentliche Schnittstelle (HL7 FHIR R4)
 
-CareCore stellt Daten der Einrichtung über eine FHIR-R4-Schnittstelle bereit, damit angebundene Systeme sie lesen können
+CareOS stellt Daten der Einrichtung über eine FHIR-R4-Schnittstelle bereit, damit angebundene Systeme sie lesen können
 (z. B. eine Arztpraxis, ein Spital oder eine Auswertung). Die Schnittstelle kann nur lesen.
 
 ## Zugang
@@ -50,7 +50,7 @@ Basis: `https://<host>/api/fhir/r4`, Antworten als `application/fhir+json`, Fehl
 | Blutzucker          | 14743-9                              | mmol/L         | laboratory  |
 | Gewicht             | 29463-7                              | kg             | vital-signs |
 
-Die Einstufung einer Messung übernimmt CareCore aus den Grenzwerten der Einrichtung und gibt sie als `interpretation`
+Die Einstufung einer Messung übernimmt CareOS aus den Grenzwerten der Einrichtung und gibt sie als `interpretation`
 (HL7 v3) aus:
 
 - `N`: im Zielbereich
@@ -87,11 +87,13 @@ gewählten Ereignisse.
   ```
 
 - **Kopfzeilen:** `X-CareCore-Event`, `X-CareCore-Delivery` und `X-CareCore-Signature: t=<Unix-Zeit>,v1=<Signatur>`.
+  - Die Namen der Kopfzeilen behalten „CareCore“ (früherer Produktname), damit angebundene Systeme ohne Änderung
+    weiterlaufen.
   - Die Signatur ist der HMAC-SHA256 (hex) über `<t>.<Inhalt>`, gebildet mit dem Geheimnis des Webhooks.
   - Das Geheimnis wird einmal beim Anlegen angezeigt.
   - Empfänger sollten die Signatur prüfen und zu alte Zeitstempel ablehnen.
 - **Zustellung:**
-  - Die Meldungen werden in der Datenbank vorgemerkt (Trigger) und nach der nächsten Anfrage an CareCore zugestellt.
+  - Die Meldungen werden in der Datenbank vorgemerkt (Trigger) und nach der nächsten Anfrage an CareOS zugestellt.
   - Als Erfolg gilt eine Antwort `2xx`. Weiterleitungen werden nicht verfolgt.
   - Das Zeitlimit beträgt 5 s.
   - Wiederholungen erfolgen nach 1, 5, 30, 120 und 720 Minuten; danach gilt die Meldung als gescheitert.

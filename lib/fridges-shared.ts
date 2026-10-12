@@ -1,5 +1,5 @@
 // Temperaturprotokoll Medikamentenkühlschrank (Server und Oberfläche). Grenzen und Messrhythmus legt die Einrichtung
-// je Kühlschrank fest; ohne Vorgabe zeigt CareCore keinen Hinweis.
+// je Kühlschrank fest; ohne Vorgabe zeigt CareOS keinen Hinweis.
 
 export type FridgeReading = {
   id: string;

@@ -36,7 +36,7 @@ export default function PortalPage() {
       <div className="portal-shell">
         <header className="portal-top">
           <div>
-            <p className="eyebrow">CareCore Portal</p>
+            <p className="eyebrow">CareOS Portal</p>
             <h1>{me ? me.account.displayName : "Anmeldung"}</h1>
           </div>
           <div className="portal-top-actions">

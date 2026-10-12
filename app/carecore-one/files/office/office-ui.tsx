@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNo
 import { createPortal } from "react-dom";
 import { CaretDown } from "@phosphor-icons/react";
 
-// Bausteine der Menüleiste in Dokument, Tabelle und Präsentation (CareCore-Optik, keine Browser-Auswahlfelder).
+// Bausteine der Menüleiste in Dokument, Tabelle und Präsentation (CareOS-Optik, keine Browser-Auswahlfelder).
 
 // Knöpfe nehmen den Fokus nicht weg: die Auswahl im Text oder in der Tabelle bleibt erhalten.
 const keepFocus = (event: React.MouseEvent) => event.preventDefault();

@@ -106,7 +106,7 @@ export function WoundDialog({
   return (
     <EditorDialog
       id="wound-editor"
-      eyebrow="CareCore Wunden"
+      eyebrow="Wunden"
       title={wound ? "Wunde bearbeiten" : "Neue Wunde erfassen"}
       description={
         wound
@@ -285,7 +285,7 @@ export function EntryDialog({
   return (
     <EditorDialog
       id="wound-entry"
-      eyebrow={`CareCore Wunden · ${wound.residentName}`}
+      eyebrow={`Wunden · ${wound.residentName}`}
       title="Verlauf dokumentieren"
       description={`${wound.title}${wound.treatmentPlan ? ` · Plan: ${wound.treatmentPlan}` : ""}`}
       onClose={onClose}

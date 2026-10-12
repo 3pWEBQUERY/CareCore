@@ -29,7 +29,7 @@ export function UploadDialog({
   return (
     <EditorDialog
       id="document-upload"
-      eyebrow={standards ? "CareCore Docs · Standards" : "CareCore Docs · Ablage"}
+      eyebrow={standards ? "Dokumente · Standards" : "Dokumente · Ablage"}
       title={standards ? "Weisung veröffentlichen" : "Dokument hochladen"}
       description={
         standards

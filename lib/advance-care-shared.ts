@@ -1,6 +1,6 @@
 import type { CountryCode } from "@/lib/country";
 
-// Vorsorge und Vertretung (Server und Oberfläche): Bezeichnungen je Land der Einrichtung. CareCore hält nur fest,
+// Vorsorge und Vertretung (Server und Oberfläche): Bezeichnungen je Land der Einrichtung. CareOS hält nur fest,
 // was vorliegt; ob ein Dokument wirksam ist, beurteilt die Einrichtung.
 
 export type AdvanceAnswer = "yes" | "no";

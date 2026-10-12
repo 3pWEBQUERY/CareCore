@@ -1,6 +1,6 @@
 # To-do-Liste
 
-Abgleich des Projekts mit dem **CareCore PRD v1.0** (Stand 29.09.2026). Die frühere Liste (PR #35–#47) ist
+Abgleich des Projekts mit dem **CareOS PRD v1.0** (Stand 29.09.2026). Die frühere Liste (PR #35–#47) ist
 abgeschlossen; Erledigtes steht im README und in den Pull Requests.
 
 Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
@@ -81,7 +81,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Dokumentationseintrag und Übergabepunkt, nur wenn der Browser die Erkennung lokal anbietet (Web Speech API mit
       `processLocally`, Sprachpaket de-CH bzw. de-DE auf dem Gerät). Ohne lokale Erkennung erscheint kein Knopf – kein
       Rückgriff auf die Cloud-Erkennung. Eingeschaltet wird sie in den persönlichen Einstellungen („Spracheingabe“,
-      Standard aus) – erst dann fragt CareCore den Browser, weil manche Chromium-Builds ohne Sprachmodul bei dieser
+      Standard aus) – erst dann fragt CareOS den Browser, weil manche Chromium-Builds ohne Sprachmodul bei dieser
       Abfrage die Seite beenden. Ein eigener Erkennungsdienst (z. B. Whisper auf eigenem Server) wäre die Ergänzung
       für Geräte ohne lokale Erkennung.
 - [x] **Zwischenspeicher des Service Workers verschlüsselt** (Entscheidung vom 30.09.2026). Daten (`GET /api/…`) liegen
@@ -111,7 +111,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Einrichtung erfasst Hinweise (Wirkstoff/Präparat A und B, Schweregrad, Beschreibung, Empfehlung, Pflichtangabe
       Quelle) in Leitung › Konfiguration; wer Verordnungen verwaltet, darf sie pflegen, protokolliert. Trifft ein Hinweis
       auf zwei laufende Verordnungen derselben Person zu, erscheint er im Medikamentenplan und bei den Reserven, mit dem
-      Vermerk, dass fehlende Hinweise keine Unbedenklichkeit bedeuten. CareCore enthält keine eigenen Regeln.
+      Vermerk, dass fehlende Hinweise keine Unbedenklichkeit bedeuten. CareOS enthält keine eigenen Regeln.
 - [x] **Dark Mode** als Wahl in den persönlichen Einstellungen. Das Standard-Aussehen bleibt unverändert.
 
 ## Niedrig / später
@@ -142,7 +142,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
         Assistenz, Administration, Einstellungen, Hilfe und Tastaturkürzel.
   - [x] Texte des Servers: Kennzahlen (mit fester ID für „Meine Kennzahlen“), Übersichten, Fehlermeldungen,
         RAI-Export und KI-Aufträge. Seltene Fehlermeldungen ohne Einrichtung sind neutral formuliert („Akte …“).
-  - [x] Seitentitel im Browser-Tab („CareCore · Patienten“).
+  - [x] Seitentitel im Browser-Tab („CareOS · Patienten“).
   - [x] Weitere Sprachen (Entscheidung vom 30.09.2026): Französisch, Italienisch, Englisch, Albanisch, Kroatisch,
         Serbisch (lateinisch), Ungarisch für die gesamte App. Textkatalog aus dem Code (`npm run i18n:extract`, in CI
         geprüft), KI-Entwürfe, Prüfung Text für Text und Freigabe je Sprache in Leitung › Administration › Sprachen;
@@ -175,14 +175,14 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       Kennzahlen-Seiten (Pflege, Bewohner, Leitung, Personal, Meine Kennzahlen: verschieben, Breite, stapeln,
       ausblenden) je Person; Arbeitsseiten bleiben bewusst einheitlich (Entscheidung vom 01.10.2026).
 - [x] **Mistral** (`mistral-small-latest`, offizielles SDK `@mistralai/mistralai`, Entscheidung vom 07.10.2026) für
-      CareCore KI, KI-Dienstplanung, KI-Suche, Diktat und Übersetzungsentwürfe, Schlüssel `MISTRAL_API_KEY`, Modell
+      CareOS KI, KI-Dienstplanung, KI-Suche, Diktat und Übersetzungsentwürfe, Schlüssel `MISTRAL_API_KEY`, Modell
       wählbar über `MISTRAL_MODEL`; Google Gemini entfernt (vorher seit 30.09.2026).
 - [x] **Portale (Phase 6).**
   - [x] Portal für Angehörige und Ärztinnen/Ärzte (Entscheidung vom 30.09.2026): eigene Zugänge mit Einmal-Passwort,
         Freigaben individuell je Person oder Wohnbereich, einzeln gewählte Bereiche (Notfalldaten, Medikation,
         Vitalwerte, Pflegeberichte, Termine, Wunden), Zeitraum und Grundlage mit Vermerk; Widerruf sofort, jeder Abruf
         protokolliert. Beschreibung in `docs/PORTAL.md`.
-  - [x] Nachrichten zwischen Portal und Pflege (CareCore One › Portal-Nachrichten), Apothekenportal mit Bestellungen
+  - [x] Nachrichten zwischen Portal und Pflege (CareOS One › Portal-Nachrichten), Apothekenportal mit Bestellungen
         aus Medikation › Bestellungen, Hilfe mit Bildschirmfotos im Portal.
 - [x] **Mandanten: eigene Rollen je Einrichtung.** Nur die Einrichtung, die eine Rolle anlegt, sieht, vergibt, ändert
       und löscht sie; bestehende eigene Rollen wurden ihrer Einrichtung zugeordnet (Migration 0048). Eingebaute Rollen
@@ -194,7 +194,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       In der Suche z. B. „vital“ (Person aus der Kopfzeile) oder „vital Muster“ (gleich für diese Person); Vitalwerte
       und Trinkmenge öffnen die Erfassung direkt, die Übergabe wählt die Person vor und setzt den Cursor ins Textfeld.
       Die Startseite nutzt dieselbe Suche wie alle anderen Seiten.
-- [x] **KI-Planungsassistenz:** Auftrag „Pflegeplanung vorschlagen“ in CareCore KI, nur für eine Person: Probleme,
+- [x] **KI-Planungsassistenz:** Auftrag „Pflegeplanung vorschlagen“ in CareOS KI, nur für eine Person: Probleme,
       Ressourcen, Ziele und Massnahmen mit Datengrundlage aus Einschätzungen, bestehender Planung, zwei Wochen Berichten,
       Vitalwerten und Wunden (pseudonymisiert). Bestehende Ziele werden nicht doppelt vorgeschlagen, keine erfundenen
       Werte; der Vorschlag bleibt ein Entwurf, den die Pflegefachperson prüft und selbst in die Planung überträgt.
@@ -205,14 +205,14 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 
 - [x] **Arbeitsplatz: alle Bereiche einrichtbar.** Auch die Begrüssung (Datum, Begrüssung, Uhrzeit) ist ein Baustein:
       verschieben, Breite wählen, zwischen Kopf- und Hauptbereich wechseln, ausblenden. Die Breitenwahl auf dem
-      Arbeitsplatz und den Kennzahlen-Seiten nutzt das CareCore-Dropdown statt der Browser-Auswahl.
+      Arbeitsplatz und den Kennzahlen-Seiten nutzt das CareOS-Dropdown statt der Browser-Auswahl.
 
 - [x] **Verkaufsbereit 1 – Sicherheit:** Next.js 16.3.8 (kritische Lücke geschlossen), Sicherheits-Header (CSP, HSTS,
       Einbettschutz, Permissions-Policy); Klicktests melden jeden CSP-Verstoss.
 - [x] **Verkaufsbereit 2 – E-Mail-Versand:** SMTP (`docs/EMAIL.md`), E-Mail-Adresse bei Mitarbeitenden, „Passwort
       vergessen?“, Einladung statt Startpasswort, Link zum Passwort setzen; Links einmalig, gehasht, protokolliert.
 - [x] **Verkaufsbereit 3 – Installation je Einrichtung:** Anleitung `docs/INSTALLATION.md`, Skript für die Geheimnisse,
-      Name der Einrichtung in der Konfiguration änderbar (Kopfzeile ohne Neuladen), Checkliste „CareCore einrichten“.
+      Name der Einrichtung in der Konfiguration änderbar (Kopfzeile ohne Neuladen), Checkliste „CareOS einrichten“.
 - [x] **Verkaufsbereit 4 – Überwachung und Backups:** Serverfehler im Systemstatus, Alarm per E-Mail
       (`ALERT_EMAIL`), Anleitung `docs/BETRIEB.md` (Railway-Backups und PITR, Bucket, Benachrichtigungen,
       Verfügbarkeitstest, Wiederherstellung üben, Ernstfall). Die Backups selbst schaltet der Betreiber in Railway ein.
@@ -224,7 +224,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       BPGG § 4 (AT) in Aufnahme, Pflegeakte und Pflegeplanung (vom Server geprüft); AHV- bzw.
       Sozialversicherungsnummer mit Formatprüfung (AT mit Prüfziffer), Krankenversichertennummer (DE);
       Feiertage zum Übernehmen (je Kanton bzw. Bundesland, siehe unten); übliche Qualifikationen des Landes werden
-      ergänzt. Gespeicherte Werte aus einem anderen Land bleiben erhalten. CareCore stuft nicht selbst ein.
+      ergänzt. Gespeicherte Werte aus einem anderen Land bleiben erhalten. CareOS stuft nicht selbst ein.
 - [x] **Feiertage je Kanton und Bundesland (02.10.2026):** In der Karte „Land der Einrichtung“ wählt die
       Administration den Kanton (26) bzw. das Bundesland (DE 16, AT 9); der Dienstplan übernimmt die gesetzlichen
       Feiertage dieser Region (ohne Auswahl die landesweiten). Quelle: Paket `date-holidays` (Daten CC BY 3.0), nur
@@ -250,17 +250,17 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 
 ## Entschieden (01.10.2026)
 
-- **Kein Medizinprodukt (MepV):** CareCore ist Software für Pflegedokumentation, Organisation und Kommunikation und
+- **Kein Medizinprodukt (MepV):** CareOS ist Software für Pflegedokumentation, Organisation und Kommunikation und
   bleibt ausserhalb der Medizinprodukteverordnung. Daraus folgt für alle Funktionen:
-  - CareCore stellt keine Diagnosen, berechnet keine Dosierungen und gibt keine eigenen Therapie- oder
+  - CareOS stellt keine Diagnosen, berechnet keine Dosierungen und gibt keine eigenen Therapie- oder
     Behandlungsempfehlungen.
   - Grenzwerte (Vitalwerte, Trinkziel), Hinweise zu Wechselwirkungen und Erinnerungen stammen von der Einrichtung
-    (mit Quelle); CareCore enthält dafür keine eigenen Regeln oder Vorgabewerte.
+    (mit Quelle); CareOS enthält dafür keine eigenen Regeln oder Vorgabewerte.
   - Eine lizenzierte Arzneimitteldatenbank wird nicht angebunden, weil eine automatische Wechselwirkungsprüfung die
     Software zum Medizinprodukt machen würde.
   - Assessments (z. B. Braden, interRAI) werden erfasst und nach der veröffentlichten Methode ausgezählt; die
     Beurteilung bleibt bei der Fachperson.
-  - CareCore KI erstellt nur Entwürfe, die eine Fachperson prüft und übernimmt; sie stellt keine Diagnosen und
+  - CareOS KI erstellt nur Entwürfe, die eine Fachperson prüft und übernimmt; sie stellt keine Diagnosen und
     ordnet keine Medikation an.
 
 ## Entschieden (02.10.2026)
@@ -272,12 +272,12 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
 
 ## Entschieden (06.10.2026)
 
-- [x] **Bewohnergelder (Barbetrag, Taschengeld):** CareCore deckt sie ab. Bewohner › Bewohnergelder: Konto je Person
+- [x] **Bewohnergelder (Barbetrag, Taschengeld):** CareOS deckt sie ab. Bewohner › Bewohnergelder: Konto je Person
       in der Kasse der Einrichtung mit Einzahlung, Auszahlung und Ausgabe (Zweck, von bzw. an, Beleg-Nr.), Guthaben
       nie unter null, Storno mit Grund statt Ändern oder Löschen, Kontoauszug je Monat (A4, mit laufendem Saldo und
       Unterschriftsfeldern) und Kassenkontrolle (gezählter Bestand gegen die Summe aller Guthaben, Differenz nur mit
       Erklärung). Eigenes Recht „Bewohnergelder verwalten“, zu Beginn nur für die Administration. Beträge in CHF
-      (Schweiz) bzw. EUR (Deutschland, Österreich). Gesetzliche Höchstbeträge oder Abrechnungsfristen gibt CareCore
+      (Schweiz) bzw. EUR (Deutschland, Österreich). Gesetzliche Höchstbeträge oder Abrechnungsfristen gibt CareOS
       nicht vor.
 
 ## Erledigt (06.10.2026): Präsentation
@@ -294,7 +294,7 @@ Legende: ✅ vorhanden · 🟡 teilweise · ❌ fehlt
       und optional einem Spaltenfeld zusammen (Summe, Anzahl, Mittelwert, Minimum, Maximum, mit Gesamtergebnissen) und
       legt sie auf ein eigenes Blatt. Die Zellen der Pivot-Tabelle sind fest; „Pivot-Tabelle aktualisieren“ übernimmt
       geänderte Daten, „bearbeiten“ ändert die Felder. In der Excel-Datei steht die Pivot-Tabelle als Werte (ohne
-      Excel-eigene Pivot-Definition); in CareCore bleibt sie aktualisierbar.
+      Excel-eigene Pivot-Definition); in CareOS bleibt sie aktualisierbar.
 - [x] **Blattschutz:** Überprüfen › „Blatt schützen“ sperrt Zellen, Formate und den Aufbau des Blatts; mit
       „Bearbeitbar trotz Blattschutz“ freigegebene Zellen bleiben ausfüllbar (z. B. Vorlagen). Schutz vor versehentlichen
       Änderungen ohne Kennwort: wer die Datei bearbeiten darf, kann den Schutz aufheben. In der Excel-Datei als
@@ -322,7 +322,7 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
       nicht vor / nicht erfasst, Datum, Aufbewahrungsort) und Vorsorgeauftrag bzw. Vorsorgevollmacht (Datum, wirksam
       seit). Kontaktpersonen erhalten eine Rolle „vertretungsberechtigt als“ mit Bezeichnungen je Land. Aktenkopf zeigt
       „PV: Ja / Nein / nicht erfasst“ und „Vertretung: Name“; Überleitungsbogen enthält beides; das FBM-Formular
-      übernimmt die Vertretung. Jede Änderung der Vorsorge mit eigenem Protokolleintrag. CareCore prüft keine
+      übernimmt die Vertretung. Jede Änderung der Vorsorge mit eigenem Protokolleintrag. CareOS prüft keine
       Wirksamkeit.
 - [ ] **Anbindung an das elektronische Patientendossier:** CH: EPD über eine Stammgemeinschaft; DE: Telematikinfrastruktur
       (ePA, KIM); AT: ELGA. Anschlusspflichten und Profile (IHE, FHIR) je Land prüfen. Grösster Integrationsschritt,
@@ -333,7 +333,7 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
 - [x] **Nationale Qualitätsindikatoren als Auswertung:** Leitung › Qualität & Kennzahlen › Qualitätsindikatoren:
       die medizinischen Qualitätsindikatoren der Schweizer Pflegeheime (Mangelernährung, Rumpffixation / Sitzgelegenheit,
       Bettgitter, Polymedikation, Schmerz Selbsteinschätzung, Dekubitus) am Stichtag, je Wohnbereich, mit den gezählten
-      Personen und Export als CSV. Jeder Indikator nennt die Definition und wie CareCore zählt; wo die Daten die
+      Personen und Export als CSV. Jeder Indikator nennt die Definition und wie CareOS zählt; wo die Daten die
       Definition nicht ganz abbilden, steht „Annäherung“. Die offizielle Erhebung bleibt beim Bedarfsabklärungsinstrument.
 - [ ] **Qualitätsindikatoren DE (§ 113 SGB XI):** braucht die halbjährliche Ergebniserfassung (Mobilität,
       Selbständigkeit, Integrationsgespräch u. a.) als eigene strukturierte Erhebung; erst danach auswertbar.
@@ -341,7 +341,7 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
       nicht) als Entwurf für die Person in der Kopfzeile: Personenabgleich (Name, Geburtsdatum), Dosierung
       Morgen/Mittag/Abend/Nacht, Reserve, Zeitraum, Grund und Verordnende. Jede Zeile prüft eine Fachperson und übernimmt
       sie einzeln als Verordnung mit den Pflichtangaben des Medikamentenplans; verschiedene Dosen werden zu getrennten
-      Verordnungen. GTIN und Pharmacode löst CareCore ohne Arzneimitteldatenbank nicht auf: Das Präparat wird beim ersten
+      Verordnungen. GTIN und Pharmacode löst CareOS ohne Arzneimitteldatenbank nicht auf: Das Präparat wird beim ersten
       Mal zugeordnet, die Zuordnung gilt für den nächsten Plan. Komplexe Schemata von Hand. Keine automatische Prüfung
       oder Änderung.
 - [x] **eMediplan CHMED23A und Kamera:** CHMED23A wird gelesen, auch auf mehrere QR-Codes verteilt (je Code eine
@@ -359,9 +359,9 @@ Fristen werden beim Bau an der Quelle geprüft und nicht erfunden; Fristen legt 
       Akte und im Portal-Protokoll; die Pflege des Wohnbereichs erhält einen Hinweis.
 - [x] **Leistungserfassung:** Dokumentation › Leistungen erfasst erbrachte Leistungen mit Zeit für die Person in der
       Kopfzeile, vorbelegt aus erledigten Aufgaben und laufenden Massnahmen der Pflegeplanung. Leistungskatalog der
-      Einrichtung unter Administration (eigener Code, Minuten nur als Vorschlag, keine Normzeiten von CareCore).
+      Einrichtung unter Administration (eigener Code, Minuten nur als Vorschlag, keine Normzeiten von CareOS).
       Stornieren mit Begründung statt Löschen, alles im Protokoll der Akte. Leistungsauswertung je Person und Bereich
-      im Monat mit CSV-Export (Summen und Einzelleistungen). CareCore berechnet weder Pflegestufe noch Rechnung.
+      im Monat mit CSV-Export (Summen und Einzelleistungen). CareOS berechnet weder Pflegestufe noch Rechnung.
 - [ ] **Leistungen: Anbindung an Einstufungs- und Abrechnungssysteme:** Export im Format des jeweiligen Systems
       (z. B. BESA, RAI, PLAISIR, Abrechnungssoftware), sobald die Schnittstellen der Kunden bekannt sind.
 - [x] **Ausbruchs- und Isolationsübersicht:** Bewohner › Isolation & Ausbruch zeigt laufende Isolationen je
@@ -412,7 +412,7 @@ Einrichtung bzw. die Pflegeplanung fest, gesetzliche Grundlagen werden beim Bau 
 
 - [x] **Lagerungs- und Bewegungsprotokoll:** Dokumentation › Lagerung: Positionswechsel (Position, Hautbefund nach
       Fingertest, Uhrzeit, Bemerkung) in wenigen Klicks für die Person in der Kopfzeile, auch offline vorgemerkt. Der
-      Lagerungsplan hält das Intervall aus der Pflegeplanung fest (optional mit Bezug zur Massnahme; CareCore gibt
+      Lagerungsplan hält das Intervall aus der Pflegeplanung fest (optional mit Bezug zur Massnahme; CareOS gibt
       keines vor). Die Tagesliste zeigt „Lagerung fällig“ (letzter Wechsel plus Intervall) bzw. den Wechsel in der
       nächsten Stunde. Verlauf über 24 Stunden, 3 oder 7 Tage; Stornieren mit Grund statt Löschen; Plan ändern oder mit
       Grund beenden; alles im Protokoll der Akte. Bei verletzter Haut Hinweis auf das Wundmanagement.
@@ -437,7 +437,7 @@ Einrichtung bzw. die Pflegeplanung fest, gesetzliche Grundlagen werden beim Bau 
 - [x] **Schmerzeinschätzung bei eingeschränkter Kommunikation:** Lizenz an der Quelle geprüft: BESD (Deutsche
       Schmerzgesellschaft) ist nur nichtkommerziell frei; kommerzielle Nutzung und elektronische Veröffentlichung
       brauchen die vorherige schriftliche Erlaubnis. Bei PAINAD (Warden et al. 2003) ist das Nutzungsrecht nicht geklärt.
-      Darum liefert CareCore keines davon mit. Stattdessen „Eigene Instrumente“ unter Konfiguration (Administration):
+      Darum liefert CareOS keines davon mit. Stattdessen „Eigene Instrumente“ unter Konfiguration (Administration):
       Name, Quelle und Nutzungsrecht (Pflicht), Fragen mit Antworten und Punkten, Bereiche laut Instrument (optional) und
       Intervall – alles von der Einrichtung. Das Instrument erscheint in den Einschätzungen neben dem Katalog (mit
       Quelle), Fälligkeiten nach dem Intervall der Einrichtung. Nach der ersten Einschätzung ergibt eine Änderung eine
@@ -479,7 +479,7 @@ Fachliche Lücken der Akte; was die Einrichtung festlegt, bleibt bei ihr (keine 
       Bezeichnungen zur Auswahl), Präparat, Charge, im Haus oder extern, geimpft von, Bemerkung; Fehleinträge mit
       Begründung entfernen, alles im Protokoll der Akte. Unter Isolation & Ausbruch der „Impfstatus“ je Wohnbereich:
       wer gegen die gewählte Impfung geimpft ist, auf Wunsch nur seit einem frei gewählten Datum (kein vorgegebener
-      Zeitraum). Letzte Impfung je Art im Überleitungsbogen, alle in der Auskunft. Keine Empfehlungen durch CareCore.
+      Zeitraum). Letzte Impfung je Art im Überleitungsbogen, alle in der Auskunft. Keine Empfehlungen durch CareOS.
 - [x] **Hilfsmittel und persönliche Gegenstände:** Karte „Hilfsmittel & Gegenstände“ in den Stammdaten: Art
       (Hilfsmittel oder persönlicher Gegenstand), Gegenstand (häufige zur Schnellauswahl), Kennzeichnung, Standort,
       Bemerkung; „nicht mehr vorhanden“ mit Grund, bleibt im Verlauf; Schutz gegen gleichzeitige Änderungen; alles im
@@ -557,7 +557,7 @@ als Entwurf in `docs/ZWECKBESTIMMUNG.md`.
 ### Braucht eine externe Fachperson
 
 - [ ] **Zweckbestimmung prüfen lassen:** `docs/ZWECKBESTIMMUNG.md` und die dort genannten Funktionen nahe an der
-      Grenze (Wechselwirkungs-Hinweise, Einschätzungsinstrumente, Vitalwert-Grenzen und Trendhinweise, CareCore KI)
+      Grenze (Wechselwirkungs-Hinweise, Einschätzungsinstrumente, Vitalwert-Grenzen und Trendhinweise, CareOS KI)
       durch eine Fachperson für Medizinprodukte-Regulierung prüfen lassen.
 
 ## Abgleich mit careCoach (06.10.2026): noch zu erstellen
@@ -565,13 +565,13 @@ als Entwurf in `docs/ZWECKBESTIMMUNG.md`.
 Vergleich mit careCoach (topCare Management AG) nach den öffentlichen Angaben des Herstellers: Leistungskataloge
 BESA, RAI-NH, Plaisir und interRAI (LTCF, HC, CMH), Heim und Spitex, Einstufung, Abrechnung, Statistik,
 Schnittstellen (RAIsoft.net, BESA, Apotheken und Blister, Administrationssysteme, Rufsystem Ascom), Dokumentation nach
-Abweichungen, Diktat mit KI-Umformulierung, offline mobil. CareCore ist in Kommunikation, Office, Portalen, KI,
+Abweichungen, Diktat mit KI-Umformulierung, offline mobil. CareOS ist in Kommunikation, Office, Portalen, KI,
 Dienstplan, Sicherheit und Sprachen weiter; es fehlt vor allem, was die Finanzierung der Pflege betrifft. Es gilt
 weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen oder Fristen.
 
-### Hoch (ohne diese Punkte ersetzt CareCore careCoach im Heim nicht)
+### Hoch (ohne diese Punkte ersetzt CareOS careCoach im Heim nicht)
 
-- [x] **Bedarfsabklärung – eigenes Instrument „CareCore Kompass“** (Entscheid vom 06.10.2026: eigenes Instrument mit
+- [x] **Bedarfsabklärung – eigenes Instrument „CareOS Kompass“** (Entscheid vom 06.10.2026: eigenes Instrument mit
       eigenem Namen statt Lizenz von interRAI oder BESA; kein Medizinprodukt, Zweck siehe `docs/ZWECKBESTIMMUNG.md`).
       Hinweis: Für die Einstufung zur Finanzierung (KVG) bleibt ein vom Kanton anerkanntes Instrument massgebend; der
       Kompass ersetzt es nicht.
@@ -590,7 +590,7 @@ weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen ode
         Berichte: „Unterstützung je Bereich“ je Wohnbereich oder ganzes Haus – je Bereich Personen mit Unterstützung
         oder Beobachtung und mit Handlungsbedarf, aufklappbar bis zur Verteilung der Antworten je Frage; nur gezählt,
         Grundlage ist die letzte abgeschlossene Abklärung je Person; Export als CSV. Im Abschluss „Entwurf mit
-        CareCore KI“ für das Gesamtbild (mit Berechtigung für die KI): ohne Namen, nur aus den Antworten, Notizen und
+        CareOS KI“ für das Gesamtbild (mit Berechtigung für die KI): ohne Namen, nur aus den Antworten, Notizen und
         Entscheiden der Fachperson; der Entwurf wird erst auf „Ins Gesamtbild übernehmen“ eingesetzt.
 - [ ] **Bewohneradministration und Abrechnung:** Taxen (Pension, Betreuung, Pflege nach Stufe) mit Aufteilung nach
       Kostenträger (Versicherer, Restfinanzierung, Anteil der Person), Abwesenheiten (Spital, Ferien) mit ihrer Wirkung
@@ -602,7 +602,7 @@ weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen ode
         Pflegetarife je Pflegestufe und Kostenträger sowie die Regel zum Austrittstag (ohne Festlegung keine
         Berechnung). Je Person: Pflegestufe mit Verlauf ab Datum, Abwesenheiten (erster und letzter ganzer Tag),
         zusätzliche Taxen; Vorschau des Monats je Kostenträger, jeder Tag einzeln berechnet. Stornieren mit Grund,
-        alles im Protokoll. CareCore gibt keine Beträge vor.
+        alles im Protokoll. CareOS gibt keine Beträge vor.
   - [x] Schritt B: Rechnungen für den Anteil der Person je abgeschlossenem Monat („Rechnungen“, einzeln oder als
         Lauf für alle bereiten Personen): fortlaufende Nummer ohne Lücken, Positionen beim Erstellen festgehalten,
         Rechnungsadresse je Person (z. B. Angehörige, Beistandschaft), Zahlungsangaben der Einrichtung mit
@@ -621,7 +621,7 @@ weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen ode
       Schweiz und Nachweise (z. B. ISO 27001, externer Sicherheitstest). Entschieden am 06.10.2026: ja, nach
       Abschluss der übrigen Punkte.
 
-### Mittel (damit CareCore klar besser ist)
+### Mittel (damit CareOS klar besser ist)
 
 - [x] **Dokumentation nach Abweichungen:** Je Massnahme der Pflegeplanung lassen sich Tageszeiten für den Nachweis
       wählen (Morgen, Mittag, Abend, Nacht wie die Medikamentenrunden; ohne Wahl kein Nachweis je Tageszeit).
@@ -632,18 +632,18 @@ weiter: keine Diagnosen, keine Dosierungen, keine erfundenen Tarife, Grenzen ode
       Protokoll der Akte und in der Auskunft.
 - [x] **Diktat mit KI umformulieren:** Rohtext aus der Erkennung auf dem Gerät wird pseudonymisiert zu einem
       Pflegebericht-Entwurf umformuliert, den die Fachperson prüft. Entschieden am 06.10.2026: ja (nur der Text,
-      keine Tonaufnahme). Umgesetzt in der Schnelldokumentation und im Dialog „Eintrag“: „Mit CareCore KI
+      keine Tonaufnahme). Umgesetzt in der Schnelldokumentation und im Dialog „Eintrag“: „Mit CareOS KI
       umformulieren“ (nur mit Berechtigung für die KI und eingerichteter KI). Namen aller Bewohnenden und Mitarbeitenden
       der Einrichtung gehen nur als Platzhalter ([Person 1] …) an die KI und werden im Vorschlag wieder eingesetzt;
       der Vorschlag ersetzt den Text erst mit „Text übernehmen“, gespeichert wird wie bisher mit dem Formular.
 - [x] **Vorlagen für die Pflegeplanung:** Standardpläne und Massnahmenkataloge der Einrichtung (keine Vorgaben von
-      CareCore), bei einer Person übernehmen und anpassen. Unter Pflegeplanung → Vorlagen (Recht Qualität verwalten)
+      CareOS), bei einer Person übernehmen und anpassen. Unter Pflegeplanung → Vorlagen (Recht Qualität verwalten)
       legt die Einrichtung Standardpläne (Pflegebereich, Problem, Ressourcen, Ziel, Überprüfung nach Tagen, Massnahmen)
       und einen Massnahmenkatalog an; nicht mehr gebrauchte Vorlagen werden nicht mehr angeboten, bleiben aber
       nachvollziehbar. Beim neuen Ziel füllt „Vorlage“ die Felder vor, die Massnahmen sind einzeln abwählbar und alles
       bleibt vor dem Speichern änderbar; bei einer neuen Massnahme hilft „Aus dem Katalog“. Ziel und Massnahmen werden
       gemeinsam gespeichert und protokolliert.
-- [ ] **Rufsystem anbinden:** Rufe (z. B. Ascom, Teletronic) in CareCore anzeigen und dokumentieren, Reaktionszeiten
+- [ ] **Rufsystem anbinden:** Rufe (z. B. Ascom, Teletronic) in CareOS anzeigen und dokumentieren, Reaktionszeiten
       für die Qualität. Braucht die Schnittstelle des Herstellers.
 - [ ] **Apotheke und Blister elektronisch:** Bestellungen an die Apotheke elektronisch, Rückmeldung von Verblisterung
       und Änderungen; heute nur über das Apothekenportal.

@@ -1,6 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { activePage, navigation, navigationFor, routeFor, sidebarNavigation } from "../app/components/navigation.ts";
+import {
+  DOCK_APPS,
+  MOBILE_DOCK_APPS,
+  activePage,
+  appHref,
+  navigation,
+  navigationFor,
+  routeFor,
+  sidebarNavigation,
+} from "../app/components/navigation.ts";
 
 const modules = navigation.flatMap((group) => group.modules);
 
@@ -21,7 +30,7 @@ test("no two tabs share an address", () => {
 
 test("the address decides module and tab", () => {
   assert.deepEqual(activePage("/c/medikation/runde"), { moduleId: "med", child: "Medikamentenrunde" });
-  assert.deepEqual(activePage("/c/ernaehrung/trinkprotokoll"), { moduleId: "vitals", child: "Trinkprotokoll" });
+  assert.deepEqual(activePage("/c/ernaehrung/trinkprotokoll"), { moduleId: "nutrition", child: "Trinkprotokoll" });
   assert.deepEqual(activePage("/c/betrieb/uebergabe/letzter-dienst"), {
     moduleId: "shift",
     child: "Seit letztem Dienst",
@@ -47,17 +56,18 @@ test("modules and tabs follow the permissions", () => {
   assert.deepEqual(staff?.children, ["Profile & Rollen"]);
 });
 
-test("CareCore KI is reached from the header, not the sidebar", () => {
+test("CareOS KI is reached from the header, not the sidebar", () => {
   const ids = sidebarNavigation(["ai.use"]).flatMap((group) => group.modules.map((module) => module.id));
   assert.ok(!ids.includes("ai"));
   assert.deepEqual(activePage("/c/intelligenz/entwuerfe"), { moduleId: "ai", child: "KI-Entwürfe" });
 });
 
-test("CareCore One bundles calendar, messenger and cloud", () => {
+test("Kommunikation bundles messages, calendar and files", () => {
   const group = sidebarNavigation([]).find((entry) => entry.id === "carecore-one");
+  assert.equal(group?.label, "Kommunikation");
   assert.deepEqual(
     group?.modules.map((entry) => entry.id),
-    ["one-calendar", "messenger", "cloud"],
+    ["messenger", "one-calendar", "cloud"],
   );
   assert.deepEqual(activePage("/c/carecore-one/kalender"), { moduleId: "one-calendar", child: "Kalender" });
   assert.deepEqual(activePage("/c/carecore-one/messenger"), { moduleId: "messenger", child: "Nachrichten" });
@@ -65,12 +75,12 @@ test("CareCore One bundles calendar, messenger and cloud", () => {
   assert.deepEqual(activePage("/c/carecore-one/cloud"), { moduleId: "cloud", child: "Meine Dateien" });
 });
 
-test("CareCore Kompass is its own main area right after Bewohner & Pflege", () => {
+test("CareOS Kompass is its own main area right after Bewohner & Pflege", () => {
   const groups = sidebarNavigation(["rai.manage"]);
   const ids = groups.map((group) => group.id);
   assert.equal(ids[ids.indexOf("clinical") + 1], "kompass");
   const kompass = groups.find((group) => group.id === "kompass");
-  assert.equal(kompass?.label, "CareCore Kompass");
+  assert.equal(kompass?.label, "CareOS Kompass");
   assert.deepEqual(
     kompass?.modules.map((entry) => entry.id),
     ["rai"],
@@ -78,4 +88,24 @@ test("CareCore Kompass is its own main area right after Bewohner & Pflege", () =
   assert.ok(!groups.find((group) => group.id === "clinical")?.modules.some((entry) => entry.id === "rai"));
   assert.ok(!sidebarNavigation([]).some((group) => group.id === "kompass"));
   assert.deepEqual(activePage("/c/kompass/abklaerung"), { moduleId: "rai", child: "Abklärung" });
+});
+
+test("CareOS: every app has a colour, a plain-language hint and an icon of its own", () => {
+  const apps = modules.filter((entry) => !entry.hiddenInSidebar);
+  for (const app of apps) {
+    assert.ok(app.hue >= 0 && app.hue <= 360, `${app.id} hue`);
+    assert.ok(app.hint.length > 10 && app.hint.length <= 70, `${app.id} hint`);
+  }
+  // Mein Dienst und Vitalwerte trugen früher dasselbe Herz-Symbol.
+  const shift = modules.find((entry) => entry.id === "shift");
+  const vitals = modules.find((entry) => entry.id === "vitals");
+  assert.notEqual(shift?.icon, vitals?.icon);
+});
+
+test("CareOS: the dock shows the same apps for everyone who may use them", () => {
+  const ids = sidebarNavigation([]).flatMap((group) => group.modules.map((module) => module.id));
+  for (const id of DOCK_APPS) assert.ok(ids.includes(id), `${id} reachable for all staff`);
+  for (const id of MOBILE_DOCK_APPS) assert.ok(DOCK_APPS.includes(id), `${id} also in the desktop dock`);
+  const chart = modules.find((entry) => entry.id === "chart")!;
+  assert.equal(appHref(chart), "/c/pflegedokumentation");
 });

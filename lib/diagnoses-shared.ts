@@ -1,4 +1,4 @@
-// Diagnosen je Person (Server und Oberfläche): wie von Ärztin/Arzt gestellt, mit Quelle. CareCore stellt keine
+// Diagnosen je Person (Server und Oberfläche): wie von Ärztin/Arzt gestellt, mit Quelle. CareOS stellt keine
 // Diagnosen und prüft den freiwilligen ICD-10-Code nur auf seine Form.
 
 export const DIAGNOSIS_KINDS = { main: "Hauptdiagnose", secondary: "Nebendiagnose" } as const;

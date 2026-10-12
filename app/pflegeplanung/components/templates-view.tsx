@@ -24,7 +24,7 @@ import {
   type TemplateIntervention,
 } from "@/lib/care-planning-shared";
 
-// Vorlagen der Einrichtung: Standardpläne (Ziel mit Massnahmen) und Massnahmenkatalog. CareCore gibt keine Inhalte
+// Vorlagen der Einrichtung: Standardpläne (Ziel mit Massnahmen) und Massnahmenkatalog. CareOS gibt keine Inhalte
 // vor; übernommen wird bei der Person immer eine Kopie, die angepasst werden kann.
 
 const EMPTY_INTERVENTION: TemplateIntervention = {
@@ -390,7 +390,7 @@ export default function TemplatesView({ showToast }: { showToast: ShowToast }) {
   return (
     <>
       <PageHeading
-        eyebrow="CareCore Plan"
+        eyebrow="Pflegeplanung"
         title="Vorlagen"
         description="Standardpläne und Massnahmenkatalog der Einrichtung. Bei der Person wird eine Kopie übernommen und angepasst; Änderungen an Vorlagen ändern bestehende Pflegepläne nicht."
       />

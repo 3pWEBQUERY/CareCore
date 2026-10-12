@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { ADMIN, login, watchErrors } from "./support";
 
 // Eigene Einschätzungsinstrumente: die Administration hinterlegt ein Instrument mit Quelle; die Pflege erfasst damit
-// eine Einschätzung, CareCore zählt die Punkte der Einrichtung zusammen.
+// eine Einschätzung, CareOS zählt die Punkte der Einrichtung zusammen.
 test("Eigene Instrumente: anlegen, damit einschätzen, nicht mehr anbieten", async ({ page }) => {
   await login(page, ADMIN);
   const errors = watchErrors(page);

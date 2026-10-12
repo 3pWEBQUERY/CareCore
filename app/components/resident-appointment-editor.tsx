@@ -159,7 +159,7 @@ export default function ResidentAppointmentEditor({
       >
         <header className="area-editor-header">
           <div>
-            <p className="eyebrow">CareCore One · Kalender</p>
+            <p className="eyebrow">Kalender</p>
             <h2 id="appointment-editor-title">{appointment ? "Termin verwalten" : "Termin erstellen"}</h2>
             <p>
               {t.prefix}termine erscheinen auch in der {t.prefix}akte. Aufgaben für einen Wohnbereich bleiben im

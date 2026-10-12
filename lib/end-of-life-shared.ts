@@ -1,4 +1,4 @@
-// Wünsche für die letzte Lebensphase und Ablauf nach einem Todesfall (Server und Oberfläche). CareCore hält fest, was die
+// Wünsche für die letzte Lebensphase und Ablauf nach einem Todesfall (Server und Oberfläche). CareOS hält fest, was die
 // Person bzw. ihre Vertretung wünscht; die Punkte der Checkliste nach einem Todesfall legt die Einrichtung selbst fest.
 
 export const END_OF_LIFE_FIELDS = [

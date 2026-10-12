@@ -65,7 +65,7 @@ export async function checkErrorAlert(sql: Sql, now = new Date()) {
   const url = `${process.env.APP_URL?.trim() || `https://${process.env.RAILWAY_PUBLIC_DOMAIN ?? ""}`}/c/leitung/administration/konfiguration`;
   await sendMail({
     to,
-    subject: `CareCore: ${count} Serverfehler in 15 Minuten`,
+    subject: `CareOS: ${count} Serverfehler in 15 Minuten`,
     ...linkMail({
       heading: "Viele Serverfehler",
       intro: `In den letzten 15 Minuten sind ${count} Serverfehler aufgetreten (Schwelle ${threshold}). Bitte das Log des Dienstes und den Systemstatus prüfen.`,

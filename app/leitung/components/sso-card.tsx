@@ -48,7 +48,7 @@ export function SsoCard({ showToast }: { showToast: (message: string) => void })
         {data.data && (
           <p className="list-hint">
             Rücksprungadresse beim Identity-Provider eintragen: <code>{data.data.redirectUri}</code>. Angemeldet werden
-            nur bestehende CareCore-Konten, deren Benutzername dem gewählten Claim entspricht.
+            nur bestehende CareOS-Konten, deren Benutzername dem gewählten Claim entspricht.
             {settings?.updatedAt ? ` Zuletzt geändert ${formatDateTime(settings.updatedAt)}.` : ""}
           </p>
         )}
@@ -132,7 +132,7 @@ export function SsoCard({ showToast }: { showToast: (message: string) => void })
             />
           </label>
           <label>
-            <span>Benutzername in CareCore entspricht</span>
+            <span>Benutzername in CareOS entspricht</span>
             <CareSelect
               label="Claim"
               value={SSO_CLAIMS[editing.usernameClaim]}

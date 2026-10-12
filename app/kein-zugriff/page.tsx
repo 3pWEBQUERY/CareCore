@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { StatusPage } from "../components/status-page";
 
-export const metadata: Metadata = { title: "CareCore · Kein Zugriff", robots: { index: false } };
+export const metadata: Metadata = { title: "CareOS · Kein Zugriff", robots: { index: false } };
 
 // Ziel des Proxys, wenn eine Seite direkt aufgerufen wird, die die eigene Rolle nicht öffnen darf. Mit
 // ?grund=zwei-faktor fehlt nur die Zwei-Faktor-Anmeldung, die die Einrichtung für Leitung und Administration verlangt.

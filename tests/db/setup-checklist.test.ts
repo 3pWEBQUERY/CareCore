@@ -41,7 +41,7 @@ test("Ersteinrichtung: Schritte aus den Daten, Name der Einrichtung, ausblenden 
   });
 
   // Standardname einer frischen Installation gilt als offen.
-  await q(`UPDATE carecore_organizations SET name = 'CareCore' WHERE id = $1`, [f.org]);
+  await q(`UPDATE carecore_organizations SET name = 'CareOS' WHERE id = $1`, [f.org]);
   assert.equal((await states(admin)).name, false);
   assert.equal(await status(saveOrganizationName(lead, "Heim")), 403);
   assert.equal(await status(saveOrganizationName(admin, "   ")), 400);
@@ -52,7 +52,7 @@ test("Ersteinrichtung: Schritte aus den Daten, Name der Einrichtung, ausblenden 
     `SELECT before_data, after_data FROM carecore_audit_log WHERE entity_id = $1 AND action = 'name_updated'`,
     [f.org],
   );
-  assert.deepEqual([audit.before_data.name, audit.after_data.name], ["CareCore", "Alterszentrum Sonnengarten"]);
+  assert.deepEqual([audit.before_data.name, audit.after_data.name], ["CareOS", "Alterszentrum Sonnengarten"]);
   assert.equal((await states(admin)).name, true);
 
   // Adresse am Standort.

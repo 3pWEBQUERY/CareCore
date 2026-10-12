@@ -92,7 +92,7 @@ export default function PasswordChangePopover({ open, onClose, onSuccess }: Pass
         </header>
         <form className="settings-password-form" onSubmit={(event) => void submit(event)}>
           <p className="settings-password-note">
-            <ModuleIcon name="alert" /> Verwende ein Passwort, das du nur für CareCore nutzt.
+            <ModuleIcon name="alert" /> Verwende ein Passwort, das du nur für CareOS nutzt.
           </p>
           <PasswordField
             id="current-password"

@@ -6,7 +6,7 @@ import { useWorkContext } from "./care-context";
 import { requestJson } from "./workspace-ui";
 import type { AiDraft } from "@/lib/ai-shared";
 
-// Diktierten oder getippten Rohtext mit CareCore KI als Pflegebericht umformulieren. Namen gehen nur als Platzhalter
+// Diktierten oder getippten Rohtext mit CareOS KI als Pflegebericht umformulieren. Namen gehen nur als Platzhalter
 // an die KI; der Vorschlag ersetzt den Text erst, wenn die Fachperson ihn übernimmt.
 export function AiRephrase({
   text,
@@ -59,14 +59,14 @@ export function AiRephrase({
           disabled={busy || text.trim().length < 10}
           onClick={() => void rephrase()}
         >
-          <ModuleIcon name="ai" /> {busy ? "Wird umformuliert …" : "Mit CareCore KI umformulieren"}
+          <ModuleIcon name="ai" /> {busy ? "Wird umformuliert …" : "Mit CareOS KI umformulieren"}
         </button>
         <small>{error || "Namen werden vor dem Senden durch Platzhalter ersetzt."}</small>
       </span>
       {suggestion && (
-        <div className="ai-suggestion" role="region" aria-label="Vorschlag der CareCore KI">
+        <div className="ai-suggestion" role="region" aria-label="Vorschlag der CareOS KI">
           <p className="ai-suggestion-head">
-            <ModuleIcon name="ai" /> Vorschlag der CareCore KI – bitte prüfen
+            <ModuleIcon name="ai" /> Vorschlag der CareOS KI – bitte prüfen
           </p>
           <p className="ai-suggestion-text">{suggestion.content}</p>
           <div className="ai-suggestion-actions">

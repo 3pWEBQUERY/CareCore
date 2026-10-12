@@ -52,7 +52,7 @@ export function NewsView(props: {
       )}
       {dialog?.kind === "archive" && (
         <ReasonDialog
-          eyebrow="CareCore Team · Neuigkeiten"
+          eyebrow="Team · Neuigkeiten"
           title="Beitrag archivieren"
           description={`„${dialog.post.title}“ wird aus dem Feed entfernt, bleibt aber im Protokoll nachvollziehbar.`}
           label="Grund"

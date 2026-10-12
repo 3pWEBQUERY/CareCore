@@ -15,8 +15,7 @@ export const meta: Record<RaiView, { child: string; title: string; description: 
   overview: {
     child: "Übersicht",
     title: "Kompass",
-    description:
-      "Bedarfsabklärungen mit dem CareCore Kompass: wer dran ist, was fällig ist und wer verantwortlich ist.",
+    description: "Bedarfsabklärungen mit dem CareOS Kompass: wer dran ist, was fällig ist und wer verantwortlich ist.",
     action: "Neue Abklärung",
   },
   assessment: {

@@ -19,7 +19,7 @@ import { carecoreDb, type CarecoreActor } from "@/lib/server-data";
 
 type Sql = ReturnType<typeof carecoreDb>;
 
-const ISSUER = "CareCore";
+const ISSUER = "CareOS";
 // Gültigkeit einer Anmeldeanfrage nach richtigem Passwort und Zahl der Code-Versuche je Anfrage.
 const CHALLENGE_MINUTES = 5;
 const CHALLENGE_ATTEMPTS = 5;

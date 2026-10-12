@@ -18,7 +18,7 @@ type SearchResult = {
   href: string;
   residentId?: string;
   action?: CareAction;
-  // Frage an die Such-Assistenz von CareCore KI.
+  // Frage an die Such-Assistenz von CareOS KI.
   ask?: string;
 };
 
@@ -108,7 +108,7 @@ export function GlobalSearchDialog({ onClose }: { onClose: () => void }) {
       ? [
           {
             key: "ai-question",
-            title: `CareCore KI fragen: „${question}“`,
+            title: `CareOS KI fragen: „${question}“`,
             meta: "Antwort aus den Daten der letzten Tage, mit Links zu den Akten",
             icon: "ai",
             href: "",
@@ -152,7 +152,7 @@ export function GlobalSearchDialog({ onClose }: { onClose: () => void }) {
         </div>
         {aiAnswer && (
           <div className="search-ai-answer" role="status" aria-live="polite">
-            <span className="search-group-label">CareCore KI · {aiAnswer.question}</span>
+            <span className="search-group-label">CareOS KI · {aiAnswer.question}</span>
             {aiAnswer.status === "loading" && <p>Die Daten werden ausgewertet …</p>}
             {aiAnswer.status === "error" && <p className="search-ai-error">{aiAnswer.error}</p>}
             {aiAnswer.status === "done" && (
@@ -184,7 +184,7 @@ export function GlobalSearchDialog({ onClose }: { onClose: () => void }) {
                   </button>
                 ))}
                 <small className="search-ai-note">
-                  Entwurf von CareCore KI aus den erfassten Daten – bitte in der Akte prüfen.
+                  Entwurf von CareOS KI aus den erfassten Daten – bitte in der Akte prüfen.
                 </small>
               </>
             )}

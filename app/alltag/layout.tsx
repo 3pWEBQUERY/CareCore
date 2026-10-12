@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "CareCore · Alltag & Aktivierung",
+  title: "CareOS · Alltag & Aktivierung",
   description: "Angebote der Alltagsgestaltung planen und die Teilnahme je Person festhalten.",
 };
 

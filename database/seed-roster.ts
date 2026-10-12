@@ -159,7 +159,7 @@ people.push({
 const ROTATION = ["F", "F", "S", "S", "N", "N", "-", "-", "Z", "F", "S", "-", "-", "-"];
 
 async function main() {
-  await sql`INSERT INTO carecore_organizations (id, name, timezone) VALUES (${org}, 'CareCore Demo', ${TZ}) ON CONFLICT (id) DO NOTHING`;
+  await sql`INSERT INTO carecore_organizations (id, name, timezone) VALUES (${org}, 'CareOS Demo', ${TZ}) ON CONFLICT (id) DO NOTHING`;
   await sql`INSERT INTO carecore_sites (id, organization_id, name) VALUES (${site}, ${org}, 'Pflegezentrum Lindenhof') ON CONFLICT DO NOTHING`;
   const siteRow =
     await sql`SELECT id FROM carecore_sites WHERE organization_id = ${org} ORDER BY id = ${site} DESC LIMIT 1`;
