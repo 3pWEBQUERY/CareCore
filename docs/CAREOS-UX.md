@@ -1,7 +1,7 @@
 # CareOS – Bedienkonzept
 
 CareOS (früher CareCore) wird wie das Betriebssystem eines Tablets bedient: Jeder Bereich ist eine **App** mit eigenem
-Namen, eigenem Symbol und eigener Farbe. Wer eine App einmal gesehen hat, findet sie überall wieder.
+Namen und eigenem Symbol. Wer eine App einmal gesehen hat, findet sie überall wieder.
 
 **Warum:** In der Pflege arbeiten viele Menschen, die Deutsch nicht als Muttersprache sprechen oder selten mit Computern
 arbeiten. Sie sollen CareOS ohne Schulung verstehen: sofort sehen, wo was ist, und es sich leicht merken.
@@ -26,8 +26,9 @@ mit Demodaten.
 ## 2. Die fünf Regeln von CareOS
 
 1. **Jedes Symbol hat ein Wort.** Kein Knopf erklärt sich nur über ein Bild.
-2. **Eine Farbe pro App – überall gleich.** Medikamente sind immer rosa, Dokumentation immer grün, Bewohner immer blau.
-   Man erkennt die App an der Farbe, bevor man liest.
+2. **Ein Symbol pro App – überall gleich.** Jede App hat ihr eigenes Symbol (kein Symbol doppelt), auf dem
+   Startbildschirm, in der Leiste und über jeder Seite. Gestaltet wie der Rest der Anwendung: ruhiges Markenblau,
+   feine Ränder, 6 px Ecken – keine bunten Kacheln.
 3. **Immer am selben Ort.** Die Leiste zeigt immer dieselben Apps in derselben Reihenfolge. „Start“ ist immer oben
    (Computer) bzw. links (Handy).
 4. **Nur eine Ebene.** Start → App → Reiter. Keine Ausklappmenüs, keine Untermenüs.
@@ -38,14 +39,14 @@ mit Demodaten.
 
 ### Startbildschirm
 
-Begrüssung, darunter **„Meine Apps“**: alle Apps, die die Person nutzen darf, als grosse farbige Kacheln, gruppiert
+Begrüssung, darunter **„Meine Apps“**: alle Apps, die die Person nutzen darf, als grosse Kacheln, gruppiert
 wie der Arbeitstag. Eine rote Zahl an einer App heisst: Hier wartet etwas (offene Aufgaben, überfällige Gaben,
 Übergaben, ungelesene Nachrichten). Darunter folgen wie bisher Notizen, „Heute wichtig“, Tagesliste usw. Alles lässt
 sich unter „Startseite anpassen“ verschieben oder ausblenden.
 
 ### Die Leiste
 
-Am Computer links, auf dem Handy unten. Jeder Knopf: farbiges Symbol **und** Name darunter.
+Am Computer links, auf dem Handy unten. Jeder Knopf: Symbol **und** Name darunter.
 
 | Computer (links) | Handy (unten) |
 | ---------------- | ------------- |
@@ -69,34 +70,34 @@ ist). Unten: Einstellungen und Hilfe.
 ### Kopf jeder App
 
 Oben auf jeder Seite stehen Symbol und Name der App („Wo bin ich?“), daneben die Seiten der App als grosse Knöpfe.
-Die gewählte Seite ist in der Farbe der App gefüllt.
+Die gewählte Seite ist blau markiert, wie bei allen Knöpfen der Anwendung.
 
 ### Die Apps
 
-| Gruppe            | App                   | Farbe      | Wofür (Satz in der App-Übersicht)                               |
-| ----------------- | --------------------- | ---------- | --------------------------------------------------------------- |
-| Mein Dienst       | Mein Dienst           | Orange     | Mein Tag, Übergabe und was seit dem letzten Dienst passiert ist |
-|                   | Aufgaben              | Gelb       | Was ich heute erledigen muss                                    |
-|                   | Mein Dienstplan       | Blau       | Wann ich arbeite, Wünsche und Zeiten                            |
-| Bewohner & Pflege | Bewohner              | Blau       | Alle Bewohner und ihre Pflegeakte                               |
-|                   | Dokumentation         | Grün       | Pflegebericht schreiben und nachlesen                           |
-|                   | Medikamente           | Rosa       | Medikamente richten, geben und kontrollieren                    |
-|                   | Vitalwerte            | Rot        | Blutdruck, Puls, Gewicht und mehr messen                        |
-|                   | Essen & Trinken       | Hellgrün   | Trinkmenge und Ernährung festhalten                             |
-|                   | Wunden                | Koralle    | Wunden beschreiben, fotografieren, verfolgen                    |
-|                   | Pflegeplanung         | Violett    | Ziele, Massnahmen und Einschätzungen                            |
-|                   | Aktivitäten           | Magenta    | Angebote im Alltag und wer teilnimmt                            |
-| CareOS Kompass    | Kompass               | Türkis     | Pflegebedarf abklären und Berichte                              |
-| Team & Wissen     | Neuigkeiten           | Hellblau   | Mitteilungen für das ganze Team                                 |
-|                   | Schulungen            | Lila       | Kurse besuchen und Nachweise                                    |
-|                   | Dokumente             | Indigo     | Standards, Weisungen und Formulare                              |
-| Kommunikation     | Nachrichten           | Petrol     | Mit Kolleginnen, Kollegen und Angehörigen schreiben             |
-|                   | Kalender              | Blau       | Termine im Haus und Fahrdienst                                  |
-|                   | Dateien               | Himmelblau | Gemeinsame und eigene Dateien                                   |
-| Leitung           | Qualität & Kennzahlen | Grün       | Ereignisse, Massnahmen und Zahlen                               |
-|                   | Dienstplanung         | Blau       | Dienstplan für das Team erstellen                               |
-|                   | Mitarbeitende         | Cyan       | Team, Einarbeitung und Rollen                                   |
-|                   | Administration        | Graublau   | Einrichtung, Portal, Sprachen und Daten                         |
+| Gruppe            | App                   | Wofür (Satz in der App-Übersicht)                               |
+| ----------------- | --------------------- | --------------------------------------------------------------- |
+| Mein Dienst       | Mein Dienst           | Mein Tag, Übergabe und was seit dem letzten Dienst passiert ist |
+|                   | Aufgaben              | Was ich heute erledigen muss                                    |
+|                   | Mein Dienstplan       | Wann ich arbeite, Wünsche und Zeiten                            |
+| Bewohner & Pflege | Bewohner              | Alle Bewohner und ihre Pflegeakte                               |
+|                   | Dokumentation         | Pflegebericht schreiben und nachlesen                           |
+|                   | Medikamente           | Medikamente richten, geben und kontrollieren                    |
+|                   | Vitalwerte            | Blutdruck, Puls, Gewicht und mehr messen                        |
+|                   | Essen & Trinken       | Trinkmenge und Ernährung festhalten                             |
+|                   | Wunden                | Wunden beschreiben, fotografieren, verfolgen                    |
+|                   | Pflegeplanung         | Ziele, Massnahmen und Einschätzungen                            |
+|                   | Aktivitäten           | Angebote im Alltag und wer teilnimmt                            |
+| CareOS Kompass    | Kompass               | Pflegebedarf abklären und Berichte                              |
+| Team & Wissen     | Neuigkeiten           | Mitteilungen für das ganze Team                                 |
+|                   | Schulungen            | Kurse besuchen und Nachweise                                    |
+|                   | Dokumente             | Standards, Weisungen und Formulare                              |
+| Kommunikation     | Nachrichten           | Mit Kolleginnen, Kollegen und Angehörigen schreiben             |
+|                   | Kalender              | Termine im Haus und Fahrdienst                                  |
+|                   | Dateien               | Gemeinsame und eigene Dateien                                   |
+| Leitung           | Qualität & Kennzahlen | Ereignisse, Massnahmen und Zahlen                               |
+|                   | Dienstplanung         | Dienstplan für das Team erstellen                               |
+|                   | Mitarbeitende         | Team, Einarbeitung und Rollen                                   |
+|                   | Administration        | Einrichtung, Portal, Sprachen und Daten                         |
 
 Die Gruppe „Leitung“ und einzelne Apps (z. B. Kompass, Dienstplanung, Administration) sieht nur, wer die Berechtigung
 hat. Die Bezeichnung der Einrichtung (Bewohner, Patienten, Klienten) gilt in allen Namen.
@@ -109,14 +110,14 @@ hat. Die Bezeichnung der Einrichtung (Bewohner, Patienten, Klienten) gilt in all
 - **Alle Apps:** neue Übersicht mit Beschreibung, Suche und zuletzt geöffneten Seiten (ersetzt Ausklappmenüs und
   Handy-Menü).
 - **Startseite:** „Meine Apps“ statt „Schnellzugriff“; „Startseite anpassen“ statt „Arbeitsplatz bearbeiten“.
-- **App-Kopf:** Symbol und Name der App über jeder Seite, grössere Reiter (40 px hoch, 13,5 px Schrift).
+- **App-Kopf:** Symbol und Name der App über jeder Seite, grössere Reiter (36 px hoch, auf dem Handy 38 px).
 - **Neue Aufteilung:** „Vitalwerte & Ernährung“ ist in **Vitalwerte** und **Essen & Trinken** geteilt.
 - **Einfachere Namen:** Medikation → Medikamente, Planung & Einschätzungen → Pflegeplanung, Alltag & Aktivierung →
   Aktivitäten, Team → Neuigkeiten, Messenger → Nachrichten, Cloud → Dateien, CareCore One → Kommunikation,
   Dienstplan (Leitung) → Dienstplanung.
-- **Eigene Symbole:** „Mein Dienst“ hat ein eigenes Symbol (Sonnenaufgang) statt des Herzens der Vitalwerte.
+- **Eigene Symbole:** Jede App hat ein eigenes Symbol, z. B. „Mein Dienst“ (Sonnenaufgang) statt des Herzens der
+  Vitalwerte; Mein Dienstplan, Kalender und Dienstplanung tragen nicht mehr alle denselben Kalender.
 - **Hilfe:** neue Kurzanleitung „So funktioniert CareOS“.
-- **Dunkles Erscheinungsbild:** Die Farben der Apps bleiben gleich.
 
 ## 5. Was bewusst gleich bleibt
 

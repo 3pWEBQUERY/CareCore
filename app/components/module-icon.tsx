@@ -6,7 +6,9 @@ import {
   Bell,
   BookOpenText,
   Buildings,
+  CalendarCheck,
   CalendarDots,
+  CalendarPlus,
   CaretDown,
   CaretRight,
   ChartBar,
@@ -106,6 +108,8 @@ export function ModuleIcon({ name, className = "" }: { name: ModuleIconName; cla
     staff: IdentificationBadge,
     apps: SquaresFour,
     help: Question,
+    calendarCheck: CalendarCheck,
+    calendarPlus: CalendarPlus,
   };
   const Component = icons[name];
   return <Component className={className} aria-hidden="true" weight="regular" />;

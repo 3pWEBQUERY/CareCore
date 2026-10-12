@@ -90,16 +90,15 @@ test("CareOS Kompass is its own main area right after Bewohner & Pflege", () => 
   assert.deepEqual(activePage("/c/kompass/abklaerung"), { moduleId: "rai", child: "Abklärung" });
 });
 
-test("CareOS: every app has a colour, a plain-language hint and an icon of its own", () => {
+test("CareOS: every app has a plain-language hint and an icon of its own", () => {
   const apps = modules.filter((entry) => !entry.hiddenInSidebar);
-  for (const app of apps) {
-    assert.ok(app.hue >= 0 && app.hue <= 360, `${app.id} hue`);
-    assert.ok(app.hint.length > 10 && app.hint.length <= 70, `${app.id} hint`);
-  }
-  // Mein Dienst und Vitalwerte trugen früher dasselbe Herz-Symbol.
-  const shift = modules.find((entry) => entry.id === "shift");
-  const vitals = modules.find((entry) => entry.id === "vitals");
-  assert.notEqual(shift?.icon, vitals?.icon);
+  for (const app of apps) assert.ok(app.hint.length > 10 && app.hint.length <= 70, `${app.id} hint`);
+  // Früher trugen z. B. Mein Dienst und Vitalwerte dasselbe Herz, drei Bereiche denselben Kalender.
+  const icons = apps.map((app) => app.icon);
+  assert.deepEqual(
+    icons.filter((icon, index) => icons.indexOf(icon) !== index),
+    [],
+  );
 });
 
 test("CareOS: the dock shows the same apps for everyone who may use them", () => {

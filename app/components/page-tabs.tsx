@@ -4,10 +4,10 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useNavigationBadges, useWorkContext } from "./care-context";
 import { badgeFor, moduleById, navigationFor, routeFor } from "./navigation";
-import { AppIcon, appStyle } from "./app-launcher";
+import { AppIcon } from "./app-launcher";
 import { navigationLabel, termsFor } from "@/lib/terminology";
 
-// Kopf jeder App: farbiges Symbol und Name der App („Wo bin ich?“), daneben ihre Seiten als grosse Reiter,
+// Kopf jeder App: Symbol und Name der App („Wo bin ich?“), daneben ihre Seiten als Reiter,
 // z. B. „Mein Dienst“: Heute · Übergabe · Seit letztem Dienst · Verlauf. Keine Untermenüs.
 export function PageTabs({ moduleId, child }: { moduleId: string; child: string }) {
   const context = useWorkContext();
@@ -30,7 +30,7 @@ export function PageTabs({ moduleId, child }: { moduleId: string; child: string 
   if (!app) return null;
   const name = L(app.label);
   return (
-    <div className="careos-app-bar" style={appStyle(app.hue)}>
+    <div className="careos-app-bar">
       <span className="careos-app-bar-name">
         <AppIcon module={app} size="sm" />
         <strong>{name}</strong>

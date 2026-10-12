@@ -60,7 +60,7 @@ export function HomeGreetingCard({ r }: { r: DashboardState }) {
   );
 }
 
-// Startbildschirm von CareOS: alle Apps, die die Person nutzen darf, als grosse farbige Kacheln mit Zählern
+// Startbildschirm von CareOS: alle Apps, die die Person nutzen darf, als grosse Kacheln mit Zählern
 // (wie auf einem Tablet). Dieselben Kacheln stehen unter „Alle Apps“ in der Leiste.
 export function HomeShortcutsCard({ r }: { r: DashboardState }) {
   const { router } = r;

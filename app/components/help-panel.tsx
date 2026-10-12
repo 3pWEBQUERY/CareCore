@@ -19,11 +19,11 @@ const guides = (t: Terms): Array<{ icon: ModuleIconName; title: string; steps: s
     icon: "apps",
     title: "So funktioniert CareOS",
     steps: [
-      "CareOS ist wie ein Tablet: Jeder Bereich ist eine App mit eigener Farbe und eigenem Symbol.",
+      "CareOS ist wie ein Tablet: Jeder Bereich ist eine App mit eigenem Namen und Symbol.",
       "„Start“ führt immer zurück zur Startseite. Dort stehen alle deine Apps.",
       "Die Leiste (am Computer links, auf dem Handy unten) zeigt immer dieselben Apps an derselben Stelle.",
       "„Alle Apps“ zeigt alle Apps mit einem kurzen Satz, wofür sie da sind. Oben kannst du eine App suchen.",
-      "In einer App stehen die Seiten oben als Knöpfe nebeneinander. Die gewählte Seite ist farbig.",
+      "In einer App stehen die Seiten oben als Knöpfe nebeneinander. Die gewählte Seite ist blau markiert.",
       "Eine rote Zahl an einer App heisst: Hier wartet etwas auf dich.",
     ],
   },
@@ -40,7 +40,7 @@ const guides = (t: Terms): Array<{ icon: ModuleIconName; title: string; steps: s
     icon: "note",
     title: "Dokumentieren",
     steps: [
-      "In der Leiste auf „Doku“ tippen (grünes Symbol).",
+      "In der Leiste auf „Doku“ tippen.",
       "Art und Einordnung wählen, Text eingeben und speichern.",
       `„Speichern & nächster ${t.one}“ springt direkt zur nächsten Person.`,
     ],
@@ -49,7 +49,7 @@ const guides = (t: Terms): Array<{ icon: ModuleIconName; title: string; steps: s
     icon: "med",
     title: "Medikamentenrunde",
     steps: [
-      "In der Leiste „Medikamente“ öffnen (rosa Symbol); die Zahl zeigt überfällige Gaben.",
+      "In der Leiste „Medikamente“ öffnen; die Zahl zeigt überfällige Gaben.",
       "Pro Gabe „Gegeben“ oder mit Begründung „Nicht gegeben“ dokumentieren.",
       "Reservemedikation unter „Reserven“ erfassen.",
     ],

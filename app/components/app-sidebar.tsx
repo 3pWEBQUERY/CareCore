@@ -7,7 +7,7 @@ import { useNavigationBadges, useWorkContext } from "./care-context";
 import { BrandIcon } from "./brand-icon";
 import { openHelp } from "./help-panel";
 import { ModuleIcon } from "./module-icon";
-import { AppIcon, appStyle, openAppLauncher } from "./app-launcher";
+import { AppIcon, openAppLauncher } from "./app-launcher";
 import { DOCK_APPS, appHref, moduleBadges, rememberPage, sidebarNavigation, type ModuleIconName } from "./navigation";
 import { navigationLabel, termsFor } from "@/lib/terminology";
 
@@ -124,7 +124,6 @@ export default function AppSidebar({ activeModule, activeChild }: AppSidebarProp
         <DockButton
           label="Start"
           icon="home"
-          hue={214}
           active={activeModule === "home"}
           onPointerEnter={() => router.prefetch("/c")}
           onClick={() => go("/c")}
@@ -137,7 +136,6 @@ export default function AppSidebar({ activeModule, activeChild }: AppSidebarProp
               key={module.id}
               label={L(module.shortLabel ?? module.label)}
               module={module}
-              hue={module.hue}
               count={value}
               active={activeModule === module.id}
               onPointerEnter={() => href && router.prefetch(href)}
@@ -146,29 +144,27 @@ export default function AppSidebar({ activeModule, activeChild }: AppSidebarProp
           );
         })}
         <span className="sidebar-rail-divider" aria-hidden="true" />
-        <DockButton label="Alle Apps" icon="apps" hue={214} active={otherApp} onClick={openAppLauncher} haspopup />
+        <DockButton label="Alle Apps" icon="apps" active={otherApp} onClick={openAppLauncher} haspopup />
       </nav>
       <div className="sidebar-rail-footer careos-dock-footer">
         <DockButton
           label="Einstellungen"
           icon="settings"
-          hue={215}
           active={activeModule === "settings"}
           onPointerEnter={() => router.prefetch("/c/einstellungen")}
           onClick={() => go("/c/einstellungen")}
         />
-        <DockButton label="Hilfe" icon="help" hue={215} onClick={openHelp} haspopup />
+        <DockButton label="Hilfe" icon="help" onClick={openHelp} haspopup />
       </div>
     </aside>
   );
 }
 
-// Ein Knopf der Leiste: farbiges Symbol und darunter immer der Name (keine Bedeutung nur über ein Symbol).
+// Ein Knopf der Leiste: Symbol und darunter immer der Name (keine Bedeutung nur über ein Symbol).
 function DockButton({
   label,
   icon,
   module,
-  hue,
   count = 0,
   active = false,
   haspopup = false,
@@ -178,7 +174,6 @@ function DockButton({
   label: string;
   icon?: ModuleIconName;
   module?: Parameters<typeof AppIcon>[0]["module"];
-  hue: number;
   count?: number;
   active?: boolean;
   haspopup?: boolean;
@@ -189,7 +184,6 @@ function DockButton({
     <button
       className={`sidebar-rail-button careos-dock-button ${active ? "active" : ""}`}
       type="button"
-      style={appStyle(hue)}
       aria-current={active && !haspopup ? "page" : undefined}
       aria-haspopup={haspopup ? "dialog" : undefined}
       onClick={onClick}
@@ -201,7 +195,7 @@ function DockButton({
         {module ? (
           <AppIcon module={module} size="sm" />
         ) : (
-          <span className="careos-app-icon careos-app-icon-sm careos-app-icon-plain">
+          <span className="careos-app-icon careos-app-icon-sm">
             <ModuleIcon name={icon ?? "home"} />
           </span>
         )}
